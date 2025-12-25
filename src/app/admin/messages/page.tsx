@@ -1,230 +1,220 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
-import { Crown, Search, MessageSquare, Users } from "lucide-react";
-import { ConversationList, ChatWindow } from "@/components/chat";
-import { Card, Badge } from "@/components/ui";
+import { Crown, Search, MessageSquare, Users, Loader2, RefreshCw } from "lucide-react";
+import { ChatWindow } from "@/components/chat";
+import { Card, Badge, Button } from "@/components/ui";
 
-// Demo data - in production, fetch from API
-const demoConversations = [
-  {
-    id: "1",
-    user: {
-      id: "user1",
-      name: "John D.",
-      image: undefined,
-      isOnline: true,
-    },
-    lastMessage: {
-      text: "I'd love to see more content like this!",
-      isPPV: false,
-      createdAt: new Date(),
-      isRead: false,
-      senderId: "user1",
-    },
-    unreadCount: 2,
-    subscription: "VIP",
-  },
-  {
-    id: "2",
-    user: {
-      id: "user2",
-      name: "Sarah M.",
-      image: undefined,
-      isOnline: false,
-    },
-    lastMessage: {
-      text: "Thanks for the exclusive video!",
-      isPPV: false,
-      createdAt: new Date(Date.now() - 3600000),
-      isRead: true,
-      senderId: "user2",
-    },
-    unreadCount: 0,
-    subscription: "Premium",
-  },
-  {
-    id: "3",
-    user: {
-      id: "user3",
-      name: "Mike R.",
-      image: undefined,
-      isOnline: true,
-    },
-    lastMessage: {
-      text: "Can you send me something special?",
-      isPPV: false,
-      createdAt: new Date(Date.now() - 7200000),
-      isRead: true,
-      senderId: "user3",
-    },
-    unreadCount: 0,
-    subscription: "Basic",
-  },
-  {
-    id: "4",
-    user: {
-      id: "user4",
-      name: "Emily K.",
-      image: undefined,
-      isOnline: false,
-    },
-    lastMessage: {
-      text: "Just subscribed!",
-      isPPV: false,
-      createdAt: new Date(Date.now() - 86400000),
-      isRead: true,
-      senderId: "user4",
-    },
-    unreadCount: 0,
-    subscription: "VIP",
-  },
-];
+interface Conversation {
+  id: string;
+  user: {
+    id: string;
+    name: string;
+    email?: string;
+    image?: string;
+    isOnline: boolean;
+  };
+  lastMessage: {
+    text: string | null;
+    isPPV: boolean;
+    createdAt: string;
+    isRead: boolean;
+    senderId: string;
+  } | null;
+  unreadCount: number;
+  subscription: string;
+}
 
-const demoMessagesMap: Record<string, any[]> = {
-  "1": [
-    {
-      id: "1",
-      text: "Hey! Thanks for your VIP subscription!",
-      senderId: "admin",
-      createdAt: new Date(Date.now() - 7200000),
-    },
-    {
-      id: "2",
-      text: "Here's an exclusive preview for you",
-      media: [
-        {
-          id: "m1",
-          type: "PHOTO" as const,
-          url: "/media/preview/2885347102581834996_1.jpg",
-          previewUrl: "/media/preview/2885347102581834996_1.jpg",
-        },
-      ],
-      isPPV: true,
-      ppvPrice: 14.99,
-      isUnlocked: true,
-      senderId: "admin",
-      createdAt: new Date(Date.now() - 3600000),
-    },
-    {
-      id: "3",
-      text: "I'd love to see more content like this!",
-      senderId: "user1",
-      createdAt: new Date(),
-    },
-    {
-      id: "4",
-      text: "Can you send more exclusive pics?",
-      senderId: "user1",
-      createdAt: new Date(),
-    },
-  ],
-  "2": [
-    {
-      id: "1",
-      text: "Welcome to ExclusiveHub!",
-      senderId: "admin",
-      createdAt: new Date(Date.now() - 86400000),
-    },
-    {
-      id: "2",
-      text: "Thanks for the exclusive video!",
-      senderId: "user2",
-      createdAt: new Date(Date.now() - 3600000),
-    },
-  ],
-  "3": [
-    {
-      id: "1",
-      text: "Hey Mike! Thanks for subscribing!",
-      senderId: "admin",
-      createdAt: new Date(Date.now() - 86400000),
-    },
-    {
-      id: "2",
-      text: "Can you send me something special?",
-      senderId: "user3",
-      createdAt: new Date(Date.now() - 7200000),
-    },
-  ],
-  "4": [
-    {
-      id: "1",
-      text: "Just subscribed!",
-      senderId: "user4",
-      createdAt: new Date(Date.now() - 86400000),
-    },
-  ],
-};
+interface Message {
+  id: string;
+  text: string | null;
+  senderId: string;
+  receiverId: string;
+  isPPV: boolean;
+  ppvPrice: number | null;
+  isUnlocked: boolean;
+  media: {
+    id: string;
+    type: "PHOTO" | "VIDEO" | "AUDIO";
+    url: string;
+    previewUrl: string | null;
+  }[];
+  createdAt: string;
+}
 
 const subscriptionColors: Record<string, string> = {
+  Free: "bg-gray-500/20 text-gray-400",
   Basic: "bg-blue-500/20 text-blue-400",
+  BASIC: "bg-blue-500/20 text-blue-400",
   Premium: "bg-purple-500/20 text-purple-400",
+  PREMIUM: "bg-purple-500/20 text-purple-400",
   VIP: "bg-[var(--gold)]/20 text-[var(--gold)]",
 };
 
 export default function AdminMessagesPage() {
   const [activeConversation, setActiveConversation] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [conversations, setConversations] = useState(demoConversations);
-  const [messages, setMessages] = useState<Record<string, any[]>>(demoMessagesMap);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [isLoadingConvs, setIsLoadingConvs] = useState(true);
+  const [isLoadingMsgs, setIsLoadingMsgs] = useState(false);
+  const [isSending, setIsSending] = useState(false);
+
+  // Fetch conversations
+  const fetchConversations = useCallback(async () => {
+    try {
+      const res = await fetch("/api/conversations");
+      if (res.ok) {
+        const data = await res.json();
+        setConversations(data);
+      }
+    } catch (error) {
+      console.error("Error fetching conversations:", error);
+    } finally {
+      setIsLoadingConvs(false);
+    }
+  }, []);
+
+  // Fetch messages for active conversation
+  const fetchMessages = useCallback(async (conversationId: string) => {
+    setIsLoadingMsgs(true);
+    try {
+      const res = await fetch(`/api/conversations/${conversationId}/messages`);
+      if (res.ok) {
+        const data = await res.json();
+        setMessages(data);
+      }
+    } catch (error) {
+      console.error("Error fetching messages:", error);
+    } finally {
+      setIsLoadingMsgs(false);
+    }
+  }, []);
+
+  // Initial load
+  useEffect(() => {
+    fetchConversations();
+  }, [fetchConversations]);
+
+  // Load messages when conversation changes
+  useEffect(() => {
+    if (activeConversation) {
+      fetchMessages(activeConversation);
+
+      // Mark conversation as read locally
+      setConversations((prev) =>
+        prev.map((conv) =>
+          conv.id === activeConversation ? { ...conv, unreadCount: 0 } : conv
+        )
+      );
+    }
+  }, [activeConversation, fetchMessages]);
+
+  // Poll for new messages
+  useEffect(() => {
+    const pollInterval = setInterval(() => {
+      fetchConversations();
+      if (activeConversation) {
+        fetchMessages(activeConversation);
+      }
+    }, 5000); // Poll every 5 seconds
+
+    return () => clearInterval(pollInterval);
+  }, [activeConversation, fetchConversations, fetchMessages]);
+
+  const handleSendMessage = async (
+    text: string,
+    mediaFiles?: File[],
+    isPPV?: boolean,
+    ppvPrice?: number
+  ) => {
+    if (!activeConversation) return;
+    setIsSending(true);
+
+    try {
+      let uploadedMedia: any[] = [];
+
+      // Upload media files first
+      if (mediaFiles && mediaFiles.length > 0) {
+        const formData = new FormData();
+        mediaFiles.forEach((file) => formData.append("files", file));
+        formData.append("type", "chat");
+
+        const uploadRes = await fetch("/api/upload", {
+          method: "POST",
+          body: formData,
+        });
+
+        if (uploadRes.ok) {
+          const uploadData = await uploadRes.json();
+          uploadedMedia = uploadData.files || [uploadData];
+        }
+      }
+
+      // Send message
+      const res = await fetch(`/api/conversations/${activeConversation}/messages`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          text: text || null,
+          media: uploadedMedia.map((m) => ({
+            type: m.type,
+            url: m.url,
+            previewUrl: m.previewUrl,
+          })),
+          isPPV: isPPV || false,
+          ppvPrice: isPPV ? ppvPrice : null,
+        }),
+      });
+
+      if (res.ok) {
+        const newMessage = await res.json();
+        setMessages((prev) => [...prev, newMessage]);
+
+        // Update conversation's last message
+        setConversations((prev) =>
+          prev.map((conv) =>
+            conv.id === activeConversation
+              ? {
+                  ...conv,
+                  lastMessage: {
+                    text: isPPV ? "Sent exclusive content" : text,
+                    isPPV: isPPV || false,
+                    createdAt: new Date().toISOString(),
+                    isRead: false,
+                    senderId: "admin",
+                  },
+                }
+              : conv
+          )
+        );
+      }
+    } catch (error) {
+      console.error("Error sending message:", error);
+    } finally {
+      setIsSending(false);
+    }
+  };
 
   const filteredConversations = conversations.filter((conv) =>
     conv.user.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const totalUnread = conversations.reduce((sum, c) => sum + c.unreadCount, 0);
-
-  const handleSendMessage = (text: string, media?: File[], isPPV?: boolean, ppvPrice?: number) => {
-    if (!activeConversation) return;
-
-    const newMessage: any = {
-      id: Date.now().toString(),
-      text,
-      senderId: "admin",
-      createdAt: new Date(),
-    };
-
-    if (media && media.length > 0) {
-      newMessage.media = media.map((file, i) => ({
-        id: `media-${Date.now()}-${i}`,
-        type: file.type.startsWith("video/") ? "VIDEO" : "PHOTO",
-        url: URL.createObjectURL(file),
-        previewUrl: URL.createObjectURL(file),
-      }));
-      if (isPPV) {
-        newMessage.isPPV = true;
-        newMessage.ppvPrice = ppvPrice;
-        newMessage.isUnlocked = false;
-      }
-    }
-
-    setMessages((prev) => ({
-      ...prev,
-      [activeConversation]: [...(prev[activeConversation] || []), newMessage],
-    }));
-
-    // Update last message in conversation
-    setConversations((prev) =>
-      prev.map((conv) =>
-        conv.id === activeConversation
-          ? {
-              ...conv,
-              lastMessage: {
-                text: isPPV ? "Sent exclusive content" : text,
-                isPPV: isPPV || false,
-                createdAt: new Date(),
-                isRead: false,
-                senderId: "admin",
-              },
-            }
-          : conv
-      )
-    );
-  };
-
   const activeConv = conversations.find((c) => c.id === activeConversation);
+
+  // Transform messages for ChatWindow
+  const transformedMessages = messages.map((msg) => ({
+    id: msg.id,
+    text: msg.text || undefined,
+    media: msg.media,
+    isPPV: msg.isPPV,
+    ppvPrice: msg.ppvPrice || undefined,
+    isUnlocked: msg.isUnlocked,
+    senderId: msg.senderId,
+    createdAt: new Date(msg.createdAt),
+  }));
 
   return (
     <div className="h-screen flex flex-col">
@@ -244,6 +234,14 @@ export default function AdminMessagesPage() {
             </p>
           </div>
           <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => fetchConversations()}
+              title="Refresh"
+            >
+              <RefreshCw className="w-5 h-5" />
+            </Button>
             <Card variant="luxury" className="px-4 py-2 flex items-center gap-2">
               <Users className="w-5 h-5 text-[var(--gold)]" />
               <span className="text-[var(--foreground)] font-medium">
@@ -284,10 +282,21 @@ export default function AdminMessagesPage() {
 
           {/* Conversations */}
           <div className="flex-1 overflow-y-auto">
-            {filteredConversations.length === 0 ? (
+            {isLoadingConvs ? (
+              <div className="flex items-center justify-center h-full">
+                <Loader2 className="w-8 h-8 text-[var(--gold)] animate-spin" />
+              </div>
+            ) : filteredConversations.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full p-8 text-center">
                 <MessageSquare className="w-12 h-12 text-[var(--muted)] mb-4" />
-                <p className="text-[var(--muted)]">No conversations found</p>
+                <p className="text-[var(--muted)]">
+                  {conversations.length === 0
+                    ? "No conversations yet"
+                    : "No conversations found"}
+                </p>
+                <p className="text-sm text-[var(--muted)] mt-2">
+                  Conversations will appear when users message you
+                </p>
               </div>
             ) : (
               <div className="divide-y divide-[var(--border)]">
@@ -303,11 +312,19 @@ export default function AdminMessagesPage() {
                   >
                     {/* Avatar */}
                     <div className="relative flex-shrink-0">
-                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[var(--gold)] to-[var(--gold-dark)] flex items-center justify-center">
-                        <span className="text-[var(--background)] font-bold">
-                          {conversation.user.name.charAt(0)}
-                        </span>
-                      </div>
+                      {conversation.user.image ? (
+                        <img
+                          src={conversation.user.image}
+                          alt={conversation.user.name}
+                          className="w-12 h-12 rounded-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[var(--gold)] to-[var(--gold-dark)] flex items-center justify-center">
+                          <span className="text-[var(--background)] font-bold">
+                            {conversation.user.name.charAt(0).toUpperCase()}
+                          </span>
+                        </div>
+                      )}
                       {conversation.user.isOnline && (
                         <div className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-emerald-500 border-2 border-[var(--surface)]" />
                       )}
@@ -322,7 +339,8 @@ export default function AdminMessagesPage() {
                           </h4>
                           <Badge
                             className={`text-xs ${
-                              subscriptionColors[conversation.subscription]
+                              subscriptionColors[conversation.subscription] ||
+                              subscriptionColors.Free
                             }`}
                           >
                             {conversation.subscription}
@@ -377,20 +395,26 @@ export default function AdminMessagesPage() {
               >
                 &larr; Back to conversations
               </button>
-              <ChatWindow
-                conversationId={activeConversation}
-                currentUserId="admin"
-                otherUser={activeConv.user}
-                messages={messages[activeConversation] || []}
-                isAdmin={true}
-                onSendMessage={handleSendMessage}
-                onUnlockPPV={(messageId) => {
-                  console.log("User unlock PPV:", messageId);
-                }}
-                onSendTip={(messageId, amount) => {
-                  console.log("User tip:", messageId, amount);
-                }}
-              />
+              {isLoadingMsgs ? (
+                <div className="flex-1 flex items-center justify-center">
+                  <Loader2 className="w-8 h-8 text-[var(--gold)] animate-spin" />
+                </div>
+              ) : (
+                <ChatWindow
+                  conversationId={activeConversation}
+                  currentUserId="admin"
+                  otherUser={activeConv.user}
+                  messages={transformedMessages}
+                  isAdmin={true}
+                  onSendMessage={handleSendMessage}
+                  onUnlockPPV={(messageId) => {
+                    console.log("User unlock PPV:", messageId);
+                  }}
+                  onSendTip={(messageId, amount) => {
+                    console.log("User tip:", messageId, amount);
+                  }}
+                />
+              )}
             </>
           ) : (
             <div className="flex-1 flex items-center justify-center bg-[var(--background)]">

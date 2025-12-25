@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { cookies } from "next/headers";
 import { writeFile } from "fs/promises";
 import { join } from "path";
 import crypto from "crypto";
@@ -7,25 +7,34 @@ import crypto from "crypto";
 // In production, use S3, Cloudinary, or another cloud storage
 // This is a simple local file upload for development
 
+async function isAdmin(): Promise<boolean> {
+  const cookieStore = await cookies();
+  const token = cookieStore.get("admin_token");
+  return !!token?.value;
+}
+
 export async function POST(request: NextRequest) {
   try {
-    const session = await auth();
+    // Check admin auth (for now, only admin can upload)
+    const admin = await isAdmin();
 
-    if (!session?.user?.id) {
+    if (!admin) {
       return NextResponse.json(
         { error: "Authentication required" },
         { status: 401 }
       );
     }
 
-    // In production, check for admin role for media uploads
-    // Regular users can only upload chat attachments
-
     const formData = await request.formData();
-    const file = formData.get("file") as File | null;
+
+    // Support both single file and multiple files
+    const singleFile = formData.get("file") as File | null;
+    const multipleFiles = formData.getAll("files") as File[];
     const type = formData.get("type") as string | null; // media, chat, avatar
 
-    if (!file) {
+    const filesToUpload = singleFile ? [singleFile] : multipleFiles;
+
+    if (!filesToUpload || filesToUpload.length === 0) {
       return NextResponse.json(
         { error: "No file provided" },
         { status: 400 }
@@ -39,15 +48,8 @@ export async function POST(request: NextRequest) {
       avatar: ["image/jpeg", "image/png", "image/webp"],
     };
 
-    const uploadType = type || "media";
-    const allowed = allowedTypes[uploadType] || allowedTypes.media;
-
-    if (!allowed.includes(file.type)) {
-      return NextResponse.json(
-        { error: "File type not allowed" },
-        { status: 400 }
-      );
-    }
+    const uploadType = type || "chat";
+    const allowed = allowedTypes[uploadType] || allowedTypes.chat;
 
     // Validate file size (50MB max for media, 10MB for chat, 5MB for avatar)
     const maxSizes: Record<string, number> = {
@@ -56,53 +58,70 @@ export async function POST(request: NextRequest) {
       avatar: 5 * 1024 * 1024,
     };
 
-    const maxSize = maxSizes[uploadType] || maxSizes.media;
+    const maxSize = maxSizes[uploadType] || maxSizes.chat;
 
-    if (file.size > maxSize) {
+    // Process all files
+    const uploadedFiles = [];
+    const { mkdir } = await import("fs/promises");
+    const uploadDir = join(process.cwd(), "public", "uploads", uploadType);
+    await mkdir(uploadDir, { recursive: true });
+
+    for (const file of filesToUpload) {
+      if (!allowed.includes(file.type)) {
+        continue; // Skip invalid file types
+      }
+
+      if (file.size > maxSize) {
+        continue; // Skip files that are too large
+      }
+
+      // Generate unique filename
+      const ext = file.name.split(".").pop();
+      const hash = crypto.randomBytes(16).toString("hex");
+      const filename = `${hash}.${ext}`;
+
+      // Save file
+      const bytes = await file.arrayBuffer();
+      const buffer = Buffer.from(bytes);
+      const filePath = join(uploadDir, filename);
+      await writeFile(filePath, buffer);
+
+      const url = `/uploads/${uploadType}/${filename}`;
+
+      // Determine media type for database
+      let mediaType: "PHOTO" | "VIDEO" | "AUDIO" = "PHOTO";
+      if (file.type.startsWith("video/")) {
+        mediaType = "VIDEO";
+      } else if (file.type.startsWith("audio/")) {
+        mediaType = "AUDIO";
+      }
+
+      uploadedFiles.push({
+        url,
+        thumbnailUrl: url,
+        previewUrl: url,
+        filename,
+        mimeType: file.type,
+        size: file.size,
+        type: mediaType,
+      });
+    }
+
+    if (uploadedFiles.length === 0) {
       return NextResponse.json(
-        { error: "File too large" },
+        { error: "No valid files uploaded" },
         { status: 400 }
       );
     }
 
-    // Generate unique filename
-    const ext = file.name.split(".").pop();
-    const hash = crypto.randomBytes(16).toString("hex");
-    const filename = `${hash}.${ext}`;
-
-    // In production, upload to S3/Cloudinary
-    // For development, save to public/uploads
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
-
-    const uploadDir = join(process.cwd(), "public", "uploads", uploadType);
-    const filePath = join(uploadDir, filename);
-
-    // Create directory if it doesn't exist
-    const { mkdir } = await import("fs/promises");
-    await mkdir(uploadDir, { recursive: true });
-
-    await writeFile(filePath, buffer);
-
-    const url = `/uploads/${uploadType}/${filename}`;
-
-    // Generate thumbnail/preview for images and videos
-    let thumbnailUrl = null;
-    let previewUrl = null;
-
-    if (file.type.startsWith("image/")) {
-      // In production, use sharp to generate thumbnails
-      thumbnailUrl = url;
-      previewUrl = url;
+    // Return single file format for backward compatibility, or array for multiple
+    if (singleFile) {
+      return NextResponse.json(uploadedFiles[0]);
     }
 
     return NextResponse.json({
-      url,
-      thumbnailUrl,
-      previewUrl,
-      filename,
-      type: file.type,
-      size: file.size,
+      success: true,
+      files: uploadedFiles,
     });
   } catch (error) {
     console.error("Upload error:", error);
