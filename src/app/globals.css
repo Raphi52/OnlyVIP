@@ -76,6 +76,21 @@ html {
   scroll-behavior: smooth;
 }
 
+/* Cursor pointer for all clickable elements */
+button,
+[role="button"],
+[type="button"],
+[type="submit"],
+[type="reset"],
+a,
+label[for],
+select,
+summary,
+[onclick],
+.cursor-pointer {
+  cursor: pointer;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
