@@ -42,6 +42,62 @@ export const CRYPTO_CURRENCIES = [
   { id: "usdttrc20", name: "USDT (TRC20)", symbol: "USDT", color: "#26A17B" },
 ];
 
+interface InvoiceResponse {
+  id: string;
+  token_id: string;
+  order_id: string;
+  order_description: string;
+  price_amount: number;
+  price_currency: string;
+  invoice_url: string;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Create a crypto invoice with hosted payment page
+ */
+export async function createCryptoInvoice(params: {
+  priceAmount: number;
+  priceCurrency: string;
+  orderId: string;
+  orderDescription: string;
+  successUrl?: string;
+  cancelUrl?: string;
+}): Promise<InvoiceResponse> {
+  if (!process.env.NOWPAYMENTS_API_KEY) {
+    throw new Error("NOWPayments API key not configured");
+  }
+
+  const ipnCallbackUrl = `${process.env.NEXT_PUBLIC_APP_URL}/api/payments/crypto/webhook`;
+  const successUrl = params.successUrl || `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/billing?success=true`;
+  const cancelUrl = params.cancelUrl || `${process.env.NEXT_PUBLIC_APP_URL}/checkout`;
+
+  const response = await fetch(`${API_URL}/invoice`, {
+    method: "POST",
+    headers: {
+      "x-api-key": process.env.NOWPAYMENTS_API_KEY,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      price_amount: params.priceAmount,
+      price_currency: params.priceCurrency,
+      order_id: params.orderId,
+      order_description: params.orderDescription,
+      ipn_callback_url: ipnCallbackUrl,
+      success_url: successUrl,
+      cancel_url: cancelUrl,
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`NOWPayments API error: ${error}`);
+  }
+
+  return response.json();
+}
+
 export async function createCryptoPayment(
   params: CreatePaymentParams
 ): Promise<PaymentResponse> {

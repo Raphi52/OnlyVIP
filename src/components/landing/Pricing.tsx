@@ -24,11 +24,11 @@ const plans = [
     tier: "BASIC",
   },
   {
-    id: "premium",
-    name: "Premium",
-    description: "Most popular choice",
-    monthlyPrice: 19.99,
-    annualPrice: 191.88,
+    id: "vip",
+    name: "VIP",
+    description: "Ultimate experience",
+    monthlyPrice: 29.99,
+    annualPrice: 287.88,
     isPopular: true,
     features: [
       "Full content access",
@@ -36,24 +36,9 @@ const plans = [
       "Unlimited downloads",
       "Direct messaging",
       "Early access to new content",
-      "Priority support",
-    ],
-    tier: "PREMIUM",
-  },
-  {
-    id: "vip",
-    name: "VIP",
-    description: "Ultimate experience",
-    monthlyPrice: 49.99,
-    annualPrice: 479.88,
-    features: [
-      "Everything in Premium",
       "Exclusive VIP-only content",
-      "Custom content requests",
-      "Private video calls",
       "Behind-the-scenes access",
-      "Personalized messages",
-      "VIP badge on profile",
+      "Priority support",
     ],
     tier: "VIP",
   },
@@ -136,7 +121,7 @@ export function Pricing() {
         </motion.div>
 
         {/* Plans */}
-        <div className="grid md:grid-cols-3 gap-6 lg:gap-8">
+        <div className="grid md:grid-cols-2 gap-6 lg:gap-8 max-w-4xl mx-auto">
           {plans.map((plan, index) => (
             <motion.div
               key={plan.id}

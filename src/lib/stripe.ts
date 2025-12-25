@@ -12,6 +12,8 @@ export const SUBSCRIPTION_PLANS = {
     name: "Basic",
     monthlyPrice: 9.99,
     annualPrice: 95.88,
+    tier: "BASIC" as const,
+    canMessage: false,
     features: [
       "Access to basic content library",
       "Standard resolution downloads",
@@ -19,31 +21,21 @@ export const SUBSCRIPTION_PLANS = {
       "Email support",
     ],
   },
-  PREMIUM: {
-    name: "Premium",
-    monthlyPrice: 19.99,
-    annualPrice: 191.88,
+  VIP: {
+    name: "VIP",
+    monthlyPrice: 29.99,
+    annualPrice: 287.88,
+    tier: "VIP" as const,
+    canMessage: true,
     features: [
       "Full content access",
       "4K resolution downloads",
       "Unlimited downloads",
       "Direct messaging",
       "Early access to new content",
-      "Priority support",
-    ],
-  },
-  VIP: {
-    name: "VIP",
-    monthlyPrice: 49.99,
-    annualPrice: 479.88,
-    features: [
-      "Everything in Premium",
       "Exclusive VIP-only content",
-      "Custom content requests",
-      "Private video calls",
       "Behind-the-scenes access",
-      "Personalized messages",
-      "VIP badge on profile",
+      "Priority support",
     ],
   },
 };

@@ -208,7 +208,12 @@ export default function AdminMessagesPage() {
   const transformedMessages = messages.map((msg) => ({
     id: msg.id,
     text: msg.text || undefined,
-    media: msg.media,
+    media: msg.media.map((m) => ({
+      id: m.id,
+      type: m.type,
+      url: m.url,
+      previewUrl: m.previewUrl || undefined,
+    })),
     isPPV: msg.isPPV,
     ppvPrice: msg.ppvPrice || undefined,
     isUnlocked: msg.isUnlocked,

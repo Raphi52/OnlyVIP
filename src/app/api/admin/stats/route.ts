@@ -51,10 +51,6 @@ export async function GET(request: NextRequest) {
         where: { status: "COMPLETED" },
         orderBy: { createdAt: "desc" },
         take: 5,
-        include: {
-          // Note: Payment doesn't have user relation in current schema
-          // We'd need to add it or use a different approach
-        },
       }),
 
       // Top performing media
