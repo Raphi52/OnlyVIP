@@ -22,6 +22,7 @@ import {
   Check,
   Loader2,
   RefreshCw,
+  Play,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -69,6 +70,14 @@ export default function AdminMediaPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterType, setFilterType] = useState("all");
   const [uploadError, setUploadError] = useState("");
+  const [previewItem, setPreviewItem] = useState<MediaItem | null>(null);
+  const [editItem, setEditItem] = useState<MediaItem | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [editAccessTier, setEditAccessTier] = useState("FREE");
+  const [editIsPurchaseable, setEditIsPurchaseable] = useState(false);
+  const [editPrice, setEditPrice] = useState("");
+  const [isEditing, setIsEditing] = useState(false);
 
   // Fetch media from API
   const fetchMedia = useCallback(async () => {
@@ -194,6 +203,53 @@ export default function AdminMediaPage() {
     return true;
   });
 
+  // Open edit modal
+  const openEditModal = (item: MediaItem) => {
+    setEditItem(item);
+    setEditTitle(item.title);
+    setEditDescription(item.description || "");
+    setEditAccessTier(item.accessTier);
+    setEditIsPurchaseable(item.isPurchaseable);
+    setEditPrice(item.price ? String(item.price) : "");
+  };
+
+  // Handle edit save
+  const handleEditSave = async () => {
+    if (!editItem) return;
+
+    setIsEditing(true);
+    try {
+      const res = await fetch("/api/media", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: editItem.id,
+          title: editTitle,
+          description: editDescription || null,
+          accessTier: editAccessTier,
+          isPurchaseable: editIsPurchaseable,
+          price: editIsPurchaseable && editPrice ? parseFloat(editPrice) : null,
+        }),
+      });
+
+      if (res.ok) {
+        const { media: updatedMedia } = await res.json();
+        setMedia((prev) =>
+          prev.map((m) => (m.id === editItem.id ? { ...m, ...updatedMedia } : m))
+        );
+        setEditItem(null);
+      } else {
+        const error = await res.json();
+        alert(error.error || "Failed to update media");
+      }
+    } catch (error) {
+      console.error("Edit error:", error);
+      alert("Failed to update media");
+    } finally {
+      setIsEditing(false);
+    }
+  };
+
   return (
     <div className="p-8">
       <motion.div
@@ -303,7 +359,10 @@ export default function AdminMediaPage() {
               transition={{ delay: index * 0.05 }}
             >
               <Card variant="luxury" hover className="overflow-hidden p-0">
-                <div className="relative aspect-[4/5]">
+                <div
+                  className="relative aspect-[4/5] cursor-pointer group"
+                  onClick={() => setPreviewItem(item)}
+                >
                   {item.thumbnailUrl ? (
                     <img
                       src={item.thumbnailUrl}
@@ -322,6 +381,15 @@ export default function AdminMediaPage() {
                     </div>
                   )}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+
+                  {/* Play overlay for videos */}
+                  {item.type === "VIDEO" && (
+                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="w-16 h-16 rounded-full bg-[var(--gold)] flex items-center justify-center">
+                        <Play className="w-8 h-8 text-[var(--background)] ml-1" />
+                      </div>
+                    </div>
+                  )}
 
                   {/* Status badges */}
                   <div className="absolute top-3 left-3 flex flex-col gap-2">
@@ -387,12 +455,23 @@ export default function AdminMediaPage() {
 
                 {/* Actions */}
                 <div className="p-4 flex items-center gap-2">
-                  <Button variant="outline" size="sm" className="flex-1">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openEditModal(item);
+                    }}
+                  >
                     <Edit className="w-4 h-4 mr-2" />
                     Edit
                   </Button>
                   <button
-                    onClick={() => handleDelete(item.id)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDelete(item.id);
+                    }}
                     className="p-2 text-[var(--muted)] hover:text-red-500 transition-colors"
                   >
                     <Trash2 className="w-5 h-5" />
@@ -649,6 +728,238 @@ export default function AdminMediaPage() {
                   </Button>
                 </div>
               </Card>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Edit Modal */}
+      <AnimatePresence>
+        {editItem && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+            onClick={() => setEditItem(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-lg max-h-[90vh] overflow-y-auto"
+            >
+              <Card variant="luxury" className="p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-2xl font-bold text-[var(--foreground)]">
+                    Edit Media
+                  </h2>
+                  <button
+                    onClick={() => setEditItem(null)}
+                    className="p-2 text-[var(--muted)] hover:text-[var(--foreground)]"
+                  >
+                    <X className="w-6 h-6" />
+                  </button>
+                </div>
+
+                {/* Preview */}
+                <div className="mb-6 rounded-xl overflow-hidden aspect-video bg-[var(--surface)]">
+                  {editItem.thumbnailUrl ? (
+                    <img
+                      src={editItem.thumbnailUrl}
+                      alt={editItem.title}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <ImageIcon className="w-16 h-16 text-[var(--muted)]" />
+                    </div>
+                  )}
+                </div>
+
+                {/* Form */}
+                <div className="space-y-4">
+                  <Input
+                    label="Title"
+                    value={editTitle}
+                    onChange={(e) => setEditTitle(e.target.value)}
+                    placeholder="Enter title"
+                  />
+
+                  <div>
+                    <label className="block text-sm font-medium text-[var(--foreground)] mb-2">
+                      Description
+                    </label>
+                    <textarea
+                      value={editDescription}
+                      onChange={(e) => setEditDescription(e.target.value)}
+                      placeholder="Enter description (optional)"
+                      rows={3}
+                      className="w-full px-4 py-3 bg-[var(--surface)] border border-[var(--border)] rounded-xl text-[var(--foreground)] placeholder-[var(--muted)] focus:outline-none focus:border-[var(--gold)] resize-none"
+                    />
+                  </div>
+
+                  {/* Access Tier */}
+                  <div>
+                    <label className="block text-sm font-medium text-[var(--foreground)] mb-3">
+                      Access Tier
+                    </label>
+                    <div className="grid grid-cols-3 gap-3">
+                      {accessTiers.map((tier) => (
+                        <button
+                          key={tier.id}
+                          onClick={() => setEditAccessTier(tier.id)}
+                          className={cn(
+                            "p-3 rounded-xl border-2 transition-all text-center",
+                            editAccessTier === tier.id
+                              ? "border-[var(--gold)] bg-[var(--gold)]/10"
+                              : "border-[var(--border)] hover:border-[var(--gold)]/50"
+                          )}
+                        >
+                          <Badge className={tier.color}>{tier.label}</Badge>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Purchaseable */}
+                  <div className="p-4 bg-[var(--surface)] rounded-xl">
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <h4 className="font-medium text-[var(--foreground)]">
+                          Individual Purchase
+                        </h4>
+                        <p className="text-sm text-[var(--muted)]">
+                          Allow buying without subscription
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => setEditIsPurchaseable(!editIsPurchaseable)}
+                        className={cn(
+                          "w-12 h-6 rounded-full transition-colors",
+                          editIsPurchaseable ? "bg-[var(--gold)]" : "bg-[var(--border)]"
+                        )}
+                      >
+                        <div
+                          className={cn(
+                            "w-5 h-5 rounded-full bg-white shadow transition-transform",
+                            editIsPurchaseable ? "translate-x-6" : "translate-x-0.5"
+                          )}
+                        />
+                      </button>
+                    </div>
+                    {editIsPurchaseable && (
+                      <Input
+                        label="Price (USD)"
+                        type="number"
+                        value={editPrice}
+                        onChange={(e) => setEditPrice(e.target.value)}
+                        placeholder="4.99"
+                        leftIcon={<DollarSign className="w-4 h-4" />}
+                      />
+                    )}
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex items-center gap-4 pt-4">
+                    <Button
+                      variant="outline"
+                      onClick={() => setEditItem(null)}
+                      className="flex-1"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      variant="premium"
+                      onClick={handleEditSave}
+                      disabled={!editTitle || isEditing}
+                      className="flex-1"
+                    >
+                      {isEditing ? (
+                        <>
+                          <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                          Saving...
+                        </>
+                      ) : (
+                        <>
+                          <Check className="w-5 h-5 mr-2" />
+                          Save Changes
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </Card>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Preview Modal */}
+      <AnimatePresence>
+        {previewItem && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm p-4"
+            onClick={() => setPreviewItem(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-4xl max-h-[90vh] overflow-hidden"
+            >
+              <div className="relative">
+                <button
+                  onClick={() => setPreviewItem(null)}
+                  className="absolute top-4 right-4 z-10 p-2 bg-black/50 rounded-full text-white hover:bg-black/70 transition-colors"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+
+                {previewItem.type === "VIDEO" ? (
+                  <video
+                    src={previewItem.contentUrl}
+                    controls
+                    autoPlay
+                    className="w-full max-h-[80vh] bg-black rounded-xl"
+                  />
+                ) : previewItem.type === "AUDIO" ? (
+                  <div className="bg-[var(--surface)] rounded-xl p-8">
+                    <div className="w-32 h-32 rounded-full bg-[var(--gold)]/10 flex items-center justify-center mx-auto mb-6">
+                      <Music className="w-16 h-16 text-[var(--gold)]" />
+                    </div>
+                    <h3 className="text-xl font-bold text-[var(--foreground)] text-center mb-4">
+                      {previewItem.title}
+                    </h3>
+                    <audio
+                      src={previewItem.contentUrl}
+                      controls
+                      autoPlay
+                      className="w-full"
+                    />
+                  </div>
+                ) : (
+                  <img
+                    src={previewItem.contentUrl}
+                    alt={previewItem.title}
+                    className="w-full max-h-[80vh] object-contain rounded-xl"
+                  />
+                )}
+
+                <div className="mt-4 text-center">
+                  <h3 className="text-xl font-bold text-white mb-2">
+                    {previewItem.title}
+                  </h3>
+                  {previewItem.description && (
+                    <p className="text-white/60">{previewItem.description}</p>
+                  )}
+                </div>
+              </div>
             </motion.div>
           </motion.div>
         )}

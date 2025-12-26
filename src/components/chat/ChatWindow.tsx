@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, Image, DollarSign, Lock, X, Plus } from "lucide-react";
+import { Send, Image, DollarSign, Lock, X, Plus, Sparkles, Loader2 } from "lucide-react";
 import { MessageBubble } from "./MessageBubble";
 import { Button, Badge } from "@/components/ui";
 
@@ -33,9 +33,11 @@ interface ChatWindowProps {
   };
   messages: Message[];
   isAdmin?: boolean;
+  isSending?: boolean;
   onSendMessage: (text: string, media?: File[], isPPV?: boolean, ppvPrice?: number) => void;
   onUnlockPPV: (messageId: string) => void;
   onSendTip: (messageId: string, amount: number) => void;
+  onAISuggest?: (lastUserMessage: string) => Promise<string>;
 }
 
 const tipAmounts = [5, 10, 20, 50, 100];
@@ -46,9 +48,11 @@ export function ChatWindow({
   otherUser,
   messages,
   isAdmin,
+  isSending,
   onSendMessage,
   onUnlockPPV,
   onSendTip,
+  onAISuggest,
 }: ChatWindowProps) {
   const [newMessage, setNewMessage] = useState("");
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -56,8 +60,33 @@ export function ChatWindow({
   const [ppvPrice, setPpvPrice] = useState(9.99);
   const [showTipModal, setShowTipModal] = useState<string | null>(null);
   const [customTip, setCustomTip] = useState("");
+  const [isLoadingAI, setIsLoadingAI] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Get last message from user (for AI context)
+  const getLastUserMessage = () => {
+    const userMessages = messages.filter((m) => m.senderId === otherUser.id && m.text);
+    return userMessages[userMessages.length - 1]?.text || "";
+  };
+
+  // Handle AI suggestion
+  const handleAISuggest = async () => {
+    if (!onAISuggest) return;
+
+    const lastMsg = getLastUserMessage();
+    if (!lastMsg) return;
+
+    setIsLoadingAI(true);
+    try {
+      const suggestion = await onAISuggest(lastMsg);
+      setNewMessage(suggestion);
+    } catch (error) {
+      console.error("AI suggestion error:", error);
+    } finally {
+      setIsLoadingAI(false);
+    }
+  };
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -65,6 +94,7 @@ export function ChatWindow({
 
   const handleSend = () => {
     if (!newMessage.trim() && selectedFiles.length === 0) return;
+    if (isSending) return; // Prevent double-sending
 
     onSendMessage(
       newMessage,
@@ -224,6 +254,22 @@ export function ChatWindow({
             onChange={handleFileSelect}
           />
 
+          {/* AI Suggest Button - Admin only */}
+          {isAdmin && onAISuggest && (
+            <button
+              onClick={handleAISuggest}
+              disabled={isLoadingAI || !getLastUserMessage()}
+              className="p-3 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Suggestion IA flirty"
+            >
+              {isLoadingAI ? (
+                <Loader2 className="w-5 h-5 text-white animate-spin" />
+              ) : (
+                <Sparkles className="w-5 h-5 text-white" />
+              )}
+            </button>
+          )}
+
           <div className="flex-1 relative">
             <textarea
               value={newMessage}
@@ -242,10 +288,14 @@ export function ChatWindow({
 
           <button
             onClick={handleSend}
-            disabled={!newMessage.trim() && selectedFiles.length === 0}
+            disabled={isSending || (!newMessage.trim() && selectedFiles.length === 0)}
             className="p-3 rounded-full bg-[var(--gold)] hover:bg-[var(--gold-light)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
-            <Send className="w-5 h-5 text-[var(--background)]" />
+            {isSending ? (
+              <Loader2 className="w-5 h-5 text-[var(--background)] animate-spin" />
+            ) : (
+              <Send className="w-5 h-5 text-[var(--background)]" />
+            )}
           </button>
         </div>
       </div>

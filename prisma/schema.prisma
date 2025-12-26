@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -16,7 +16,7 @@ model User {
   passwordHash  String?
   name          String?
   image         String?
-  role          Role      @default(USER)
+  role          String    @default("USER")
 
   // Stripe
   stripeCustomerId String?
@@ -45,12 +45,12 @@ model Account {
   type              String
   provider          String
   providerAccountId String
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
+  refresh_token     String?
+  access_token      String?
   expires_at        Int?
   token_type        String?
   scope             String?
-  id_token          String? @db.Text
+  id_token          String?
   session_state     String?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -74,10 +74,7 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
-enum Role {
-  USER
-  ADMIN
-}
+// Role: "USER" | "ADMIN"
 
 // ============= SUBSCRIPTION PLANS =============
 
@@ -85,11 +82,11 @@ model SubscriptionPlan {
   id                 String   @id @default(cuid())
   name               String   @unique
   slug               String   @unique
-  description        String?  @db.Text
+  description        String?
 
   // Pricing
-  monthlyPrice       Decimal  @db.Decimal(10, 2)
-  annualPrice        Decimal  @db.Decimal(10, 2)
+  monthlyPrice       Float
+  annualPrice        Float
   currency           String   @default("USD")
 
   // Stripe
@@ -98,12 +95,12 @@ model SubscriptionPlan {
   stripePriceAnnual  String?
 
   // Access
-  accessTier         AccessTier
+  accessTier         String   // "FREE" | "BASIC" | "VIP"
   canMessage         Boolean  @default(false)
-  downloadLimit      Int?     // null = unlimited
+  downloadLimit      Int?
 
-  // Features
-  features           String[]
+  // Features (JSON string)
+  features           String   @default("[]")
 
   // Display
   isPopular          Boolean  @default(false)
@@ -122,15 +119,15 @@ model Subscription {
   planId               String
 
   // Status
-  status               SubscriptionStatus @default(PENDING)
+  status               String             @default("PENDING") // "PENDING" | "TRIALING" | "ACTIVE" | "PAST_DUE" | "CANCELED" | "UNPAID" | "EXPIRED"
 
   // Payment
-  paymentProvider      PaymentProvider
+  paymentProvider      String             // "STRIPE" | "NOWPAYMENTS" | "MANUAL"
   stripeSubscriptionId String?            @unique
   stripeCustomerId     String?
 
   // Billing
-  billingInterval      BillingInterval    @default(MONTHLY)
+  billingInterval      String             @default("MONTHLY") // "MONTHLY" | "ANNUAL"
   currentPeriodStart   DateTime
   currentPeriodEnd     DateTime
   cancelAtPeriodEnd    Boolean            @default(false)
@@ -140,45 +137,19 @@ model Subscription {
   trialStart           DateTime?
   trialEnd             DateTime?
 
-  metadata             Json?
+  metadata             String?
 
   user                 User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   plan                 SubscriptionPlan   @relation(fields: [planId], references: [id])
 
   createdAt            DateTime           @default(now())
   updatedAt            DateTime           @updatedAt
-
-  @@index([userId])
-  @@index([status])
 }
 
-enum AccessTier {
-  FREE
-  BASIC
-  PREMIUM
-  VIP
-}
-
-enum SubscriptionStatus {
-  PENDING
-  TRIALING
-  ACTIVE
-  PAST_DUE
-  CANCELED
-  UNPAID
-  EXPIRED
-}
-
-enum BillingInterval {
-  MONTHLY
-  ANNUAL
-}
-
-enum PaymentProvider {
-  STRIPE
-  NOWPAYMENTS
-  MANUAL
-}
+// AccessTier: "FREE" | "BASIC" | "VIP"
+// SubscriptionStatus: "PENDING" | "TRIALING" | "ACTIVE" | "PAST_DUE" | "CANCELED" | "UNPAID" | "EXPIRED"
+// BillingInterval: "MONTHLY" | "ANNUAL"
+// PaymentProvider: "STRIPE" | "NOWPAYMENTS" | "MANUAL"
 
 // ============= MEDIA CONTENT =============
 
@@ -186,25 +157,25 @@ model MediaContent {
   id             String      @id @default(cuid())
   title          String
   slug           String      @unique
-  description    String?     @db.Text
+  description    String?
 
   // Type
-  type           MediaType
+  type           String      // "PHOTO" | "VIDEO" | "AUDIO" | "PACK"
 
   // Access
-  accessTier     AccessTier  @default(FREE)
+  accessTier     String      @default("FREE") // "FREE" | "BASIC" | "VIP"
   isPurchaseable Boolean     @default(false)
-  price          Decimal?    @db.Decimal(10, 2)
+  price          Float?
 
   // Files
   thumbnailUrl   String?
-  previewUrl     String?     // Watermarked/blurred
-  contentUrl     String      // Protected full content
-  storageKey     String?     // S3 key
+  previewUrl     String?
+  contentUrl     String
+  storageKey     String?
 
   // Metadata
-  fileSize       Int?        // bytes
-  duration       Int?        // seconds for video/audio
+  fileSize       Int?
+  duration       Int?
   width          Int?
   height         Int?
   mimeType       String?
@@ -212,7 +183,7 @@ model MediaContent {
   // Organization
   categoryId     String?
   category       Category?   @relation(fields: [categoryId], references: [id])
-  tags           String[]
+  tags           String      @default("[]")
 
   // Stats
   viewCount      Int         @default(0)
@@ -229,10 +200,6 @@ model MediaContent {
 
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
-
-  @@index([type, isPublished])
-  @@index([accessTier])
-  @@index([categoryId])
 }
 
 model Category {
@@ -250,12 +217,7 @@ model Category {
   updatedAt   DateTime       @updatedAt
 }
 
-enum MediaType {
-  PHOTO
-  VIDEO
-  AUDIO
-  PACK
-}
+// MediaType: "PHOTO" | "VIDEO" | "AUDIO" | "PACK"
 
 // ============= MEDIA PURCHASES =============
 
@@ -265,16 +227,16 @@ model MediaPurchase {
   mediaId       String
 
   // Payment
-  amount        Decimal       @db.Decimal(10, 2)
+  amount        Float
   currency      String        @default("USD")
-  provider      PaymentProvider
+  provider      String        // "STRIPE" | "NOWPAYMENTS" | "MANUAL"
   providerTxId  String?
-  status        PaymentStatus @default(PENDING)
+  status        String        @default("PENDING") // "PENDING" | "COMPLETED" | "FAILED" | "REFUNDED" | "CANCELLED"
 
   // Access
-  expiresAt     DateTime?     // null = permanent
+  expiresAt     DateTime?
   downloadCount Int           @default(0)
-  maxDownloads  Int?          // null = unlimited
+  maxDownloads  Int?
 
   user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   media         MediaContent  @relation(fields: [mediaId], references: [id])
@@ -283,16 +245,9 @@ model MediaPurchase {
   updatedAt     DateTime      @updatedAt
 
   @@unique([userId, mediaId])
-  @@index([userId])
 }
 
-enum PaymentStatus {
-  PENDING
-  COMPLETED
-  FAILED
-  REFUNDED
-  CANCELLED
-}
+// PaymentStatus: "PENDING" | "COMPLETED" | "FAILED" | "REFUNDED" | "CANCELLED"
 
 // ============= CHAT SYSTEM =============
 
@@ -318,7 +273,6 @@ model ConversationParticipant {
   user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([conversationId, userId])
-  @@index([userId])
 }
 
 model Message {
@@ -328,15 +282,15 @@ model Message {
   receiverId     String
 
   // Content
-  text           String?      @db.Text
+  text           String?
 
   // PPV (Pay-Per-View)
   isPPV          Boolean      @default(false)
-  ppvPrice       Decimal?     @db.Decimal(10, 2)
-  ppvUnlockedBy  String[]     // User IDs who paid
+  ppvPrice       Float?
+  ppvUnlockedBy  String       @default("[]")
 
   // Tips received
-  totalTips      Decimal      @default(0) @db.Decimal(10, 2)
+  totalTips      Float        @default(0)
 
   // Status
   isRead         Boolean      @default(false)
@@ -351,10 +305,6 @@ model Message {
 
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
-
-  @@index([conversationId])
-  @@index([senderId])
-  @@index([receiverId])
 }
 
 model MessageMedia {
@@ -365,9 +315,9 @@ model MessageMedia {
   mediaId    String?
 
   // Direct upload
-  type       MediaType
+  type       String    // "PHOTO" | "VIDEO" | "AUDIO" | "PACK"
   url        String
-  previewUrl String?       // Blurred for PPV
+  previewUrl String?
 
   message    Message       @relation(fields: [messageId], references: [id], onDelete: Cascade)
   media      MediaContent? @relation(fields: [mediaId], references: [id])
@@ -380,27 +330,21 @@ model MessagePayment {
   messageId String
   userId    String
 
-  type      MessagePaymentType
-  amount    Decimal            @db.Decimal(10, 2)
+  type      String             // "PPV_UNLOCK" | "TIP"
+  amount    Float
   currency  String             @default("USD")
 
-  provider  PaymentProvider
+  provider  String             // "STRIPE" | "NOWPAYMENTS" | "MANUAL"
   providerTxId String?
-  status    PaymentStatus      @default(PENDING)
+  status    String             @default("PENDING") // "PENDING" | "COMPLETED" | "FAILED" | "REFUNDED" | "CANCELLED"
 
   message   Message            @relation(fields: [messageId], references: [id])
   user      User               @relation(fields: [userId], references: [id])
 
   createdAt DateTime           @default(now())
-
-  @@index([messageId])
-  @@index([userId])
 }
 
-enum MessagePaymentType {
-  PPV_UNLOCK
-  TIP
-}
+// MessagePaymentType: "PPV_UNLOCK" | "TIP"
 
 // ============= GENERAL PAYMENTS =============
 
@@ -408,29 +352,21 @@ model Payment {
   id           String        @id @default(cuid())
   userId       String
 
-  amount       Decimal       @db.Decimal(10, 2)
+  amount       Float
   currency     String        @default("USD")
 
-  provider     PaymentProvider
+  provider     String        // "STRIPE" | "NOWPAYMENTS" | "MANUAL"
   providerTxId String?
 
-  status       PaymentStatus @default(PENDING)
+  status       String        @default("PENDING") // "PENDING" | "COMPLETED" | "FAILED" | "REFUNDED" | "CANCELLED"
 
-  type         PaymentType
+  type         String        // "SUBSCRIPTION" | "MEDIA_PURCHASE" | "PPV_UNLOCK" | "TIP"
   description  String?
 
-  metadata     Json?
+  metadata     String?
 
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
-
-  @@index([userId])
-  @@index([status])
 }
 
-enum PaymentType {
-  SUBSCRIPTION
-  MEDIA_PURCHASE
-  PPV_UNLOCK
-  TIP
-}
+// PaymentType: "SUBSCRIPTION" | "MEDIA_PURCHASE" | "PPV_UNLOCK" | "TIP"

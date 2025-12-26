@@ -2,8 +2,100 @@ import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
+import { existsSync } from "fs";
 import crypto from "crypto";
 import prisma from "@/lib/prisma";
+import { spawn } from "child_process";
+
+// Get ffmpeg/ffprobe paths
+function getFfmpegPath(): string {
+  // Check node_modules for ffmpeg-static
+  const staticPath = join(process.cwd(), "node_modules", "ffmpeg-static", "ffmpeg.exe");
+  if (existsSync(staticPath)) {
+    return staticPath;
+  }
+  // Fallback to system ffmpeg
+  return "ffmpeg";
+}
+
+function getFfprobePath(): string {
+  // Check node_modules for ffprobe-static
+  const staticPath = join(process.cwd(), "node_modules", "ffprobe-static", "bin", "win32", "x64", "ffprobe.exe");
+  if (existsSync(staticPath)) {
+    return staticPath;
+  }
+  // Fallback to system ffprobe
+  return "ffprobe";
+}
+
+// Generate video thumbnail using ffmpeg
+async function generateVideoThumbnail(
+  videoPath: string,
+  thumbnailPath: string
+): Promise<boolean> {
+  return new Promise((resolve) => {
+    const ffmpegPath = getFfmpegPath();
+    console.log("Using ffmpeg at:", ffmpegPath);
+
+    const args = [
+      "-i", videoPath,
+      "-ss", "00:00:01",
+      "-vframes", "1",
+      "-vf", "scale=640:-1",
+      "-y",
+      thumbnailPath,
+    ];
+
+    const proc = spawn(ffmpegPath, args);
+
+    proc.stderr.on("data", (data) => {
+      console.log("ffmpeg:", data.toString());
+    });
+
+    proc.on("close", (code) => {
+      console.log("ffmpeg exited with code:", code);
+      resolve(code === 0);
+    });
+
+    proc.on("error", (err) => {
+      console.error("Thumbnail generation error:", err);
+      resolve(false);
+    });
+  });
+}
+
+// Get video duration in seconds using ffprobe
+async function getVideoDuration(videoPath: string): Promise<number> {
+  return new Promise((resolve) => {
+    const ffprobePath = getFfprobePath();
+    console.log("Using ffprobe at:", ffprobePath);
+
+    const args = [
+      "-v", "error",
+      "-show_entries", "format=duration",
+      "-of", "default=noprint_wrappers=1:nokey=1",
+      videoPath,
+    ];
+
+    const proc = spawn(ffprobePath, args);
+    let output = "";
+
+    proc.stdout.on("data", (data) => {
+      output += data.toString();
+    });
+
+    proc.on("close", () => {
+      const duration = parseFloat(output.trim());
+      console.log("Video duration:", duration);
+      resolve(isNaN(duration) ? 0 : Math.round(duration));
+    });
+
+    proc.on("error", (err) => {
+      console.error("ffprobe error:", err);
+      resolve(0);
+    });
+  });
+}
 
 async function isAdmin(): Promise<boolean> {
   const cookieStore = await cookies();
@@ -126,6 +218,23 @@ export async function POST(request: NextRequest) {
       await writeFile(filePath, buffer);
 
       const contentUrl = `/uploads/media/${filename}`;
+      let thumbnailUrl = contentUrl;
+      let duration: number | null = null;
+
+      // Generate thumbnail for videos
+      if (type === "VIDEO") {
+        const thumbFilename = `${hash}_thumb.jpg`;
+        const thumbPath = join(uploadDir, thumbFilename);
+
+        // Get video duration
+        duration = await getVideoDuration(filePath);
+
+        // Generate thumbnail at 1 second mark
+        const success = await generateVideoThumbnail(filePath, thumbPath);
+        if (success) {
+          thumbnailUrl = `/uploads/media/${thumbFilename}`;
+        }
+      }
 
       // Generate slug from title
       const baseSlug = title
@@ -133,12 +242,6 @@ export async function POST(request: NextRequest) {
         .replace(/[^a-z0-9]+/g, "-")
         .replace(/(^-|-$)/g, "");
       const uniqueSlug = `${baseSlug}-${crypto.randomBytes(4).toString("hex")}`;
-
-      // Determine duration for videos (would need ffprobe in production)
-      let duration = null;
-      if (type === "VIDEO") {
-        duration = 0; // Placeholder
-      }
 
       // Create media entry
       const media = await prisma.mediaContent.create({
@@ -152,8 +255,8 @@ export async function POST(request: NextRequest) {
           price: isPurchaseable && price ? parseFloat(price) : null,
           isPublished,
           publishedAt: isPublished ? new Date() : null,
-          thumbnailUrl: contentUrl,
-          previewUrl: contentUrl,
+          thumbnailUrl,
+          previewUrl: thumbnailUrl,
           contentUrl,
           fileSize: file.size,
           mimeType: file.type,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
@@ -22,10 +22,10 @@ import {
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui";
 
-const userLinks = [
+const baseUserLinks = [
   { href: "/dashboard", icon: Home, label: "Dashboard" },
   { href: "/dashboard/library", icon: Image, label: "My Library" },
-  { href: "/dashboard/messages", icon: MessageCircle, label: "Messages", badge: 3 },
+  { href: "/dashboard/messages", icon: MessageCircle, label: "Messages" },
   { href: "/dashboard/subscription", icon: Star, label: "Subscription" },
   { href: "/dashboard/billing", icon: CreditCard, label: "Billing" },
   { href: "/dashboard/settings", icon: Settings, label: "Settings" },
@@ -118,7 +118,7 @@ export function Sidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-        {userLinks.map((link) => (
+        {baseUserLinks.map((link) => (
           <NavLink key={link.href} {...link} />
         ))}
 

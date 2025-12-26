@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import prisma from "@/lib/prisma";
+import { triggerNewMessage } from "@/lib/pusher";
 
 const ADMIN_USER_ID = process.env.ADMIN_USER_ID || "admin";
 
@@ -65,8 +66,8 @@ export async function GET(
       receiverId: msg.receiverId,
       isPPV: msg.isPPV,
       ppvPrice: msg.ppvPrice ? Number(msg.ppvPrice) : null,
-      isUnlocked: msg.ppvUnlockedBy.includes(ADMIN_USER_ID) || msg.senderId === ADMIN_USER_ID,
-      ppvUnlockedBy: msg.ppvUnlockedBy,
+      isUnlocked: JSON.parse(msg.ppvUnlockedBy || "[]").includes(ADMIN_USER_ID) || msg.senderId === ADMIN_USER_ID,
+      ppvUnlockedBy: JSON.parse(msg.ppvUnlockedBy || "[]"),
       totalTips: Number(msg.totalTips),
       isRead: msg.isRead,
       media: msg.media.map((m) => ({
@@ -138,7 +139,7 @@ export async function POST(
         text: text || null,
         isPPV: isPPV || false,
         ppvPrice: isPPV && ppvPrice ? ppvPrice : null,
-        ppvUnlockedBy: [],
+        ppvUnlockedBy: "[]",
         media: media && media.length > 0
           ? {
               create: media.map((m: any) => ({
@@ -175,7 +176,7 @@ export async function POST(
       isPPV: message.isPPV,
       ppvPrice: message.ppvPrice ? Number(message.ppvPrice) : null,
       isUnlocked: true, // Sender always sees their own content
-      ppvUnlockedBy: message.ppvUnlockedBy,
+      ppvUnlockedBy: JSON.parse(message.ppvUnlockedBy || "[]"),
       totalTips: Number(message.totalTips),
       isRead: message.isRead,
       media: message.media.map((m) => ({
@@ -186,6 +187,9 @@ export async function POST(
       })),
       createdAt: message.createdAt,
     };
+
+    // Trigger real-time notification via Pusher
+    await triggerNewMessage(conversationId, transformedMessage);
 
     return NextResponse.json(transformedMessage);
   } catch (error) {

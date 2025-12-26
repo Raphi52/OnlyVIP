@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { motion } from "framer-motion";
-import { Crown, Lock, Loader2, MessageSquare } from "lucide-react";
+import { Crown, Lock, Loader2 } from "lucide-react";
 import { ChatWindow } from "@/components/chat";
 import { Button, Card } from "@/components/ui";
 import Link from "next/link";
+import { usePusherChat, isPusherAvailable } from "@/hooks/usePusher";
 
 interface Message {
   id: string;
@@ -84,15 +85,21 @@ export default function MessagesPage() {
     }
   }, [userId]);
 
-  // Fetch messages
-  const fetchMessages = useCallback(async () => {
+  // Fetch messages - optimized to prevent flicker
+  const fetchMessages = useCallback(async (isInitial = false) => {
     if (!conversationId) return;
 
     try {
       const res = await fetch(`/api/conversations/${conversationId}/messages`);
       if (res.ok) {
         const data = await res.json();
-        setMessages(data);
+        // Only update if data actually changed
+        setMessages((prev) => {
+          const prevIds = prev.map((m) => m.id).join(",");
+          const newIds = data.map((m: Message) => m.id).join(",");
+          if (prevIds === newIds) return prev;
+          return data;
+        });
       }
     } catch (error) {
       console.error("Error fetching messages:", error);
@@ -115,13 +122,29 @@ export default function MessagesPage() {
     }
   }, [conversationId, fetchMessages]);
 
-  // Poll for new messages
-  useEffect(() => {
-    if (!conversationId) return;
+  // Handle new message from Pusher
+  const handleNewMessage = useCallback((message: Message) => {
+    setMessages((prev) => {
+      // Prevent duplicates
+      if (prev.some((m) => m.id === message.id)) return prev;
+      return [...prev, message];
+    });
+  }, []);
 
-    const pollInterval = setInterval(fetchMessages, 5000);
+  // Pusher real-time connection
+  const { isConnected } = usePusherChat({
+    conversationId: conversationId || "",
+    onNewMessage: handleNewMessage,
+  });
+
+  // Fallback polling (only when Pusher not connected)
+  useEffect(() => {
+    if (!conversationId || isConnected) return;
+
+    // Slower polling as fallback
+    const pollInterval = setInterval(() => fetchMessages(false), 30000);
     return () => clearInterval(pollInterval);
-  }, [conversationId, fetchMessages]);
+  }, [conversationId, fetchMessages, isConnected]);
 
   // Send message
   const handleSendMessage = async (
@@ -131,9 +154,37 @@ export default function MessagesPage() {
     ppvPrice?: number
   ) => {
     if (!conversationId || !userId) return;
+    if (!text && (!mediaFiles || mediaFiles.length === 0)) return;
+    if (isSending) return; // Prevent double-sending
+
     setIsSending(true);
 
     try {
+      let uploadedMedia: { type: string; url: string; previewUrl?: string }[] = [];
+
+      // Upload media files if any
+      if (mediaFiles && mediaFiles.length > 0) {
+        for (const file of mediaFiles) {
+          const formData = new FormData();
+          formData.append("file", file);
+
+          const uploadRes = await fetch("/api/messages/upload", {
+            method: "POST",
+            body: formData,
+          });
+
+          if (uploadRes.ok) {
+            const mediaData = await uploadRes.json();
+            uploadedMedia.push({
+              type: file.type.startsWith("video") ? "VIDEO" :
+                    file.type.startsWith("audio") ? "AUDIO" : "PHOTO",
+              url: mediaData.url,
+              previewUrl: mediaData.previewUrl || null,
+            });
+          }
+        }
+      }
+
       // Send message via API
       const res = await fetch(`/api/conversations/${conversationId}/messages`, {
         method: "POST",
@@ -141,12 +192,17 @@ export default function MessagesPage() {
         body: JSON.stringify({
           text: text || null,
           senderId: userId,
+          media: uploadedMedia.length > 0 ? uploadedMedia : undefined,
         }),
       });
 
       if (res.ok) {
         const newMessage = await res.json();
-        setMessages((prev) => [...prev, newMessage]);
+        // Only add if not already received via Pusher
+        setMessages((prev) => {
+          if (prev.some((m) => m.id === newMessage.id)) return prev;
+          return [...prev, newMessage];
+        });
       }
     } catch (error) {
       console.error("Error sending message:", error);
@@ -157,14 +213,52 @@ export default function MessagesPage() {
 
   // Unlock PPV content
   const handleUnlockPPV = async (messageId: string) => {
-    // TODO: Implement payment flow for PPV unlock
-    console.log("Unlock PPV:", messageId);
+    try {
+      const res = await fetch(`/api/messages/${messageId}/unlock`, {
+        method: "POST",
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.unlocked) {
+          // Update message in state to show as unlocked
+          setMessages((prev) =>
+            prev.map((msg) =>
+              msg.id === messageId
+                ? { ...msg, isUnlocked: true, ppvUnlockedBy: [...msg.ppvUnlockedBy, userId!] }
+                : msg
+            )
+          );
+        }
+      } else {
+        const error = await res.json();
+        alert(error.error || "Failed to unlock content");
+      }
+    } catch (error) {
+      console.error("Error unlocking PPV:", error);
+      alert("Failed to unlock content");
+    }
   };
 
   // Send tip
   const handleSendTip = async (messageId: string, amount: number) => {
-    // TODO: Implement payment flow for tips
-    console.log("Send tip:", messageId, amount);
+    try {
+      const res = await fetch(`/api/messages/${messageId}/tip`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount }),
+      });
+
+      if (res.ok) {
+        alert(`Tip of $${amount} sent successfully!`);
+      } else {
+        const error = await res.json();
+        alert(error.error || "Failed to send tip");
+      }
+    } catch (error) {
+      console.error("Error sending tip:", error);
+      alert("Failed to send tip");
+    }
   };
 
   // Loading state
@@ -257,36 +351,8 @@ export default function MessagesPage() {
 
   return (
     <div className="h-[calc(100vh-4rem)] lg:h-screen flex flex-col">
-      {/* Header */}
-      <div className="p-4 border-b border-[var(--border)] bg-[var(--surface)]">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[var(--gold)] to-[var(--gold-dark)] flex items-center justify-center">
-            <Crown className="w-5 h-5 text-[var(--background)]" />
-          </div>
-          <div>
-            <h1 className="font-semibold text-[var(--foreground)]">Mia Costa</h1>
-            <p className="text-xs text-[var(--success)]">Online</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Chat */}
-      <div className="flex-1 overflow-hidden">
-        {messages.length === 0 ? (
-          <div className="h-full flex items-center justify-center">
-            <div className="text-center p-8">
-              <div className="w-16 h-16 rounded-full bg-[var(--gold)]/10 flex items-center justify-center mx-auto mb-4">
-                <MessageSquare className="w-8 h-8 text-[var(--gold)]" />
-              </div>
-              <h2 className="text-lg font-semibold text-[var(--foreground)] mb-2">
-                Start a conversation
-              </h2>
-              <p className="text-[var(--muted)] text-sm max-w-xs mx-auto">
-                Say hi to Mia! She'll respond as soon as possible.
-              </p>
-            </div>
-          </div>
-        ) : null}
+      {/* Chat - ChatWindow has its own header */}
+      <div className="flex-1 flex flex-col overflow-hidden">
         <ChatWindow
           conversationId={conversationId || ""}
           currentUserId={userId || ""}
@@ -300,6 +366,7 @@ export default function MessagesPage() {
           onSendMessage={handleSendMessage}
           onUnlockPPV={handleUnlockPPV}
           onSendTip={handleSendTip}
+          isSending={isSending}
         />
       </div>
     </div>

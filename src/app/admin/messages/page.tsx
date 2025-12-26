@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
-import { Crown, Search, MessageSquare, Users, Loader2, RefreshCw } from "lucide-react";
+import { Crown, Search, MessageSquare, Users, Loader2, RefreshCw, Wifi, WifiOff } from "lucide-react";
 import { ChatWindow } from "@/components/chat";
 import { Card, Badge, Button } from "@/components/ui";
+import { usePusherChat, usePusherNotifications, isPusherAvailable } from "@/hooks/usePusher";
 
 interface Conversation {
   id: string;
@@ -60,19 +61,67 @@ export default function AdminMessagesPage() {
   const [isLoadingConvs, setIsLoadingConvs] = useState(true);
   const [isLoadingMsgs, setIsLoadingMsgs] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [pusherConnected, setPusherConnected] = useState(false);
+
+  // Handle new message from Pusher
+  const handleNewMessage = useCallback((message: Message) => {
+    // Add message to list if we're in the same conversation
+    setMessages((prev) => {
+      // Avoid duplicates
+      if (prev.some((m) => m.id === message.id)) return prev;
+      return [...prev, message];
+    });
+
+    // Update conversation last message
+    setConversations((prev) =>
+      prev.map((conv) =>
+        conv.id === message.senderId || conv.id === message.receiverId
+          ? {
+              ...conv,
+              lastMessage: {
+                text: message.isPPV ? "Sent exclusive content" : message.text,
+                isPPV: message.isPPV,
+                createdAt: typeof message.createdAt === 'string' ? message.createdAt : new Date().toISOString(),
+                isRead: false,
+                senderId: message.senderId,
+              },
+            }
+          : conv
+      )
+    );
+  }, []);
+
+  // Pusher real-time subscription
+  const { isConnected } = usePusherChat({
+    conversationId: activeConversation || "",
+    onNewMessage: handleNewMessage,
+  });
+
+  // Update connection status
+  useEffect(() => {
+    setPusherConnected(isConnected && isPusherAvailable());
+  }, [isConnected]);
 
   // Fetch conversations
-  const fetchConversations = useCallback(async () => {
+  const fetchConversations = useCallback(async (isInitial = false) => {
     try {
       const res = await fetch("/api/conversations");
       if (res.ok) {
         const data = await res.json();
-        setConversations(data);
+        // Only update if data actually changed (compare JSON)
+        setConversations((prev) => {
+          const prevJson = JSON.stringify(prev.map(c => ({ id: c.id, unread: c.unreadCount, lastMsg: c.lastMessage?.createdAt })));
+          const newJson = JSON.stringify(data.map((c: Conversation) => ({ id: c.id, unread: c.unreadCount, lastMsg: c.lastMessage?.createdAt })));
+          if (prevJson !== newJson) {
+            return data;
+          }
+          return prev;
+        });
       }
     } catch (error) {
       console.error("Error fetching conversations:", error);
     } finally {
-      setIsLoadingConvs(false);
+      if (isInitial) setIsLoadingConvs(false);
     }
   }, []);
 
@@ -94,7 +143,7 @@ export default function AdminMessagesPage() {
 
   // Initial load
   useEffect(() => {
-    fetchConversations();
+    fetchConversations(true);
   }, [fetchConversations]);
 
   // Load messages when conversation changes
@@ -111,17 +160,31 @@ export default function AdminMessagesPage() {
     }
   }, [activeConversation, fetchMessages]);
 
-  // Poll for new messages
+  // Fallback polling only when Pusher is not connected
   useEffect(() => {
+    // If Pusher is connected, no need to poll frequently
+    if (pusherConnected) return;
+
     const pollInterval = setInterval(() => {
       fetchConversations();
       if (activeConversation) {
-        fetchMessages(activeConversation);
+        fetch(`/api/conversations/${activeConversation}/messages`)
+          .then((res) => res.json())
+          .then((data) => {
+            setMessages((prev) => {
+              if (data.length !== prev.length ||
+                  (data.length > 0 && prev.length > 0 && data[data.length - 1].id !== prev[prev.length - 1].id)) {
+                return data;
+              }
+              return prev;
+            });
+          })
+          .catch(console.error);
       }
-    }, 5000); // Poll every 5 seconds
+    }, 30000); // Poll every 30 seconds as fallback only
 
     return () => clearInterval(pollInterval);
-  }, [activeConversation, fetchConversations, fetchMessages]);
+  }, [pusherConnected, activeConversation, fetchConversations]);
 
   const handleSendMessage = async (
     text: string,
@@ -130,6 +193,7 @@ export default function AdminMessagesPage() {
     ppvPrice?: number
   ) => {
     if (!activeConversation) return;
+    if (isSending) return; // Prevent double-sending
     setIsSending(true);
 
     try {
@@ -170,7 +234,11 @@ export default function AdminMessagesPage() {
 
       if (res.ok) {
         const newMessage = await res.json();
-        setMessages((prev) => [...prev, newMessage]);
+        // Only add if not already received via Pusher
+        setMessages((prev) => {
+          if (prev.some((m) => m.id === newMessage.id)) return prev;
+          return [...prev, newMessage];
+        });
 
         // Update conversation's last message
         setConversations((prev) =>
@@ -239,6 +307,22 @@ export default function AdminMessagesPage() {
             </p>
           </div>
           <div className="flex items-center gap-4">
+            {/* Real-time status indicator */}
+            <div
+              className={`flex items-center gap-1.5 px-2 py-1 rounded-full text-xs ${
+                pusherConnected
+                  ? "bg-emerald-500/20 text-emerald-400"
+                  : "bg-yellow-500/20 text-yellow-400"
+              }`}
+              title={pusherConnected ? "Real-time connected" : "Polling mode"}
+            >
+              {pusherConnected ? (
+                <Wifi className="w-3 h-3" />
+              ) : (
+                <WifiOff className="w-3 h-3" />
+              )}
+              <span>{pusherConnected ? "Live" : "Polling"}</span>
+            </div>
             <Button
               variant="ghost"
               size="icon"
@@ -411,12 +495,28 @@ export default function AdminMessagesPage() {
                   otherUser={activeConv.user}
                   messages={transformedMessages}
                   isAdmin={true}
+                  isSending={isSending}
                   onSendMessage={handleSendMessage}
                   onUnlockPPV={(messageId) => {
                     console.log("User unlock PPV:", messageId);
                   }}
                   onSendTip={(messageId, amount) => {
                     console.log("User tip:", messageId, amount);
+                  }}
+                  onAISuggest={async (userMessage) => {
+                    const res = await fetch("/api/ai/suggest", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        conversationId: activeConversation,
+                        userMessage,
+                      }),
+                    });
+                    if (res.ok) {
+                      const data = await res.json();
+                      return data.suggestion;
+                    }
+                    throw new Error("AI suggestion failed");
                   }}
                 />
               )}
