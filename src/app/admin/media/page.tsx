@@ -31,7 +31,7 @@ interface MediaItem {
   slug: string;
   description: string | null;
   type: "PHOTO" | "VIDEO" | "AUDIO" | "PACK";
-  accessTier: "FREE" | "BASIC" | "PREMIUM" | "VIP";
+  accessTier: "FREE" | "BASIC" | "VIP";
   thumbnailUrl: string | null;
   contentUrl: string;
   isPurchaseable: boolean;
@@ -51,7 +51,6 @@ const mediaTypes = [
 const accessTiers = [
   { id: "FREE", label: "Free", color: "bg-emerald-500/20 text-emerald-400" },
   { id: "BASIC", label: "Basic", color: "bg-blue-500/20 text-blue-400" },
-  { id: "PREMIUM", label: "Premium", color: "bg-purple-500/20 text-purple-400" },
   { id: "VIP", label: "VIP", color: "bg-[var(--gold)]/20 text-[var(--gold)]" },
 ];
 

@@ -50,3 +50,6 @@ next-env.d.ts
 /public/media/private/*
 !/public/media/preview/.gitkeep
 !/public/media/private/.gitkeep
+
+# uploaded media
+/public/uploads/
