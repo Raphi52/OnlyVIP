@@ -4,18 +4,18 @@ services:
   # PostgreSQL Database
   db:
     image: postgres:16-alpine
-    container_name: miacosta-db
+    container_name: viponly-db
     restart: unless-stopped
     environment:
-      POSTGRES_USER: miacosta
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme123}
-      POSTGRES_DB: miacosta
+      POSTGRES_USER: viponly
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-OnlyVIP2024Secure!}
+      POSTGRES_DB: viponly
     volumes:
       - postgres_data:/var/lib/postgresql/data
     # ports:
     #   - "5432:5432"  # Ne pas exposer en production
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U miacosta"]
+      test: ["CMD-SHELL", "pg_isready -U viponly"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -25,30 +25,36 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: miacosta-app
+    container_name: viponly-app
     restart: unless-stopped
     depends_on:
       db:
         condition: service_healthy
     environment:
-      - DATABASE_URL=postgresql://miacosta:${DB_PASSWORD:-changeme123}@db:5432/miacosta
+      - DATABASE_URL=postgresql://viponly:${DB_PASSWORD:-OnlyVIP2024Secure!}@db:5432/viponly
       - NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost:3000}
       - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:-your-secret-key-change-in-production}
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
       - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY:-}
       - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET:-}
+      - STRIPE_PRICE_BASIC_MONTHLY=${STRIPE_PRICE_BASIC_MONTHLY:-}
+      - STRIPE_PRICE_BASIC_ANNUAL=${STRIPE_PRICE_BASIC_ANNUAL:-}
+      - STRIPE_PRICE_PREMIUM_MONTHLY=${STRIPE_PRICE_PREMIUM_MONTHLY:-}
+      - STRIPE_PRICE_PREMIUM_ANNUAL=${STRIPE_PRICE_PREMIUM_ANNUAL:-}
+      - STRIPE_PRICE_VIP_MONTHLY=${STRIPE_PRICE_VIP_MONTHLY:-}
+      - STRIPE_PRICE_VIP_ANNUAL=${STRIPE_PRICE_VIP_ANNUAL:-}
       - NOWPAYMENTS_API_KEY=${NOWPAYMENTS_API_KEY:-}
       - NOWPAYMENTS_IPN_SECRET=${NOWPAYMENTS_IPN_SECRET:-}
-    ports:
-      - "80:3000"
+    expose:
+      - "3000"
     volumes:
       - ./public/media:/app/public/media
 
-  # Nginx Reverse Proxy (optional, for SSL)
+  # Nginx Reverse Proxy
   nginx:
     image: nginx:alpine
-    container_name: miacosta-nginx
+    container_name: viponly-nginx
     restart: unless-stopped
     depends_on:
       - app
@@ -59,8 +65,7 @@ services:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
       - ./ssl:/etc/nginx/ssl:ro
       - ./public/media:/var/www/media:ro
-    profiles:
-      - production
+      - ./certbot/www:/var/www/certbot:ro
 
 volumes:
   postgres_data:

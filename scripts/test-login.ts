@@ -2,7 +2,7 @@ import prisma from "../src/lib/prisma";
 import bcrypt from "bcryptjs";
 
 async function testLogin() {
-  const email = "admin@onlyvip.com";
+  const email = "admin@viponly.fun";
   const password = "admin123";
 
   console.log("Testing login for:", email);

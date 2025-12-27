@@ -2,7 +2,7 @@ import prisma from "../src/lib/prisma";
 
 async function check() {
   const user = await prisma.user.findUnique({
-    where: { email: "admin@onlyvip.com" },
+    where: { email: "admin@viponly.fun" },
     include: { creatorProfiles: true }
   });
 

@@ -3,7 +3,7 @@ import prisma from "../src/lib/prisma";
 async function main() {
   // Find admin user
   const admin = await prisma.user.findUnique({
-    where: { email: "admin@onlyvip.com" },
+    where: { email: "admin@viponly.fun" },
   });
 
   if (!admin) {

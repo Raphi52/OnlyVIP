@@ -165,7 +165,7 @@ export function Sidebar() {
           </div>
           <div className="flex-1">
             <span className="text-lg font-bold gradient-gold-text">
-              OnlyVip
+              VipOnly
             </span>
             <p className="text-xs text-gray-500 flex items-center gap-1">
               <ArrowLeft className="w-3 h-3" />
@@ -417,7 +417,7 @@ export function Sidebar() {
             <Crown className="w-5 h-5 text-black" />
           </div>
           <span className="text-lg font-bold gradient-gold-text">
-            OnlyVip
+            VipOnly
           </span>
         </Link>
         <motion.button

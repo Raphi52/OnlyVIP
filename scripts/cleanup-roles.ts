@@ -5,21 +5,21 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('=== Nettoyage des rôles ===\n');
 
-  // 1. Mettre tous les users en USER sauf admin@onlyvip.com
+  // 1. Mettre tous les users en USER sauf admin@viponly.fun
   console.log('1. Reset de tous les rôles à USER...');
   await prisma.user.updateMany({
     where: {
-      email: { not: 'admin@onlyvip.com' }
+      email: { not: 'admin@viponly.fun' }
     },
     data: {
       role: 'USER',
     },
   });
 
-  // 2. S'assurer que admin@onlyvip.com est ADMIN
-  console.log('2. Configuration de admin@onlyvip.com comme seul ADMIN...');
+  // 2. S'assurer que admin@viponly.fun est ADMIN
+  console.log('2. Configuration de admin@viponly.fun comme seul ADMIN...');
   await prisma.user.update({
-    where: { email: 'admin@onlyvip.com' },
+    where: { email: 'admin@viponly.fun' },
     data: {
       role: 'ADMIN',
       isCreator: false,

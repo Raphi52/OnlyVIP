@@ -139,7 +139,7 @@ export default function CreatorsPage() {
           <div className="flex items-center justify-between h-16">
             <Link href="/" className="flex items-center gap-2">
               <Sparkles className="w-7 h-7 text-[var(--gold)]" />
-              <span className="text-xl font-bold gradient-gold-text">OnlyVip</span>
+              <span className="text-xl font-bold gradient-gold-text">VipOnly</span>
             </Link>
 
             <div className="flex items-center gap-3">
@@ -446,10 +446,10 @@ export default function CreatorsPage() {
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2">
               <Sparkles className="w-6 h-6 text-[var(--gold)]" />
-              <span className="font-bold gradient-gold-text">OnlyVip</span>
+              <span className="font-bold gradient-gold-text">VipOnly</span>
             </div>
             <p className="text-sm text-gray-500">
-              {new Date().getFullYear()} OnlyVip. All rights reserved.
+              {new Date().getFullYear()} VipOnly. All rights reserved.
             </p>
           </div>
         </div>

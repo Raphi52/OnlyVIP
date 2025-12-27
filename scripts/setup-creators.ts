@@ -5,15 +5,15 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('=== Configuration des créateurs ===\n');
 
-  // 1. Nettoyer le compte superadmin (admin@onlyvip.com)
+  // 1. Nettoyer le compte superadmin (admin@viponly.fun)
   console.log('1. Nettoyage du compte superadmin...');
   await prisma.user.update({
-    where: { email: 'admin@onlyvip.com' },
+    where: { email: 'admin@viponly.fun' },
     data: {
       isCreator: false,
     },
   });
-  console.log('   ✓ admin@onlyvip.com est maintenant superadmin pur (isCreator: false)\n');
+  console.log('   ✓ admin@viponly.fun est maintenant superadmin pur (isCreator: false)\n');
 
   // 2. Configurer viralstudioshop@gmail.com comme créateur
   console.log('2. Configuration de viralstudioshop@gmail.com comme créateur...');

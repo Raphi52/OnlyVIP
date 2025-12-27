@@ -15,9 +15,9 @@ const playfair = Playfair_Display({
 });
 
 export const metadata: Metadata = {
-  title: "OnlyVip - Exclusive Creator Platform",
+  title: "VipOnly - Exclusive Creator Platform",
   description: "The premium platform for exclusive creators. Share content, connect with fans, and earn from subscriptions.",
-  keywords: ["OnlyVip", "exclusive content", "creator platform", "premium", "VIP"],
+  keywords: ["VipOnly", "exclusive content", "creator platform", "premium", "VIP"],
 };
 
 export default function RootLayout({

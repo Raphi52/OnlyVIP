@@ -1,5 +1,5 @@
-# Build stage
-FROM node:20-alpine AS builder
+# Build stage - using Alpine 3.18 for OpenSSL 1.1 compatibility with Prisma
+FROM node:20-alpine3.18 AS builder
 
 WORKDIR /app
 
@@ -7,8 +7,8 @@ WORKDIR /app
 COPY package*.json ./
 COPY prisma ./prisma/
 
-# Install dependencies
-RUN npm ci
+# Install dependencies (legacy-peer-deps for React 19 compatibility)
+RUN npm ci --legacy-peer-deps
 
 # Copy source code
 COPY . .
@@ -20,7 +20,7 @@ RUN npx prisma generate
 RUN npm run build
 
 # Production stage
-FROM node:20-alpine AS runner
+FROM node:20-alpine3.18 AS runner
 
 WORKDIR /app
 
@@ -36,6 +36,8 @@ COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
+COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 
 # Set ownership
 RUN chown -R nextjs:nodejs /app
