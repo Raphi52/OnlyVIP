@@ -1,8 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { createCryptoPayment, CRYPTO_CURRENCIES } from "@/lib/nowpayments";
+import { createCryptoPayment, CRYPTO_CURRENCIES, getEstimatedAmount } from "@/lib/nowpayments";
 import { SUBSCRIPTION_PLANS } from "@/lib/stripe";
+
+// Get estimated crypto amount from USD
+async function getEstimatedCryptoAmount(usdAmount: number, cryptoCurrency: string): Promise<number> {
+  try {
+    // Try to use NOWPayments estimate API
+    const estimate = await getEstimatedAmount("usd", cryptoCurrency, usdAmount);
+    return estimate.estimated_amount;
+  } catch {
+    // Fallback: use approximate rates (updated periodically)
+    const fallbackRates: Record<string, number> = {
+      btc: 0.000024, // ~$42k per BTC
+      eth: 0.00043,  // ~$2.3k per ETH
+    };
+    return usdAmount * (fallbackRates[cryptoCurrency] || 0.0001);
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -16,7 +32,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { type, currency, planId, billingInterval, mediaId, messageId, amount } = body;
+    const { type, currency, planId, billingInterval, mediaId, messageId, amount, creatorSlug } = body;
 
     // Validate currency
     const validCurrency = CRYPTO_CURRENCIES.find(c => c.id === currency);
@@ -25,6 +41,20 @@ export async function POST(request: NextRequest) {
         { error: "Invalid cryptocurrency" },
         { status: 400 }
       );
+    }
+
+    // Get creator's wallet for direct payments
+    let creatorWallet: string | null = null;
+    let creator = null;
+    if (creatorSlug) {
+      creator = await prisma.creator.findUnique({
+        where: { slug: creatorSlug },
+        select: { walletEth: true, walletBtc: true, slug: true, displayName: true },
+      });
+
+      if (creator) {
+        creatorWallet = currency === "eth" ? creator.walletEth : creator.walletBtc;
+      }
     }
 
     let priceAmount: number;
@@ -155,7 +185,50 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create NOWPayments payment
+    // Check if we should use direct wallet payment (creator has wallet configured)
+    // Direct payments are for: tips, ppv, media purchases (not subscriptions to platform)
+    const useDirectPayment = creatorWallet && type !== "subscription";
+
+    if (useDirectPayment) {
+      // Direct wallet payment - no intermediary
+      // Get crypto amount from USD (use a simple conversion API or estimated rate)
+      const estimatedCryptoAmount = await getEstimatedCryptoAmount(priceAmount, currency);
+
+      // Store pending payment in database
+      const paymentRecord = await prisma.payment.create({
+        data: {
+          userId: session.user.id,
+          creatorSlug: creatorSlug || "miacosta",
+          amount: priceAmount,
+          currency: "USD",
+          status: "PENDING",
+          provider: "DIRECT_CRYPTO",
+          providerTxId: orderId,
+          type: type === "media" ? "MEDIA_PURCHASE" :
+                type === "ppv" ? "PPV_UNLOCK" : "TIP",
+          metadata: JSON.stringify({
+            ...metadata,
+            cryptoCurrency: currency,
+            payAmount: estimatedCryptoAmount,
+            payAddress: creatorWallet,
+            creatorSlug,
+            isDirect: true,
+          }),
+        },
+      });
+
+      return NextResponse.json({
+        paymentId: paymentRecord.id,
+        payAddress: creatorWallet,
+        payAmount: estimatedCryptoAmount,
+        payCurrency: currency.toUpperCase(),
+        expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(), // 1 hour
+        isDirect: true,
+        creatorName: creator?.displayName,
+      });
+    }
+
+    // Fallback to NOWPayments for platform payments or when no wallet configured
     const payment = await createCryptoPayment({
       priceAmount,
       priceCurrency: "usd",
@@ -168,6 +241,7 @@ export async function POST(request: NextRequest) {
     await prisma.payment.create({
       data: {
         userId: session.user.id,
+        creatorSlug: creatorSlug || "miacosta",
         amount: priceAmount,
         currency: "USD",
         status: "PENDING",
@@ -191,6 +265,7 @@ export async function POST(request: NextRequest) {
       payAmount: payment.pay_amount,
       payCurrency: payment.pay_currency,
       expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(), // 1 hour
+      isDirect: false,
     });
   } catch (error) {
     console.error("Crypto payment creation error:", error);

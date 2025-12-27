@@ -23,10 +23,14 @@ export function Footer({ creatorSlug = "miacosta" }: FooterProps) {
       { href: "/terms", label: "Terms of Service" },
       { href: "/privacy", label: "Privacy Policy" },
     ],
-    social: creator?.socialLinks ? Object.entries(creator.socialLinks).map(([key, url]) => ({
-      href: url,
-      label: key.charAt(0).toUpperCase() + key.slice(1),
-    })) : [],
+    social: creator?.socialLinks
+      ? Object.entries(creator.socialLinks)
+          .filter(([_, url]) => url && url.trim() !== "")
+          .map(([key, url]) => ({
+            href: url.startsWith("http") ? url : `https://${key}.com/${url.replace("@", "")}`,
+            label: key.charAt(0).toUpperCase() + key.slice(1),
+          }))
+      : [],
   };
 
   return (

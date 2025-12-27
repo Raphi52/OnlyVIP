@@ -95,14 +95,15 @@ export async function getCreatorFromDB(slug: string): Promise<Creator | undefine
 
     if (dbCreator) {
       const socialLinks = JSON.parse(dbCreator.socialLinks || "{}");
+      const staticFallback = defaultCreators[slug.toLowerCase()];
       return {
         slug: dbCreator.slug,
         name: dbCreator.name,
         displayName: dbCreator.displayName,
-        avatar: dbCreator.avatar || defaultCreators[slug.toLowerCase()]?.avatar || "/placeholder-avatar.jpg",
-        cardImage: dbCreator.cardImage || undefined,
-        coverImage: dbCreator.coverImage || defaultCreators[slug.toLowerCase()]?.coverImage || "/placeholder-cover.jpg",
-        bio: dbCreator.bio || defaultCreators[slug.toLowerCase()]?.bio || "",
+        avatar: dbCreator.avatar || staticFallback?.avatar || "",
+        cardImage: dbCreator.cardImage || staticFallback?.cardImage || undefined,
+        coverImage: dbCreator.coverImage || staticFallback?.coverImage || "",
+        bio: dbCreator.bio || staticFallback?.bio || `Welcome to ${dbCreator.displayName}'s page`,
         socialLinks: {
           instagram: socialLinks.instagram || undefined,
           twitter: socialLinks.twitter || undefined,

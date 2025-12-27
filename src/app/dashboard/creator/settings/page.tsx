@@ -18,6 +18,7 @@ import {
   ToggleRight,
   ImageIcon,
   X,
+  Wallet,
 } from "lucide-react";
 import { Button, Card } from "@/components/ui";
 import { useAdminCreator } from "@/components/providers/AdminCreatorContext";
@@ -51,6 +52,8 @@ export default function CreatorSettingsPage() {
   const [chatEnabled, setChatEnabled] = useState(true);
   const [tipsEnabled, setTipsEnabled] = useState(true);
   const [ppvEnabled, setPpvEnabled] = useState(true);
+  const [walletEth, setWalletEth] = useState("");
+  const [walletBtc, setWalletBtc] = useState("");
 
   const isCreator = (session?.user as any)?.isCreator === true;
   const isAdmin = (session?.user as any)?.role === "ADMIN";
@@ -89,6 +92,8 @@ export default function CreatorSettingsPage() {
         setChatEnabled(data.chatEnabled ?? true);
         setTipsEnabled(data.tipsEnabled ?? true);
         setPpvEnabled(data.ppvEnabled ?? true);
+        setWalletEth(data.walletEth || "");
+        setWalletBtc(data.walletBtc || "");
       }
     } catch (error) {
       console.error("Error fetching settings:", error);
@@ -214,6 +219,8 @@ export default function CreatorSettingsPage() {
           chatEnabled,
           tipsEnabled,
           ppvEnabled,
+          walletEth,
+          walletBtc,
         }),
       });
 
@@ -570,11 +577,62 @@ export default function CreatorSettingsPage() {
             </Card>
           </motion.div>
 
-          {/* Chat Settings */}
+          {/* Payment Wallets */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4 }}
+          >
+            <Card variant="luxury" className="p-6">
+              <h2 className="text-xl font-semibold text-[var(--foreground)] mb-6 flex items-center gap-2">
+                <Wallet className="w-5 h-5 text-[var(--gold)]" />
+                Payment Wallets
+              </h2>
+              <p className="text-sm text-[var(--muted)] mb-4">
+                Crypto payments from your page will be sent directly to these wallets.
+              </p>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-[var(--foreground)] mb-2 flex items-center gap-2">
+                    <svg className="w-4 h-4" viewBox="0 0 32 32" fill="currentColor">
+                      <path d="M16 0c8.837 0 16 7.163 16 16s-7.163 16-16 16S0 24.837 0 16 7.163 0 16 0zm5.5 9.5h-4.75v-2h-1.5v2H12v1.5h1.25v11H12v1.5h3.25v2h1.5v-2h4.75v-1.5h-1.25v-11h1.25V9.5zm-2.75 12.5h-2.5v-11h2.5v11z"/>
+                    </svg>
+                    Ethereum (ETH) Wallet
+                  </label>
+                  <input
+                    type="text"
+                    value={walletEth}
+                    onChange={(e) => setWalletEth(e.target.value)}
+                    className="w-full px-4 py-3 rounded-xl bg-[var(--surface)] border border-[var(--border)] text-[var(--foreground)] focus:outline-none focus:border-[var(--gold)] font-mono text-sm"
+                    placeholder="0x..."
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-[var(--foreground)] mb-2 flex items-center gap-2">
+                    <svg className="w-4 h-4" viewBox="0 0 32 32" fill="currentColor">
+                      <path d="M16 0c8.837 0 16 7.163 16 16s-7.163 16-16 16S0 24.837 0 16 7.163 0 16 0zm4.138 8.788c-2.068.619-4.438.619-6.186.619-.094 0-.156 0-.212-.006-.069-.006-.125-.006-.175-.006-.188 0-.625.106-.625.387 0 .125.062.213.237.388l.056.056c.125.125.294.294.463.556.312.5.375.888.375 1.625 0 .256-.019.531-.037.794l-.019.331c-.05.738-.075 1.506.019 2.206.094.75.281 1.388.469 1.813.094.219.188.406.269.563.081.156.15.281.181.344.15.306.25.525.25.775 0 .156-.031.306-.094.45l-.119.294c-.131.319-.281.681-.281 1.144 0 .763.538 1.456.956 1.844l.044.044c.25.225.531.481.863.706.5.356.569.619.569.813 0 .094-.019.175-.063.256-.075.144-.206.256-.363.338-.312.156-.712.187-1.044.187-.15 0-.287-.012-.406-.025l-.063-.006c-.162-.019-.312-.031-.475-.031-.25 0-.494.031-.688.138-.231.119-.356.294-.412.481-.044.156-.056.344-.056.544v.006c0 .481.125 1.019.4 1.494.625 1.088 1.763 1.788 3.219 1.788h.2c.125.006.244.006.375.006.806 0 1.738-.125 2.55-.563.438-.238.844-.563 1.169-.981.731-.938.887-2.188.887-3.056 0-.325-.025-.619-.056-.85-.013-.1-.025-.188-.038-.275-.013-.1-.025-.188-.031-.269-.019-.225-.031-.419.05-.575.081-.163.244-.25.481-.356.131-.056.294-.113.475-.188l.063-.025c.231-.094.5-.2.737-.331.669-.369 1.188-.988 1.188-1.925 0-.819-.419-1.388-.7-1.788-.106-.15-.194-.275-.244-.381-.119-.275-.081-.656-.006-1.225.038-.294.075-.594.094-.9v-.019c.019-.288.031-.563.031-.825 0-.706-.075-1.35-.45-1.831-.225-.288-.531-.494-.938-.619z"/>
+                    </svg>
+                    Bitcoin (BTC) Wallet
+                  </label>
+                  <input
+                    type="text"
+                    value={walletBtc}
+                    onChange={(e) => setWalletBtc(e.target.value)}
+                    className="w-full px-4 py-3 rounded-xl bg-[var(--surface)] border border-[var(--border)] text-[var(--foreground)] focus:outline-none focus:border-[var(--gold)] font-mono text-sm"
+                    placeholder="bc1... or 1... or 3..."
+                  />
+                </div>
+              </div>
+            </Card>
+          </motion.div>
+
+          {/* Chat Settings */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5 }}
           >
             <Card variant="luxury" className="p-6">
               <h2 className="text-xl font-semibold text-[var(--foreground)] mb-6 flex items-center gap-2">
@@ -603,7 +661,7 @@ export default function CreatorSettingsPage() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5 }}
+            transition={{ delay: 0.6 }}
           >
             <Card variant="luxury" className="p-6">
               <h2 className="text-xl font-semibold text-[var(--foreground)] mb-6 flex items-center gap-2">
@@ -679,7 +737,7 @@ export default function CreatorSettingsPage() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.6 }}
+            transition={{ delay: 0.7 }}
             className="flex justify-end"
           >
             <Button

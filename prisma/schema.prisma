@@ -29,6 +29,10 @@ model Creator {
   // Theme customization (JSON string)
   theme        String   @default("{}")
 
+  // Payment wallets
+  walletEth    String?
+  walletBtc    String?
+
   // Stats cache
   photoCount      Int   @default(0)
   videoCount      Int   @default(0)

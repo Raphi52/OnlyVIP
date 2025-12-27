@@ -258,11 +258,14 @@ export function Pricing({ creatorSlug = "miacosta" }: PricingProps) {
           className="text-center mt-16"
         >
           <p className="text-sm text-gray-500 mb-4">
-            Secure payments powered by
+            Secure payments
           </p>
-          <div className="flex items-center justify-center gap-6">
+          <div className="flex items-center justify-center gap-4 flex-wrap">
             <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 border border-white/10">
-              <span className="text-white font-medium">Stripe</span>
+              <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/>
+              </svg>
+              <span className="text-white font-medium">Card</span>
             </div>
             <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 border border-white/10">
               <span className="text-[#F7931A] font-medium">Bitcoin</span>

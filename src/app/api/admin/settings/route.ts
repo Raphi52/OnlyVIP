@@ -54,6 +54,8 @@ export async function GET(request: NextRequest) {
       instagram: JSON.parse(creator.socialLinks || "{}").instagram || null,
       twitter: JSON.parse(creator.socialLinks || "{}").twitter || null,
       tiktok: JSON.parse(creator.socialLinks || "{}").tiktok || null,
+      walletEth: creator.walletEth || null,
+      walletBtc: creator.walletBtc || null,
       // From SiteSettings model
       ...settings,
       pricing: JSON.parse(settings.pricing || "{}"),
@@ -105,6 +107,8 @@ export async function PUT(request: NextRequest) {
       chatEnabled,
       tipsEnabled,
       ppvEnabled,
+      walletEth,
+      walletBtc,
     } = body;
 
     if (!creatorSlug) {
@@ -128,6 +132,8 @@ export async function PUT(request: NextRequest) {
         coverImage: coverImage || null,
         bio: creatorBio || null,
         socialLinks,
+        walletEth: walletEth || null,
+        walletBtc: walletBtc || null,
       },
       create: {
         slug: creatorSlug,
@@ -138,6 +144,8 @@ export async function PUT(request: NextRequest) {
         coverImage: coverImage || null,
         bio: creatorBio || null,
         socialLinks,
+        walletEth: walletEth || null,
+        walletBtc: walletBtc || null,
       },
     });
 
