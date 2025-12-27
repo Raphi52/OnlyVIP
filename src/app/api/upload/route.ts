@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { writeFile } from "fs/promises";
 import { join } from "path";
 import crypto from "crypto";
+import { auth } from "@/lib/auth";
 
 // In production, use S3, Cloudinary, or another cloud storage
 // This is a simple local file upload for development
@@ -13,12 +14,31 @@ async function isAdmin(): Promise<boolean> {
   return !!token?.value;
 }
 
+async function canUpload(): Promise<boolean> {
+  // Check admin token (old admin panel)
+  const cookieStore = await cookies();
+  const adminToken = cookieStore.get("admin_token");
+  if (adminToken?.value) return true;
+
+  // Check NextAuth session (creators and admins)
+  const session = await auth();
+  if (session?.user) {
+    // Allow if user is admin or creator
+    const user = session.user as { role?: string; isCreator?: boolean };
+    if (user.role === "ADMIN" || user.isCreator) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 export async function POST(request: NextRequest) {
   try {
-    // Check admin auth (for now, only admin can upload)
-    const admin = await isAdmin();
+    // Check auth (admin token or NextAuth session)
+    const authorized = await canUpload();
 
-    if (!admin) {
+    if (!authorized) {
       return NextResponse.json(
         { error: "Authentication required" },
         { status: 401 }

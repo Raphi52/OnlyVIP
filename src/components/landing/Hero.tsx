@@ -96,7 +96,7 @@ export function Hero({ creator }: HeroProps) {
   useEffect(() => setMounted(true), []);
 
   return (
-    <section ref={containerRef} className="relative min-h-[100vh] overflow-hidden bg-black">
+    <section ref={containerRef} className="relative min-h-[100vh] overflow-hidden bg-black pt-20">
       {/* Background image with parallax */}
       <motion.div
         className="absolute inset-0 z-0"

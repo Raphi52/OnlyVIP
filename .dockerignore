@@ -50,3 +50,9 @@ docker-compose.yml
 # Docs
 README.md
 *.md
+
+ssl/live
+ssl/archive
+ssl/accounts
+ssl/renewal
+ssl/renewal-hooks

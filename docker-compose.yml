@@ -50,6 +50,7 @@ services:
       - "3000"
     volumes:
       - ./public/media:/app/public/media
+      - ./public/uploads:/app/public/uploads
 
   # Nginx Reverse Proxy
   nginx:
@@ -65,6 +66,7 @@ services:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
       - ./ssl:/etc/nginx/ssl:ro
       - ./public/media:/var/www/media:ro
+      - ./public/uploads:/var/www/uploads:ro
       - ./certbot/www:/var/www/certbot:ro
 
 volumes:
