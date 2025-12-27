@@ -1,8 +1,10 @@
 "use client";
 
+import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import Link from "next/link";
-import { MessageCircle, Heart, DollarSign, Lock, Send, Sparkles, Check, Zap } from "lucide-react";
+import { MessageCircle, Heart, DollarSign, Lock, Send, Sparkles, Check, Zap, Loader2 } from "lucide-react";
 import { Button, Badge } from "@/components/ui";
 import { Creator } from "@/lib/creators";
 
@@ -11,9 +13,77 @@ interface ChatPreviewProps {
 }
 
 export function ChatPreview({ creator }: ChatPreviewProps) {
+  const { data: session } = useSession();
+  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(false);
+  const [canMessage, setCanMessage] = useState(false);
+
   const creatorSlug = creator?.slug || "miacosta";
   const basePath = `/${creatorSlug}`;
   const creatorName = creator?.displayName || "Mia";
+
+  // Check if user can message
+  useEffect(() => {
+    const checkSubscription = async () => {
+      if (!session?.user?.id) return;
+
+      // Admin can always message
+      if ((session.user as any).role === "ADMIN") {
+        setCanMessage(true);
+        return;
+      }
+
+      try {
+        const res = await fetch("/api/user/subscription");
+        if (res.ok) {
+          const data = await res.json();
+          const hasAccess =
+            data.subscription?.plan?.canMessage === true ||
+            data.subscription?.plan?.accessTier === "VIP";
+          setCanMessage(hasAccess);
+        }
+      } catch (error) {
+        console.error("Error checking subscription:", error);
+      }
+    };
+
+    checkSubscription();
+  }, [session?.user?.id]);
+
+  // Handle start chat click
+  const handleStartChat = async () => {
+    if (!session) {
+      router.push("/auth/login");
+      return;
+    }
+
+    if (!canMessage) {
+      router.push(`${basePath}/membership`);
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const res = await fetch("/api/conversations/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ creatorSlug }),
+      });
+
+      if (res.ok) {
+        router.push("/dashboard/messages");
+      } else {
+        const error = await res.json();
+        console.error("Error:", error);
+        router.push(`${basePath}/membership`);
+      }
+    } catch (error) {
+      console.error("Error starting conversation:", error);
+      router.push(`${basePath}/membership`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const features = [
     {
@@ -101,12 +171,20 @@ export function ChatPreview({ creator }: ChatPreviewProps) {
               ))}
             </div>
 
-            <Link href={`${basePath}/membership`}>
-              <Button variant="premium" size="lg" className="gap-2">
+            <Button
+              variant="premium"
+              size="lg"
+              className="gap-2"
+              onClick={handleStartChat}
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : (
                 <MessageCircle className="w-5 h-5" />
-                Start Chatting
-              </Button>
-            </Link>
+              )}
+              {canMessage ? "Start Chatting" : "Get VIP Access"}
+            </Button>
           </motion.div>
 
           {/* Chat Preview */}

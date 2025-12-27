@@ -1,19 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
+import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
-
-// Check admin auth
-async function isAdmin(): Promise<boolean> {
-  const cookieStore = await cookies();
-  const token = cookieStore.get("admin_token");
-  return !!token?.value;
-}
 
 // GET /api/admin/payments - Get all payments
 export async function GET(request: NextRequest) {
   try {
-    const admin = await isAdmin();
-    if (!admin) {
+    const session = await auth();
+    if (!session || (session.user as any)?.role !== "ADMIN") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 

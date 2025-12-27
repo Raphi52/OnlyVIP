@@ -89,20 +89,25 @@ export default function SubscriptionPage() {
 
     try {
       if (paymentMethod === "card") {
-        // Stripe checkout
-        const response = await fetch("/api/payments/stripe/checkout", {
+        // ChangeHero checkout for credit card
+        const response = await fetch("/api/payments/card/checkout", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             type: "subscription",
             planId,
             billingInterval,
+            amount: billingInterval === "ANNUAL"
+              ? plans.find(p => p.id === planId)?.annualPrice || 0
+              : plans.find(p => p.id === planId)?.monthlyPrice || 0,
           }),
         });
 
         const data = await response.json();
-        if (data.url) {
-          window.location.href = data.url;
+        if (data.walletAddress) {
+          // Open ChangeHero in new tab and show wallet address
+          window.open(data.changeHeroUrl, "_blank");
+          alert(`After buying crypto on ChangeHero, send it to:\n${data.walletAddress}\n\nYour subscription will activate once we receive the payment.`);
         }
       } else {
         // Crypto payment
@@ -260,7 +265,7 @@ export default function SubscriptionPage() {
       )}
 
       {/* Plans Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4">
         {plans.map((plan, index) => {
           const price = billingInterval === "ANNUAL" ? plan.annualPrice : plan.monthlyPrice;
           const monthlyEquivalent = billingInterval === "ANNUAL" ? plan.annualPrice / 12 : plan.monthlyPrice;
@@ -275,8 +280,8 @@ export default function SubscriptionPage() {
               <Card
                 variant={plan.isPopular ? "featured" : "luxury"}
                 className={cn(
-                  "p-6 relative overflow-hidden",
-                  plan.isPopular && "ring-2 ring-[var(--gold)]"
+                  "p-6 relative",
+                  plan.isPopular && "ring-2 ring-[var(--gold)] overflow-visible"
                 )}
               >
                 {plan.isPopular && (

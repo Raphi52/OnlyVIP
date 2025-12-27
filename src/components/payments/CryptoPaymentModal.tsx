@@ -185,7 +185,7 @@ export function CryptoPaymentModal({
 
             {/* Product info */}
             <div className="bg-[var(--surface)] rounded-lg p-4 mb-6">
-              <p className="text-sm text-[var(--muted)]">Article</p>
+              <p className="text-sm text-[var(--muted)]">Item</p>
               <p className="font-medium text-[var(--foreground)]">{title}</p>
               <p className="text-lg font-bold text-[var(--gold)]">{formatPrice(price)}</p>
             </div>
@@ -195,7 +195,7 @@ export function CryptoPaymentModal({
                 {/* Crypto selection */}
                 <div className="mb-6">
                   <p className="text-sm text-[var(--muted)] mb-3">
-                    Sélectionnez une cryptomonnaie
+                    Select a cryptocurrency
                   </p>
                   <div className="grid grid-cols-3 gap-3">
                     {cryptoCurrencies.map((crypto) => (
@@ -238,12 +238,12 @@ export function CryptoPaymentModal({
                   {isLoading ? (
                     <>
                       <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                      Génération...
+                      Generating...
                     </>
                   ) : (
                     <>
                       <QrCode className="w-5 h-5 mr-2" />
-                      Générer QR Code
+                      Generate QR Code
                     </>
                   )}
                 </Button>
@@ -259,7 +259,7 @@ export function CryptoPaymentModal({
                   className="text-sm text-[var(--muted)] hover:text-[var(--foreground)] flex items-center gap-1 mb-4 transition-colors"
                 >
                   <ArrowLeft className="w-4 h-4" />
-                  Changer de crypto
+                  Change crypto
                 </button>
 
                 {/* QR Code */}
@@ -267,7 +267,7 @@ export function CryptoPaymentModal({
                   <div className="bg-white p-3 rounded-lg mb-4">
                     <img
                       src={cryptoPayment.qrCodeUrl}
-                      alt="QR Code de paiement"
+                      alt="Payment QR Code"
                       className="w-48 h-48"
                     />
                   </div>
@@ -275,7 +275,7 @@ export function CryptoPaymentModal({
                   {/* Amount */}
                   <div className="text-center mb-4">
                     <p className="text-sm text-[var(--muted)] mb-1">
-                      Envoyez exactement:
+                      Send exactly:
                     </p>
                     <p className="text-2xl font-bold text-[var(--foreground)]">
                       {cryptoPayment.payAmount} {cryptoPayment.payCurrency.toUpperCase()}
@@ -288,7 +288,7 @@ export function CryptoPaymentModal({
                         onClick={fetchUsdValue}
                         disabled={refreshingUsd}
                         className="p-1 hover:bg-[var(--surface)] rounded transition-colors"
-                        title="Rafraîchir"
+                        title="Refresh"
                       >
                         <RefreshCw
                           className={`w-3 h-3 text-[var(--muted)] ${
@@ -302,7 +302,7 @@ export function CryptoPaymentModal({
                   {/* Address */}
                   <div className="w-full bg-black/50 p-3 rounded-lg border border-[var(--border)]">
                     <p className="text-xs text-[var(--muted)] mb-2">
-                      À cette adresse:
+                      To this address:
                     </p>
                     <div className="flex items-center gap-2">
                       <code className="flex-1 text-xs text-[var(--gold)] break-all">
@@ -311,7 +311,7 @@ export function CryptoPaymentModal({
                       <button
                         onClick={copyAddress}
                         className="p-2 bg-[var(--surface)] hover:bg-[var(--surface-hover)] rounded transition-colors flex-shrink-0"
-                        title="Copier l'adresse"
+                        title="Copy address"
                       >
                         {copied ? (
                           <Check className="w-4 h-4 text-emerald-400" />
@@ -325,14 +325,14 @@ export function CryptoPaymentModal({
                   {/* Timer */}
                   <div className="mt-4 flex items-center gap-2 text-sm text-[var(--muted)]">
                     <Clock className="w-4 h-4" />
-                    <span>Expire dans 1 heure</span>
+                    <span>Expires in 1 hour</span>
                   </div>
 
                   {/* Info */}
                   <div className="mt-4 bg-[var(--gold)]/10 border border-[var(--gold)]/30 rounded-lg p-3 w-full">
                     <p className="text-xs text-[var(--gold)] text-center">
-                      Votre achat sera activé automatiquement après confirmation
-                      du paiement (10-30 min)
+                      Your purchase will be activated automatically after payment
+                      confirmation (10-30 min)
                     </p>
                   </div>
                 </div>

@@ -72,6 +72,7 @@ export default function BillingPage() {
   const [summary, setSummary] = useState<BillingSummary | null>(null);
   const [filter, setFilter] = useState("all");
   const [isLoading, setIsLoading] = useState(true);
+  const [isManaging, setIsManaging] = useState(false);
 
   const fetchBilling = async () => {
     try {
@@ -102,6 +103,30 @@ export default function BillingPage() {
       month: "short",
       day: "numeric",
     });
+  };
+
+  const handleManageSubscription = async () => {
+    setIsManaging(true);
+    try {
+      const res = await fetch("/api/payments/stripe/portal", {
+        method: "POST",
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.url) {
+          window.location.href = data.url;
+        }
+      } else {
+        const error = await res.json();
+        console.error("Portal error:", error);
+        alert(error.error || "Failed to open subscription management");
+      }
+    } catch (error) {
+      console.error("Error managing subscription:", error);
+    } finally {
+      setIsManaging(false);
+    }
   };
 
   return (
@@ -327,10 +352,24 @@ export default function BillingPage() {
                   </p>
                 </div>
               </div>
-              <Button variant="outline" className="gap-2">
-                <ExternalLink className="w-4 h-4" />
-                Manage
-              </Button>
+              <Button
+                  variant="outline"
+                  className="gap-2"
+                  onClick={handleManageSubscription}
+                  disabled={isManaging}
+                >
+                  {isManaging ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Loading...
+                    </>
+                  ) : (
+                    <>
+                      <ExternalLink className="w-4 h-4" />
+                      Manage
+                    </>
+                  )}
+                </Button>
             </div>
           </Card>
         </motion.div>

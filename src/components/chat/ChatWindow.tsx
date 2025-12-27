@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useScroll, useTransform } from "framer-motion";
 import {
   Send, Plus, Sparkles, Loader2, Play, X, Lock, DollarSign,
-  Search, Smile, ArrowLeft, ChevronDown
+  Search, Smile, ArrowLeft, ChevronDown, Mic, Image, Camera,
+  Gift, Heart, Paperclip, StopCircle
 } from "lucide-react";
 import { useInView } from "react-intersection-observer";
 import { MessageBubble } from "./MessageBubble";
@@ -78,7 +79,7 @@ interface ChatWindowProps {
   onBack?: () => void;
 }
 
-const tipAmounts = [5, 10, 20, 50, 100];
+const tipAmounts = [5, 10, 25, 50, 100];
 
 // Group messages by date and sender
 function groupMessages(messages: Message[], currentUserId: string) {
@@ -96,7 +97,6 @@ function groupMessages(messages: Message[], currentUserId: string) {
     const prevMessage = messages[index - 1];
     const nextMessage = messages[index + 1];
 
-    // Check if same sender and within 2 minutes
     const isSameSenderAsPrev =
       prevMessage &&
       prevMessage.senderId === message.senderId &&
@@ -160,6 +160,8 @@ export function ChatWindow({
   const [lightboxMedia, setLightboxMedia] = useState<MessageMedia[] | null>(null);
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const [isDraggingFiles, setIsDraggingFiles] = useState(false);
+  const [showAttachMenu, setShowAttachMenu] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
 
   // Refs
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -167,10 +169,8 @@ export function ChatWindow({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Intersection observer for scroll-to-bottom button
-  const { ref: bottomRef, inView: isAtBottom } = useInView({
-    threshold: 0,
-  });
+  // Intersection observer
+  const { ref: bottomRef, inView: isAtBottom } = useInView({ threshold: 0 });
 
   // Group messages
   const groupedMessages = useMemo(
@@ -207,7 +207,16 @@ export function ChatWindow({
     }
   }, [newMessage]);
 
-  // Scroll to bottom on new messages (if already at bottom)
+  // Scroll to bottom on initial load
+  useEffect(() => {
+    if (messages.length > 0) {
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "instant" });
+      }, 100);
+    }
+  }, [conversationId]);
+
+  // Scroll on new messages
   useEffect(() => {
     if (isAtBottom) {
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -220,7 +229,7 @@ export function ChatWindow({
     }
   }, [messages, isAtBottom, currentUserId]);
 
-  // Mark messages as read when in view
+  // Mark messages as read
   useEffect(() => {
     if (isAtBottom && onMarkAsRead) {
       const unreadMessages = messages.filter(
@@ -230,7 +239,7 @@ export function ChatWindow({
     }
   }, [isAtBottom, messages, currentUserId, onMarkAsRead]);
 
-  // Get last message from user (for AI context)
+  // Get last user message for AI
   const getLastUserMessage = useCallback(() => {
     const userMessages = messages.filter((m) => m.senderId === otherUser.id && m.text);
     return userMessages[userMessages.length - 1]?.text || "";
@@ -278,7 +287,7 @@ export function ChatWindow({
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     setSelectedFiles((prev) => [...prev, ...files]);
-    // Reset input so same file can be selected again
+    setShowAttachMenu(false);
     e.target.value = "";
   };
 
@@ -321,7 +330,6 @@ export function ChatWindow({
   // Handle search
   const handleSearch = async (query: string): Promise<SearchResult[]> => {
     if (!onSearch) {
-      // Fallback local search
       return messages
         .filter((m) => m.text?.toLowerCase().includes(query.toLowerCase()))
         .map((m) => ({
@@ -337,9 +345,7 @@ export function ChatWindow({
   // Handle search result click
   const handleSearchResultClick = (messageId: string) => {
     handleQuoteClick(messageId);
-    setSearchHighlight(
-      messages.find((m) => m.id === messageId)?.text?.slice(0, 20) || ""
-    );
+    setSearchHighlight(messages.find((m) => m.id === messageId)?.text?.slice(0, 20) || "");
   };
 
   // Scroll to bottom
@@ -357,92 +363,116 @@ export function ChatWindow({
 
   return (
     <div
-      className="flex flex-col h-full bg-[#0a0a0a] relative"
+      className="flex flex-col h-full bg-gradient-to-b from-[#0a0a0a] to-[#0f0f0f] relative overflow-hidden"
       onDragOver={(e) => {
         e.preventDefault();
         setIsDraggingFiles(true);
       }}
       onDragLeave={(e) => {
-        // Only set to false if leaving the container entirely
         if (!e.currentTarget.contains(e.relatedTarget as Node)) {
           setIsDraggingFiles(false);
         }
       }}
       onDrop={handleDrop}
     >
+      {/* Ambient background */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-[var(--gold)]/5 rounded-full blur-[120px]" />
+        <div className="absolute bottom-1/4 right-0 w-80 h-80 bg-purple-500/5 rounded-full blur-[100px]" />
+      </div>
+
       {/* Header */}
       <motion.div
         initial={{ y: -20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        className="flex items-center justify-between px-3 md:px-4 py-3 border-b border-white/10 bg-[#0a0a0a]/95 backdrop-blur-lg safe-top z-10"
+        className="relative z-20 flex items-center justify-between px-4 py-3 border-b border-white/5 bg-[#0a0a0a]/80 backdrop-blur-xl"
+        style={{ paddingTop: "max(12px, env(safe-area-inset-top))" }}
       >
-        <div className="flex items-center gap-2 md:gap-3">
-          {/* Back button (mobile) */}
+        <div className="flex items-center gap-3">
+          {/* Back button */}
           {onBack && (
             <motion.button
               whileTap={{ scale: 0.9 }}
               onClick={onBack}
-              className="p-2 -ml-2 rounded-full hover:bg-white/10 text-white md:hidden"
+              className="p-2 -ml-2 rounded-full hover:bg-white/5 active:bg-white/10 text-white md:hidden"
             >
               <ArrowLeft className="w-5 h-5" />
             </motion.button>
           )}
 
+          {/* Avatar */}
           <div className="relative">
             {otherUser.image ? (
-              <img
+              <motion.img
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
                 src={otherUser.image}
                 alt={otherUser.name}
-                className="w-10 h-10 md:w-11 md:h-11 rounded-full object-cover ring-2 ring-[var(--gold)]/30"
+                className="w-11 h-11 rounded-full object-cover ring-2 ring-[var(--gold)]/30 shadow-lg"
               />
             ) : (
-              <div className="w-10 h-10 md:w-11 md:h-11 rounded-full bg-gradient-to-br from-[var(--gold)] to-[var(--gold-dark)] flex items-center justify-center text-black font-bold">
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className="w-11 h-11 rounded-full bg-gradient-to-br from-[var(--gold)] via-amber-400 to-amber-600 flex items-center justify-center text-black font-bold shadow-lg"
+              >
                 {otherUser.name.charAt(0)}
-              </div>
+              </motion.div>
             )}
             {otherUser.isOnline && (
               <motion.span
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
-                className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-[#0a0a0a]"
+                className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-500 rounded-full border-2 border-[#0a0a0a] shadow-lg shadow-emerald-500/50"
               />
             )}
           </div>
+
+          {/* Info */}
           <div className="min-w-0">
-            <h3 className="font-semibold text-white flex items-center gap-2 truncate">
+            <h3 className="font-semibold text-white flex items-center gap-2">
               <span className="truncate">{otherUser.name}</span>
               {isAdmin && (
-                <Badge variant="vip" className="text-[10px] py-0 flex-shrink-0">
-                  Creator
-                </Badge>
+                <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-gradient-to-r from-[var(--gold)] to-amber-600 text-black">
+                  CREATOR
+                </span>
               )}
             </h3>
-            <p className="text-xs text-gray-400">
+            <AnimatePresence mode="wait">
               {isTyping ? (
-                <motion.span
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="text-[var(--gold)]"
+                <motion.p
+                  key="typing"
+                  initial={{ opacity: 0, y: 5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -5 }}
+                  className="text-xs text-[var(--gold)]"
                 >
                   typing...
-                </motion.span>
-              ) : otherUser.isOnline ? (
-                "Online"
+                </motion.p>
               ) : (
-                "Offline"
+                <motion.p
+                  key="status"
+                  initial={{ opacity: 0, y: 5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -5 }}
+                  className="text-xs text-white/40"
+                >
+                  {otherUser.isOnline ? "Online now" : "Offline"}
+                </motion.p>
               )}
-            </p>
+            </AnimatePresence>
           </div>
         </div>
 
+        {/* Search button */}
         <motion.button
           whileTap={{ scale: 0.9 }}
           onClick={() => setShowSearch(!showSearch)}
           className={cn(
-            "p-2.5 rounded-full transition-colors touch-manipulation",
+            "p-2.5 rounded-full transition-all",
             showSearch
               ? "bg-[var(--gold)]/20 text-[var(--gold)]"
-              : "hover:bg-white/10 active:bg-white/10 text-gray-400"
+              : "hover:bg-white/5 active:bg-white/10 text-white/50"
           )}
         >
           <Search className="w-5 h-5" />
@@ -464,7 +494,7 @@ export function ChatWindow({
       {/* Messages */}
       <div
         ref={messagesContainerRef}
-        className="flex-1 overflow-y-auto px-3 md:px-4 py-4 space-y-1 overscroll-contain"
+        className="flex-1 overflow-y-auto px-3 md:px-4 py-4 space-y-1 overscroll-contain relative z-10"
       >
         {groupedMessages.map((group) => (
           <div key={group.date.toISOString()}>
@@ -475,7 +505,7 @@ export function ChatWindow({
                 id={`message-${message.id}`}
                 className={cn(
                   "transition-all duration-500",
-                  highlightedMessageId === message.id && "bg-[var(--gold)]/10 rounded-lg -mx-2 px-2"
+                  highlightedMessageId === message.id && "bg-[var(--gold)]/10 rounded-xl -mx-2 px-2 py-1"
                 )}
               >
                 <MessageBubble
@@ -492,15 +522,7 @@ export function ChatWindow({
                   isRead={message.isRead}
                   isDelivered={true}
                   reactions={message.reactions}
-                  replyTo={
-                    message.replyTo
-                      ? {
-                          id: message.replyTo.id,
-                          text: message.replyTo.text,
-                          senderName: message.replyTo.senderName,
-                        }
-                      : undefined
-                  }
+                  replyTo={message.replyTo}
                   isFirstInGroup={message.isFirstInGroup}
                   isLastInGroup={message.isLastInGroup}
                   onUnlock={onUnlockPPV}
@@ -523,7 +545,7 @@ export function ChatWindow({
           )}
         </AnimatePresence>
 
-        {/* Bottom anchor */}
+        {/* Bottom anchors */}
         <div ref={messagesEndRef} />
         <div ref={bottomRef} />
       </div>
@@ -536,12 +558,10 @@ export function ChatWindow({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.9 }}
             onClick={scrollToBottom}
-            className="absolute bottom-32 left-1/2 -translate-x-1/2 flex items-center gap-2 px-4 py-2 rounded-full bg-[var(--gold)] text-black font-medium shadow-lg shadow-[var(--gold)]/30 z-20"
+            className="absolute bottom-36 left-1/2 -translate-x-1/2 flex items-center gap-2 px-4 py-2.5 rounded-full bg-gradient-to-r from-[var(--gold)] to-amber-600 text-black font-medium shadow-xl shadow-[var(--gold)]/30 z-20"
           >
             <ChevronDown className="w-4 h-4" />
-            {newMessagesCount > 0 && (
-              <span>{newMessagesCount} new message{newMessagesCount > 1 ? "s" : ""}</span>
-            )}
+            {newMessagesCount > 0 && `${newMessagesCount} new`}
           </motion.button>
         )}
       </AnimatePresence>
@@ -553,7 +573,7 @@ export function ChatWindow({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center"
+            className="absolute inset-0 z-50 bg-black/90 backdrop-blur-xl flex items-center justify-center"
           >
             <motion.div
               initial={{ scale: 0.9 }}
@@ -561,14 +581,14 @@ export function ChatWindow({
               className="text-center"
             >
               <motion.div
-                animate={{ y: [0, -10, 0] }}
+                animate={{ y: [0, -15, 0] }}
                 transition={{ repeat: Infinity, duration: 1.5 }}
-                className="w-20 h-20 rounded-full bg-[var(--gold)]/20 flex items-center justify-center mx-auto mb-4"
+                className="w-24 h-24 rounded-full bg-gradient-to-br from-[var(--gold)]/30 to-amber-600/30 flex items-center justify-center mx-auto mb-6 border border-[var(--gold)]/30"
               >
-                <Plus className="w-10 h-10 text-[var(--gold)]" />
+                <Image className="w-10 h-10 text-[var(--gold)]" />
               </motion.div>
-              <p className="text-white text-xl font-medium">Drop files here</p>
-              <p className="text-gray-400 text-sm">Images and videos only</p>
+              <p className="text-white text-xl font-semibold">Drop to upload</p>
+              <p className="text-white/50 text-sm mt-1">Images & videos</p>
             </motion.div>
           </motion.div>
         )}
@@ -581,7 +601,7 @@ export function ChatWindow({
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            className="border-t border-white/10 bg-[#111] overflow-hidden"
+            className="border-t border-white/5 bg-[#111]/80 backdrop-blur-xl overflow-hidden relative z-10"
           >
             <QuotedMessage
               message={{
@@ -605,16 +625,16 @@ export function ChatWindow({
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            className="px-3 md:px-4 py-3 border-t border-white/10 bg-[#111] overflow-hidden"
+            className="px-4 py-3 border-t border-white/5 bg-[#111]/80 backdrop-blur-xl overflow-hidden relative z-10"
           >
             <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
               {selectedFiles.map((file, index) => (
                 <motion.div
                   key={index}
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  exit={{ scale: 0 }}
-                  className="relative flex-shrink-0 w-20 h-20 rounded-xl overflow-hidden bg-white/5"
+                  initial={{ scale: 0, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0, opacity: 0 }}
+                  className="relative flex-shrink-0 w-20 h-20 rounded-xl overflow-hidden bg-white/5 ring-1 ring-white/10"
                 >
                   {file.type.startsWith("image/") ? (
                     <img
@@ -637,17 +657,11 @@ export function ChatWindow({
                         <Play className="w-6 h-6 text-white" fill="white" />
                       </div>
                     </div>
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <span className="text-xs text-gray-400">File</span>
-                    </div>
-                  )}
+                  ) : null}
                   <motion.button
-                    whileTap={{ scale: 0.9 }}
-                    onClick={() =>
-                      setSelectedFiles((prev) => prev.filter((_, i) => i !== index))
-                    }
-                    className="absolute top-1 right-1 p-1 rounded-full bg-black/60 text-white"
+                    whileTap={{ scale: 0.8 }}
+                    onClick={() => setSelectedFiles((prev) => prev.filter((_, i) => i !== index))}
+                    className="absolute top-1 right-1 p-1 rounded-full bg-black/70 text-white"
                   >
                     <X className="w-3 h-3" />
                   </motion.button>
@@ -656,7 +670,7 @@ export function ChatWindow({
               <motion.button
                 whileTap={{ scale: 0.95 }}
                 onClick={() => fileInputRef.current?.click()}
-                className="flex-shrink-0 w-20 h-20 rounded-xl border-2 border-dashed border-white/20 flex items-center justify-center text-gray-400 active:text-white active:border-white/40 transition-colors"
+                className="flex-shrink-0 w-20 h-20 rounded-xl border-2 border-dashed border-white/10 hover:border-white/20 flex items-center justify-center text-white/40 hover:text-white/60 transition-colors"
               >
                 <Plus className="w-6 h-6" />
               </motion.button>
@@ -667,17 +681,24 @@ export function ChatWindow({
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="flex items-center gap-4 mt-2"
+                className="flex items-center gap-4 mt-3 pt-3 border-t border-white/5"
               >
-                <label className="flex items-center gap-2 cursor-pointer touch-manipulation">
-                  <input
-                    type="checkbox"
-                    checked={isPPV}
-                    onChange={(e) => setIsPPV(e.target.checked)}
-                    className="w-5 h-5 rounded border-white/20 bg-white/5 text-[var(--gold)] focus:ring-[var(--gold)]"
-                  />
-                  <Lock className="w-4 h-4 text-[var(--gold)]" />
-                  <span className="text-sm text-gray-300">Send as PPV</span>
+                <label className="flex items-center gap-2.5 cursor-pointer">
+                  <div className={cn(
+                    "w-10 h-6 rounded-full p-0.5 transition-colors",
+                    isPPV ? "bg-[var(--gold)]" : "bg-white/10"
+                  )}>
+                    <motion.div
+                      animate={{ x: isPPV ? 16 : 0 }}
+                      transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                      className="w-5 h-5 rounded-full bg-white shadow-md"
+                      onClick={() => setIsPPV(!isPPV)}
+                    />
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <Lock className="w-4 h-4 text-[var(--gold)]" />
+                    <span className="text-sm text-white">PPV Content</span>
+                  </div>
                 </label>
                 {isPPV && (
                   <motion.div
@@ -685,14 +706,14 @@ export function ChatWindow({
                     animate={{ opacity: 1, x: 0 }}
                     className="flex items-center gap-2"
                   >
-                    <span className="text-sm text-gray-400">$</span>
+                    <span className="text-sm text-white/50">$</span>
                     <input
                       type="number"
                       value={ppvPrice}
                       onChange={(e) => setPpvPrice(parseFloat(e.target.value))}
                       min="0.99"
                       step="0.01"
-                      className="w-20 px-2 py-1.5 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-[var(--gold)]"
+                      className="w-24 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-[var(--gold)]"
                     />
                   </motion.div>
                 )}
@@ -706,17 +727,64 @@ export function ChatWindow({
       <motion.div
         initial={{ y: 20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        className="p-3 md:p-4 border-t border-white/10 bg-[#0a0a0a] safe-bottom"
+        className="relative z-20 p-3 md:p-4 border-t border-white/5 bg-[#0a0a0a]/80 backdrop-blur-xl"
+        style={{ paddingBottom: "max(12px, env(safe-area-inset-bottom))" }}
       >
-        <div className="flex items-end gap-2">
+        <div className="flex items-center gap-2">
           {/* Attach button */}
-          <motion.button
-            whileTap={{ scale: 0.9 }}
-            onClick={() => fileInputRef.current?.click()}
-            className="p-3 rounded-full bg-white/5 active:bg-white/10 text-[var(--gold)] transition-colors touch-manipulation"
-          >
-            <Plus className="w-5 h-5" />
-          </motion.button>
+          <div className="relative">
+            <motion.button
+              whileTap={{ scale: 0.9 }}
+              onClick={() => setShowAttachMenu(!showAttachMenu)}
+              className={cn(
+                "w-11 h-11 flex items-center justify-center rounded-full transition-all",
+                showAttachMenu
+                  ? "bg-[var(--gold)] text-black"
+                  : "bg-white/5 hover:bg-white/10 text-[var(--gold)]"
+              )}
+            >
+              <motion.div animate={{ rotate: showAttachMenu ? 45 : 0 }}>
+                <Plus className="w-5 h-5" />
+              </motion.div>
+            </motion.button>
+
+            {/* Attach menu */}
+            <AnimatePresence>
+              {showAttachMenu && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.9, y: 10 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.9, y: 10 }}
+                  className="absolute bottom-full left-0 mb-2 p-2 rounded-2xl bg-[#1a1a1a]/95 backdrop-blur-xl border border-white/10 shadow-2xl"
+                >
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      className="flex flex-col items-center gap-1.5 p-3 rounded-xl hover:bg-white/5 transition-colors"
+                    >
+                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-purple-700 flex items-center justify-center">
+                        <Image className="w-6 h-6 text-white" />
+                      </div>
+                      <span className="text-xs text-white/70">Gallery</span>
+                    </button>
+                    <button className="flex flex-col items-center gap-1.5 p-3 rounded-xl hover:bg-white/5 transition-colors">
+                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-pink-500 to-rose-600 flex items-center justify-center">
+                        <Camera className="w-6 h-6 text-white" />
+                      </div>
+                      <span className="text-xs text-white/70">Camera</span>
+                    </button>
+                    <button className="flex flex-col items-center gap-1.5 p-3 rounded-xl hover:bg-white/5 transition-colors">
+                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[var(--gold)] to-amber-600 flex items-center justify-center">
+                        <Gift className="w-6 h-6 text-black" />
+                      </div>
+                      <span className="text-xs text-white/70">Gift</span>
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
           <input
             ref={fileInputRef}
             type="file"
@@ -726,14 +794,13 @@ export function ChatWindow({
             onChange={handleFileSelect}
           />
 
-          {/* AI Suggest button (admin only) */}
+          {/* AI button (admin only) */}
           {isAdmin && onAISuggest && (
             <motion.button
               whileTap={{ scale: 0.9 }}
               onClick={handleAISuggest}
               disabled={isLoadingAI || !getLastUserMessage()}
-              className="p-3 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 active:from-purple-600 active:to-pink-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all touch-manipulation"
-              title="AI suggestion"
+              className="w-11 h-11 flex items-center justify-center rounded-full bg-gradient-to-r from-violet-500 to-purple-600 disabled:opacity-40 disabled:cursor-not-allowed shadow-lg shadow-purple-500/20"
             >
               {isLoadingAI ? (
                 <Loader2 className="w-5 h-5 text-white animate-spin" />
@@ -743,7 +810,7 @@ export function ChatWindow({
             </motion.button>
           )}
 
-          {/* Text input */}
+          {/* Input field */}
           <div className="flex-1 relative">
             <textarea
               ref={textareaRef}
@@ -755,18 +822,17 @@ export function ChatWindow({
                   handleSend();
                 }
               }}
-              placeholder="Type a message..."
+              placeholder="Message..."
               rows={1}
-              className="w-full px-4 py-3 pr-12 rounded-2xl bg-white/5 border border-white/10 text-white placeholder:text-gray-500 resize-none focus:outline-none focus:border-[var(--gold)] transition-colors text-base"
-              style={{ maxHeight: "120px" }}
+              className="w-full min-h-[44px] max-h-[120px] px-4 py-2.5 pr-12 rounded-2xl bg-white/5 border border-white/10 text-white placeholder:text-white/30 resize-none overflow-hidden focus:outline-none focus:border-[var(--gold)]/50 focus:bg-white/[0.07] transition-all text-[15px] leading-6"
             />
 
             {/* Emoji button */}
-            <div className="absolute right-3 bottom-3">
+            <div className="absolute right-3 top-1/2 -translate-y-1/2">
               <motion.button
                 whileTap={{ scale: 0.9 }}
                 onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                className="text-gray-400 active:text-[var(--gold)] transition-colors touch-manipulation"
+                className="text-white/40 hover:text-[var(--gold)] transition-colors"
               >
                 <Smile className="w-5 h-5" />
               </motion.button>
@@ -788,23 +854,19 @@ export function ChatWindow({
             onClick={handleSend}
             disabled={isSending || (!newMessage.trim() && selectedFiles.length === 0)}
             className={cn(
-              "p-3 rounded-full transition-all touch-manipulation",
-              newMessage.trim() || selectedFiles.length > 0
-                ? "bg-[var(--gold)] active:bg-[var(--gold-light)] shadow-lg shadow-[var(--gold)]/30"
+              "w-11 h-11 flex items-center justify-center rounded-full transition-all",
+              (newMessage.trim() || selectedFiles.length > 0)
+                ? "bg-gradient-to-r from-[var(--gold)] to-amber-600 shadow-lg shadow-[var(--gold)]/30"
                 : "bg-white/10 cursor-not-allowed"
             )}
           >
             {isSending ? (
               <Loader2 className="w-5 h-5 text-black animate-spin" />
             ) : (
-              <Send
-                className={cn(
-                  "w-5 h-5",
-                  newMessage.trim() || selectedFiles.length > 0
-                    ? "text-black"
-                    : "text-gray-500"
-                )}
-              />
+              <Send className={cn(
+                "w-5 h-5",
+                (newMessage.trim() || selectedFiles.length > 0) ? "text-black" : "text-white/30"
+              )} />
             )}
           </motion.button>
         </div>
@@ -818,27 +880,27 @@ export function ChatWindow({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm"
+              className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md"
               onClick={() => setShowTipModal(null)}
             />
             <motion.div
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              initial={{ opacity: 0, scale: 0.9, y: 50 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="fixed inset-x-4 top-1/2 -translate-y-1/2 md:inset-auto md:left-1/2 md:top-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-full md:max-w-sm z-50"
+              exit={{ opacity: 0, scale: 0.9, y: 50 }}
+              className="fixed inset-x-4 top-1/2 -translate-y-1/2 md:inset-auto md:left-1/2 md:top-1/2 md:-translate-x-1/2 md:w-full md:max-w-sm z-50"
             >
-              <div className="bg-[#111] border border-white/10 rounded-2xl p-6 shadow-2xl">
+              <div className="bg-gradient-to-b from-[#1a1a1a] to-[#0a0a0a] border border-white/10 rounded-3xl p-6 shadow-2xl">
                 <div className="text-center mb-6">
                   <motion.div
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
                     transition={{ type: "spring", stiffness: 400, damping: 20 }}
-                    className="w-16 h-16 rounded-full bg-gradient-to-br from-[var(--gold)] to-[var(--gold-dark)] flex items-center justify-center mx-auto mb-4 shadow-lg shadow-[var(--gold)]/30"
+                    className="w-20 h-20 rounded-full bg-gradient-to-br from-[var(--gold)] via-amber-400 to-amber-600 flex items-center justify-center mx-auto mb-4 shadow-xl shadow-[var(--gold)]/30"
                   >
-                    <DollarSign className="w-8 h-8 text-black" />
+                    <Heart className="w-10 h-10 text-black" fill="black" />
                   </motion.div>
-                  <h3 className="text-xl font-bold text-white">Send a Tip</h3>
-                  <p className="text-sm text-gray-400">Show your appreciation!</p>
+                  <h3 className="text-2xl font-bold text-white">Send a Tip</h3>
+                  <p className="text-sm text-white/50 mt-1">Show your appreciation</p>
                 </div>
 
                 <div className="grid grid-cols-3 gap-2 mb-4">
@@ -850,31 +912,30 @@ export function ChatWindow({
                       transition={{ delay: i * 0.05 }}
                       whileTap={{ scale: 0.95 }}
                       onClick={() => handleTip(showTipModal, amount)}
-                      className="py-3 rounded-xl bg-white/5 active:bg-[var(--gold)]/10 border border-white/10 active:border-[var(--gold)] text-white font-medium transition-all touch-manipulation"
+                      className="py-4 rounded-2xl bg-white/5 hover:bg-[var(--gold)]/10 active:bg-[var(--gold)]/20 border border-white/5 hover:border-[var(--gold)]/30 text-white text-lg font-semibold transition-all"
                     >
                       ${amount}
                     </motion.button>
                   ))}
                 </div>
 
-                <div className="flex gap-2">
+                <div className="flex gap-2 mb-4">
                   <div className="relative flex-1">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                      $
-                    </span>
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40 text-lg">$</span>
                     <input
                       type="number"
                       value={customTip}
                       onChange={(e) => setCustomTip(e.target.value)}
                       placeholder="Custom"
                       min="1"
-                      className="w-full pl-7 pr-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white focus:outline-none focus:border-[var(--gold)] transition-colors text-base"
+                      className="w-full pl-8 pr-4 py-4 rounded-2xl bg-white/5 border border-white/10 text-white text-lg focus:outline-none focus:border-[var(--gold)] transition-colors"
                     />
                   </div>
                   <Button
                     variant="premium"
                     disabled={!customTip || parseFloat(customTip) < 1}
                     onClick={() => handleTip(showTipModal, parseFloat(customTip))}
+                    className="px-6 text-lg"
                   >
                     Send
                   </Button>
@@ -882,7 +943,7 @@ export function ChatWindow({
 
                 <button
                   onClick={() => setShowTipModal(null)}
-                  className="w-full mt-4 py-3 rounded-xl bg-white/5 active:bg-white/10 text-white font-medium transition-colors"
+                  className="w-full py-4 rounded-2xl bg-white/5 hover:bg-white/10 text-white font-medium transition-colors"
                 >
                   Cancel
                 </button>

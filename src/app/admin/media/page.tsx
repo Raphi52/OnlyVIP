@@ -83,6 +83,10 @@ export default function AdminMediaPage() {
 
   // Fetch media from API
   const fetchMedia = useCallback(async () => {
+    if (!selectedCreator) {
+      setIsLoading(false);
+      return;
+    }
     setIsLoading(true);
     try {
       const params = new URLSearchParams();
@@ -100,7 +104,7 @@ export default function AdminMediaPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [filterType, searchQuery, selectedCreator.slug]);
+  }, [filterType, searchQuery, selectedCreator]);
 
   useEffect(() => {
     fetchMedia();
@@ -113,7 +117,7 @@ export default function AdminMediaPage() {
   };
 
   const handleUpload = async () => {
-    if (!title || files.length === 0) return;
+    if (!title || files.length === 0 || !selectedCreator) return;
 
     setIsUploading(true);
     setUploadError("");

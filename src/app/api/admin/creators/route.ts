@@ -1,15 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
+import { auth } from "@/lib/auth";
 import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
 import crypto from "crypto";
 import prisma from "@/lib/prisma";
-
-async function isAdmin(): Promise<boolean> {
-  const cookieStore = await cookies();
-  const token = cookieStore.get("admin_token");
-  return !!token?.value;
-}
 
 // GET /api/admin/creators - Get all creators
 export async function GET(request: NextRequest) {
@@ -43,8 +37,8 @@ export async function GET(request: NextRequest) {
 // POST /api/admin/creators - Create new creator
 export async function POST(request: NextRequest) {
   try {
-    const admin = await isAdmin();
-    if (!admin) {
+    const session = await auth();
+    if (!session || (session.user as any)?.role !== "ADMIN") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -160,8 +154,8 @@ export async function POST(request: NextRequest) {
 // PATCH /api/admin/creators - Update creator
 export async function PATCH(request: NextRequest) {
   try {
-    const admin = await isAdmin();
-    if (!admin) {
+    const session = await auth();
+    if (!session || (session.user as any)?.role !== "ADMIN") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -270,8 +264,8 @@ export async function PATCH(request: NextRequest) {
 // DELETE /api/admin/creators - Delete creator
 export async function DELETE(request: NextRequest) {
   try {
-    const admin = await isAdmin();
-    if (!admin) {
+    const session = await auth();
+    if (!session || (session.user as any)?.role !== "ADMIN") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 

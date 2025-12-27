@@ -78,7 +78,7 @@ export default function RegisterPage() {
       if (result?.error) {
         router.push(`${basePath}/auth/login`);
       } else {
-        router.push(`${basePath}/dashboard`);
+        router.push("/dashboard");
       }
     } catch (err) {
       setError("Something went wrong. Please try again.");

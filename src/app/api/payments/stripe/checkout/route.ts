@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { type, planId, billingInterval, mediaId } = body;
+    const { type, planId, billingInterval, mediaId, creatorSlug } = body;
 
     const user = await prisma.user.findUnique({
       where: { id: session.user.id },
@@ -72,7 +72,8 @@ export async function POST(request: NextRequest) {
         priceId,
         user.id,
         planId,
-        billingInterval
+        billingInterval,
+        creatorSlug
       );
 
       return NextResponse.json({ url: checkoutSession.url });

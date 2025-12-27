@@ -15,9 +15,9 @@ const playfair = Playfair_Display({
 });
 
 export const metadata: Metadata = {
-  title: "Mia Costa - Exclusive Private Content",
-  description: "Exclusive private content from Mia Costa. Photos, videos, and personalized chat. Subscribe for VIP access.",
-  keywords: ["Mia Costa", "exclusive content", "private videos", "premium", "VIP"],
+  title: "OnlyVip - Exclusive Creator Platform",
+  description: "The premium platform for exclusive creators. Share content, connect with fans, and earn from subscriptions.",
+  keywords: ["OnlyVip", "exclusive content", "creator platform", "premium", "VIP"],
 };
 
 export default function RootLayout({

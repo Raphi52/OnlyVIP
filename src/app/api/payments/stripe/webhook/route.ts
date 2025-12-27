@@ -4,6 +4,7 @@ import Stripe from "stripe";
 import { prisma } from "@/lib/prisma";
 import { stripe, verifyWebhookSignature } from "@/lib/stripe";
 import { sendToAccounting } from "@/lib/crypto-accounting";
+import { calculateFees } from "@/lib/fees";
 
 export async function POST(request: NextRequest) {
   try {
@@ -109,11 +110,17 @@ async function handleCheckoutComplete(session: Stripe.Checkout.Session) {
       },
     });
 
+    // Calculate platform fee
+    const amount = session.amount_total ? session.amount_total / 100 : 0;
+    const { platformFee, netAmount } = calculateFees(amount);
+
     // Create payment record
     const payment = await prisma.payment.create({
       data: {
         userId,
-        amount: session.amount_total ? session.amount_total / 100 : 0,
+        amount,
+        platformFee,
+        netAmount,
         currency: session.currency?.toUpperCase() || "USD",
         status: "COMPLETED",
         provider: "STRIPE",
@@ -136,7 +143,7 @@ async function handleCheckoutComplete(session: Stripe.Checkout.Session) {
       paymentDate: payment.createdAt.toISOString(),
       userEmail: user?.email,
       userId: userId,
-      metadata: { mediaId, provider: "STRIPE" },
+      metadata: { mediaId, provider: "STRIPE", platformFee, netAmount },
     });
   }
 
@@ -164,13 +171,17 @@ async function handleCheckoutComplete(session: Stripe.Checkout.Session) {
       });
     }
 
+    // Calculate platform fee
+    const ppvAmount = session.amount_total ? session.amount_total / 100 : 0;
+    const ppvFees = calculateFees(ppvAmount);
+
     // Create message payment record
     await prisma.messagePayment.create({
       data: {
         messageId,
         userId,
         type: "PPV_UNLOCK",
-        amount: session.amount_total ? session.amount_total / 100 : 0,
+        amount: ppvAmount,
         status: "COMPLETED",
         provider: "STRIPE",
       },
@@ -180,7 +191,9 @@ async function handleCheckoutComplete(session: Stripe.Checkout.Session) {
     const payment = await prisma.payment.create({
       data: {
         userId,
-        amount: session.amount_total ? session.amount_total / 100 : 0,
+        amount: ppvAmount,
+        platformFee: ppvFees.platformFee,
+        netAmount: ppvFees.netAmount,
         currency: session.currency?.toUpperCase() || "USD",
         status: "COMPLETED",
         provider: "STRIPE",
@@ -203,12 +216,16 @@ async function handleCheckoutComplete(session: Stripe.Checkout.Session) {
       paymentDate: payment.createdAt.toISOString(),
       userEmail: user?.email,
       userId: userId,
-      metadata: { messageId, provider: "STRIPE" },
+      metadata: { messageId, provider: "STRIPE", platformFee: ppvFees.platformFee, netAmount: ppvFees.netAmount },
     });
   }
 
   if (type === "tip") {
     const { messageId, recipientId } = metadata;
+
+    // Calculate platform fee
+    const tipAmount = session.amount_total ? session.amount_total / 100 : 0;
+    const tipFees = calculateFees(tipAmount);
 
     // Create message payment record if message-specific
     if (messageId) {
@@ -217,7 +234,7 @@ async function handleCheckoutComplete(session: Stripe.Checkout.Session) {
           messageId,
           userId,
           type: "TIP",
-          amount: session.amount_total ? session.amount_total / 100 : 0,
+          amount: tipAmount,
           status: "COMPLETED",
           provider: "STRIPE",
         },
@@ -228,7 +245,7 @@ async function handleCheckoutComplete(session: Stripe.Checkout.Session) {
         where: { id: messageId },
         data: {
           totalTips: {
-            increment: session.amount_total ? session.amount_total / 100 : 0,
+            increment: tipAmount,
           },
         },
       });
@@ -238,7 +255,9 @@ async function handleCheckoutComplete(session: Stripe.Checkout.Session) {
     const payment = await prisma.payment.create({
       data: {
         userId,
-        amount: session.amount_total ? session.amount_total / 100 : 0,
+        amount: tipAmount,
+        platformFee: tipFees.platformFee,
+        netAmount: tipFees.netAmount,
         currency: session.currency?.toUpperCase() || "USD",
         status: "COMPLETED",
         provider: "STRIPE",
@@ -260,7 +279,7 @@ async function handleCheckoutComplete(session: Stripe.Checkout.Session) {
       paymentDate: payment.createdAt.toISOString(),
       userEmail: user?.email,
       userId: userId,
-      metadata: { messageId, recipientId, provider: "STRIPE" },
+      metadata: { messageId, recipientId, provider: "STRIPE", platformFee: tipFees.platformFee, netAmount: tipFees.netAmount },
     });
   }
 }
@@ -269,7 +288,7 @@ async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {
   const metadata = subscription.metadata;
   if (!metadata?.userId) return;
 
-  const { userId, planId, billingInterval } = metadata;
+  const { userId, planId, billingInterval, creatorSlug } = metadata;
 
   // Map Stripe status to our status
   const statusMap: Record<string, string> = {
@@ -297,6 +316,13 @@ async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {
   const periodStart = subData.current_period_start || subData.currentPeriodStart;
   const periodEnd = subData.current_period_end || subData.currentPeriodEnd;
 
+  // Check if this is a NEW subscription (not an update)
+  const existingSubscription = await prisma.subscription.findFirst({
+    where: { stripeSubscriptionId: subscription.id },
+  });
+
+  const isNewSubscription = !existingSubscription && status === "ACTIVE";
+
   // Upsert subscription
   await prisma.subscription.upsert({
     where: {
@@ -305,6 +331,7 @@ async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {
     create: {
       userId,
       planId: plan.id,
+      creatorSlug: creatorSlug || undefined,
       status: status as any,
       stripeSubscriptionId: subscription.id,
       paymentProvider: "STRIPE",
@@ -318,6 +345,82 @@ async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {
       currentPeriodEnd: new Date(periodEnd * 1000),
     },
   });
+
+  // Send welcome message for new subscriptions
+  if (isNewSubscription && creatorSlug) {
+    await sendWelcomeMessage(userId, creatorSlug);
+  }
+}
+
+// Send welcome message to new subscriber
+async function sendWelcomeMessage(userId: string, creatorSlug: string) {
+  try {
+    // Get site settings with welcome message
+    const settings = await prisma.siteSettings.findFirst({
+      where: { creatorSlug },
+    });
+
+    if (!settings?.welcomeMessage || !settings.welcomeMessage.trim()) {
+      return; // No welcome message configured
+    }
+
+    // Get creator user ID
+    const creator = await prisma.creator.findFirst({
+      where: { slug: creatorSlug },
+    });
+
+    if (!creator?.userId) {
+      console.error(`Creator not found for slug: ${creatorSlug}`);
+      return;
+    }
+
+    // Find or create conversation
+    let conversation = await prisma.conversation.findFirst({
+      where: {
+        creatorSlug,
+        AND: [
+          { participants: { some: { userId } } },
+          { participants: { some: { userId: creator.userId } } },
+        ],
+      },
+    });
+
+    if (!conversation) {
+      // Create new conversation
+      conversation = await prisma.conversation.create({
+        data: {
+          creatorSlug,
+          participants: {
+            create: [
+              { userId },
+              { userId: creator.userId },
+            ],
+          },
+        },
+      });
+    }
+
+    // Send welcome message from creator
+    await prisma.message.create({
+      data: {
+        conversationId: conversation.id,
+        senderId: creator.userId,
+        receiverId: userId,
+        text: settings.welcomeMessage,
+        isRead: false,
+      },
+    });
+
+    // Update conversation timestamp
+    await prisma.conversation.update({
+      where: { id: conversation.id },
+      data: { updatedAt: new Date() },
+    });
+
+    console.log(`Welcome message sent to user ${userId} from creator ${creatorSlug}`);
+  } catch (error) {
+    console.error("Error sending welcome message:", error);
+  }
 }
 
 async function handleSubscriptionCanceled(subscription: Stripe.Subscription) {
@@ -347,11 +450,17 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
 
   if (!user) return;
 
+  // Calculate platform fee
+  const subAmount = (invoiceData.amount_paid || 0) / 100;
+  const subFees = calculateFees(subAmount);
+
   // Create payment record
   const payment = await prisma.payment.create({
     data: {
       userId: user.id,
-      amount: (invoiceData.amount_paid || 0) / 100,
+      amount: subAmount,
+      platformFee: subFees.platformFee,
+      netAmount: subFees.netAmount,
       currency: (invoiceData.currency || "usd").toUpperCase(),
       status: "COMPLETED",
       provider: "STRIPE",
@@ -375,7 +484,7 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
     paymentDate: payment.createdAt.toISOString(),
     userEmail: user.email,
     userId: user.id,
-    metadata: { invoiceId: invoice.id, subscriptionId, provider: "STRIPE" },
+    metadata: { invoiceId: invoice.id, subscriptionId, provider: "STRIPE", platformFee: subFees.platformFee, netAmount: subFees.netAmount },
   });
 }
 

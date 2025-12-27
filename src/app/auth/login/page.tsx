@@ -11,7 +11,11 @@ import { Button, Input, Card } from "@/components/ui";
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
+  // Only use callbackUrl if it's a simple path, not a full URL with query params
+  const rawCallbackUrl = searchParams.get("callbackUrl");
+  const callbackUrl = rawCallbackUrl && !rawCallbackUrl.includes("?")
+    ? rawCallbackUrl
+    : "/dashboard";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -62,7 +66,7 @@ function LoginForm() {
           <Link href="/" className="inline-flex items-center gap-2">
             <Crown className="w-8 h-8 text-[var(--gold)]" />
             <span className="text-2xl font-semibold gradient-gold-text">
-              Mia Costa
+              OnlyVip
             </span>
           </Link>
         </div>

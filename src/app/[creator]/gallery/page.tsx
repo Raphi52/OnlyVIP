@@ -148,14 +148,18 @@ export default function GalleryPage() {
     setShowPaymentChoice(null);
     setIsPurchasing(mediaId);
     try {
-      const res = await fetch("/api/payments/stripe/checkout", {
+      const media = mediaItems.find(m => m.id === mediaId);
+      const res = await fetch("/api/payments/card/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: "media", mediaId }),
+        body: JSON.stringify({ type: "media", mediaId, amount: media?.price || 0 }),
       });
       if (res.ok) {
         const data = await res.json();
-        if (data.url) window.location.href = data.url;
+        if (data.walletAddress) {
+          window.open(data.changeHeroUrl, "_blank");
+          alert(`After buying crypto on ChangeHero, send it to:\n${data.walletAddress}\n\nYour purchase will be unlocked once we receive the payment.`);
+        }
       } else {
         const error = await res.json();
         if (error.error === "Already purchased") {

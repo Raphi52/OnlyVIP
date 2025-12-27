@@ -16,6 +16,8 @@ import {
   Palette,
   ToggleLeft,
   ToggleRight,
+  ImageIcon,
+  X,
 } from "lucide-react";
 import { Button, Card } from "@/components/ui";
 import { useAdminCreator } from "@/components/providers/AdminCreatorContext";
@@ -38,16 +40,22 @@ interface Settings {
 }
 
 export default function AdminSettingsPage() {
-  const { selectedCreator, refreshCreators } = useAdminCreator();
+  const { selectedCreator, refreshCreator } = useAdminCreator();
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [isUploadingCover, setIsUploadingCover] = useState(false);
+  const [isUploadingCard, setIsUploadingCard] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+  const coverInputRef = useRef<HTMLInputElement>(null);
+  const cardInputRef = useRef<HTMLInputElement>(null);
 
   // Form state
   const [creatorName, setCreatorName] = useState("");
   const [creatorImage, setCreatorImage] = useState<string | null>(null);
+  const [cardImage, setCardImage] = useState<string | null>(null);
+  const [coverImage, setCoverImage] = useState<string | null>(null);
   const [creatorBio, setCreatorBio] = useState("");
   const [instagram, setInstagram] = useState("");
   const [twitter, setTwitter] = useState("");
@@ -61,7 +69,10 @@ export default function AdminSettingsPage() {
 
   // Fetch settings for the selected creator
   const fetchSettings = useCallback(async () => {
-    if (!selectedCreator.slug) return;
+    if (!selectedCreator) {
+      setIsLoading(false);
+      return;
+    }
 
     setIsLoading(true);
     try {
@@ -70,6 +81,8 @@ export default function AdminSettingsPage() {
         const data = await res.json();
         setCreatorName(data.creatorName || "");
         setCreatorImage(data.creatorImage);
+        setCardImage(data.cardImage);
+        setCoverImage(data.coverImage);
         setCreatorBio(data.creatorBio || "");
         setInstagram(data.instagram || "");
         setTwitter(data.twitter || "");
@@ -86,22 +99,22 @@ export default function AdminSettingsPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [selectedCreator.slug]);
+  }, [selectedCreator]);
 
   useEffect(() => {
     fetchSettings();
   }, [fetchSettings]);
 
-  // Handle image upload
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Handle avatar upload
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    setIsUploading(true);
+    setIsUploadingAvatar(true);
     try {
       const formData = new FormData();
       formData.append("files", file);
-      formData.append("type", "profile");
+      formData.append("type", "avatar");
 
       const res = await fetch("/api/upload", {
         method: "POST",
@@ -114,14 +127,72 @@ export default function AdminSettingsPage() {
         setCreatorImage(uploadedFile.url);
       }
     } catch (error) {
-      console.error("Error uploading image:", error);
+      console.error("Error uploading avatar:", error);
     } finally {
-      setIsUploading(false);
+      setIsUploadingAvatar(false);
+    }
+  };
+
+  // Handle cover image upload
+  const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploadingCover(true);
+    try {
+      const formData = new FormData();
+      formData.append("files", file);
+      formData.append("type", "media");
+
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        const uploadedFile = data.files?.[0] || data;
+        setCoverImage(uploadedFile.url);
+      }
+    } catch (error) {
+      console.error("Error uploading cover:", error);
+    } finally {
+      setIsUploadingCover(false);
+    }
+  };
+
+  // Handle card image upload
+  const handleCardUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploadingCard(true);
+    try {
+      const formData = new FormData();
+      formData.append("files", file);
+      formData.append("type", "media");
+
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        const uploadedFile = data.files?.[0] || data;
+        setCardImage(uploadedFile.url);
+      }
+    } catch (error) {
+      console.error("Error uploading card image:", error);
+    } finally {
+      setIsUploadingCard(false);
     }
   };
 
   // Save settings
   const handleSave = async () => {
+    if (!selectedCreator) return;
+
     setIsSaving(true);
     setSaved(false);
 
@@ -133,6 +204,8 @@ export default function AdminSettingsPage() {
           creatorSlug: selectedCreator.slug,
           creatorName,
           creatorImage,
+          cardImage,
+          coverImage,
           creatorBio,
           instagram,
           twitter,
@@ -148,8 +221,8 @@ export default function AdminSettingsPage() {
 
       if (res.ok) {
         setSaved(true);
-        // Refresh creators to update the sidebar
-        await refreshCreators();
+        // Refresh creator to update the sidebar
+        await refreshCreator();
         setTimeout(() => setSaved(false), 3000);
       }
     } catch (error) {
@@ -163,6 +236,14 @@ export default function AdminSettingsPage() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-[var(--gold)]" />
+      </div>
+    );
+  }
+
+  if (!selectedCreator) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-gray-400">Loading settings...</p>
       </div>
     );
   }
@@ -197,52 +278,176 @@ export default function AdminSettingsPage() {
                 Creator Profile
               </h2>
 
-              <div className="flex flex-col md:flex-row gap-6">
-                {/* Profile Image */}
-                <div className="flex flex-col items-center gap-4">
-                  <div className="relative">
-                    <div className="w-32 h-32 rounded-full overflow-hidden bg-[var(--surface)] border-4 border-[var(--gold)]/30">
-                      {creatorImage ? (
-                        <img
-                          src={creatorImage}
-                          alt="Profile"
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-[var(--gold)] to-[var(--gold-dark)]">
-                          <User className="w-12 h-12 text-[var(--background)]" />
-                        </div>
-                      )}
+              <div className="space-y-6">
+                {/* Images Row */}
+                <div className="flex flex-col sm:flex-row gap-6">
+                  {/* Profile Image */}
+                  <div className="flex flex-col items-center gap-3">
+                    <p className="text-sm font-medium text-[var(--foreground)]">
+                      Profile Photo <span className="text-red-400">*</span>
+                    </p>
+                    <div className="relative">
+                      <div className="w-28 h-28 rounded-full overflow-hidden bg-[var(--surface)] border-4 border-[var(--gold)]/30">
+                        {creatorImage ? (
+                          <img
+                            src={creatorImage}
+                            alt="Profile"
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-[var(--gold)] to-[var(--gold-dark)]">
+                            <User className="w-10 h-10 text-[var(--background)]" />
+                          </div>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => avatarInputRef.current?.click()}
+                        disabled={isUploadingAvatar}
+                        className="absolute bottom-0 right-0 w-9 h-9 rounded-full bg-[var(--gold)] hover:bg-[var(--gold-light)] flex items-center justify-center transition-colors shadow-lg"
+                      >
+                        {isUploadingAvatar ? (
+                          <Loader2 className="w-4 h-4 text-[var(--background)] animate-spin" />
+                        ) : (
+                          <Camera className="w-4 h-4 text-[var(--background)]" />
+                        )}
+                      </button>
+                      <input
+                        ref={avatarInputRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleAvatarUpload}
+                      />
                     </div>
-                    <button
-                      onClick={() => fileInputRef.current?.click()}
-                      disabled={isUploading}
-                      className="absolute bottom-0 right-0 w-10 h-10 rounded-full bg-[var(--gold)] hover:bg-[var(--gold-light)] flex items-center justify-center transition-colors shadow-lg"
-                    >
-                      {isUploading ? (
-                        <Loader2 className="w-5 h-5 text-[var(--background)] animate-spin" />
-                      ) : (
-                        <Camera className="w-5 h-5 text-[var(--background)]" />
-                      )}
-                    </button>
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={handleImageUpload}
-                    />
+                    <p className="text-xs text-[var(--muted)] text-center">
+                      Chat & navbar
+                    </p>
                   </div>
-                  <p className="text-sm text-[var(--muted)]">
-                    Profile photo for chat
-                  </p>
+
+                  {/* Card Image */}
+                  <div className="flex flex-col items-center gap-3">
+                    <p className="text-sm font-medium text-[var(--foreground)]">
+                      Card Image
+                    </p>
+                    <div className="relative">
+                      <div className="w-24 h-32 rounded-xl overflow-hidden bg-[var(--surface)] border-2 border-[var(--gold)]/30">
+                        {cardImage ? (
+                          <div className="relative w-full h-full group">
+                            <img
+                              src={cardImage}
+                              alt="Card"
+                              className="w-full h-full object-cover"
+                            />
+                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1">
+                              <button
+                                onClick={() => cardInputRef.current?.click()}
+                                className="p-1.5 rounded-full bg-white/20 hover:bg-white/30 transition-colors"
+                              >
+                                <Camera className="w-4 h-4 text-white" />
+                              </button>
+                              <button
+                                onClick={() => setCardImage(null)}
+                                className="p-1.5 rounded-full bg-red-500/80 hover:bg-red-500 transition-colors"
+                              >
+                                <X className="w-4 h-4 text-white" />
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => cardInputRef.current?.click()}
+                            disabled={isUploadingCard}
+                            className="w-full h-full flex flex-col items-center justify-center gap-1 text-[var(--muted)] hover:text-[var(--gold)] transition-colors"
+                          >
+                            {isUploadingCard ? (
+                              <Loader2 className="w-6 h-6 animate-spin" />
+                            ) : (
+                              <>
+                                <ImageIcon className="w-6 h-6" />
+                                <span className="text-[10px]">Add</span>
+                              </>
+                            )}
+                          </button>
+                        )}
+                      </div>
+                      <input
+                        ref={cardInputRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleCardUpload}
+                      />
+                    </div>
+                    <p className="text-xs text-[var(--muted)] text-center">
+                      Homepage (3:4)
+                    </p>
+                  </div>
+
+                  {/* Cover Image */}
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-[var(--foreground)] mb-3">
+                      Cover Image <span className="text-gray-500">(optional)</span>
+                    </p>
+                    <div className="relative">
+                      <div className="w-full h-32 rounded-xl overflow-hidden bg-[var(--surface)] border-2 border-dashed border-[var(--border)] hover:border-[var(--gold)]/50 transition-colors">
+                        {coverImage ? (
+                          <div className="relative w-full h-full group">
+                            <img
+                              src={coverImage}
+                              alt="Cover"
+                              className="w-full h-full object-cover"
+                            />
+                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                              <button
+                                onClick={() => coverInputRef.current?.click()}
+                                className="p-2 rounded-full bg-white/20 hover:bg-white/30 transition-colors"
+                              >
+                                <Camera className="w-5 h-5 text-white" />
+                              </button>
+                              <button
+                                onClick={() => setCoverImage(null)}
+                                className="p-2 rounded-full bg-red-500/80 hover:bg-red-500 transition-colors"
+                              >
+                                <X className="w-5 h-5 text-white" />
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => coverInputRef.current?.click()}
+                            disabled={isUploadingCover}
+                            className="w-full h-full flex flex-col items-center justify-center gap-2 text-[var(--muted)] hover:text-[var(--gold)] transition-colors"
+                          >
+                            {isUploadingCover ? (
+                              <Loader2 className="w-8 h-8 animate-spin" />
+                            ) : (
+                              <>
+                                <ImageIcon className="w-8 h-8" />
+                                <span className="text-sm">Add background image</span>
+                              </>
+                            )}
+                          </button>
+                        )}
+                      </div>
+                      <input
+                        ref={coverInputRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleCoverUpload}
+                      />
+                    </div>
+                    <p className="text-xs text-[var(--muted)] mt-2">
+                      Homepage hero background (recommended: 1920x1080)
+                    </p>
+                  </div>
                 </div>
 
                 {/* Profile Info */}
-                <div className="flex-1 space-y-4">
+                <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-[var(--foreground)] mb-2">
-                      Creator Name
+                      Creator Name <span className="text-red-400">*</span>
                     </label>
                     <input
                       type="text"

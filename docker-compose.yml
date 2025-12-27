@@ -12,8 +12,8 @@ services:
       POSTGRES_DB: miacosta
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
+    # ports:
+    #   - "5432:5432"  # Ne pas exposer en production
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U miacosta"]
       interval: 5s
@@ -41,7 +41,7 @@ services:
       - NOWPAYMENTS_API_KEY=${NOWPAYMENTS_API_KEY:-}
       - NOWPAYMENTS_IPN_SECRET=${NOWPAYMENTS_IPN_SECRET:-}
     ports:
-      - "3000:3000"
+      - "80:3000"
     volumes:
       - ./public/media:/app/public/media
 

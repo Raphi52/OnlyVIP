@@ -139,25 +139,28 @@ export default function GalleryPage() {
     setShowPaymentChoice(mediaId);
   };
 
-  // Handle Stripe payment
+  // Handle Card payment via ChangeHero
   const handleStripePurchase = async (mediaId: string) => {
     setShowPaymentChoice(null);
     setIsPurchasing(mediaId);
 
     try {
-      const res = await fetch("/api/payments/stripe/checkout", {
+      const media = mediaItems.find(m => m.id === mediaId);
+      const res = await fetch("/api/payments/card/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           type: "media",
           mediaId,
+          amount: media?.price || 0,
         }),
       });
 
       if (res.ok) {
         const data = await res.json();
-        if (data.url) {
-          window.location.href = data.url;
+        if (data.walletAddress) {
+          window.open(data.changeHeroUrl, "_blank");
+          alert(`After buying crypto on ChangeHero, send it to:\n${data.walletAddress}\n\nYour purchase will be unlocked once we receive the payment.`);
         }
       } else {
         const error = await res.json();
@@ -350,7 +353,7 @@ export default function GalleryPage() {
                       {isPurchased ? (
                         <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">
                           <Check className="w-3 h-3 mr-1" />
-                          Acheté
+                          Purchased
                         </Badge>
                       ) : !canAccess ? (
                         <div className="w-8 h-8 rounded-full bg-[var(--gold)]/80 flex items-center justify-center">
@@ -461,12 +464,12 @@ export default function GalleryPage() {
                               <Lock className="w-8 h-8 text-[var(--background)]" />
                             </div>
                             <h3 className="text-2xl font-semibold text-white mb-2">
-                              Contenu {item.accessTier}
+                              {item.accessTier} Content
                             </h3>
                             <p className="text-white/70 mb-6">
                               {canBuy
-                                ? "Achetez ce contenu pour le débloquer"
-                                : "Abonnez-vous pour débloquer ce contenu"}
+                                ? "Purchase this content to unlock"
+                                : "Subscribe to unlock this content"}
                             </p>
                             {canBuy ? (
                               <Button
@@ -481,12 +484,12 @@ export default function GalleryPage() {
                                 {isPurchasing === item.id ? (
                                   <>
                                     <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                                    Traitement...
+                                    Processing...
                                   </>
                                 ) : (
                                   <>
                                     <ShoppingBag className="w-5 h-5 mr-2" />
-                                    Acheter {formatPrice(item.price!)}
+                                    Buy {formatPrice(item.price!)}
                                   </>
                                 )}
                               </Button>
@@ -500,7 +503,7 @@ export default function GalleryPage() {
                                 }}
                               >
                                 <Crown className="w-5 h-5 mr-2" />
-                                S'abonner
+                                Subscribe
                               </Button>
                             )}
                           </div>
@@ -512,7 +515,7 @@ export default function GalleryPage() {
                         <div className="absolute top-3 right-3">
                           <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">
                             <Check className="w-3 h-3 mr-1" />
-                            Acheté
+                            Purchased
                           </Badge>
                         </div>
                       )}
@@ -544,7 +547,7 @@ export default function GalleryPage() {
                             {isPurchasing === item.id ? (
                               <Loader2 className="w-4 h-4 animate-spin" />
                             ) : (
-                              <>Acheter {formatPrice(item.price!)}</>
+                              <>Buy {formatPrice(item.price!)}</>
                             )}
                           </Button>
                         )}
@@ -557,7 +560,7 @@ export default function GalleryPage() {
                             }}
                           >
                             <Play className="w-4 h-4 mr-2" />
-                            Voir
+                            View
                           </Button>
                         )}
                       </div>
@@ -590,7 +593,7 @@ export default function GalleryPage() {
               <Card variant="luxury" className="p-6">
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="text-xl font-semibold text-[var(--foreground)]">
-                    Mode de paiement
+                    Payment method
                   </h2>
                   <button
                     onClick={() => setShowPaymentChoice(null)}
@@ -611,7 +614,7 @@ export default function GalleryPage() {
                     </div>
                     <div className="flex-1 text-left">
                       <p className="font-medium text-[var(--foreground)]">
-                        Carte bancaire
+                        Credit Card
                       </p>
                       <p className="text-xs text-[var(--muted)]">
                         Visa, Mastercard, Amex
@@ -629,7 +632,7 @@ export default function GalleryPage() {
                     </div>
                     <div className="flex-1 text-left">
                       <p className="font-medium text-[var(--foreground)]">
-                        Cryptomonnaie
+                        Cryptocurrency
                       </p>
                       <p className="text-xs text-[var(--muted)]">
                         Bitcoin, Ethereum

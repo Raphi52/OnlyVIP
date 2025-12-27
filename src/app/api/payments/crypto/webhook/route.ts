@@ -132,7 +132,7 @@ async function handleSubscriptionPayment(
   userId: string,
   metadata: Record<string, any>
 ) {
-  const { planId, billingInterval } = metadata;
+  const { planId, billingInterval, creatorSlug } = metadata;
 
   // Find subscription plan
   const plan = await prisma.subscriptionPlan.findFirst({
@@ -153,7 +153,7 @@ async function handleSubscriptionPayment(
     periodEnd.setMonth(periodEnd.getMonth() + 1);
   }
 
-  // Create or update subscription
+  // Check if this is a NEW subscription
   const existingSubscription = await prisma.subscription.findFirst({
     where: {
       userId,
@@ -161,6 +161,8 @@ async function handleSubscriptionPayment(
       paymentProvider: "NOWPAYMENTS",
     },
   });
+
+  const isNewSubscription = !existingSubscription;
 
   if (existingSubscription) {
     await prisma.subscription.update({
@@ -176,6 +178,7 @@ async function handleSubscriptionPayment(
       data: {
         userId,
         planId: plan.id,
+        creatorSlug: creatorSlug || null,
         status: "ACTIVE",
         paymentProvider: "NOWPAYMENTS",
         billingInterval: billingInterval as any,
@@ -183,6 +186,82 @@ async function handleSubscriptionPayment(
         currentPeriodEnd: periodEnd,
       },
     });
+  }
+
+  // Send welcome message for new subscriptions
+  if (isNewSubscription && creatorSlug) {
+    await sendWelcomeMessage(userId, creatorSlug);
+  }
+}
+
+// Send welcome message to new subscriber
+async function sendWelcomeMessage(userId: string, creatorSlug: string) {
+  try {
+    // Get site settings with welcome message
+    const settings = await prisma.siteSettings.findFirst({
+      where: { creatorSlug },
+    });
+
+    if (!settings?.welcomeMessage || !settings.welcomeMessage.trim()) {
+      return; // No welcome message configured
+    }
+
+    // Get creator user ID
+    const creator = await prisma.creator.findFirst({
+      where: { slug: creatorSlug },
+    });
+
+    if (!creator?.userId) {
+      console.error(`Creator not found for slug: ${creatorSlug}`);
+      return;
+    }
+
+    // Find or create conversation
+    let conversation = await prisma.conversation.findFirst({
+      where: {
+        creatorSlug,
+        AND: [
+          { participants: { some: { userId } } },
+          { participants: { some: { userId: creator.userId } } },
+        ],
+      },
+    });
+
+    if (!conversation) {
+      // Create new conversation
+      conversation = await prisma.conversation.create({
+        data: {
+          creatorSlug,
+          participants: {
+            create: [
+              { userId },
+              { userId: creator.userId },
+            ],
+          },
+        },
+      });
+    }
+
+    // Send welcome message from creator
+    await prisma.message.create({
+      data: {
+        conversationId: conversation.id,
+        senderId: creator.userId,
+        receiverId: userId,
+        text: settings.welcomeMessage,
+        isRead: false,
+      },
+    });
+
+    // Update conversation timestamp
+    await prisma.conversation.update({
+      where: { id: conversation.id },
+      data: { updatedAt: new Date() },
+    });
+
+    console.log(`Welcome message sent to user ${userId} from creator ${creatorSlug}`);
+  } catch (error) {
+    console.error("Error sending welcome message:", error);
   }
 }
 

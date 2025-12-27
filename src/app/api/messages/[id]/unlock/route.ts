@@ -71,7 +71,7 @@ export async function POST(
           userId,
           amount: message.ppvPrice,
           currency: "USD",
-          provider: "STRIPE", // Default, can be updated
+          provider: "MOONPAY",
           status: "COMPLETED",
           type: "PPV_UNLOCK",
           description: `PPV unlock for message`,
@@ -83,7 +83,7 @@ export async function POST(
           userId,
           amount: message.ppvPrice,
           type: "PPV_UNLOCK",
-          provider: "STRIPE",
+          provider: "MOONPAY",
           status: "COMPLETED",
         },
       }),

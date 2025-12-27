@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
+import { useSession } from "next-auth/react";
 
 export interface Creator {
   id?: string;
@@ -9,7 +10,7 @@ export interface Creator {
   displayName: string;
   avatar: string | null;
   coverImage: string | null;
-  bio: string | null;
+  bio?: string | null;
   socialLinks?: {
     instagram?: string;
     twitter?: string;
@@ -28,107 +29,110 @@ export interface Creator {
 }
 
 interface AdminCreatorContextType {
-  selectedCreator: Creator;
+  selectedCreator: Creator | null;
   setSelectedCreator: (creator: Creator) => void;
   creators: Creator[];
   isLoading: boolean;
+  refreshCreator: () => Promise<void>;
   refreshCreators: () => Promise<void>;
 }
 
 const AdminCreatorContext = createContext<AdminCreatorContextType | undefined>(undefined);
 
+const SELECTED_CREATOR_KEY = "selectedCreatorSlug";
+
 export function AdminCreatorProvider({ children }: { children: ReactNode }) {
-  const [creators, setCreators] = useState<Creator[]>([]);
+  const { data: session, status } = useSession();
   const [selectedCreator, setSelectedCreatorState] = useState<Creator | null>(null);
+  const [creators, setCreators] = useState<Creator[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Fetch creators from API
+  const isAdmin = (session?.user as any)?.role === "ADMIN";
+  const isCreator = (session?.user as any)?.isCreator === true;
+
+  // Fetch all creators for the user
   const fetchCreators = useCallback(async () => {
+    if (!session?.user?.id || (!isAdmin && !isCreator)) {
+      setCreators([]);
+      setSelectedCreatorState(null);
+      setIsLoading(false);
+      return;
+    }
+
     try {
-      const res = await fetch("/api/admin/creators");
+      // For admin, fetch all creators; for creator, fetch their profiles
+      const endpoint = isAdmin ? "/api/admin/creators" : "/api/creator/my-profiles";
+      const res = await fetch(endpoint);
+
       if (res.ok) {
         const data = await res.json();
-        const fetchedCreators = data.creators || [];
-        setCreators(fetchedCreators);
-        return fetchedCreators as Creator[];
+        const creatorList = data.creators || [];
+        setCreators(creatorList);
+
+        // Try to restore previously selected creator from localStorage
+        const savedSlug = localStorage.getItem(SELECTED_CREATOR_KEY);
+        const savedCreator = creatorList.find((c: Creator) => c.slug === savedSlug);
+
+        if (savedCreator) {
+          setSelectedCreatorState(savedCreator);
+        } else if (creatorList.length > 0) {
+          // Default to first creator
+          setSelectedCreatorState(creatorList[0]);
+          localStorage.setItem(SELECTED_CREATOR_KEY, creatorList[0].slug);
+        }
       }
     } catch (error) {
       console.error("Error fetching creators:", error);
-    }
-
-    // Return empty array if API fails - no fallback to hardcoded
-    setCreators([]);
-    return [] as Creator[];
-  }, []);
-
-  // Initialize
-  useEffect(() => {
-    const init = async () => {
-      setIsLoading(true);
-      const fetchedCreators = await fetchCreators();
-
-      // Restore selected creator from localStorage
-      const saved = localStorage.getItem("admin-selected-creator");
-      if (saved && fetchedCreators.length > 0) {
-        const creator = fetchedCreators.find((c) => c.slug === saved);
-        if (creator) {
-          setSelectedCreatorState(creator);
-        } else {
-          setSelectedCreatorState(fetchedCreators[0]);
-        }
-      } else if (fetchedCreators.length > 0) {
-        setSelectedCreatorState(fetchedCreators[0]);
-      }
-      // If no creators, selectedCreator stays null - will redirect to /admin/creators
-
+    } finally {
       setIsLoading(false);
-    };
+    }
+  }, [session?.user?.id, isAdmin, isCreator]);
 
-    init();
-  }, [fetchCreators]);
+  // Fetch creators when session is ready
+  useEffect(() => {
+    if (status === "loading") return;
 
-  const handleSetCreator = useCallback((creator: Creator) => {
-    setSelectedCreatorState(creator);
-    localStorage.setItem("admin-selected-creator", creator.slug);
+    if (status === "authenticated" && (isAdmin || isCreator)) {
+      fetchCreators();
+    } else {
+      setCreators([]);
+      setSelectedCreatorState(null);
+      setIsLoading(false);
+    }
+  }, [status, isAdmin, isCreator, fetchCreators]);
+
+  // Set selected creator and persist to localStorage
+  const handleSetCreator = useCallback((newCreator: Creator) => {
+    setSelectedCreatorState(newCreator);
+    localStorage.setItem(SELECTED_CREATOR_KEY, newCreator.slug);
   }, []);
 
-  const refreshCreators = useCallback(async () => {
-    const fetchedCreators = await fetchCreators();
+  // Refresh selected creator's data from API
+  const refreshCreator = useCallback(async () => {
+    if (!selectedCreator?.slug) return;
 
-    // Update selected creator if it still exists
-    if (selectedCreator) {
-      const updated = fetchedCreators.find((c) => c.slug === selectedCreator.slug);
-      if (updated) {
-        setSelectedCreatorState(updated);
-      } else if (fetchedCreators.length > 0) {
-        setSelectedCreatorState(fetchedCreators[0]);
-        localStorage.setItem("admin-selected-creator", fetchedCreators[0].slug);
+    try {
+      const res = await fetch(`/api/creators/${selectedCreator.slug}`);
+      if (res.ok) {
+        const data = await res.json();
+        setSelectedCreatorState(data);
+        // Also update in creators list
+        setCreators(prev => prev.map(c => c.slug === data.slug ? data : c));
       }
+    } catch (error) {
+      console.error("Error refreshing creator:", error);
     }
-  }, [fetchCreators, selectedCreator]);
-
-  // Placeholder creator when none exists (for UI stability)
-  const placeholderCreator: Creator = {
-    slug: "",
-    name: "No Creator",
-    displayName: "No Creator Selected",
-    avatar: null,
-    coverImage: null,
-    bio: null,
-    stats: { photos: 0, videos: 0, subscribers: 0 },
-  };
-
-  // Use selected creator, or placeholder if none
-  const effectiveCreator = selectedCreator || placeholderCreator;
+  }, [selectedCreator?.slug]);
 
   return (
     <AdminCreatorContext.Provider
       value={{
-        selectedCreator: effectiveCreator,
+        selectedCreator,
         setSelectedCreator: handleSetCreator,
         creators,
-        isLoading,
-        refreshCreators,
+        isLoading: isLoading || status === "loading",
+        refreshCreator,
+        refreshCreators: fetchCreators,
       }}
     >
       {children}

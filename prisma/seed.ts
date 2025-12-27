@@ -14,7 +14,7 @@ async function main() {
     create: {
       id: "admin",
       name: "Mia Costa",
-      email: "mia@exclusivehub.com",
+      email: "mia@onlyvip.com",
       role: "ADMIN",
       image: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&h=400&fit=crop&crop=face",
     },

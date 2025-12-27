@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { Sidebar } from "@/components/dashboard/Sidebar";
+import { MobileNav } from "@/components/dashboard/MobileNav";
+import { AdminCreatorProvider } from "@/components/providers/AdminCreatorContext";
 
 export default async function DashboardLayout({
   children,
@@ -14,11 +16,14 @@ export default async function DashboardLayout({
   }
 
   return (
-    <div className="flex min-h-screen bg-[var(--background)]">
-      <Sidebar />
-      <main className="flex-1 lg:pl-0">
-        {children}
-      </main>
-    </div>
+    <AdminCreatorProvider>
+      <div className="flex min-h-screen bg-[var(--background)]">
+        <Sidebar />
+        <main className="flex-1 lg:pl-0">
+          {children}
+        </main>
+        <MobileNav />
+      </div>
+    </AdminCreatorProvider>
   );
 }

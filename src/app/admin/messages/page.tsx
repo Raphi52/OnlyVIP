@@ -106,6 +106,10 @@ export default function AdminMessagesPage() {
 
   // Fetch conversations
   const fetchConversations = useCallback(async (isInitial = false) => {
+    if (!selectedCreator) {
+      if (isInitial) setIsLoadingConvs(false);
+      return;
+    }
     if (isInitial) setIsLoadingConvs(true);
     try {
       const res = await fetch(`/api/conversations?creator=${selectedCreator.slug}`);
@@ -126,7 +130,7 @@ export default function AdminMessagesPage() {
     } finally {
       if (isInitial) setIsLoadingConvs(false);
     }
-  }, [selectedCreator.slug]);
+  }, [selectedCreator]);
 
   // Fetch messages for active conversation
   const fetchMessages = useCallback(async (conversationId: string) => {
@@ -149,7 +153,7 @@ export default function AdminMessagesPage() {
     setActiveConversation(null);
     setMessages([]);
     fetchConversations(true);
-  }, [fetchConversations, selectedCreator.slug]);
+  }, [fetchConversations, selectedCreator]);
 
   // Load messages when conversation changes
   useEffect(() => {

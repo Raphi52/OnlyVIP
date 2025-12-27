@@ -1,19 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
+import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
-
-// Check admin auth
-async function isAdmin(): Promise<boolean> {
-  const cookieStore = await cookies();
-  const token = cookieStore.get("admin_token");
-  return !!token?.value;
-}
 
 // GET /api/admin/users - Get all users with their subscriptions
 export async function GET(request: NextRequest) {
   try {
-    const admin = await isAdmin();
-    if (!admin) {
+    const session = await auth();
+    if (!session || (session.user as any)?.role !== "ADMIN") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -22,77 +15,38 @@ export async function GET(request: NextRequest) {
     const filter = searchParams.get("filter") || "all"; // all, subscribed, free
 
     const users = await prisma.user.findMany({
-      where: {
-        role: "USER",
-        ...(search
-          ? {
-              OR: [
-                { name: { contains: search } },
-                { email: { contains: search } },
-              ],
-            }
-          : {}),
-      },
+      where: search
+        ? {
+            OR: [
+              { name: { contains: search } },
+              { email: { contains: search } },
+            ],
+          }
+        : {},
       include: {
         subscriptions: {
           where: { status: "ACTIVE" },
-          include: { plan: true },
           orderBy: { createdAt: "desc" },
           take: 1,
-        },
-        _count: {
-          select: {
-            mediaPurchases: true,
-            messagePurchases: true,
-          },
         },
       },
       orderBy: { createdAt: "desc" },
     });
 
-    // Transform and filter users
-    let transformedUsers = users.map((user) => {
-      const activeSubscription = user.subscriptions[0];
-      return {
-        id: user.id,
-        name: user.name || "Unknown",
-        email: user.email,
-        image: user.image,
-        createdAt: user.createdAt,
-        subscription: activeSubscription
-          ? {
-              plan: activeSubscription.plan.name,
-              status: activeSubscription.status,
-              expiresAt: activeSubscription.currentPeriodEnd,
-            }
-          : null,
-        stats: {
-          purchases: user._count.mediaPurchases,
-          tips: user._count.messagePurchases,
-        },
-      };
-    });
+    // Transform users
+    let transformedUsers = users.map((user) => ({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      image: user.image,
+      role: user.role,
+      isCreator: user.isCreator,
+      emailVerified: user.emailVerified,
+      subscriptions: user.subscriptions,
+      createdAt: user.createdAt,
+    }));
 
-    // Apply filter
-    if (filter === "subscribed") {
-      transformedUsers = transformedUsers.filter((u) => u.subscription);
-    } else if (filter === "free") {
-      transformedUsers = transformedUsers.filter((u) => !u.subscription);
-    }
-
-    // Get summary stats
-    const totalUsers = users.length;
-    const subscribedUsers = transformedUsers.filter((u) => u.subscription).length;
-    const freeUsers = totalUsers - subscribedUsers;
-
-    return NextResponse.json({
-      users: transformedUsers,
-      stats: {
-        total: totalUsers,
-        subscribed: subscribedUsers,
-        free: freeUsers,
-      },
-    });
+    return NextResponse.json({ users: transformedUsers });
   } catch (error) {
     console.error("Error fetching users:", error);
     return NextResponse.json(

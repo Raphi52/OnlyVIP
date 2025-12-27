@@ -161,14 +161,15 @@ function CheckoutContent() {
           qrCodeUrl: data.qrCodeUrl,
         });
       } else {
-        // Stripe checkout
-        const response = await fetch("/api/payments/stripe/checkout", {
+        // ChangeHero checkout for credit card
+        const response = await fetch("/api/payments/card/checkout", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             type: "subscription",
             planId: plan.id.toUpperCase(),
             billingInterval: interval === "annual" ? "ANNUAL" : "MONTHLY",
+            amount: price,
           }),
         });
 
@@ -178,8 +179,9 @@ function CheckoutContent() {
         }
 
         const data = await response.json();
-        if (data.url) {
-          window.location.href = data.url;
+        if (data.walletAddress) {
+          window.open(data.changeHeroUrl, "_blank");
+          alert(`After buying crypto on ChangeHero, send it to:\n${data.walletAddress}\n\nYour subscription will activate once we receive the payment.`);
         }
       }
     } catch (error) {

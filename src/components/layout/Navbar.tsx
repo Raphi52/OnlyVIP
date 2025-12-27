@@ -2,11 +2,12 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X, User, LogOut, Settings, Crown, MessageCircle, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui";
-import { getCreator } from "@/lib/creators";
+import { getCreator, Creator } from "@/lib/creators";
 
 interface NavbarProps {
   creatorSlug?: string;
@@ -14,12 +15,122 @@ interface NavbarProps {
 
 export function Navbar({ creatorSlug = "miacosta" }: NavbarProps) {
   const { data: session, status } = useSession();
+  const router = useRouter();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [hasVipAccess, setHasVipAccess] = useState(false);
+  const [isStartingChat, setIsStartingChat] = useState(false);
+  const [creator, setCreator] = useState<Creator | undefined>(getCreator(creatorSlug));
+  const [userCreatorAvatar, setUserCreatorAvatar] = useState<string | null>(null);
+  const [userCreatorName, setUserCreatorName] = useState<string | null>(null);
 
-  const creator = getCreator(creatorSlug);
+  const isAdmin = (session?.user as any)?.role === "ADMIN";
+  const isCreator = (session?.user as any)?.isCreator === true;
+
   const basePath = `/${creatorSlug}`;
+
+  // Fetch creator data from database
+  useEffect(() => {
+    const fetchCreator = async () => {
+      try {
+        const res = await fetch(`/api/creators/${creatorSlug}`);
+        if (res.ok) {
+          const data = await res.json();
+          setCreator(data);
+        }
+      } catch (error) {
+        console.error("Error fetching creator:", error);
+      }
+    };
+
+    fetchCreator();
+  }, [creatorSlug]);
+
+  // Fetch user's creator avatar if they are a creator/admin
+  useEffect(() => {
+    const fetchUserCreatorInfo = async () => {
+      if (!session?.user?.id || (!isAdmin && !isCreator)) return;
+
+      try {
+        const res = await fetch("/api/creator/my-profiles");
+        if (res.ok) {
+          const data = await res.json();
+          if (data.creators && data.creators.length > 0) {
+            setUserCreatorAvatar(data.creators[0].avatar);
+            setUserCreatorName(data.creators[0].displayName);
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching user creator info:", error);
+      }
+    };
+
+    fetchUserCreatorInfo();
+  }, [session?.user?.id, isAdmin, isCreator]);
+
+  // Check VIP subscription status
+  useEffect(() => {
+    const checkVipAccess = async () => {
+      if (!session?.user?.id) {
+        setHasVipAccess(false);
+        return;
+      }
+
+      try {
+        const res = await fetch("/api/user/subscription");
+        if (res.ok) {
+          const data = await res.json();
+          setHasVipAccess(
+            data.subscription?.plan?.canMessage ||
+            ["PREMIUM", "VIP"].includes(data.subscription?.plan?.accessTier)
+          );
+        }
+      } catch (error) {
+        console.error("Error checking VIP access:", error);
+      }
+    };
+
+    checkVipAccess();
+  }, [session?.user?.id]);
+
+  // Handle Send Message click
+  const handleSendMessage = async () => {
+    // Not logged in -> login page
+    if (!session) {
+      router.push(`${basePath}/auth/login`);
+      return;
+    }
+
+    // Not VIP -> membership page
+    if (!hasVipAccess) {
+      router.push(`${basePath}/membership`);
+      return;
+    }
+
+    // VIP -> start/open conversation with creator
+    setIsStartingChat(true);
+    try {
+      const res = await fetch("/api/conversations/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ creatorSlug }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        router.push(`/dashboard/messages?conversation=${data.conversationId}`);
+      } else {
+        // Fallback to messages page
+        router.push("/dashboard/messages");
+      }
+    } catch (error) {
+      console.error("Error starting conversation:", error);
+      router.push("/dashboard/messages");
+    } finally {
+      setIsStartingChat(false);
+    }
+  };
 
   // Handle scroll effect
   useEffect(() => {
@@ -32,7 +143,6 @@ export function Navbar({ creatorSlug = "miacosta" }: NavbarProps) {
 
   const navLinks = [
     { href: `${basePath}/gallery`, label: "Gallery", icon: Sparkles },
-    { href: `${basePath}/membership`, label: "VIP Access", icon: Crown },
   ];
 
   return (
@@ -103,6 +213,21 @@ export function Navbar({ creatorSlug = "miacosta" }: NavbarProps) {
                 </Link>
               </motion.div>
             ))}
+            {/* Send Message Button */}
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+            >
+              <button
+                onClick={handleSendMessage}
+                disabled={isStartingChat}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-medium text-gray-300 border border-transparent hover:text-[var(--gold)] hover:bg-[var(--gold)]/10 hover:border-[var(--gold)]/30 transition-all duration-300 disabled:opacity-50"
+              >
+                <MessageCircle className={`w-4 h-4 ${isStartingChat ? "animate-pulse" : ""}`} />
+                Send Message
+              </button>
+            </motion.div>
           </div>
 
           {/* Desktop Auth */}
@@ -117,9 +242,9 @@ export function Navbar({ creatorSlug = "miacosta" }: NavbarProps) {
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                 >
-                  {session.user?.image ? (
+                  {userCreatorAvatar || session.user?.image ? (
                     <img
-                      src={session.user.image}
+                      src={userCreatorAvatar || session.user?.image || ""}
                       alt=""
                       className="w-8 h-8 rounded-full border border-[var(--gold)]/50 object-cover"
                       referrerPolicy="no-referrer"
@@ -130,7 +255,7 @@ export function Navbar({ creatorSlug = "miacosta" }: NavbarProps) {
                     </div>
                   )}
                   <span className="text-sm text-gray-300 max-w-[100px] truncate">
-                    {session.user?.name?.split(" ")[0] || "User"}
+                    {userCreatorName || session.user?.name?.split(" ")[0] || "User"}
                   </span>
                 </motion.button>
 
@@ -158,7 +283,7 @@ export function Navbar({ creatorSlug = "miacosta" }: NavbarProps) {
 
                         <div className="px-5 py-4 border-b border-white/10">
                           <p className="text-sm font-semibold text-white">
-                            {session.user?.name || "User"}
+                            {userCreatorName || session.user?.name || "User"}
                           </p>
                           <p className="text-xs text-gray-500 truncate">
                             {session.user?.email}
@@ -166,9 +291,9 @@ export function Navbar({ creatorSlug = "miacosta" }: NavbarProps) {
                         </div>
                         <div className="py-2">
                           {[
-                            { href: `${basePath}/dashboard`, icon: Crown, label: "Dashboard", color: "text-[var(--gold)]" },
-                            { href: `${basePath}/dashboard/messages`, icon: MessageCircle, label: "Messages", color: "text-blue-400" },
-                            { href: `${basePath}/dashboard/settings`, icon: Settings, label: "Settings", color: "text-gray-400" },
+                            { href: "/dashboard", icon: Crown, label: "Dashboard", color: "text-[var(--gold)]" },
+                            { href: "/dashboard/messages", icon: MessageCircle, label: "Messages", color: "text-blue-400" },
+                            { href: "/dashboard/settings", icon: Settings, label: "Settings", color: "text-gray-400" },
                           ].map((item) => (
                             <Link
                               key={item.href}
@@ -309,6 +434,26 @@ export function Navbar({ creatorSlug = "miacosta" }: NavbarProps) {
                       </Link>
                     </motion.div>
                   ))}
+                  {/* Send Message Button - Mobile */}
+                  <motion.div
+                    initial={{ opacity: 0, x: -30 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.25 }}
+                  >
+                    <button
+                      onClick={() => {
+                        setIsMobileMenuOpen(false);
+                        handleSendMessage();
+                      }}
+                      disabled={isStartingChat}
+                      className="w-full flex items-center gap-4 px-5 py-4 rounded-2xl bg-white/5 border border-white/10 text-white hover:border-[var(--gold)]/30 hover:bg-[var(--gold)]/5 transition-all active:scale-[0.98] disabled:opacity-50"
+                    >
+                      <div className="w-10 h-10 rounded-xl bg-[var(--gold)]/10 flex items-center justify-center">
+                        <MessageCircle className={`w-5 h-5 text-[var(--gold)] ${isStartingChat ? "animate-pulse" : ""}`} />
+                      </div>
+                      <span className="text-lg font-medium">Send Message</span>
+                    </button>
+                  </motion.div>
                 </div>
 
                 {/* Auth Section */}
@@ -320,7 +465,7 @@ export function Navbar({ creatorSlug = "miacosta" }: NavbarProps) {
                 >
                   {session ? (
                     <>
-                      <Link href={`${basePath}/dashboard`} onClick={() => setIsMobileMenuOpen(false)}>
+                      <Link href="/dashboard" onClick={() => setIsMobileMenuOpen(false)}>
                         <motion.button
                           className="w-full flex items-center justify-center gap-3 px-6 py-4 rounded-2xl bg-gradient-to-r from-[var(--gold)] to-yellow-600 text-black font-bold text-lg shadow-lg shadow-[var(--gold)]/20"
                           whileTap={{ scale: 0.98 }}
@@ -329,9 +474,13 @@ export function Navbar({ creatorSlug = "miacosta" }: NavbarProps) {
                           My Dashboard
                         </motion.button>
                       </Link>
+
+                      {/* Separator */}
+                      <div className="h-4" />
+
                       <button
                         onClick={() => signOut()}
-                        className="w-full flex items-center justify-center gap-3 px-6 py-4 rounded-2xl border border-white/10 text-gray-400 hover:text-white hover:border-white/20 transition-all"
+                        className="w-full flex items-center justify-center gap-3 px-6 py-4 rounded-2xl border border-red-500/20 text-red-400 hover:text-red-300 hover:border-red-500/30 hover:bg-red-500/5 transition-all"
                       >
                         <LogOut className="w-5 h-5" />
                         Sign out

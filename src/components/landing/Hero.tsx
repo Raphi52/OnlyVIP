@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import { motion, useScroll, useTransform, useSpring, useInView } from "framer-motion";
 import Link from "next/link";
-import { Play, Crown, Sparkles, ChevronDown, Lock, Heart, Users, Camera, Eye, Star } from "lucide-react";
+import { Play, Crown, Sparkles, ChevronDown, Lock, Heart, Users, Camera, Eye, Star, Instagram, Twitter } from "lucide-react";
 import { Button } from "@/components/ui";
 import { Creator } from "@/lib/creators";
 
@@ -205,10 +205,16 @@ export function Hero({ creator }: HeroProps) {
                 transition={{ duration: 0.8, delay: 0.4 }}
                 className="text-lg sm:text-xl text-gray-400 max-w-xl mx-auto lg:mx-0 mb-8 leading-relaxed"
               >
-                Get exclusive access to my most intimate content, private messages,
-                and VIP-only photos & videos. Join{" "}
-                <span className="text-[var(--gold)] font-semibold">2,500+ members</span>{" "}
-                who already unlocked everything.
+                {creator?.bio && creator.bio.trim() ? (
+                  creator.bio.trim().length > 250 ? `${creator.bio.trim().slice(0, 250)}...` : creator.bio.trim()
+                ) : (
+                  <>
+                    Get exclusive access to my most intimate content, private messages,
+                    and VIP-only photos & videos. Join{" "}
+                    <span className="text-[var(--gold)] font-semibold">2,500+ members</span>{" "}
+                    who already unlocked everything.
+                  </>
+                )}
               </motion.p>
 
               {/* CTA Buttons */}
@@ -241,6 +247,49 @@ export function Hero({ creator }: HeroProps) {
                   </Button>
                 </Link>
               </motion.div>
+
+              {/* Social Links */}
+              {(creator?.socialLinks?.instagram || creator?.socialLinks?.twitter || creator?.socialLinks?.tiktok) && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.8, delay: 0.7 }}
+                  className="flex items-center justify-center lg:justify-start gap-4 mb-8"
+                >
+                  {creator.socialLinks.instagram && (
+                    <a
+                      href={creator.socialLinks.instagram.startsWith("http") ? creator.socialLinks.instagram : `https://instagram.com/${creator.socialLinks.instagram.replace("@", "")}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="group flex items-center justify-center w-12 h-12 rounded-xl bg-white/5 border border-white/10 hover:border-[var(--gold)]/50 hover:bg-[var(--gold)]/10 transition-all"
+                    >
+                      <Instagram className="w-5 h-5 text-gray-400 group-hover:text-[var(--gold)] transition-colors" />
+                    </a>
+                  )}
+                  {creator.socialLinks.twitter && (
+                    <a
+                      href={creator.socialLinks.twitter.startsWith("http") ? creator.socialLinks.twitter : `https://twitter.com/${creator.socialLinks.twitter.replace("@", "")}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="group flex items-center justify-center w-12 h-12 rounded-xl bg-white/5 border border-white/10 hover:border-[var(--gold)]/50 hover:bg-[var(--gold)]/10 transition-all"
+                    >
+                      <Twitter className="w-5 h-5 text-gray-400 group-hover:text-[var(--gold)] transition-colors" />
+                    </a>
+                  )}
+                  {creator.socialLinks.tiktok && (
+                    <a
+                      href={creator.socialLinks.tiktok.startsWith("http") ? creator.socialLinks.tiktok : `https://tiktok.com/@${creator.socialLinks.tiktok.replace("@", "")}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="group flex items-center justify-center w-12 h-12 rounded-xl bg-white/5 border border-white/10 hover:border-[var(--gold)]/50 hover:bg-[var(--gold)]/10 transition-all"
+                    >
+                      <svg className="w-5 h-5 text-gray-400 group-hover:text-[var(--gold)] transition-colors" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/>
+                      </svg>
+                    </a>
+                  )}
+                </motion.div>
+              )}
 
               {/* Trust indicators */}
               <motion.div
@@ -287,7 +336,7 @@ export function Hero({ creator }: HeroProps) {
                 <div className="relative rounded-3xl overflow-hidden border-2 border-[var(--gold)]/40 shadow-2xl shadow-[var(--gold)]/20">
                   <div className="aspect-[3/4] relative">
                     <img
-                      src={creator?.avatar || "/media/preview/3039035234726006678_1.jpg"}
+                      src={creator?.cardImage || creator?.avatar || "/media/preview/3039035234726006678_1.jpg"}
                       alt={creator?.displayName || "Creator"}
                       className="w-full h-full object-cover"
                     />

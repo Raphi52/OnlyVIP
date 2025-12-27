@@ -1,15 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
+import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { triggerNewMessage } from "@/lib/pusher";
-
-const ADMIN_USER_ID = process.env.ADMIN_USER_ID || "admin";
-
-async function isAdmin(): Promise<boolean> {
-  const cookieStore = await cookies();
-  const token = cookieStore.get("admin_token");
-  return !!token?.value;
-}
 
 // GET /api/conversations/[id]/messages - Get messages for a conversation
 export async function GET(
@@ -17,6 +9,15 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
+    const currentUserId = session.user.id;
     const { id: conversationId } = await params;
     const { searchParams } = new URL(request.url);
     const limit = parseInt(searchParams.get("limit") || "50");
@@ -36,6 +37,12 @@ export async function GET(
             image: true,
           },
         },
+        reactions: {
+          select: {
+            emoji: true,
+            userId: true,
+          },
+        },
       },
       orderBy: { createdAt: "asc" },
       take: limit,
@@ -45,39 +52,54 @@ export async function GET(
       }),
     });
 
-    // Mark messages as read if admin is viewing
-    const admin = await isAdmin();
-    if (admin) {
-      await prisma.message.updateMany({
-        where: {
-          conversationId,
-          receiverId: ADMIN_USER_ID,
-          isRead: false,
-        },
-        data: { isRead: true },
-      });
-    }
+    // Mark messages as read for current user
+    await prisma.message.updateMany({
+      where: {
+        conversationId,
+        receiverId: currentUserId,
+        isRead: false,
+      },
+      data: { isRead: true },
+    });
 
     // Transform messages for frontend
-    const transformedMessages = messages.map((msg) => ({
-      id: msg.id,
-      text: msg.text,
-      senderId: msg.senderId,
-      receiverId: msg.receiverId,
-      isPPV: msg.isPPV,
-      ppvPrice: msg.ppvPrice ? Number(msg.ppvPrice) : null,
-      isUnlocked: JSON.parse(msg.ppvUnlockedBy || "[]").includes(ADMIN_USER_ID) || msg.senderId === ADMIN_USER_ID,
-      ppvUnlockedBy: JSON.parse(msg.ppvUnlockedBy || "[]"),
-      totalTips: Number(msg.totalTips),
-      isRead: msg.isRead,
-      media: msg.media.map((m) => ({
-        id: m.id,
-        type: m.type,
-        url: m.url,
-        previewUrl: m.previewUrl,
-      })),
-      createdAt: msg.createdAt,
-    }));
+    const transformedMessages = messages.map((msg) => {
+      // Group reactions by emoji and count
+      const reactionMap = new Map<string, { count: number; users: string[] }>();
+      msg.reactions.forEach((r) => {
+        const existing = reactionMap.get(r.emoji) || { count: 0, users: [] };
+        existing.count++;
+        existing.users.push(r.userId);
+        reactionMap.set(r.emoji, existing);
+      });
+
+      const reactions = Array.from(reactionMap.entries()).map(([emoji, data]) => ({
+        emoji,
+        count: data.count,
+        users: data.users,
+      }));
+
+      return {
+        id: msg.id,
+        text: msg.text,
+        senderId: msg.senderId,
+        receiverId: msg.receiverId,
+        isPPV: msg.isPPV,
+        ppvPrice: msg.ppvPrice ? Number(msg.ppvPrice) : null,
+        isUnlocked: JSON.parse(msg.ppvUnlockedBy || "[]").includes(currentUserId) || msg.senderId === currentUserId,
+        ppvUnlockedBy: JSON.parse(msg.ppvUnlockedBy || "[]"),
+        totalTips: Number(msg.totalTips),
+        isRead: msg.isRead,
+        media: msg.media.map((m) => ({
+          id: m.id,
+          type: m.type,
+          url: m.url,
+          previewUrl: m.previewUrl,
+        })),
+        reactions,
+        createdAt: msg.createdAt,
+      };
+    });
 
     return NextResponse.json(transformedMessages);
   } catch (error) {
@@ -95,23 +117,20 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id: conversationId } = await params;
-    const admin = await isAdmin();
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
 
+    const { id: conversationId } = await params;
     const body = await request.json();
     const { text, media, isPPV, ppvPrice, senderId } = body;
 
-    // Determine sender and receiver
-    // If senderId is provided, use it (user sending from their dashboard)
-    // Only use ADMIN_USER_ID if no senderId and admin is logged in
-    const actualSenderId = senderId || (admin ? ADMIN_USER_ID : null);
-
-    if (!actualSenderId) {
-      return NextResponse.json(
-        { error: "Sender ID is required" },
-        { status: 400 }
-      );
-    }
+    // Use senderId from body if provided, otherwise use session user
+    const actualSenderId = senderId || session.user.id;
 
     // Get the other participant
     const conversation = await prisma.conversation.findUnique({
@@ -128,16 +147,11 @@ export async function POST(
       );
     }
 
-    const receiverId = conversation.participants.find(
+    // Find receiver - for self-conversations, receiver is same as sender
+    const otherParticipant = conversation.participants.find(
       (p) => p.userId !== actualSenderId
-    )?.userId;
-
-    if (!receiverId) {
-      return NextResponse.json(
-        { error: "Receiver not found" },
-        { status: 400 }
-      );
-    }
+    );
+    const receiverId = otherParticipant?.userId || actualSenderId;
 
     // Create the message
     const message = await prisma.message.create({

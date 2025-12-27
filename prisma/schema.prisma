@@ -15,8 +15,13 @@ model Creator {
   name         String
   displayName  String
   avatar       String?
+  cardImage    String?
   coverImage   String?
   bio          String?
+
+  // Link to user account (creator owner) - one user can manage multiple creators
+  userId       String?
+  user         User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   // Social links (JSON string)
   socialLinks  String   @default("{}")
@@ -47,6 +52,10 @@ model User {
   name          String?
   image         String?
   role          String    @default("USER")
+
+  // Creator account - can manage multiple creator profiles
+  isCreator       Boolean   @default(false)
+  creatorProfiles Creator[]
 
   // Stripe
   stripeCustomerId String?
@@ -416,6 +425,10 @@ model Payment {
   amount       Float
   currency     String        @default("USD")
 
+  // Platform fee (3%)
+  platformFee  Float         @default(0)
+  netAmount    Float         @default(0)
+
   provider     String        // "STRIPE" | "NOWPAYMENTS" | "MANUAL"
   providerTxId String?
 
@@ -488,24 +501,37 @@ model DailyStats {
 
 model SiteSettings {
   id              String   @id @default(cuid())
-  creatorSlug     String   @unique
+  creatorSlug     String?  @unique
 
-  // Site settings per creator
+  // Site settings
   siteName        String?
   siteDescription String?
+  siteUrl         String?
   welcomeMessage  String?
 
-  // Theme customization
+  // Branding
+  logo            String?
+  favicon         String?
   primaryColor    String?
   accentColor     String?
 
   // Pricing (stored as JSON string)
   pricing         String   @default("{}")
 
+  // Payment toggles
+  stripeEnabled   Boolean  @default(true)
+  cryptoEnabled   Boolean  @default(false)
+
   // Features toggles
   chatEnabled     Boolean  @default(true)
   tipsEnabled     Boolean  @default(true)
   ppvEnabled      Boolean  @default(true)
+
+  // System toggles
+  maintenanceMode      Boolean  @default(false)
+  registrationEnabled  Boolean  @default(true)
+  emailNotifications   Boolean  @default(true)
+  pushNotifications    Boolean  @default(false)
 
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt

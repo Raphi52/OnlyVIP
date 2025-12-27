@@ -73,7 +73,8 @@ export async function createSubscriptionCheckout(
   priceId: string,
   userId: string,
   planId: string,
-  billingInterval: "MONTHLY" | "ANNUAL"
+  billingInterval: "MONTHLY" | "ANNUAL",
+  creatorSlug?: string
 ) {
   if (!stripe) throw new Error("Stripe not configured");
 
@@ -89,12 +90,14 @@ export async function createSubscriptionCheckout(
         userId,
         planId,
         billingInterval,
+        ...(creatorSlug && { creatorSlug }),
       },
     },
     metadata: {
       userId,
       planId,
       type: "subscription",
+      ...(creatorSlug && { creatorSlug }),
     },
   });
 

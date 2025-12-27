@@ -16,6 +16,8 @@ import {
   Copy,
   QrCode,
   Sparkles,
+  CreditCard,
+  ExternalLink,
 } from "lucide-react";
 
 // Subscription plans configuration
@@ -114,6 +116,16 @@ function CheckoutContent() {
     payCurrency: string;
     qrCodeUrl?: string;
   } | null>(null);
+  const [cardPayment, setCardPayment] = useState<{
+    walletAddress: string;
+    cryptoCurrency: string;
+    changeHeroUrl: string;
+    amount: number;
+    paymentId: string;
+  } | null>(null);
+  const [copiedAddress, setCopiedAddress] = useState(false);
+  const [paymentStatus, setPaymentStatus] = useState<"waiting" | "confirmed" | "failed">("waiting");
+  const [checkingPayment, setCheckingPayment] = useState(false);
 
   // Get plan from URL
   const planId = searchParams.get("plan") as PlanKey;
@@ -127,6 +139,35 @@ function CheckoutContent() {
       router.push(`${basePath}/auth/login?callbackUrl=${callbackUrl}`);
     }
   }, [status, router, planId, interval, basePath]);
+
+  // Poll for payment status when waiting for card payment
+  useEffect(() => {
+    if (!cardPayment?.paymentId || paymentStatus !== "waiting") return;
+
+    const checkPaymentStatus = async () => {
+      try {
+        setCheckingPayment(true);
+        const response = await fetch(`/api/payments/check-pending?paymentId=${cardPayment.paymentId}`);
+        const data = await response.json();
+
+        if (data.confirmed) {
+          setPaymentStatus("confirmed");
+        }
+      } catch (error) {
+        console.error("Error checking payment status:", error);
+      } finally {
+        setCheckingPayment(false);
+      }
+    };
+
+    // Check immediately
+    checkPaymentStatus();
+
+    // Then poll every 30 seconds
+    const interval = setInterval(checkPaymentStatus, 30000);
+
+    return () => clearInterval(interval);
+  }, [cardPayment?.paymentId, paymentStatus]);
 
   const price = plan ? (interval === "annual" ? plan.annualPrice : plan.monthlyPrice) : 0;
 
@@ -146,6 +187,7 @@ function CheckoutContent() {
             planId: plan.id.toUpperCase(),
             billingInterval: interval === "annual" ? "ANNUAL" : "MONTHLY",
             currency: selectedCrypto || "btc",
+            creatorSlug,
           }),
         });
 
@@ -164,14 +206,16 @@ function CheckoutContent() {
           qrCodeUrl: data.qrCodeUrl,
         });
       } else {
-        // Stripe checkout
-        const response = await fetch("/api/payments/stripe/checkout", {
+        // ChangeHero checkout for credit card payments
+        const response = await fetch("/api/payments/card/checkout", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             type: "subscription",
             planId: plan.id.toUpperCase(),
             billingInterval: interval === "annual" ? "ANNUAL" : "MONTHLY",
+            amount: price,
+            creatorSlug,
           }),
         });
 
@@ -181,9 +225,14 @@ function CheckoutContent() {
         }
 
         const data = await response.json();
-        if (data.url) {
-          window.location.href = data.url;
-        }
+        setCardPayment({
+          walletAddress: data.walletAddress,
+          cryptoCurrency: data.cryptoCurrency,
+          changeHeroUrl: data.changeHeroUrl,
+          amount: price,
+          paymentId: data.paymentId,
+        });
+        setPaymentStatus("waiting");
       }
     } catch (error) {
       console.error("Payment error:", error);
@@ -381,7 +430,7 @@ function CheckoutContent() {
                   </div>
 
                   {/* Dashboard link */}
-                  <Link href={`${basePath}/dashboard/billing`} className="mt-4">
+                  <Link href="/dashboard" className="mt-4">
                     <Button variant="gold-outline" size="sm">
                       Check Payment Status
                     </Button>
@@ -390,8 +439,162 @@ function CheckoutContent() {
               </Card>
             )}
 
+            {/* Credit Card Payment via ChangeHero */}
+            {selectedPayment === "card" && cardPayment && (
+              <Card variant="luxury" className="p-6">
+                {paymentStatus === "confirmed" ? (
+                  // Payment confirmed!
+                  <div className="text-center py-6">
+                    <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                      <Check className="w-8 h-8 text-emerald-500" />
+                    </div>
+                    <h2 className="text-xl font-bold text-[var(--foreground)] mb-2">
+                      Payment Confirmed!
+                    </h2>
+                    <p className="text-[var(--muted)] mb-6">
+                      Your {plan?.name} subscription is now active.
+                    </p>
+                    <Link href="/dashboard">
+                      <Button variant="premium">
+                        Go to Dashboard
+                      </Button>
+                    </Link>
+                  </div>
+                ) : (
+                  // Waiting for payment
+                  <>
+                    <div className="flex items-center justify-between mb-4">
+                      <h2 className="text-lg font-semibold text-[var(--foreground)] flex items-center gap-2">
+                        <CreditCard className="w-5 h-5" />
+                        Pay with Credit Card
+                      </h2>
+                      <button
+                        onClick={() => {
+                          setCardPayment(null);
+                          setPaymentStatus("waiting");
+                        }}
+                        className="text-sm text-[var(--muted)] hover:text-[var(--foreground)] flex items-center gap-1 transition-colors"
+                      >
+                        <ArrowLeft className="w-4 h-4" />
+                        Back
+                      </button>
+                    </div>
+
+                    <div className="space-y-4">
+                      {/* Step 1 */}
+                      <div className="flex gap-3">
+                        <div className="w-6 h-6 rounded-full bg-[var(--gold)] text-black flex items-center justify-center text-sm font-bold flex-shrink-0">
+                          1
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-medium text-[var(--foreground)] mb-2">
+                            Buy {cardPayment.cryptoCurrency.toUpperCase()} with your card
+                          </p>
+                          <a
+                            href={cardPayment.changeHeroUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-2 px-4 py-2 bg-[var(--gold)] text-black rounded-lg font-medium hover:bg-[var(--gold-hover)] transition-colors"
+                          >
+                            Buy on ChangeHero
+                            <ExternalLink className="w-4 h-4" />
+                          </a>
+                        </div>
+                      </div>
+
+                      {/* Step 2 */}
+                      <div className="flex gap-3">
+                        <div className="w-6 h-6 rounded-full bg-[var(--gold)] text-black flex items-center justify-center text-sm font-bold flex-shrink-0">
+                          2
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-medium text-[var(--foreground)] mb-2">
+                            Send to this {cardPayment.cryptoCurrency.toUpperCase()} address
+                          </p>
+                          <div className="bg-black/50 p-3 rounded-lg border border-[var(--border)]">
+                            <div className="flex items-center gap-2">
+                              <code className="flex-1 text-xs text-[var(--gold)] break-all">
+                                {cardPayment.walletAddress}
+                              </code>
+                              <button
+                                onClick={() => {
+                                  navigator.clipboard.writeText(cardPayment.walletAddress);
+                                  setCopiedAddress(true);
+                                  setTimeout(() => setCopiedAddress(false), 2000);
+                                }}
+                                className="p-2 bg-[var(--surface)] hover:bg-[var(--surface-hover)] rounded transition-colors flex-shrink-0"
+                                title="Copy address"
+                              >
+                                {copiedAddress ? (
+                                  <Check className="w-4 h-4 text-emerald-500" />
+                                ) : (
+                                  <Copy className="w-4 h-4 text-[var(--muted)]" />
+                                )}
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Payment status indicator */}
+                      <div className="bg-[var(--gold)]/10 border border-[var(--gold)]/30 rounded-lg p-4">
+                        <div className="flex items-center justify-center gap-2 mb-2">
+                          {checkingPayment ? (
+                            <Loader2 className="w-4 h-4 text-[var(--gold)] animate-spin" />
+                          ) : (
+                            <div className="w-2 h-2 rounded-full bg-[var(--gold)] animate-pulse" />
+                          )}
+                          <p className="text-sm text-[var(--gold)]">
+                            Waiting for payment...
+                          </p>
+                        </div>
+                        <p className="text-sm text-[var(--gold)] text-center">
+                          Amount: <span className="font-bold">{formatPrice(cardPayment.amount)}</span>
+                        </p>
+                        <p className="text-xs text-[var(--gold)]/70 text-center mt-1">
+                          Your subscription will activate automatically once we receive the payment
+                        </p>
+                      </div>
+
+                      {/* Manual check button */}
+                      <div className="text-center">
+                        <Button
+                          variant="gold-outline"
+                          size="sm"
+                          onClick={async () => {
+                            setCheckingPayment(true);
+                            try {
+                              const response = await fetch(`/api/payments/check-pending?paymentId=${cardPayment.paymentId}`);
+                              const data = await response.json();
+                              if (data.confirmed) {
+                                setPaymentStatus("confirmed");
+                              }
+                            } catch (error) {
+                              console.error("Error checking payment:", error);
+                            } finally {
+                              setCheckingPayment(false);
+                            }
+                          }}
+                          disabled={checkingPayment}
+                        >
+                          {checkingPayment ? (
+                            <>
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                              Checking...
+                            </>
+                          ) : (
+                            "Check Payment Status"
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </Card>
+            )}
+
             {/* Pay Button */}
-            {!cryptoPayment && (
+            {!cryptoPayment && !cardPayment && (
               <Button
                 variant="premium"
                 size="lg"

@@ -76,17 +76,17 @@ export default function DashboardPage() {
   const isPremium = subscription && subscription.accessTier !== "FREE";
 
   return (
-    <div className="p-6 lg:p-8">
+    <div className="p-4 sm:p-6 lg:p-8 pb-24 lg:pb-8">
       {/* Welcome Section */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="mb-8"
+        className="mb-6 sm:mb-8"
       >
-        <h1 className="text-3xl font-semibold text-[var(--foreground)] mb-2">
+        <h1 className="text-2xl sm:text-3xl font-semibold text-[var(--foreground)] mb-1 sm:mb-2">
           Welcome back, {session?.user?.name?.split(" ")[0] || "there"}!
         </h1>
-        <p className="text-[var(--muted)]">
+        <p className="text-sm sm:text-base text-[var(--muted)]">
           Here&apos;s what&apos;s happening with your account
         </p>
       </motion.div>
@@ -96,41 +96,46 @@ export default function DashboardPage() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
-        className="mb-8"
+        className="mb-6 sm:mb-8"
       >
         <Card
           variant="featured"
-          className="p-6 flex flex-col md:flex-row items-center gap-6"
+          className="p-4 sm:p-6 flex flex-col md:flex-row items-start md:items-center gap-4 sm:gap-6"
         >
+          {/* Mobile crown icon */}
+          <div className="md:hidden w-14 h-14 rounded-full bg-[var(--gold)]/10 flex items-center justify-center flex-shrink-0">
+            <Crown className="w-7 h-7 text-[var(--gold)]" />
+          </div>
+
           <div className="flex-1">
-            <Badge variant="vip" className="mb-3">
+            <Badge variant="vip" className="mb-2 sm:mb-3">
               <Star className="w-3 h-3 mr-1" />
               {isPremium ? subscription.planName : "Free Account"}
             </Badge>
             {isPremium ? (
               <>
-                <h2 className="text-xl font-semibold text-[var(--foreground)] mb-2">
+                <h2 className="text-lg sm:text-xl font-semibold text-[var(--foreground)] mb-1 sm:mb-2">
                   You&apos;re a {subscription.planName} member!
                 </h2>
-                <p className="text-[var(--muted)] mb-4">
+                <p className="text-sm sm:text-base text-[var(--muted)] mb-3 sm:mb-4">
                   Enjoy your exclusive access to premium content and features.
                 </p>
                 <Link href="/dashboard/subscription">
-                  <Button variant="outline" className="gap-2">
+                  <Button variant="outline" className="gap-2 w-full sm:w-auto">
                     Manage Subscription
                   </Button>
                 </Link>
               </>
             ) : (
               <>
-                <h2 className="text-xl font-semibold text-[var(--foreground)] mb-2">
+                <h2 className="text-lg sm:text-xl font-semibold text-[var(--foreground)] mb-1 sm:mb-2">
                   Upgrade to Premium
                 </h2>
-                <p className="text-[var(--muted)] mb-4">
+                <p className="text-sm sm:text-base text-[var(--muted)] mb-3 sm:mb-4">
                   Unlock all exclusive content, direct messaging, and more!
                 </p>
                 <Link href="/dashboard/subscription">
-                  <Button variant="premium" className="gap-2">
+                  <Button variant="premium" className="gap-2 w-full sm:w-auto">
                     <Crown className="w-4 h-4" />
                     View Plans
                   </Button>
@@ -138,6 +143,7 @@ export default function DashboardPage() {
               </>
             )}
           </div>
+          {/* Desktop crown icon */}
           <div className="hidden md:block">
             <div className="w-32 h-32 rounded-full bg-[var(--gold)]/10 flex items-center justify-center">
               <Crown className="w-16 h-16 text-[var(--gold)]" />
@@ -151,56 +157,56 @@ export default function DashboardPage() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
-        className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8"
+        className="grid grid-cols-3 gap-2 sm:gap-4 mb-6 sm:mb-8"
       >
-        <Card className="p-6">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-full bg-[var(--gold)]/10 flex items-center justify-center">
-              <Image className="w-6 h-6 text-[var(--gold)]" />
+        <Card className="p-3 sm:p-6">
+          <div className="flex flex-col sm:flex-row items-center sm:items-center gap-2 sm:gap-4 text-center sm:text-left">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-[var(--gold)]/10 flex items-center justify-center flex-shrink-0">
+              <Image className="w-5 h-5 sm:w-6 sm:h-6 text-[var(--gold)]" />
             </div>
             <div>
               {isLoading ? (
-                <Loader2 className="w-6 h-6 animate-spin text-[var(--muted)]" />
+                <Loader2 className="w-5 h-5 sm:w-6 sm:h-6 animate-spin text-[var(--muted)] mx-auto sm:mx-0" />
               ) : (
-                <p className="text-2xl font-bold text-[var(--foreground)]">
+                <p className="text-xl sm:text-2xl font-bold text-[var(--foreground)]">
                   {stats?.unlockedContent || 0}
                 </p>
               )}
-              <p className="text-sm text-[var(--muted)]">Unlocked Content</p>
+              <p className="text-[10px] sm:text-sm text-[var(--muted)] leading-tight">Unlocked</p>
             </div>
           </div>
         </Card>
-        <Card className="p-6">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-full bg-[var(--gold)]/10 flex items-center justify-center">
-              <MessageCircle className="w-6 h-6 text-[var(--gold)]" />
+        <Card className="p-3 sm:p-6">
+          <div className="flex flex-col sm:flex-row items-center sm:items-center gap-2 sm:gap-4 text-center sm:text-left">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-[var(--gold)]/10 flex items-center justify-center flex-shrink-0">
+              <MessageCircle className="w-5 h-5 sm:w-6 sm:h-6 text-[var(--gold)]" />
             </div>
             <div>
               {isLoading ? (
-                <Loader2 className="w-6 h-6 animate-spin text-[var(--muted)]" />
+                <Loader2 className="w-5 h-5 sm:w-6 sm:h-6 animate-spin text-[var(--muted)] mx-auto sm:mx-0" />
               ) : (
-                <p className="text-2xl font-bold text-[var(--foreground)]">
+                <p className="text-xl sm:text-2xl font-bold text-[var(--foreground)]">
                   {stats?.messageCount || 0}
                 </p>
               )}
-              <p className="text-sm text-[var(--muted)]">Messages</p>
+              <p className="text-[10px] sm:text-sm text-[var(--muted)] leading-tight">Messages</p>
             </div>
           </div>
         </Card>
-        <Card className="p-6">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-full bg-[var(--gold)]/10 flex items-center justify-center">
-              <Star className="w-6 h-6 text-[var(--gold)]" />
+        <Card className="p-3 sm:p-6">
+          <div className="flex flex-col sm:flex-row items-center sm:items-center gap-2 sm:gap-4 text-center sm:text-left">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-[var(--gold)]/10 flex items-center justify-center flex-shrink-0">
+              <Star className="w-5 h-5 sm:w-6 sm:h-6 text-[var(--gold)]" />
             </div>
             <div>
               {isLoading ? (
-                <Loader2 className="w-6 h-6 animate-spin text-[var(--muted)]" />
+                <Loader2 className="w-5 h-5 sm:w-6 sm:h-6 animate-spin text-[var(--muted)] mx-auto sm:mx-0" />
               ) : (
-                <p className="text-2xl font-bold text-[var(--foreground)]">
+                <p className="text-xl sm:text-2xl font-bold text-[var(--foreground)] truncate max-w-[60px] sm:max-w-none">
                   {stats?.currentPlan || "Free"}
                 </p>
               )}
-              <p className="text-sm text-[var(--muted)]">Current Plan</p>
+              <p className="text-[10px] sm:text-sm text-[var(--muted)] leading-tight">Plan</p>
             </div>
           </div>
         </Card>
@@ -212,12 +218,12 @@ export default function DashboardPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3 }}
       >
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-semibold text-[var(--foreground)]">
+        <div className="flex items-center justify-between mb-4 sm:mb-6">
+          <h2 className="text-lg sm:text-xl font-semibold text-[var(--foreground)]">
             Recent Content
           </h2>
           <Link href="/gallery">
-            <Button variant="ghost" size="sm" className="gap-2">
+            <Button variant="ghost" size="sm" className="gap-1 sm:gap-2 text-sm">
               View All
               <ArrowRight className="w-4 h-4" />
             </Button>
@@ -229,18 +235,18 @@ export default function DashboardPage() {
             <Loader2 className="w-8 h-8 animate-spin text-[var(--gold)]" />
           </div>
         ) : recentContent.length === 0 ? (
-          <Card className="p-8 text-center">
-            <Image className="w-12 h-12 text-[var(--muted)] mx-auto mb-4" />
-            <p className="text-[var(--muted)]">No content available yet</p>
+          <Card className="p-6 sm:p-8 text-center">
+            <Image className="w-10 h-10 sm:w-12 sm:h-12 text-[var(--muted)] mx-auto mb-3 sm:mb-4" />
+            <p className="text-sm sm:text-base text-[var(--muted)]">No content available yet</p>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
             {recentContent.map((item) => (
               <Link key={item.id} href={`/gallery?id=${item.id}`}>
                 <Card
                   variant="luxury"
                   hover
-                  className="overflow-hidden p-0 cursor-pointer"
+                  className="overflow-hidden p-0 cursor-pointer active:scale-[0.98] transition-transform"
                 >
                   <div className="relative aspect-[4/3]">
                     <img
@@ -254,42 +260,42 @@ export default function DashboardPage() {
 
                     {item.isLocked && (
                       <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="w-12 h-12 rounded-full bg-[var(--gold)] flex items-center justify-center">
-                          <Lock className="w-5 h-5 text-[var(--background)]" />
+                        <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-[var(--gold)] flex items-center justify-center">
+                          <Lock className="w-4 h-4 sm:w-5 sm:h-5 text-[var(--background)]" />
                         </div>
                       </div>
                     )}
 
                     {item.type === "video" && !item.isLocked && (
                       <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="w-12 h-12 rounded-full bg-[var(--gold)] flex items-center justify-center">
+                        <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-[var(--gold)] flex items-center justify-center">
                           <Play
-                            className="w-5 h-5 text-[var(--background)] ml-0.5"
+                            className="w-4 h-4 sm:w-5 sm:h-5 text-[var(--background)] ml-0.5"
                             fill="currentColor"
                           />
                         </div>
                       </div>
                     )}
 
-                    <div className="absolute top-3 left-3 flex gap-2">
-                      <Badge variant={item.type === "video" ? "video" : "photo"}>
+                    <div className="absolute top-2 left-2 sm:top-3 sm:left-3 flex flex-wrap gap-1 sm:gap-2">
+                      <Badge variant={item.type === "video" ? "video" : "photo"} className="text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5">
                         {item.type}
                       </Badge>
                       <Badge
-                        className={
+                        className={`text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 ${
                           item.accessTier === "VIP"
                             ? "bg-[var(--gold)]/20 text-[var(--gold)]"
                             : item.accessTier === "BASIC"
                             ? "bg-blue-500/20 text-blue-400"
                             : "bg-emerald-500/20 text-emerald-400"
-                        }
+                        }`}
                       >
                         {item.accessTier}
                       </Badge>
                     </div>
 
-                    <div className="absolute bottom-0 left-0 right-0 p-4">
-                      <h3 className="text-white font-medium">{item.title}</h3>
+                    <div className="absolute bottom-0 left-0 right-0 p-2 sm:p-4">
+                      <h3 className="text-white font-medium text-xs sm:text-base truncate">{item.title}</h3>
                     </div>
                   </div>
                 </Card>

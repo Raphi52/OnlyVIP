@@ -1,29 +1,41 @@
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
+import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 
-// Get admin ID (the creator/model)
-const ADMIN_USER_ID = process.env.ADMIN_USER_ID || "admin";
-
-// Check if user is admin
-async function isAdmin(): Promise<boolean> {
-  const cookieStore = await cookies();
-  const token = cookieStore.get("admin_token");
-  return !!token?.value;
-}
-
-// GET /api/conversations - Get all conversations
+// GET /api/conversations - Get conversations for current user
 export async function GET(request: NextRequest) {
   try {
-    const admin = await isAdmin();
+    const session = await auth();
+
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
+    const userId = session.user.id;
+    const isAdmin = (session.user as any).role === "ADMIN";
+    const isCreator = (session.user as any).isCreator;
 
     // Get creator filter from query params
     const { searchParams } = new URL(request.url);
     const creatorSlug = searchParams.get("creator");
 
-    // Get all conversations with participants and last message
+    // Build where clause - get conversations where user is a participant
+    const whereClause: any = {
+      participants: {
+        some: { userId },
+      },
+    };
+
+    if (creatorSlug) {
+      whereClause.creatorSlug = creatorSlug;
+    }
+
+    // Get conversations with participants and last message
     const conversations = await prisma.conversation.findMany({
-      where: creatorSlug ? { creatorSlug } : undefined,
+      where: whereClause,
       include: {
         participants: {
           include: {
@@ -51,42 +63,71 @@ export async function GET(request: NextRequest) {
     // Transform data for frontend
     const transformedConversations = await Promise.all(
       conversations.map(async (conv) => {
-        // Get the other user (not admin)
+        // Get the other user (not current user)
+        // For self-conversations (admin testing), show self as other user
         const otherParticipant = conv.participants.find(
-          (p) => p.userId !== ADMIN_USER_ID
-        );
-        const user = otherParticipant?.user;
+          (p) => p.userId !== userId
+        ) || conv.participants[0];
+        const otherUser = otherParticipant?.user;
 
-        // Count unread messages
+        // Check if the other user is a creator and get their avatar
+        let userImage = otherUser?.image;
+        let userName = otherUser?.name || otherUser?.email?.split("@")[0] || "User";
+
+        if (otherUser?.id) {
+          const creator = await prisma.creator.findFirst({
+            where: { userId: otherUser.id },
+            select: { avatar: true, displayName: true },
+          });
+          if (creator) {
+            userImage = creator.avatar || userImage;
+            userName = creator.displayName || userName;
+          }
+        }
+
+        // Count unread messages for current user (exclude self-messages)
         const unreadCount = await prisma.message.count({
           where: {
             conversationId: conv.id,
-            receiverId: ADMIN_USER_ID,
+            receiverId: userId,
+            senderId: { not: userId }, // Don't count messages from self
             isRead: false,
           },
         });
 
-        // Get user's subscription
-        const subscription = await prisma.subscription.findFirst({
-          where: {
-            userId: user?.id,
-            status: "ACTIVE",
-          },
-          include: {
-            plan: true,
-          },
-        });
+        // Get other user's subscription (for admin/creator view)
+        let subscriptionName = null;
+        if (isAdmin || isCreator) {
+          const subscription = await prisma.subscription.findFirst({
+            where: {
+              userId: otherUser?.id,
+              status: "ACTIVE",
+            },
+            include: {
+              plan: true,
+            },
+          });
+          subscriptionName = subscription?.plan?.name || "Free";
+        }
 
         const lastMessage = conv.messages[0];
 
         return {
           id: conv.id,
+          otherUser: {
+            id: otherUser?.id || "",
+            name: userName,
+            email: otherUser?.email,
+            image: userImage,
+            isOnline: false,
+          },
+          // Keep 'user' for backward compatibility with admin pages
           user: {
-            id: user?.id || "",
-            name: user?.name || user?.email?.split("@")[0] || "User",
-            email: user?.email,
-            image: user?.image,
-            isOnline: false, // Would need WebSocket for real-time status
+            id: otherUser?.id || "",
+            name: userName,
+            email: otherUser?.email,
+            image: userImage,
+            isOnline: false,
           },
           lastMessage: lastMessage
             ? {
@@ -98,14 +139,14 @@ export async function GET(request: NextRequest) {
               }
             : null,
           unreadCount,
-          subscription: subscription?.plan?.name || "Free",
+          subscription: subscriptionName,
           createdAt: conv.createdAt,
           updatedAt: conv.updatedAt,
         };
       })
     );
 
-    return NextResponse.json(transformedConversations);
+    return NextResponse.json({ conversations: transformedConversations });
   } catch (error) {
     console.error("Error fetching conversations:", error);
     return NextResponse.json(
@@ -115,9 +156,19 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/conversations - Create new conversation or get existing
+// POST /api/conversations - Create new conversation (for admin/creator)
 export async function POST(request: NextRequest) {
   try {
+    const session = await auth();
+
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
+    const currentUserId = session.user.id;
     const { userId } = await request.json();
 
     if (!userId) {
@@ -127,11 +178,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if conversation already exists between admin and user
+    // Check if conversation already exists between current user and target user
     const existingConversation = await prisma.conversation.findFirst({
       where: {
         AND: [
-          { participants: { some: { userId: ADMIN_USER_ID } } },
+          { participants: { some: { userId: currentUserId } } },
           { participants: { some: { userId } } },
         ],
       },
@@ -159,7 +210,7 @@ export async function POST(request: NextRequest) {
     const conversation = await prisma.conversation.create({
       data: {
         participants: {
-          create: [{ userId: ADMIN_USER_ID }, { userId }],
+          create: [{ userId: currentUserId }, { userId }],
         },
       },
       include: {

@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useRef, useCallback, useEffect } from "react";
-import { motion, AnimatePresence, PanInfo } from "framer-motion";
+import { useState, useRef, useCallback, useEffect, memo } from "react";
+import { motion, AnimatePresence, PanInfo, useMotionValue, useTransform } from "framer-motion";
 import {
-  Lock, Play, DollarSign, Check, CheckCheck,
-  CornerUpLeft, Heart, ThumbsUp, ThumbsDown, Laugh, Frown, Zap,
-  MoreHorizontal, X
+  Lock, Play, Pause, DollarSign, Check, CheckCheck,
+  CornerUpLeft, Heart, ThumbsUp, Laugh, Frown, Flame,
+  MoreHorizontal, Volume2, VolumeX, Download, Maximize2
 } from "lucide-react";
 import { Button } from "@/components/ui";
 import { formatPrice, cn } from "@/lib/utils";
@@ -55,16 +55,9 @@ interface MessageBubbleProps {
   searchHighlight?: string;
 }
 
-const QUICK_REACTIONS = [
-  { emoji: "❤️", icon: Heart },
-  { emoji: "😂", icon: Laugh },
-  { emoji: "👍", icon: ThumbsUp },
-  { emoji: "👎", icon: ThumbsDown },
-  { emoji: "😢", icon: Frown },
-  { emoji: "⚡", icon: Zap },
-];
+const QUICK_REACTIONS = ["❤️", "🔥", "😍", "😂", "👍", "💋"];
 
-export function MessageBubble({
+export const MessageBubble = memo(function MessageBubble({
   id,
   text,
   media,
@@ -91,33 +84,53 @@ export function MessageBubble({
 }: MessageBubbleProps) {
   const [showActions, setShowActions] = useState(false);
   const [showReactions, setShowReactions] = useState(false);
-  const [swipeOffset, setSwipeOffset] = useState(0);
+  const [isVideoPlaying, setIsVideoPlaying] = useState(false);
+  const [isVideoMuted, setIsVideoMuted] = useState(true);
+  const [videoProgress, setVideoProgress] = useState(0);
+
   const longPressTimer = useRef<NodeJS.Timeout | null>(null);
   const bubbleRef = useRef<HTMLDivElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  // Swipe animation
+  const x = useMotionValue(0);
+  const replyOpacity = useTransform(x, [0, 60, 80], [0, 0.5, 1]);
+  const replyScale = useTransform(x, [0, 60, 80], [0.5, 0.8, 1]);
 
   const showLocked = isPPV && !isUnlocked && !isSent;
 
-  // Clean up timer on unmount
+  // Video handlers
+  const toggleVideoPlay = useCallback(() => {
+    if (!videoRef.current) return;
+    if (isVideoPlaying) {
+      videoRef.current.pause();
+    } else {
+      videoRef.current.play();
+    }
+    setIsVideoPlaying(!isVideoPlaying);
+  }, [isVideoPlaying]);
+
+  const handleVideoTimeUpdate = useCallback(() => {
+    if (!videoRef.current) return;
+    const progress = (videoRef.current.currentTime / videoRef.current.duration) * 100;
+    setVideoProgress(progress);
+  }, []);
+
+  // Cleanup
   useEffect(() => {
     return () => {
-      if (longPressTimer.current) {
-        clearTimeout(longPressTimer.current);
-      }
+      if (longPressTimer.current) clearTimeout(longPressTimer.current);
     };
   }, []);
 
-  // Handle touch start - long press detection
+  // Long press for mobile
   const handleTouchStart = useCallback(() => {
     longPressTimer.current = setTimeout(() => {
       setShowActions(true);
-      // Haptic feedback if available
-      if (navigator.vibrate) {
-        navigator.vibrate(50);
-      }
-    }, 500);
+      if (navigator.vibrate) navigator.vibrate(50);
+    }, 400);
   }, []);
 
-  // Handle touch end
   const handleTouchEnd = useCallback(() => {
     if (longPressTimer.current) {
       clearTimeout(longPressTimer.current);
@@ -125,282 +138,263 @@ export function MessageBubble({
     }
   }, []);
 
-  // Handle swipe
+  // Swipe to reply
   const handleDragEnd = useCallback((_: any, info: PanInfo) => {
-    setSwipeOffset(0);
-    // Swipe right to reply (threshold 80px)
-    if (info.offset.x > 80 && !isSent) {
-      onReply?.(id);
-      if (navigator.vibrate) {
-        navigator.vibrate(30);
-      }
+    if (info.offset.x > 80 && !isSent && onReply) {
+      onReply(id);
+      if (navigator.vibrate) navigator.vibrate(30);
     }
   }, [id, isSent, onReply]);
 
-  // Close actions when clicking outside
+  // Close actions on outside click
   useEffect(() => {
-    if (!showActions) return;
-
-    const handleClickOutside = (e: MouseEvent | TouchEvent) => {
+    if (!showActions && !showReactions) return;
+    const handler = (e: MouseEvent | TouchEvent) => {
       if (bubbleRef.current && !bubbleRef.current.contains(e.target as Node)) {
         setShowActions(false);
         setShowReactions(false);
       }
     };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    document.addEventListener("touchstart", handleClickOutside);
+    document.addEventListener("mousedown", handler);
+    document.addEventListener("touchstart", handler);
     return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-      document.removeEventListener("touchstart", handleClickOutside);
+      document.removeEventListener("mousedown", handler);
+      document.removeEventListener("touchstart", handler);
     };
-  }, [showActions]);
+  }, [showActions, showReactions]);
 
   // Highlight search text
   const highlightText = (content: string) => {
     if (!searchHighlight || !content) return content;
-    const regex = new RegExp(`(${searchHighlight})`, 'gi');
+    const regex = new RegExp(`(${searchHighlight})`, "gi");
     const parts = content.split(regex);
     return parts.map((part, i) =>
       regex.test(part) ? (
-        <mark key={i} className="bg-[var(--gold)]/30 text-[var(--gold)] rounded px-0.5">
-          {part}
-        </mark>
+        <mark key={i} className="bg-[var(--gold)]/40 text-white rounded px-0.5">{part}</mark>
       ) : part
     );
   };
 
-  // Bubble style based on position
-  const getBubbleStyle = () => {
-    const base = isSent
-      ? "bg-gradient-to-br from-[var(--gold)] to-[var(--gold-dark)] text-black"
-      : "bg-[#1a1a1a] text-white border border-white/10";
-
-    let rounded = "rounded-2xl";
-    if (isSent) {
-      if (isFirstInGroup && isLastInGroup) rounded = "rounded-2xl rounded-br-md";
-      else if (isFirstInGroup) rounded = "rounded-2xl rounded-br-md";
-      else if (isLastInGroup) rounded = "rounded-2xl rounded-tr-md rounded-br-md";
-      else rounded = "rounded-2xl rounded-tr-md rounded-br-md";
-    } else {
-      if (isFirstInGroup && isLastInGroup) rounded = "rounded-2xl rounded-bl-md";
-      else if (isFirstInGroup) rounded = "rounded-2xl rounded-bl-md";
-      else if (isLastInGroup) rounded = "rounded-2xl rounded-tl-md rounded-bl-md";
-      else rounded = "rounded-2xl rounded-tl-md rounded-bl-md";
-    }
-
-    return cn(base, rounded);
+  // Time formatting
+  const formatTime = (date: Date) => {
+    return new Date(date).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   };
 
   return (
     <motion.div
       ref={bubbleRef}
-      initial={{ opacity: 0, y: 20, scale: 0.95 }}
+      initial={{ opacity: 0, y: 10, scale: 0.98 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
-      transition={{
-        type: "spring",
-        stiffness: 500,
-        damping: 30,
-        mass: 0.8
-      }}
+      transition={{ type: "spring", stiffness: 400, damping: 30 }}
       className={cn(
-        "flex gap-2 group relative",
+        "flex gap-2.5 group relative px-1",
         isSent ? "flex-row-reverse" : "",
-        !isLastInGroup && "mb-0.5",
-        isLastInGroup && "mb-2"
+        !isLastInGroup && "mb-[2px]",
+        isLastInGroup && "mb-3"
       )}
     >
-      {/* Avatar - only show on last message of group */}
+      {/* Avatar */}
       {!isSent && (
-        <div className="flex-shrink-0 w-9 md:w-8">
-          {isLastInGroup ? (
+        <div className="flex-shrink-0 w-8 self-end">
+          {isLastInGroup && (
             senderAvatar ? (
               <motion.img
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
                 src={senderAvatar}
                 alt={senderName}
-                className="w-9 h-9 md:w-8 md:h-8 rounded-full object-cover ring-2 ring-[var(--gold)]/20"
+                className="w-8 h-8 rounded-full object-cover ring-2 ring-white/10 shadow-lg"
               />
             ) : (
               <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                className="w-9 h-9 md:w-8 md:h-8 rounded-full bg-gradient-to-br from-[var(--gold)] to-[var(--gold-dark)] flex items-center justify-center text-black font-bold text-sm"
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-400 via-[var(--gold)] to-amber-600 flex items-center justify-center text-black font-bold text-xs shadow-lg"
               >
                 {senderName?.charAt(0) || "?"}
               </motion.div>
             )
-          ) : (
-            <div className="w-9 md:w-8" />
           )}
         </div>
       )}
 
-      {/* Message container with swipe support */}
+      {/* Message container */}
       <motion.div
         drag={!isSent ? "x" : false}
         dragConstraints={{ left: 0, right: 100 }}
-        dragElastic={0.2}
-        onDrag={(_, info) => setSwipeOffset(info.offset.x)}
+        dragElastic={0.15}
+        style={{ x }}
         onDragEnd={handleDragEnd}
         className={cn(
-          "max-w-[80%] md:max-w-[75%] relative touch-pan-y",
-          isSent ? "text-right" : ""
+          "relative max-w-[75%] min-w-[80px]",
+          isSent ? "ml-auto" : "mr-auto"
         )}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
         onTouchCancel={handleTouchEnd}
       >
         {/* Swipe reply indicator */}
-        {swipeOffset > 20 && !isSent && (
+        {!isSent && (
           <motion.div
-            initial={{ opacity: 0, scale: 0.5 }}
-            animate={{
-              opacity: Math.min(swipeOffset / 80, 1),
-              scale: swipeOffset > 60 ? 1 : 0.8
-            }}
-            className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-full pr-2"
+            style={{ opacity: replyOpacity, scale: replyScale }}
+            className="absolute -left-12 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-[var(--gold)]/20 flex items-center justify-center"
           >
-            <div className={cn(
-              "w-10 h-10 rounded-full flex items-center justify-center transition-colors",
-              swipeOffset > 80 ? "bg-[var(--gold)]" : "bg-white/10"
-            )}>
-              <CornerUpLeft className={cn(
-                "w-5 h-5",
-                swipeOffset > 80 ? "text-black" : "text-white"
-              )} />
-            </div>
+            <CornerUpLeft className="w-4 h-4 text-[var(--gold)]" />
           </motion.div>
         )}
 
-        {/* Quoted message */}
+        {/* Reply quote */}
         {replyTo && (
           <motion.button
-            initial={{ opacity: 0, x: isSent ? 20 : -20 }}
-            animate={{ opacity: 1, x: 0 }}
+            initial={{ opacity: 0, y: -5 }}
+            animate={{ opacity: 1, y: 0 }}
             onClick={() => onQuoteClick?.(replyTo.id)}
             className={cn(
-              "mb-1 px-3 py-2 rounded-lg text-left w-full max-w-full",
-              "bg-white/5 border-l-2 border-[var(--gold)] active:bg-white/10 transition-colors",
-              "flex items-center gap-2 cursor-pointer"
+              "mb-1 px-3 py-1.5 rounded-lg w-full text-left",
+              "bg-white/5 hover:bg-white/10 transition-colors",
+              "border-l-2 border-[var(--gold)]"
             )}
           >
-            <CornerUpLeft className="w-3 h-3 text-[var(--gold)] flex-shrink-0" />
-            <div className="min-w-0 flex-1">
-              <p className="text-xs text-[var(--gold)] font-medium truncate">
-                {replyTo.senderName}
-              </p>
-              <p className="text-xs text-gray-400 truncate">
-                {replyTo.text || "Media"}
-              </p>
-            </div>
+            <p className="text-[10px] text-[var(--gold)] font-medium">{replyTo.senderName}</p>
+            <p className="text-xs text-white/60 truncate">{replyTo.text || "Media"}</p>
           </motion.button>
         )}
 
-        {/* Media */}
+        {/* Media Grid */}
         {media && media.length > 0 && (
           <div className={cn(
-            "mb-1 overflow-hidden",
-            media.length === 1 ? "" : "grid gap-1",
+            "overflow-hidden rounded-2xl mb-0.5",
+            media.length > 1 && "grid gap-0.5",
             media.length === 2 && "grid-cols-2",
             media.length >= 3 && "grid-cols-2",
-            getBubbleStyle()
+            isSent ? "rounded-br-md" : "rounded-bl-md"
           )}>
             {media.slice(0, 4).map((item, index) => (
               <motion.div
                 key={item.id}
                 className={cn(
-                  "relative cursor-pointer overflow-hidden",
-                  media.length === 1 ? "aspect-[4/3]" : "aspect-square",
+                  "relative cursor-pointer overflow-hidden bg-black/20",
+                  media.length === 1 ? "aspect-[4/3] max-h-[320px]" : "aspect-square",
                   index === 0 && media.length === 3 && "row-span-2"
                 )}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => !showLocked && onMediaClick?.(item)}
               >
                 {showLocked ? (
-                  /* Locked PPV media */
-                  <div className="relative w-full h-full bg-black/50">
+                  /* Locked PPV */
+                  <div className="absolute inset-0 bg-gradient-to-br from-black/60 via-black/80 to-black/90">
                     {item.previewUrl && (
                       <img
                         src={item.previewUrl}
                         alt=""
-                        className="w-full h-full object-cover blur-xl scale-110"
+                        className="absolute inset-0 w-full h-full object-cover blur-2xl scale-110 opacity-60"
                       />
                     )}
-                    {/* Lock overlay */}
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-                      <div className="text-center p-4">
-                        <motion.div
-                          className="w-14 h-14 rounded-full bg-gradient-to-br from-[var(--gold)] to-[var(--gold-dark)] flex items-center justify-center mx-auto mb-3 shadow-lg shadow-[var(--gold)]/30"
-                          animate={{ scale: [1, 1.05, 1] }}
-                          transition={{ repeat: Infinity, duration: 2 }}
-                        >
-                          <Lock className="w-6 h-6 text-black" />
-                        </motion.div>
-                        <p className="text-white font-bold text-lg">
-                          {formatPrice(ppvPrice || 0)}
-                        </p>
-                        <p className="text-white/60 text-xs mb-3">to unlock</p>
-                        <Button
-                          variant="premium"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onUnlock?.(id);
-                          }}
-                          className="shadow-lg"
-                        >
-                          Unlock Now
-                        </Button>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center p-4">
+                      <motion.div
+                        className="w-16 h-16 rounded-full bg-gradient-to-br from-[var(--gold)] via-amber-400 to-amber-600 flex items-center justify-center mb-3 shadow-xl shadow-[var(--gold)]/30"
+                        animate={{
+                          boxShadow: [
+                            "0 0 20px rgba(212, 175, 55, 0.3)",
+                            "0 0 40px rgba(212, 175, 55, 0.5)",
+                            "0 0 20px rgba(212, 175, 55, 0.3)"
+                          ]
+                        }}
+                        transition={{ repeat: Infinity, duration: 2 }}
+                      >
+                        <Lock className="w-7 h-7 text-black" />
+                      </motion.div>
+                      <p className="text-2xl font-bold text-white mb-1">{formatPrice(ppvPrice || 0)}</p>
+                      <p className="text-xs text-white/50 mb-4">Exclusive content</p>
+                      <Button
+                        variant="premium"
+                        size="sm"
+                        onClick={(e) => { e.stopPropagation(); onUnlock?.(id); }}
+                        className="shadow-xl px-6"
+                      >
+                        <Lock className="w-4 h-4 mr-2" />
+                        Unlock
+                      </Button>
+                    </div>
+                  </div>
+                ) : item.type === "VIDEO" ? (
+                  /* Video Player */
+                  <div className="relative w-full h-full group/video">
+                    <video
+                      ref={media.length === 1 ? videoRef : undefined}
+                      src={item.url}
+                      poster={item.previewUrl}
+                      className="w-full h-full object-cover"
+                      muted={isVideoMuted}
+                      playsInline
+                      loop
+                      onTimeUpdate={media.length === 1 ? handleVideoTimeUpdate : undefined}
+                      onEnded={() => setIsVideoPlaying(false)}
+                    />
+
+                    {/* Video overlay */}
+                    <div className={cn(
+                      "absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent transition-opacity",
+                      isVideoPlaying ? "opacity-0 group-hover/video:opacity-100" : "opacity-100"
+                    )}>
+                      {/* Play/Pause center button */}
+                      <motion.button
+                        whileTap={{ scale: 0.9 }}
+                        onClick={(e) => { e.stopPropagation(); toggleVideoPlay(); }}
+                        className="absolute inset-0 flex items-center justify-center"
+                      >
+                        <div className="w-14 h-14 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/20">
+                          {isVideoPlaying ? (
+                            <Pause className="w-6 h-6 text-white" fill="white" />
+                          ) : (
+                            <Play className="w-6 h-6 text-white ml-1" fill="white" />
+                          )}
+                        </div>
+                      </motion.button>
+
+                      {/* Bottom controls */}
+                      <div className="absolute bottom-0 left-0 right-0 p-3">
+                        {/* Progress bar */}
+                        <div className="w-full h-1 bg-white/20 rounded-full overflow-hidden mb-2">
+                          <motion.div
+                            className="h-full bg-[var(--gold)]"
+                            style={{ width: `${videoProgress}%` }}
+                          />
+                        </div>
+
+                        {/* Controls row */}
+                        <div className="flex items-center justify-between">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setIsVideoMuted(!isVideoMuted); }}
+                            className="p-1.5 rounded-full bg-black/30 text-white/80 hover:text-white"
+                          >
+                            {isVideoMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); onMediaClick?.(item); }}
+                            className="p-1.5 rounded-full bg-black/30 text-white/80 hover:text-white"
+                          >
+                            <Maximize2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
                 ) : (
-                  /* Unlocked media */
-                  <>
-                    {item.type === "VIDEO" ? (
-                      <>
-                        {item.previewUrl ? (
-                          <img
-                            src={item.previewUrl}
-                            alt=""
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <video
-                            src={item.url}
-                            className="w-full h-full object-cover"
-                            muted
-                            playsInline
-                            preload="metadata"
-                          />
-                        )}
-                        <div className="absolute inset-0 flex items-center justify-center bg-black/20">
-                          <motion.div
-                            className="w-12 h-12 rounded-full bg-black/60 backdrop-blur-sm flex items-center justify-center"
-                            whileHover={{ scale: 1.1 }}
-                          >
-                            <Play className="w-5 h-5 text-white ml-0.5" fill="currentColor" />
-                          </motion.div>
-                        </div>
-                      </>
-                    ) : (
-                      <img
-                        src={item.url}
-                        alt=""
-                        className="w-full h-full object-cover"
-                      />
-                    )}
-                    {/* More indicator */}
-                    {index === 3 && media.length > 4 && (
-                      <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-                        <span className="text-white text-2xl font-bold">
-                          +{media.length - 4}
-                        </span>
-                      </div>
-                    )}
-                  </>
+                  /* Photo */
+                  <img
+                    src={item.url}
+                    alt=""
+                    className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+                    loading="lazy"
+                  />
+                )}
+
+                {/* More indicator */}
+                {index === 3 && media.length > 4 && (
+                  <div className="absolute inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center">
+                    <span className="text-3xl font-bold text-white">+{media.length - 4}</span>
+                  </div>
                 )}
               </motion.div>
             ))}
@@ -409,23 +403,34 @@ export function MessageBubble({
 
         {/* Text bubble */}
         {text && (
-          <motion.div
+          <div
             className={cn(
-              "inline-block px-4 py-2.5 shadow-sm select-none",
-              getBubbleStyle()
+              "relative px-4 py-2.5 shadow-lg select-none",
+              isSent
+                ? "bg-gradient-to-br from-[var(--gold)] via-amber-500 to-amber-600 text-black rounded-2xl"
+                : "bg-gradient-to-br from-[#1c1c1e] to-[#2c2c2e] text-white rounded-2xl border border-white/5",
+              // Bubble tail based on position
+              isSent && isLastInGroup && "rounded-br-sm",
+              !isSent && isLastInGroup && "rounded-bl-sm"
             )}
-            whileTap={{ scale: 0.98 }}
           >
+            {/* Shine effect for sent messages */}
+            {isSent && (
+              <div className="absolute inset-0 rounded-2xl overflow-hidden pointer-events-none">
+                <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/10 to-white/0 opacity-50" />
+              </div>
+            )}
+
             <p className={cn(
-              "text-[15px] leading-relaxed whitespace-pre-wrap break-words",
+              "text-[15px] leading-relaxed whitespace-pre-wrap break-words relative z-10",
               isSent ? "text-black" : "text-white"
             )}>
               {highlightText(text)}
             </p>
-          </motion.div>
+          </div>
         )}
 
-        {/* Reactions display */}
+        {/* Reactions */}
         {reactions && reactions.length > 0 && (
           <motion.div
             initial={{ opacity: 0, scale: 0.8 }}
@@ -438,155 +443,110 @@ export function MessageBubble({
             {reactions.map((reaction) => (
               <motion.button
                 key={reaction.emoji}
-                whileTap={{ scale: 0.9 }}
+                whileTap={{ scale: 0.85 }}
                 onClick={() => onReact?.(id, reaction.emoji)}
                 className={cn(
-                  "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs",
-                  "min-h-[28px] min-w-[28px] touch-manipulation",
+                  "inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs backdrop-blur-md",
                   reaction.hasReacted
-                    ? "bg-[var(--gold)]/20 border border-[var(--gold)]/50"
-                    : "bg-white/10 border border-white/10 active:bg-white/20"
+                    ? "bg-[var(--gold)]/30 ring-1 ring-[var(--gold)]/50"
+                    : "bg-white/10 hover:bg-white/20 ring-1 ring-white/10"
                 )}
               >
-                <span>{reaction.emoji}</span>
-                {reaction.count > 1 && (
-                  <span className="text-gray-400">{reaction.count}</span>
-                )}
+                <span className="text-sm">{reaction.emoji}</span>
+                {reaction.count > 1 && <span className="text-white/70">{reaction.count}</span>}
               </motion.button>
             ))}
           </motion.div>
         )}
 
-        {/* Timestamp and status */}
-        <div
-          className={cn(
-            "flex items-center gap-1.5 mt-1 text-xs text-gray-500",
-            isSent ? "justify-end" : "justify-start"
-          )}
-        >
-          <AnimatePresence mode="wait">
-            {isLastInGroup && (
-              <motion.span
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-              >
-                {new Date(timestamp).toLocaleTimeString([], {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
-              </motion.span>
+        {/* Timestamp & Status */}
+        {isLastInGroup && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.1 }}
+            className={cn(
+              "flex items-center gap-1.5 mt-1 text-[10px] text-white/40 px-1",
+              isSent ? "justify-end" : "justify-start"
             )}
-          </AnimatePresence>
-
-          {/* Read/Delivered indicator */}
-          {isSent && isLastInGroup && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.2 }}
-            >
-              {isRead ? (
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ type: "spring", stiffness: 500, damping: 25 }}
-                >
-                  <CheckCheck className="w-4 h-4 text-[var(--gold)]" />
-                </motion.div>
-              ) : isDelivered ? (
-                <CheckCheck className="w-4 h-4 text-gray-400" />
-              ) : (
-                <Check className="w-4 h-4 text-gray-400" />
-              )}
-            </motion.div>
-          )}
-        </div>
-
-        {/* Mobile action button (always visible) */}
-        <button
-          onClick={() => setShowActions(!showActions)}
-          className={cn(
-            "absolute top-0 p-2 rounded-full opacity-0 group-hover:opacity-100",
-            "md:hidden active:opacity-100 transition-opacity",
-            "bg-black/50 backdrop-blur-sm",
-            isSent ? "left-0 -translate-x-full ml-[-8px]" : "right-0 translate-x-full mr-[-8px]"
-          )}
-        >
-          <MoreHorizontal className="w-4 h-4 text-white" />
-        </button>
+          >
+            <span>{formatTime(timestamp)}</span>
+            {isSent && (
+              <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.2 }}>
+                {isRead ? (
+                  <CheckCheck className="w-3.5 h-3.5 text-[var(--gold)]" />
+                ) : isDelivered ? (
+                  <CheckCheck className="w-3.5 h-3.5 text-white/40" />
+                ) : (
+                  <Check className="w-3.5 h-3.5 text-white/40" />
+                )}
+              </motion.div>
+            )}
+          </motion.div>
+        )}
 
         {/* Desktop hover actions */}
-        <div
-          className={cn(
-            "absolute top-0 hidden md:flex items-center gap-1 z-10",
-            "opacity-0 group-hover:opacity-100 transition-opacity",
-            isSent ? "left-0 -translate-x-full pr-2" : "right-0 translate-x-full pl-2"
-          )}
-        >
-          {/* React button */}
-          <div className="relative">
-            <motion.button
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-              onClick={() => setShowReactions(!showReactions)}
-              className="p-2 rounded-full bg-[#222] hover:bg-[#333] text-gray-400 hover:text-white transition-colors"
-            >
-              <Heart className="w-4 h-4" />
-            </motion.button>
-          </div>
-
-          {/* Reply button */}
+        <div className={cn(
+          "absolute top-1/2 -translate-y-1/2 hidden md:flex items-center gap-1",
+          "opacity-0 group-hover:opacity-100 transition-all duration-200",
+          isSent ? "left-0 -translate-x-full pr-2" : "right-0 translate-x-full pl-2"
+        )}>
+          <motion.button
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            onClick={() => setShowReactions(!showReactions)}
+            className="p-2 rounded-full bg-white/10 hover:bg-white/20 text-white/70 hover:text-white transition-colors backdrop-blur-md"
+          >
+            <Heart className="w-4 h-4" />
+          </motion.button>
           <motion.button
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
             onClick={() => onReply?.(id)}
-            className="p-2 rounded-full bg-[#222] hover:bg-[#333] text-gray-400 hover:text-white transition-colors"
+            className="p-2 rounded-full bg-white/10 hover:bg-white/20 text-white/70 hover:text-white transition-colors backdrop-blur-md"
           >
             <CornerUpLeft className="w-4 h-4" />
           </motion.button>
-
-          {/* Tip button (only for received messages) */}
           {!isSent && (
             <motion.button
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
               onClick={() => onTip?.(id)}
-              className="p-2 rounded-full bg-[var(--gold)]/20 hover:bg-[var(--gold)]/30 text-[var(--gold)] transition-colors"
+              className="p-2 rounded-full bg-[var(--gold)]/20 hover:bg-[var(--gold)]/30 text-[var(--gold)] transition-colors backdrop-blur-md"
             >
               <DollarSign className="w-4 h-4" />
             </motion.button>
           )}
         </div>
 
-        {/* Reactions picker (desktop hover) */}
+        {/* Desktop reaction picker */}
         <AnimatePresence>
           {showReactions && (
             <motion.div
-              initial={{ opacity: 0, scale: 0.8, y: 10 }}
+              initial={{ opacity: 0, scale: 0.9, y: 10 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.8, y: 10 }}
+              exit={{ opacity: 0, scale: 0.9, y: 10 }}
               className={cn(
-                "absolute bottom-full mb-2 hidden md:flex items-center gap-1 p-2",
-                "rounded-full bg-[#222] border border-white/10 shadow-xl z-20",
+                "absolute bottom-full mb-2 flex items-center gap-1 p-1.5 rounded-full",
+                "bg-[#2a2a2a]/95 backdrop-blur-xl border border-white/10 shadow-2xl z-30",
                 isSent ? "right-0" : "left-0"
               )}
             >
-              {QUICK_REACTIONS.map((reaction, i) => (
+              {QUICK_REACTIONS.map((emoji, i) => (
                 <motion.button
-                  key={reaction.emoji}
+                  key={emoji}
                   initial={{ opacity: 0, scale: 0 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: i * 0.03 }}
-                  whileHover={{ scale: 1.3 }}
+                  whileHover={{ scale: 1.3, y: -4 }}
                   whileTap={{ scale: 0.8 }}
                   onClick={() => {
-                    onReact?.(id, reaction.emoji);
+                    onReact?.(id, emoji);
                     setShowReactions(false);
                   }}
-                  className="w-8 h-8 flex items-center justify-center text-lg hover:bg-white/10 rounded-full transition-colors"
+                  className="w-9 h-9 flex items-center justify-center text-xl hover:bg-white/10 rounded-full transition-colors"
                 >
-                  {reaction.emoji}
+                  {emoji}
                 </motion.button>
               ))}
             </motion.div>
@@ -598,53 +558,51 @@ export function MessageBubble({
       <AnimatePresence>
         {showActions && (
           <>
-            {/* Backdrop */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 md:hidden"
+              className="fixed inset-0 bg-black/70 backdrop-blur-md z-50 md:hidden"
               onClick={() => setShowActions(false)}
             />
-
-            {/* Action sheet */}
             <motion.div
               initial={{ y: "100%" }}
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
-              transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className="fixed bottom-0 left-0 right-0 bg-[#1a1a1a] rounded-t-3xl z-50 md:hidden pb-safe"
+              transition={{ type: "spring", damping: 28, stiffness: 350 }}
+              className="fixed bottom-0 left-0 right-0 bg-gradient-to-b from-[#1c1c1e] to-[#0c0c0e] rounded-t-[28px] z-50 md:hidden overflow-hidden"
+              style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
             >
               {/* Handle */}
               <div className="flex justify-center pt-3 pb-2">
-                <div className="w-10 h-1 rounded-full bg-white/20" />
+                <div className="w-9 h-1 rounded-full bg-white/20" />
               </div>
 
               {/* Quick reactions */}
-              <div className="flex items-center justify-center gap-4 py-4 border-b border-white/10">
-                {QUICK_REACTIONS.map((reaction) => (
+              <div className="flex items-center justify-center gap-2 py-4 px-4">
+                {QUICK_REACTIONS.map((emoji) => (
                   <motion.button
-                    key={reaction.emoji}
-                    whileTap={{ scale: 0.8 }}
+                    key={emoji}
+                    whileTap={{ scale: 0.85 }}
                     onClick={() => {
-                      onReact?.(id, reaction.emoji);
+                      onReact?.(id, emoji);
                       setShowActions(false);
                     }}
-                    className="w-12 h-12 flex items-center justify-center text-2xl bg-white/5 rounded-full active:bg-white/10 transition-colors"
+                    className="w-14 h-14 flex items-center justify-center text-2xl bg-white/5 rounded-2xl active:bg-white/10 border border-white/5"
                   >
-                    {reaction.emoji}
+                    {emoji}
                   </motion.button>
                 ))}
               </div>
 
+              {/* Divider */}
+              <div className="h-px bg-white/10 mx-4" />
+
               {/* Actions */}
-              <div className="p-2">
+              <div className="p-3 space-y-1">
                 <button
-                  onClick={() => {
-                    onReply?.(id);
-                    setShowActions(false);
-                  }}
-                  className="w-full flex items-center gap-4 px-4 py-4 rounded-xl active:bg-white/5 transition-colors"
+                  onClick={() => { onReply?.(id); setShowActions(false); }}
+                  className="w-full flex items-center gap-4 px-4 py-3.5 rounded-xl active:bg-white/5 transition-colors"
                 >
                   <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center">
                     <CornerUpLeft className="w-5 h-5 text-white" />
@@ -654,13 +612,10 @@ export function MessageBubble({
 
                 {!isSent && (
                   <button
-                    onClick={() => {
-                      onTip?.(id);
-                      setShowActions(false);
-                    }}
-                    className="w-full flex items-center gap-4 px-4 py-4 rounded-xl active:bg-white/5 transition-colors"
+                    onClick={() => { onTip?.(id); setShowActions(false); }}
+                    className="w-full flex items-center gap-4 px-4 py-3.5 rounded-xl active:bg-white/5 transition-colors"
                   >
-                    <div className="w-10 h-10 rounded-full bg-[var(--gold)]/20 flex items-center justify-center">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[var(--gold)]/30 to-amber-600/30 flex items-center justify-center">
                       <DollarSign className="w-5 h-5 text-[var(--gold)]" />
                     </div>
                     <span className="text-white font-medium">Send Tip</span>
@@ -668,11 +623,11 @@ export function MessageBubble({
                 )}
               </div>
 
-              {/* Cancel button */}
-              <div className="p-2 pt-0">
+              {/* Cancel */}
+              <div className="p-3 pt-0">
                 <button
                   onClick={() => setShowActions(false)}
-                  className="w-full py-4 rounded-xl bg-white/5 active:bg-white/10 text-white font-medium transition-colors"
+                  className="w-full py-4 rounded-2xl bg-white/5 active:bg-white/10 text-white font-medium border border-white/5"
                 >
                   Cancel
                 </button>
@@ -683,4 +638,4 @@ export function MessageBubble({
       </AnimatePresence>
     </motion.div>
   );
-}
+});

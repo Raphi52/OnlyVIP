@@ -1,19 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import prisma from "@/lib/prisma";
-
-// Check admin auth
-async function isAdmin(): Promise<boolean> {
-  const cookieStore = await cookies();
-  const token = cookieStore.get("admin_token");
-  return !!token?.value;
-}
+import { auth } from "@/lib/auth";
 
 // GET /api/admin/settings?creator=slug - Get settings for a creator
 export async function GET(request: NextRequest) {
   try {
-    const admin = await isAdmin();
-    if (!admin) {
+    const session = await auth();
+    const isAdmin = (session?.user as any)?.role === "ADMIN";
+    const isCreator = (session?.user as any)?.isCreator === true;
+
+    if (!session || (!isAdmin && !isCreator)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -52,6 +48,8 @@ export async function GET(request: NextRequest) {
       // From Creator model
       creatorName: creator.displayName,
       creatorImage: creator.avatar,
+      cardImage: creator.cardImage,
+      coverImage: creator.coverImage,
       creatorBio: creator.bio,
       instagram: JSON.parse(creator.socialLinks || "{}").instagram || null,
       twitter: JSON.parse(creator.socialLinks || "{}").twitter || null,
@@ -74,17 +72,25 @@ export async function GET(request: NextRequest) {
 // PUT /api/admin/settings - Update settings for a creator
 export async function PUT(request: NextRequest) {
   try {
-    const admin = await isAdmin();
-    if (!admin) {
+    const session = await auth();
+    const isAdminUser = (session?.user as any)?.role === "ADMIN";
+    const isCreator = (session?.user as any)?.isCreator === true;
+
+    console.log("[Settings PUT] session:", session?.user?.email, "isAdmin:", isAdminUser, "isCreator:", isCreator);
+
+    if (!session || (!isAdminUser && !isCreator)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const body = await request.json();
+    console.log("[Settings PUT] Body received:", body);
     const {
       creatorSlug,
       // Creator fields
       creatorName,
       creatorImage,
+      cardImage,
+      coverImage,
       creatorBio,
       instagram,
       twitter,
@@ -105,51 +111,67 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "Creator slug required" }, { status: 400 });
     }
 
-    // Update creator info
+    // Update or create creator info
     const socialLinks = JSON.stringify({
       instagram: instagram || null,
       twitter: twitter || null,
       tiktok: tiktok || null,
     });
 
-    await prisma.creator.update({
+    await prisma.creator.upsert({
       where: { slug: creatorSlug },
-      data: {
-        displayName: creatorName,
-        name: creatorName,
-        avatar: creatorImage,
-        bio: creatorBio,
+      update: {
+        displayName: creatorName || "Creator",
+        name: creatorName || "Creator",
+        avatar: creatorImage || null,
+        cardImage: cardImage || null,
+        coverImage: coverImage || null,
+        bio: creatorBio || null,
+        socialLinks,
+      },
+      create: {
+        slug: creatorSlug,
+        displayName: creatorName || "Creator",
+        name: creatorName || "Creator",
+        avatar: creatorImage || null,
+        cardImage: cardImage || null,
+        coverImage: coverImage || null,
+        bio: creatorBio || null,
         socialLinks,
       },
     });
+
+    console.log("[Settings PUT] Creator updated, now updating SiteSettings...");
 
     // Update or create site settings
     const settings = await prisma.siteSettings.upsert({
       where: { creatorSlug },
       update: {
-        siteName,
-        siteDescription,
-        welcomeMessage,
-        primaryColor,
-        accentColor,
-        pricing: pricing ? JSON.stringify(pricing) : undefined,
-        chatEnabled,
-        tipsEnabled,
-        ppvEnabled,
+        siteName: siteName || null,
+        siteDescription: siteDescription || null,
+        welcomeMessage: welcomeMessage || null,
+        primaryColor: primaryColor || null,
+        accentColor: accentColor || null,
+        pricing: pricing ? JSON.stringify(pricing) : "{}",
+        chatEnabled: chatEnabled ?? true,
+        tipsEnabled: tipsEnabled ?? true,
+        ppvEnabled: ppvEnabled ?? true,
       },
       create: {
         creatorSlug,
-        siteName,
-        siteDescription,
-        welcomeMessage,
-        primaryColor,
-        accentColor,
+        siteName: siteName || null,
+        siteDescription: siteDescription || null,
+        welcomeMessage: welcomeMessage || null,
+        primaryColor: primaryColor || null,
+        accentColor: accentColor || null,
         pricing: pricing ? JSON.stringify(pricing) : "{}",
         chatEnabled: chatEnabled ?? true,
         tipsEnabled: tipsEnabled ?? true,
         ppvEnabled: ppvEnabled ?? true,
       },
     });
+
+    console.log("[Settings PUT] Settings saved:", settings);
 
     return NextResponse.json({
       success: true,
@@ -159,7 +181,7 @@ export async function PUT(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Error updating settings:", error);
+    console.error("[Settings PUT] Error:", error);
     return NextResponse.json(
       { error: "Failed to update settings" },
       { status: 500 }

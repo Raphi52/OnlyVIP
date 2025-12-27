@@ -10,7 +10,7 @@ import {
   Testimonials,
   Pricing
 } from "@/components/landing";
-import { getCreator, getAllCreatorSlugs } from "@/lib/creators";
+import { getCreatorFromDB, getAllCreatorSlugs } from "@/lib/creators";
 
 interface PageProps {
   params: Promise<{ creator: string }>;
@@ -20,9 +20,12 @@ export async function generateStaticParams() {
   return getAllCreatorSlugs().map((creator) => ({ creator }));
 }
 
+// Disable static generation to always fetch fresh data from DB
+export const dynamic = "force-dynamic";
+
 export default async function CreatorHome({ params }: PageProps) {
   const { creator: creatorSlug } = await params;
-  const creator = getCreator(creatorSlug);
+  const creator = await getCreatorFromDB(creatorSlug);
 
   if (!creator) {
     notFound();

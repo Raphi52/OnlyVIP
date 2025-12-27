@@ -16,7 +16,7 @@ function LoginForm() {
   const creatorSlug = params.creator as string;
   const creator = getCreator(creatorSlug);
   const basePath = `/${creatorSlug}`;
-  const callbackUrl = searchParams.get("callbackUrl") || `${basePath}/dashboard`;
+  const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
