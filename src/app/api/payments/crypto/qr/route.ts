@@ -148,6 +148,22 @@ export async function POST(request: NextRequest) {
       paymentType = "TIP";
       metadata.type = "tip";
       metadata.messageId = messageId || null;
+    } else if (type === "credits") {
+      // Credits purchase
+      if (!amount || amount < 1) {
+        return NextResponse.json(
+          { error: "Valid amount required" },
+          { status: 400 }
+        );
+      }
+
+      const credits = body.credits || amount * 100; // Default: $1 = 100 credits
+      priceAmount = amount;
+      orderId = `credits_${session.user.id}_${Date.now()}`;
+      orderDescription = `Purchase ${credits} credits`;
+      paymentType = "SUBSCRIPTION"; // Use SUBSCRIPTION as placeholder for credits
+      metadata.type = "credits_purchase";
+      metadata.credits = credits;
     } else {
       return NextResponse.json(
         { error: "Invalid payment type" },

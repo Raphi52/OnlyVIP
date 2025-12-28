@@ -29,9 +29,7 @@ const plans = {
     tier: "BASIC",
     features: [
       "Access to basic content library",
-      "Standard resolution downloads",
-      "10 downloads per month",
-      "Email support",
+      "Direct messaging with creator",
     ],
   },
   vip: {
@@ -143,6 +141,7 @@ function CheckoutContent() {
             planId: plan.id.toUpperCase(),
             billingInterval: interval === "annual" ? "ANNUAL" : "MONTHLY",
             currency: selectedCrypto || "btc",
+            creatorSlug: "miacosta", // Default creator for generic checkout
           }),
         });
 
@@ -170,6 +169,7 @@ function CheckoutContent() {
             planId: plan.id.toUpperCase(),
             billingInterval: interval === "annual" ? "ANNUAL" : "MONTHLY",
             amount: price,
+            creatorSlug: "miacosta", // Default creator for generic checkout
           }),
         });
 
@@ -245,7 +245,15 @@ function CheckoutContent() {
                 {paymentMethods.map((method) => (
                   <button
                     key={method.id}
-                    onClick={() => setSelectedPayment(method.id)}
+                    onClick={() => {
+                      setSelectedPayment(method.id);
+                      // Reset states when switching payment method
+                      setProcessing(false);
+                      setCryptoPayment(null);
+                      if (method.id === "card") {
+                        setSelectedCrypto(null);
+                      }
+                    }}
                     className={`w-full flex items-center gap-4 p-4 rounded-lg border transition-all ${
                       selectedPayment === method.id
                         ? "border-[var(--gold)] bg-[var(--gold)]/10"
@@ -403,10 +411,20 @@ function CheckoutContent() {
                     <Loader2 className="w-5 h-5 mr-2 animate-spin" />
                     Processing...
                   </>
+                ) : selectedPayment === "crypto" && !selectedCrypto ? (
+                  <>
+                    <QrCode className="w-5 h-5 mr-2" />
+                    Select a cryptocurrency above
+                  </>
+                ) : selectedPayment === "crypto" && selectedCrypto ? (
+                  <>
+                    <QrCode className="w-5 h-5 mr-2" />
+                    Pay with {selectedCrypto.toUpperCase()}
+                  </>
                 ) : (
                   <>
                     <Lock className="w-5 h-5 mr-2" />
-                    {selectedPayment === "crypto" ? "Pay with Crypto" : `Pay ${formatPrice(price)}`}
+                    Pay {formatPrice(price)}
                   </>
                 )}
               </Button>

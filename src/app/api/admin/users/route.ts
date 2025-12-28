@@ -23,7 +23,16 @@ export async function GET(request: NextRequest) {
             ],
           }
         : {},
-      include: {
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        image: true,
+        role: true,
+        isCreator: true,
+        isVip: true,
+        emailVerified: true,
+        createdAt: true,
         subscriptions: {
           where: { status: "ACTIVE" },
           orderBy: { createdAt: "desc" },
@@ -41,6 +50,7 @@ export async function GET(request: NextRequest) {
       image: user.image,
       role: user.role,
       isCreator: user.isCreator,
+      isVip: user.isVip,
       emailVerified: user.emailVerified,
       subscriptions: user.subscriptions,
       createdAt: user.createdAt,

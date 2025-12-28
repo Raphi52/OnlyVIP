@@ -11,6 +11,7 @@ export interface Creator {
   avatar: string | null;
   coverImage: string | null;
   bio?: string | null;
+  userId?: string;
   socialLinks?: {
     instagram?: string;
     twitter?: string;

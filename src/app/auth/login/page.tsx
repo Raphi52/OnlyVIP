@@ -5,7 +5,7 @@ import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Crown, Mail, Lock, Eye, EyeOff } from "lucide-react";
+import { Crown, Mail, Lock, Eye, EyeOff, CheckCircle, AlertCircle } from "lucide-react";
 import { Button, Input, Card } from "@/components/ui";
 
 function LoginForm() {
@@ -17,16 +17,24 @@ function LoginForm() {
     ? rawCallbackUrl
     : "/dashboard";
 
+  const verified = searchParams.get("verified") === "true";
+  const urlError = searchParams.get("error");
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [emailNotVerified, setEmailNotVerified] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendSuccess, setResendSuccess] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError("");
+    setEmailNotVerified(false);
+    setResendSuccess(false);
 
     try {
       const result = await signIn("credentials", {
@@ -36,6 +44,22 @@ function LoginForm() {
       });
 
       if (result?.error) {
+        // Check if email is not verified
+        if (result.error.includes("EMAIL_NOT_VERIFIED") || result.error === "CredentialsSignin") {
+          // Check verification status via API
+          const checkRes = await fetch("/api/auth/check-verification", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email }),
+          });
+          const checkData = await checkRes.json();
+
+          if (checkData.needsVerification) {
+            setEmailNotVerified(true);
+            setError("");
+            return;
+          }
+        }
         setError("Invalid email or password");
       } else {
         router.push(callbackUrl);
@@ -44,6 +68,31 @@ function LoginForm() {
       setError("Something went wrong. Please try again.");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleResendVerification = async () => {
+    setResendLoading(true);
+    setResendSuccess(false);
+
+    try {
+      const res = await fetch("/api/auth/resend-verification", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await res.json();
+
+      if (data.sent || data.message) {
+        setResendSuccess(true);
+      } else {
+        setError(data.error || "Failed to send verification email");
+      }
+    } catch (err) {
+      setError("Failed to resend verification email");
+    } finally {
+      setResendLoading(false);
     }
   };
 
@@ -80,6 +129,59 @@ function LoginForm() {
               Sign in to access your exclusive content
             </p>
           </div>
+
+          {verified && (
+            <div className="mb-6 p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-sm flex items-center gap-2">
+              <CheckCircle className="w-5 h-5 flex-shrink-0" />
+              <span>Email verified successfully! You can now sign in.</span>
+            </div>
+          )}
+
+          {urlError && (
+            <div className="mb-6 p-4 rounded-lg bg-[var(--error)]/10 border border-[var(--error)]/30 text-[var(--error)] text-sm flex items-center gap-2">
+              <AlertCircle className="w-5 h-5 flex-shrink-0" />
+              <span>
+                {urlError === "expired_token" && "Verification link has expired. Please register again."}
+                {urlError === "invalid_token" && "Invalid verification link."}
+                {urlError === "missing_token" && "Missing verification token."}
+                {urlError === "user_not_found" && "User not found."}
+                {urlError === "verification_failed" && "Verification failed. Please try again."}
+                {!["expired_token", "invalid_token", "missing_token", "user_not_found", "verification_failed"].includes(urlError) && "An error occurred."}
+              </span>
+            </div>
+          )}
+
+          {emailNotVerified && (
+            <div className="mb-6 p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/30 text-yellow-400">
+              <div className="flex items-start gap-3">
+                <Mail className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="font-medium mb-1">Email not verified</p>
+                  <p className="text-sm opacity-80 mb-3">
+                    Please verify your email address before signing in. Check your inbox for the verification link.
+                  </p>
+                  {resendSuccess ? (
+                    <div className="flex items-center gap-2 text-emerald-400">
+                      <CheckCircle className="w-4 h-4" />
+                      <span className="text-sm">Verification email sent!</span>
+                    </div>
+                  ) : (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleResendVerification}
+                      isLoading={resendLoading}
+                      className="border-yellow-500/50 text-yellow-400 hover:bg-yellow-500/10"
+                    >
+                      <Mail className="w-4 h-4 mr-2" />
+                      Resend verification email
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
 
           {error && (
             <div className="mb-6 p-4 rounded-lg bg-[var(--error)]/10 border border-[var(--error)]/30 text-[var(--error)] text-sm">

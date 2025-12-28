@@ -33,12 +33,18 @@ interface MediaItem {
   title: string;
   thumbnailUrl: string | null;
   contentUrl: string;
-  accessTier: "FREE" | "BASIC" | "VIP";
+  accessTier: "FREE" | "BASIC" | "VIP"; // Legacy
   isPurchaseable: boolean;
   price: number | null;
   duration: number | null;
   hasAccess?: boolean;
   hasPurchased?: boolean;
+  // New tag system
+  tagFree?: boolean;
+  tagVIP?: boolean;
+  tagPPV?: boolean;
+  tagGallery?: boolean;
+  ppvPriceCredits?: number | null;
 }
 
 const tierColors: Record<string, string> = {
@@ -115,7 +121,8 @@ export default function GalleryPage() {
   useEffect(() => {
     const fetchMedia = async () => {
       try {
-        const res = await fetch("/api/media?published=true");
+        // Fetch only published media that are tagged for gallery
+        const res = await fetch("/api/media?published=true&tagGallery=true");
         if (res.ok) {
           const data = await res.json();
           setMediaItems(data.media || []);

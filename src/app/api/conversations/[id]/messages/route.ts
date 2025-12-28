@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { triggerNewMessage } from "@/lib/pusher";
+import { scheduleAiResponse } from "@/lib/ai-girlfriend";
 
 // GET /api/conversations/[id]/messages - Get messages for a conversation
 export async function GET(
@@ -29,7 +30,18 @@ export async function GET(
         isDeleted: false,
       },
       include: {
-        media: true,
+        media: {
+          include: {
+            // Include the source MediaContent for PPV content
+            media: {
+              select: {
+                contentUrl: true,
+                thumbnailUrl: true,
+                previewUrl: true,
+              },
+            },
+          },
+        },
         sender: {
           select: {
             id: true,
@@ -52,15 +64,20 @@ export async function GET(
       }),
     });
 
-    // Mark messages as read for current user
-    await prisma.message.updateMany({
-      where: {
-        conversationId,
-        receiverId: currentUserId,
-        isRead: false,
-      },
-      data: { isRead: true },
-    });
+    // Only mark messages as read if explicitly requested via query param
+    // This prevents polling from marking messages as read
+    const markAsRead = searchParams.get("markAsRead") === "true";
+
+    if (markAsRead) {
+      await prisma.message.updateMany({
+        where: {
+          conversationId,
+          receiverId: currentUserId,
+          isRead: false,
+        },
+        data: { isRead: true },
+      });
+    }
 
     // Transform messages for frontend
     const transformedMessages = messages.map((msg) => {
@@ -79,6 +96,8 @@ export async function GET(
         users: data.users,
       }));
 
+      const isUnlocked = JSON.parse(msg.ppvUnlockedBy || "[]").includes(currentUserId) || msg.senderId === currentUserId;
+
       return {
         id: msg.id,
         text: msg.text,
@@ -86,16 +105,34 @@ export async function GET(
         receiverId: msg.receiverId,
         isPPV: msg.isPPV,
         ppvPrice: msg.ppvPrice ? Number(msg.ppvPrice) : null,
-        isUnlocked: JSON.parse(msg.ppvUnlockedBy || "[]").includes(currentUserId) || msg.senderId === currentUserId,
+        isUnlocked,
         ppvUnlockedBy: JSON.parse(msg.ppvUnlockedBy || "[]"),
         totalTips: Number(msg.totalTips),
         isRead: msg.isRead,
-        media: msg.media.map((m) => ({
-          id: m.id,
-          type: m.type,
-          url: m.url,
-          previewUrl: m.previewUrl,
-        })),
+        media: msg.media.map((m) => {
+          // For PPV content, return actual contentUrl only when unlocked
+          const sourceMedia = m.media; // MediaContent if linked
+          let url = m.url;
+          let previewUrl = m.previewUrl;
+
+          if (msg.isPPV && sourceMedia) {
+            if (isUnlocked) {
+              // User has unlocked - show actual content
+              url = sourceMedia.contentUrl || m.url;
+            } else {
+              // Not unlocked - show preview/thumbnail
+              url = sourceMedia.previewUrl || sourceMedia.thumbnailUrl || m.url;
+              previewUrl = sourceMedia.thumbnailUrl || m.previewUrl;
+            }
+          }
+
+          return {
+            id: m.id,
+            type: m.type,
+            url,
+            previewUrl,
+          };
+        }),
         reactions,
         createdAt: msg.createdAt,
       };
@@ -213,6 +250,31 @@ export async function POST(
 
     // Trigger real-time notification via Pusher
     await triggerNewMessage(conversationId, transformedMessage);
+
+    // Check if we need to schedule an AI response
+    // Only trigger if sender is NOT a creator (i.e., a fan sent the message)
+    const senderUser = await prisma.user.findUnique({
+      where: { id: actualSenderId },
+      select: { isCreator: true },
+    });
+
+    if (!senderUser?.isCreator && conversation.creatorSlug) {
+      // Check if the creator has AI enabled
+      const creator = await prisma.creator.findUnique({
+        where: { slug: conversation.creatorSlug },
+        select: { aiEnabled: true, aiResponseDelay: true },
+      });
+
+      if (creator?.aiEnabled) {
+        // Schedule AI response with the creator's configured delay
+        await scheduleAiResponse(
+          message.id,
+          conversationId,
+          conversation.creatorSlug,
+          creator.aiResponseDelay || 120
+        );
+      }
+    }
 
     return NextResponse.json(transformedMessage);
   } catch (error) {

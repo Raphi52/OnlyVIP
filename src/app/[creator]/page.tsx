@@ -10,27 +10,29 @@ import {
   Testimonials,
   Pricing
 } from "@/components/landing";
-import { getCreatorFromDB, getAllCreatorSlugs } from "@/lib/creators";
+import { getCreatorFromDB } from "@/lib/creators";
 
 interface PageProps {
   params: Promise<{ creator: string }>;
 }
 
-export async function generateStaticParams() {
-  return getAllCreatorSlugs().map((creator) => ({ creator }));
-}
-
-// Disable static generation to always fetch fresh data from DB
+// Dynamic route - creators are fetched from database
 export const dynamic = "force-dynamic";
+export const dynamicParams = true;
 
 export default async function CreatorHome({ params }: PageProps) {
   const { creator: creatorSlug } = await params;
+  console.log("[CreatorHome] Rendering page for:", creatorSlug);
+
   const creator = await getCreatorFromDB(creatorSlug);
+  console.log("[CreatorHome] Creator result:", creator ? "FOUND" : "NOT FOUND");
 
   if (!creator) {
+    console.log("[CreatorHome] Calling notFound()");
     notFound();
   }
 
+  console.log("[CreatorHome] Rendering with creator:", creator.displayName);
   return (
     <>
       <Navbar creatorSlug={creatorSlug} />

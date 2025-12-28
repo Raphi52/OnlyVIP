@@ -21,13 +21,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!isMoonPayConfigured()) {
-      return NextResponse.json(
-        { error: "Fiat payments not configured" },
-        { status: 500 }
-      );
-    }
-
     const body = await request.json();
     const {
       type,
@@ -38,7 +31,30 @@ export async function POST(request: NextRequest) {
       messageId,
       recipientId,
       planId,
+      creatorSlug,
     } = body;
+
+    // Fetch creator wallet from database if creatorSlug provided
+    let creatorWalletBtc: string | null = null;
+    let creatorWalletEth: string | null = null;
+
+    if (creatorSlug) {
+      const creator = await prisma.creator.findUnique({
+        where: { slug: creatorSlug },
+        select: { walletBtc: true, walletEth: true },
+      });
+      if (creator) {
+        creatorWalletBtc = creator.walletBtc;
+        creatorWalletEth = creator.walletEth;
+      }
+    }
+
+    if (!isMoonPayConfigured(creatorWalletBtc, creatorWalletEth)) {
+      return NextResponse.json(
+        { error: "Fiat payments not configured" },
+        { status: 500 }
+      );
+    }
 
     const user = await prisma.user.findUnique({
       where: { id: session.user.id },
@@ -52,10 +68,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get wallet address
+    // Get wallet address - use creator wallet based on selected crypto
+    const creatorWallet = cryptoCurrency.toUpperCase() === "ETH" ? creatorWalletEth : creatorWalletBtc;
     let walletAddress: string;
     try {
-      walletAddress = getWalletAddress(cryptoCurrency);
+      walletAddress = getWalletAddress(cryptoCurrency, creatorWallet);
     } catch (error) {
       return NextResponse.json(
         { error: `Wallet not configured for ${cryptoCurrency}` },

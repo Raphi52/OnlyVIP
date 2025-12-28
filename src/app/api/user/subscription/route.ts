@@ -14,11 +14,11 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get active subscription
+    // Get active subscription (ACTIVE or TRIALING)
     const subscription = await prisma.subscription.findFirst({
       where: {
         userId: session.user.id,
-        status: "ACTIVE",
+        status: { in: ["ACTIVE", "TRIALING"] },
       },
       include: {
         plan: true,

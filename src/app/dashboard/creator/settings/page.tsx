@@ -19,6 +19,12 @@ import {
   ImageIcon,
   X,
   Wallet,
+  DollarSign,
+  Crown,
+  Link2,
+  Play,
+  Image as ImageLucide,
+  FolderOpen,
 } from "lucide-react";
 import { Button, Card } from "@/components/ui";
 import { useAdminCreator } from "@/components/providers/AdminCreatorContext";
@@ -39,6 +45,8 @@ export default function CreatorSettingsPage() {
 
   // Form state
   const [creatorName, setCreatorName] = useState("");
+  const [creatorSlug, setCreatorSlug] = useState("");
+  const [slugError, setSlugError] = useState<string | null>(null);
   const [creatorImage, setCreatorImage] = useState<string | null>(null);
   const [coverImage, setCoverImage] = useState<string | null>(null);
   const [cardImage, setCardImage] = useState<string | null>(null);
@@ -54,6 +62,22 @@ export default function CreatorSettingsPage() {
   const [ppvEnabled, setPpvEnabled] = useState(true);
   const [walletEth, setWalletEth] = useState("");
   const [walletBtc, setWalletBtc] = useState("");
+  const [welcomeMediaId, setWelcomeMediaId] = useState<string | null>(null);
+  const [welcomeMediaUrl, setWelcomeMediaUrl] = useState<string | null>(null);
+  const [welcomeMediaType, setWelcomeMediaType] = useState<string | null>(null);
+  const [showMediaPicker, setShowMediaPicker] = useState(false);
+  const [mediaLibrary, setMediaLibrary] = useState<any[]>([]);
+  const [isLoadingMedia, setIsLoadingMedia] = useState(false);
+  const [isUploadingWelcomeMedia, setIsUploadingWelcomeMedia] = useState(false);
+  const welcomeMediaInputRef = useRef<HTMLInputElement>(null);
+
+  // Pricing state (in credits, 100 credits = $1)
+  const [basicMonthlyCredits, setBasicMonthlyCredits] = useState("999");
+  const [basicAnnualCredits, setBasicAnnualCredits] = useState("9588");
+  const [basicBonusCredits, setBasicBonusCredits] = useState("500");
+  const [vipMonthlyCredits, setVipMonthlyCredits] = useState("2999");
+  const [vipAnnualCredits, setVipAnnualCredits] = useState("28788");
+  const [vipBonusCredits, setVipBonusCredits] = useState("2000");
 
   const isCreator = (session?.user as any)?.isCreator === true;
   const isAdmin = (session?.user as any)?.role === "ADMIN";
@@ -78,6 +102,7 @@ export default function CreatorSettingsPage() {
       const res = await fetch(`/api/admin/settings?creator=${selectedCreator.slug}`);
       if (res.ok) {
         const data = await res.json();
+        setCreatorSlug(selectedCreator.slug);
         setCreatorName(data.creatorName || "");
         setCreatorImage(data.creatorImage);
         setCoverImage(data.coverImage);
@@ -94,6 +119,25 @@ export default function CreatorSettingsPage() {
         setPpvEnabled(data.ppvEnabled ?? true);
         setWalletEth(data.walletEth || "");
         setWalletBtc(data.walletBtc || "");
+        setWelcomeMediaId(data.welcomeMediaId || null);
+        setWelcomeMediaUrl(data.welcomeMediaUrl || null);
+        setWelcomeMediaType(data.welcomeMediaType || null);
+
+        // Load pricing (in credits)
+        if (data.pricing?.plans) {
+          const basicPlan = data.pricing.plans.find((p: any) => p.id === "basic");
+          const vipPlan = data.pricing.plans.find((p: any) => p.id === "vip");
+          if (basicPlan) {
+            setBasicMonthlyCredits(basicPlan.monthlyCredits?.toString() || "999");
+            setBasicAnnualCredits(basicPlan.annualCredits?.toString() || "9588");
+            setBasicBonusCredits(basicPlan.bonusCredits?.toString() || "500");
+          }
+          if (vipPlan) {
+            setVipMonthlyCredits(vipPlan.monthlyCredits?.toString() || "2999");
+            setVipAnnualCredits(vipPlan.annualCredits?.toString() || "28788");
+            setVipBonusCredits(vipPlan.bonusCredits?.toString() || "2000");
+          }
+        }
       }
     } catch (error) {
       console.error("Error fetching settings:", error);
@@ -164,6 +208,61 @@ export default function CreatorSettingsPage() {
     }
   };
 
+  // Load media library for picker
+  const loadMediaLibrary = async () => {
+    if (!selectedCreator) return;
+    setIsLoadingMedia(true);
+    try {
+      const res = await fetch(`/api/media?creator=${selectedCreator.slug}&limit=50`);
+      if (res.ok) {
+        const data = await res.json();
+        setMediaLibrary(data.media || []);
+      }
+    } catch (error) {
+      console.error("Error loading media:", error);
+    } finally {
+      setIsLoadingMedia(false);
+    }
+  };
+
+  // Handle welcome media upload
+  const handleWelcomeMediaUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploadingWelcomeMedia(true);
+    try {
+      const formData = new FormData();
+      formData.append("files", file);
+      formData.append("type", "media");
+
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        const uploadedFile = data.files?.[0] || data;
+        setWelcomeMediaUrl(uploadedFile.url);
+        setWelcomeMediaId(null); // Clear library selection when uploading directly
+        setWelcomeMediaType(file.type.startsWith("video/") ? "VIDEO" : "PHOTO");
+      }
+    } catch (error) {
+      console.error("Error uploading welcome media:", error);
+    } finally {
+      setIsUploadingWelcomeMedia(false);
+    }
+  };
+
+  // Select media from library
+  const selectMediaFromLibrary = (media: any) => {
+    setWelcomeMediaId(media.id);
+    setWelcomeMediaUrl(media.thumbnailUrl || media.contentUrl);
+    setWelcomeMediaType(media.type);
+    setShowMediaPicker(false);
+  };
+
   // Handle card image upload
   const handleCardUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -198,6 +297,7 @@ export default function CreatorSettingsPage() {
 
     setIsSaving(true);
     setSaved(false);
+    setSlugError(null);
 
     try {
       const res = await fetch("/api/admin/settings", {
@@ -205,6 +305,7 @@ export default function CreatorSettingsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           creatorSlug: selectedCreator.slug,
+          newSlug: creatorSlug !== selectedCreator.slug ? creatorSlug : undefined,
           creatorName,
           creatorImage,
           coverImage,
@@ -216,11 +317,30 @@ export default function CreatorSettingsPage() {
           siteName,
           siteDescription,
           welcomeMessage,
+          welcomeMediaId,
+          welcomeMediaUrl,
+          welcomeMediaType,
           chatEnabled,
           tipsEnabled,
           ppvEnabled,
           walletEth,
           walletBtc,
+          pricing: {
+            plans: [
+              {
+                id: "basic",
+                monthlyCredits: parseInt(basicMonthlyCredits) || 999,
+                annualCredits: parseInt(basicAnnualCredits) || 9588,
+                bonusCredits: parseInt(basicBonusCredits) || 500,
+              },
+              {
+                id: "vip",
+                monthlyCredits: parseInt(vipMonthlyCredits) || 2999,
+                annualCredits: parseInt(vipAnnualCredits) || 28788,
+                bonusCredits: parseInt(vipBonusCredits) || 2000,
+              },
+            ],
+          },
         }),
       });
 
@@ -228,6 +348,11 @@ export default function CreatorSettingsPage() {
         setSaved(true);
         refreshCreator(); // Refresh context
         setTimeout(() => setSaved(false), 3000);
+      } else {
+        const data = await res.json();
+        if (data.error?.includes("slug")) {
+          setSlugError(data.error);
+        }
       }
     } catch (error) {
       console.error("Error saving settings:", error);
@@ -445,17 +570,57 @@ export default function CreatorSettingsPage() {
 
                 {/* Profile Info */}
                 <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-[var(--foreground)] mb-2">
-                      Creator Name <span className="text-red-400">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={creatorName}
-                      onChange={(e) => setCreatorName(e.target.value)}
-                      className="w-full px-4 py-3 rounded-xl bg-[var(--surface)] border border-[var(--border)] text-[var(--foreground)] focus:outline-none focus:border-[var(--gold)]"
-                      placeholder="Enter creator name"
-                    />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-[var(--foreground)] mb-2">
+                        Creator Name <span className="text-red-400">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={creatorName}
+                        onChange={(e) => setCreatorName(e.target.value)}
+                        className="w-full px-4 py-3 rounded-xl bg-[var(--surface)] border border-[var(--border)] text-[var(--foreground)] focus:outline-none focus:border-[var(--gold)]"
+                        placeholder="Enter creator name"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-[var(--foreground)] mb-2 flex items-center gap-2">
+                        <Link2 className="w-4 h-4" />
+                        Slug (URL)
+                      </label>
+                      <div className="relative">
+                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--muted)]">
+                          viponly.fun/
+                        </span>
+                        <input
+                          type="text"
+                          value={creatorSlug}
+                          onChange={(e) => {
+                            // Convert spaces to hyphens, remove invalid chars, clean up multiple hyphens
+                            const value = e.target.value
+                              .toLowerCase()
+                              .replace(/\s+/g, "-")
+                              .replace(/[^a-z0-9-]/g, "")
+                              .replace(/-+/g, "-");
+                            setCreatorSlug(value);
+                            setSlugError(null);
+                          }}
+                          className={`w-full pl-28 pr-4 py-3 rounded-xl bg-[var(--surface)] border text-[var(--foreground)] focus:outline-none ${
+                            slugError
+                              ? "border-red-500 focus:border-red-500"
+                              : "border-[var(--border)] focus:border-[var(--gold)]"
+                          }`}
+                          placeholder="yourname"
+                        />
+                      </div>
+                      {slugError && (
+                        <p className="text-red-400 text-xs mt-1">{slugError}</p>
+                      )}
+                      <p className="text-xs text-[var(--muted)] mt-1">
+                        Only lowercase letters, numbers, and hyphens
+                      </p>
+                    </div>
                   </div>
 
                   <div>
@@ -628,6 +793,151 @@ export default function CreatorSettingsPage() {
             </Card>
           </motion.div>
 
+          {/* Subscription Pricing */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.45 }}
+          >
+            <Card variant="luxury" className="p-6">
+              <h2 className="text-xl font-semibold text-[var(--foreground)] mb-6 flex items-center gap-2">
+                <DollarSign className="w-5 h-5 text-[var(--gold)]" />
+                Subscription Pricing
+              </h2>
+              <p className="text-sm text-[var(--muted)] mb-2">
+                Set your subscription prices in credits. 100 credits = $1
+              </p>
+              <p className="text-xs text-[var(--muted)] mb-6">
+                Bonus credits are given to subscribers each month as part of their membership.
+              </p>
+
+              <div className="space-y-6">
+                {/* Basic Plan */}
+                <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-xl">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Crown className="w-5 h-5 text-blue-400" />
+                    <h3 className="font-semibold text-[var(--foreground)]">Basic Plan</h3>
+                  </div>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-[var(--foreground)] mb-2">
+                        Monthly (credits)
+                      </label>
+                      <input
+                        type="number"
+                        step="1"
+                        min="0"
+                        value={basicMonthlyCredits}
+                        onChange={(e) => setBasicMonthlyCredits(e.target.value)}
+                        className="w-full px-4 py-3 rounded-xl bg-[var(--surface)] border border-[var(--border)] text-[var(--foreground)] focus:outline-none focus:border-blue-400"
+                        placeholder="999"
+                      />
+                      <p className="text-xs text-[var(--muted)] mt-1">
+                        ~${(parseInt(basicMonthlyCredits) / 100 || 0).toFixed(2)}/mo
+                      </p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-[var(--foreground)] mb-2">
+                        Annual (credits)
+                      </label>
+                      <input
+                        type="number"
+                        step="1"
+                        min="0"
+                        value={basicAnnualCredits}
+                        onChange={(e) => setBasicAnnualCredits(e.target.value)}
+                        className="w-full px-4 py-3 rounded-xl bg-[var(--surface)] border border-[var(--border)] text-[var(--foreground)] focus:outline-none focus:border-blue-400"
+                        placeholder="9588"
+                      />
+                      <p className="text-xs text-[var(--muted)] mt-1">
+                        ~${(parseInt(basicAnnualCredits) / 100 || 0).toFixed(2)}/yr
+                      </p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-[var(--foreground)] mb-2">
+                        Bonus/month
+                      </label>
+                      <input
+                        type="number"
+                        step="1"
+                        min="0"
+                        value={basicBonusCredits}
+                        onChange={(e) => setBasicBonusCredits(e.target.value)}
+                        className="w-full px-4 py-3 rounded-xl bg-[var(--surface)] border border-[var(--border)] text-[var(--foreground)] focus:outline-none focus:border-green-400"
+                        placeholder="500"
+                      />
+                      <p className="text-xs text-green-400 mt-1">
+                        Free credits
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* VIP Plan */}
+                <div className="p-4 bg-[var(--gold)]/10 border border-[var(--gold)]/20 rounded-xl">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Crown className="w-5 h-5 text-[var(--gold)]" />
+                    <h3 className="font-semibold text-[var(--foreground)]">VIP Plan</h3>
+                    <span className="px-2 py-0.5 text-xs font-bold bg-[var(--gold)] text-black rounded-full">Popular</span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-[var(--foreground)] mb-2">
+                        Monthly (credits)
+                      </label>
+                      <input
+                        type="number"
+                        step="1"
+                        min="0"
+                        value={vipMonthlyCredits}
+                        onChange={(e) => setVipMonthlyCredits(e.target.value)}
+                        className="w-full px-4 py-3 rounded-xl bg-[var(--surface)] border border-[var(--border)] text-[var(--foreground)] focus:outline-none focus:border-[var(--gold)]"
+                        placeholder="2999"
+                      />
+                      <p className="text-xs text-[var(--muted)] mt-1">
+                        ~${(parseInt(vipMonthlyCredits) / 100 || 0).toFixed(2)}/mo
+                      </p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-[var(--foreground)] mb-2">
+                        Annual (credits)
+                      </label>
+                      <input
+                        type="number"
+                        step="1"
+                        min="0"
+                        value={vipAnnualCredits}
+                        onChange={(e) => setVipAnnualCredits(e.target.value)}
+                        className="w-full px-4 py-3 rounded-xl bg-[var(--surface)] border border-[var(--border)] text-[var(--foreground)] focus:outline-none focus:border-[var(--gold)]"
+                        placeholder="28788"
+                      />
+                      <p className="text-xs text-[var(--muted)] mt-1">
+                        ~${(parseInt(vipAnnualCredits) / 100 || 0).toFixed(2)}/yr
+                      </p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-[var(--foreground)] mb-2">
+                        Bonus/month
+                      </label>
+                      <input
+                        type="number"
+                        step="1"
+                        min="0"
+                        value={vipBonusCredits}
+                        onChange={(e) => setVipBonusCredits(e.target.value)}
+                        className="w-full px-4 py-3 rounded-xl bg-[var(--surface)] border border-[var(--border)] text-[var(--foreground)] focus:outline-none focus:border-green-400"
+                        placeholder="2000"
+                      />
+                      <p className="text-xs text-green-400 mt-1">
+                        Free credits
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </Card>
+          </motion.div>
+
           {/* Chat Settings */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -653,9 +963,157 @@ export default function CreatorSettingsPage() {
                     placeholder="Automatic message sent to new subscribers..."
                   />
                 </div>
+
+                {/* Welcome Media */}
+                <div>
+                  <label className="block text-sm font-medium text-[var(--foreground)] mb-2">
+                    Welcome Media (Optional)
+                  </label>
+                  <p className="text-xs text-[var(--muted)] mb-3">
+                    Attach a photo or video to your welcome message
+                  </p>
+
+                  {welcomeMediaUrl ? (
+                    <div className="relative inline-block">
+                      <div className="w-40 h-40 rounded-xl overflow-hidden bg-[var(--surface)] border-2 border-[var(--gold)]/30">
+                        {welcomeMediaType === "VIDEO" ? (
+                          <div className="relative w-full h-full">
+                            <video
+                              src={welcomeMediaUrl}
+                              className="w-full h-full object-cover"
+                            />
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                              <Play className="w-10 h-10 text-white" />
+                            </div>
+                          </div>
+                        ) : (
+                          <img
+                            src={welcomeMediaUrl}
+                            alt="Welcome media"
+                            className="w-full h-full object-cover"
+                          />
+                        )}
+                      </div>
+                      <button
+                        onClick={() => {
+                          setWelcomeMediaUrl(null);
+                          setWelcomeMediaId(null);
+                          setWelcomeMediaType(null);
+                        }}
+                        className="absolute -top-2 -right-2 w-7 h-7 rounded-full bg-red-500 hover:bg-red-600 flex items-center justify-center transition-colors shadow-lg"
+                      >
+                        <X className="w-4 h-4 text-white" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex gap-3">
+                      {/* Upload button */}
+                      <button
+                        onClick={() => welcomeMediaInputRef.current?.click()}
+                        disabled={isUploadingWelcomeMedia}
+                        className="flex-1 p-4 rounded-xl border-2 border-dashed border-[var(--border)] hover:border-[var(--gold)]/50 transition-colors flex flex-col items-center gap-2 text-[var(--muted)] hover:text-[var(--gold)]"
+                      >
+                        {isUploadingWelcomeMedia ? (
+                          <Loader2 className="w-8 h-8 animate-spin" />
+                        ) : (
+                          <>
+                            <Upload className="w-8 h-8" />
+                            <span className="text-sm">Upload</span>
+                          </>
+                        )}
+                      </button>
+                      <input
+                        ref={welcomeMediaInputRef}
+                        type="file"
+                        accept="image/*,video/*"
+                        className="hidden"
+                        onChange={handleWelcomeMediaUpload}
+                      />
+
+                      {/* Library picker button */}
+                      <button
+                        onClick={() => {
+                          loadMediaLibrary();
+                          setShowMediaPicker(true);
+                        }}
+                        className="flex-1 p-4 rounded-xl border-2 border-dashed border-[var(--border)] hover:border-purple-500/50 transition-colors flex flex-col items-center gap-2 text-[var(--muted)] hover:text-purple-400"
+                      >
+                        <FolderOpen className="w-8 h-8" />
+                        <span className="text-sm">From Library</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             </Card>
           </motion.div>
+
+          {/* Media Library Picker Modal */}
+          {showMediaPicker && (
+            <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="bg-[var(--card)] rounded-2xl w-full max-w-3xl max-h-[80vh] overflow-hidden"
+              >
+                <div className="p-4 border-b border-[var(--border)] flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-[var(--foreground)]">
+                    Select from Library
+                  </h3>
+                  <button
+                    onClick={() => setShowMediaPicker(false)}
+                    className="p-2 rounded-lg hover:bg-[var(--surface)] transition-colors"
+                  >
+                    <X className="w-5 h-5 text-[var(--muted)]" />
+                  </button>
+                </div>
+
+                <div className="p-4 overflow-y-auto max-h-[60vh]">
+                  {isLoadingMedia ? (
+                    <div className="flex items-center justify-center py-12">
+                      <Loader2 className="w-8 h-8 animate-spin text-[var(--gold)]" />
+                    </div>
+                  ) : mediaLibrary.length === 0 ? (
+                    <div className="text-center py-12 text-[var(--muted)]">
+                      <ImageLucide className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                      <p>No media in library</p>
+                      <p className="text-sm mt-1">Upload media first in the Media section</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+                      {mediaLibrary.map((media) => (
+                        <button
+                          key={media.id}
+                          onClick={() => selectMediaFromLibrary(media)}
+                          className="relative aspect-square rounded-xl overflow-hidden bg-[var(--surface)] hover:ring-2 hover:ring-[var(--gold)] transition-all group"
+                        >
+                          {media.type === "VIDEO" ? (
+                            <div className="relative w-full h-full">
+                              <img
+                                src={media.thumbnailUrl || media.contentUrl}
+                                alt={media.title}
+                                className="w-full h-full object-cover"
+                              />
+                              <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                                <Play className="w-8 h-8 text-white" />
+                              </div>
+                            </div>
+                          ) : (
+                            <img
+                              src={media.thumbnailUrl || media.contentUrl}
+                              alt={media.title}
+                              className="w-full h-full object-cover"
+                            />
+                          )}
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            </div>
+          )}
 
           {/* Features Toggle */}
           <motion.div

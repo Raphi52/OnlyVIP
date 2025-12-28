@@ -19,8 +19,16 @@ export interface MoonPayWidgetParams {
 
 /**
  * Get wallet address for receiving payments
+ * @param currency - BTC or ETH
+ * @param creatorWallet - Optional creator wallet from database (takes precedence)
  */
-export function getWalletAddress(currency: string): string {
+export function getWalletAddress(currency: string, creatorWallet?: string | null): string {
+  // Use creator wallet if provided
+  if (creatorWallet) {
+    return creatorWallet;
+  }
+
+  // Fallback to env for backward compatibility
   const addresses: Record<string, string | undefined> = {
     BTC: process.env.WALLET_BTC,
     ETH: process.env.WALLET_ETH,
@@ -89,9 +97,11 @@ export function generateMoonPayUrl(params: MoonPayWidgetParams): string {
 
 /**
  * Check if MoonPay is configured
+ * @param creatorWalletBtc - Optional creator BTC wallet from database
+ * @param creatorWalletEth - Optional creator ETH wallet from database
  */
-export function isMoonPayConfigured(): boolean {
-  return !!(process.env.WALLET_BTC || process.env.WALLET_ETH);
+export function isMoonPayConfigured(creatorWalletBtc?: string | null, creatorWalletEth?: string | null): boolean {
+  return !!(creatorWalletBtc || creatorWalletEth || process.env.WALLET_BTC || process.env.WALLET_ETH);
 }
 
 /**

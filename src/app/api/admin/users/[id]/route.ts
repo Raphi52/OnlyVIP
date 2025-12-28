@@ -19,7 +19,11 @@ export async function PATCH(
     const updateData: any = {};
     if (body.role !== undefined) updateData.role = body.role;
     if (body.isCreator !== undefined) updateData.isCreator = body.isCreator;
+    if (body.isVip !== undefined) updateData.isVip = body.isVip;
     if (body.name !== undefined) updateData.name = body.name;
+    if (body.emailVerified !== undefined) {
+      updateData.emailVerified = body.emailVerified ? new Date(body.emailVerified) : null;
+    }
 
     const user = await prisma.user.update({
       where: { id },

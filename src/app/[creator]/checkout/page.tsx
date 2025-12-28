@@ -31,9 +31,7 @@ const plans = {
     tier: "BASIC",
     features: [
       "Access to basic content library",
-      "Standard resolution downloads",
-      "10 downloads per month",
-      "Email support",
+      "Direct messaging with creator",
     ],
   },
   vip: {
@@ -295,7 +293,17 @@ function CheckoutContent() {
                 {paymentMethods.map((method) => (
                   <button
                     key={method.id}
-                    onClick={() => setSelectedPayment(method.id)}
+                    onClick={() => {
+                      setSelectedPayment(method.id);
+                      // Reset all payment states when switching method
+                      setProcessing(false);
+                      setCryptoPayment(null);
+                      setCardPayment(null);
+                      setPaymentStatus("waiting");
+                      if (method.id === "card") {
+                        setSelectedCrypto(null);
+                      }
+                    }}
                     className={`w-full flex items-center gap-4 p-4 rounded-lg border transition-all ${
                       selectedPayment === method.id
                         ? "border-[var(--gold)] bg-[var(--gold)]/10"

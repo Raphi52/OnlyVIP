@@ -12,7 +12,6 @@ import {
   User as UserIcon,
   Loader2,
   RefreshCw,
-  Ban,
   Check,
   Mail,
 } from "lucide-react";
@@ -98,6 +97,43 @@ export default function AdminUsersPage() {
     }
   };
 
+  const handleResendVerification = async (userId: string, email: string) => {
+    try {
+      const res = await fetch("/api/auth/resend-verification", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      if (res.ok) {
+        alert("Verification email sent successfully!");
+      } else {
+        alert("Failed to send verification email");
+      }
+    } catch (error) {
+      console.error("Error sending verification:", error);
+      alert("Failed to send verification email");
+    }
+  };
+
+  const handleManualVerify = async (userId: string) => {
+    try {
+      const res = await fetch(`/api/admin/users/${userId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ emailVerified: new Date().toISOString() }),
+      });
+      if (res.ok) {
+        setUsers((prev) =>
+          prev.map((u) =>
+            u.id === userId ? { ...u, emailVerified: new Date() } : u
+          )
+        );
+      }
+    } catch (error) {
+      console.error("Error verifying user:", error);
+    }
+  };
+
   const filteredUsers = users.filter((user) => {
     const matchesSearch =
       user.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -107,7 +143,9 @@ export default function AdminUsersPage() {
       filterRole === "all" ||
       (filterRole === "admin" && user.role === "ADMIN") ||
       (filterRole === "creator" && user.isCreator) ||
-      (filterRole === "user" && user.role === "USER" && !user.isCreator);
+      (filterRole === "user" && user.role === "USER" && !user.isCreator) ||
+      (filterRole === "pending" && !user.emailVerified) ||
+      (filterRole === "verified" && user.emailVerified);
 
     return matchesSearch && matchesFilter;
   });
@@ -161,14 +199,18 @@ export default function AdminUsersPage() {
             className="w-full pl-10 pr-4 py-2 bg-[var(--surface)] border border-[var(--border)] rounded-xl text-[var(--foreground)] placeholder-[var(--muted)] focus:outline-none focus:border-[var(--gold)]"
           />
         </div>
-        <div className="flex items-center gap-2">
-          {["all", "admin", "creator", "user"].map((filter) => (
+        <div className="flex items-center gap-2 flex-wrap">
+          {["all", "admin", "creator", "user", "pending", "verified"].map((filter) => (
             <button
               key={filter}
               onClick={() => setFilterRole(filter)}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-all capitalize ${
                 filterRole === filter
-                  ? "bg-[var(--gold)] text-[var(--background)]"
+                  ? filter === "pending"
+                    ? "bg-yellow-500 text-black"
+                    : filter === "verified"
+                    ? "bg-emerald-500 text-black"
+                    : "bg-[var(--gold)] text-[var(--background)]"
                   : "bg-[var(--surface)] text-[var(--muted)] hover:text-[var(--foreground)]"
               }`}
             >
@@ -183,7 +225,7 @@ export default function AdminUsersPage() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
-        className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-8"
+        className="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-8"
       >
         <Card variant="luxury" className="p-4">
           <div className="flex items-center gap-3">
@@ -232,6 +274,19 @@ export default function AdminUsersPage() {
                 {users.filter((u) => u.emailVerified).length}
               </p>
               <p className="text-sm text-[var(--muted)]">Verified</p>
+            </div>
+          </div>
+        </Card>
+        <Card variant="luxury" className="p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-yellow-500/20 flex items-center justify-center">
+              <Mail className="w-5 h-5 text-yellow-400" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-[var(--foreground)]">
+                {users.filter((u) => !u.emailVerified).length}
+              </p>
+              <p className="text-sm text-[var(--muted)]">Pending</p>
             </div>
           </div>
         </Card>
@@ -313,7 +368,7 @@ export default function AdminUsersPage() {
                         </div>
                       </td>
                       <td className="py-4 px-4">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           {user.role === "ADMIN" && (
                             <Badge className="bg-red-500/20 text-red-400">
                               <Shield className="w-3 h-3 mr-1" />
@@ -354,7 +409,29 @@ export default function AdminUsersPage() {
                         {new Date(user.createdAt).toLocaleDateString()}
                       </td>
                       <td className="py-4 px-4">
-                        <div className="flex items-center justify-end gap-2">
+                        <div className="flex items-center justify-end gap-2 flex-wrap">
+                          {!user.emailVerified && (
+                            <>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleResendVerification(user.id, user.email)}
+                                className="border-yellow-500/50 text-yellow-400 hover:bg-yellow-500/10"
+                              >
+                                <Mail className="w-3 h-3 mr-1" />
+                                Resend
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleManualVerify(user.id)}
+                                className="border-emerald-500/50 text-emerald-400 hover:bg-emerald-500/10"
+                              >
+                                <Check className="w-3 h-3 mr-1" />
+                                Verify
+                              </Button>
+                            </>
+                          )}
                           <Button
                             variant="outline"
                             size="sm"

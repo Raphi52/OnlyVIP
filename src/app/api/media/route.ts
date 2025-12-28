@@ -6,25 +6,15 @@ import { existsSync } from "fs";
 import crypto from "crypto";
 import prisma from "@/lib/prisma";
 import { spawn } from "child_process";
+import { auth } from "@/lib/auth";
+import { notifyFollowersOfNewContent } from "@/lib/email";
 
-// Get ffmpeg/ffprobe paths
+// Get ffmpeg/ffprobe paths - use system binaries in Docker
 function getFfmpegPath(): string {
-  // Check node_modules for ffmpeg-static
-  const staticPath = join(process.cwd(), "node_modules", "ffmpeg-static", "ffmpeg.exe");
-  if (existsSync(staticPath)) {
-    return staticPath;
-  }
-  // Fallback to system ffmpeg
   return "ffmpeg";
 }
 
 function getFfprobePath(): string {
-  // Check node_modules for ffprobe-static
-  const staticPath = join(process.cwd(), "node_modules", "ffprobe-static", "bin", "win32", "x64", "ffprobe.exe");
-  if (existsSync(staticPath)) {
-    return staticPath;
-  }
-  // Fallback to system ffprobe
   return "ffprobe";
 }
 
@@ -103,10 +93,23 @@ async function isAdmin(): Promise<boolean> {
   return !!token?.value;
 }
 
+async function isCreator(): Promise<{ isCreator: boolean; userId?: string }> {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return { isCreator: false };
+  }
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { id: true, isCreator: true },
+  });
+  return { isCreator: user?.isCreator === true, userId: session.user.id };
+}
+
 // GET /api/media - Get all media
 export async function GET(request: NextRequest) {
   try {
     const admin = await isAdmin();
+    const creator = await isCreator();
     const { searchParams } = new URL(request.url);
 
     const type = searchParams.get("type");
@@ -114,8 +117,16 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get("search");
     const published = searchParams.get("published");
     const creatorSlug = searchParams.get("creator");
+    const gallery = searchParams.get("gallery"); // Filter by showInGallery (legacy)
     const page = parseInt(searchParams.get("page") || "1");
     const limit = parseInt(searchParams.get("limit") || "50");
+
+    // New tag filters
+    const tagGallery = searchParams.get("tagGallery");
+    const tagPPV = searchParams.get("tagPPV");
+    const tagAI = searchParams.get("tagAI");
+    const tagFree = searchParams.get("tagFree");
+    const tagVIP = searchParams.get("tagVIP");
 
     const where: any = {};
 
@@ -124,10 +135,22 @@ export async function GET(request: NextRequest) {
       where.creatorSlug = creatorSlug;
     }
 
+    // Check if user is a creator and has access to this creator's media
+    let hasCreatorAccess = false;
+    if (creator.isCreator && creatorSlug) {
+      // Check if this creator profile belongs to the logged-in user
+      const creatorProfile = await prisma.creator.findFirst({
+        where: { slug: creatorSlug, userId: creator.userId },
+      });
+      hasCreatorAccess = !!creatorProfile;
+    }
+
     // Public users can only see published content
-    if (!admin) {
+    // Creators can see all their own content
+    // Admins can see everything
+    if (!admin && !hasCreatorAccess) {
       where.isPublished = true;
-    } else if (published !== null) {
+    } else if (published !== null && (admin || hasCreatorAccess)) {
       where.isPublished = published === "true";
     }
 
@@ -146,7 +169,49 @@ export async function GET(request: NextRequest) {
       };
     }
 
-    const [media, total] = await Promise.all([
+    // Filter by gallery visibility (legacy)
+    // gallery=true -> only showInGallery=true
+    // gallery=false -> only showInGallery=false (hidden)
+    // gallery=all or not set -> show all (for admins/creators)
+    if (gallery === "true") {
+      where.showInGallery = true;
+    } else if (gallery === "false") {
+      where.showInGallery = false;
+    }
+    // If gallery=all or not specified, don't filter (show all)
+
+    // New tag filters
+    if (tagGallery === "true") {
+      where.tagGallery = true;
+    } else if (tagGallery === "false") {
+      where.tagGallery = false;
+    }
+
+    if (tagPPV === "true") {
+      where.tagPPV = true;
+    } else if (tagPPV === "false") {
+      where.tagPPV = false;
+    }
+
+    if (tagAI === "true") {
+      where.tagAI = true;
+    } else if (tagAI === "false") {
+      where.tagAI = false;
+    }
+
+    if (tagFree === "true") {
+      where.tagFree = true;
+    } else if (tagFree === "false") {
+      where.tagFree = false;
+    }
+
+    if (tagVIP === "true") {
+      where.tagVIP = true;
+    } else if (tagVIP === "false") {
+      where.tagVIP = false;
+    }
+
+    const [media, total, photosCount, videosCount] = await Promise.all([
       prisma.mediaContent.findMany({
         where,
         orderBy: { createdAt: "desc" },
@@ -157,6 +222,8 @@ export async function GET(request: NextRequest) {
         },
       }),
       prisma.mediaContent.count({ where }),
+      prisma.mediaContent.count({ where: { ...where, type: "PHOTO" } }),
+      prisma.mediaContent.count({ where: { ...where, type: "VIDEO" } }),
     ]);
 
     return NextResponse.json({
@@ -166,6 +233,10 @@ export async function GET(request: NextRequest) {
         limit,
         total,
         totalPages: Math.ceil(total / limit),
+      },
+      stats: {
+        photos: photosCount,
+        videos: videosCount,
       },
     });
   } catch (error) {
@@ -180,16 +251,25 @@ export async function GET(request: NextRequest) {
 // POST /api/media - Create new media with file upload
 export async function POST(request: NextRequest) {
   try {
+    console.log("[Media POST] Starting upload...");
     const admin = await isAdmin();
-    if (!admin) {
+    const creator = await isCreator();
+
+    console.log("[Media POST] Auth check - admin:", admin, "creator:", creator);
+
+    // Allow both admins and creators to upload
+    if (!admin && !creator.isCreator) {
+      console.log("[Media POST] Unauthorized - no admin or creator rights");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const contentType = request.headers.get("content-type") || "";
+    console.log("[Media POST] Content-Type:", contentType);
 
     // Handle FormData upload
     if (contentType.includes("multipart/form-data")) {
       const formData = await request.formData();
+      console.log("[Media POST] FormData parsed");
 
       const title = formData.get("title") as string;
       const description = formData.get("description") as string | null;
@@ -198,23 +278,40 @@ export async function POST(request: NextRequest) {
       const isPurchaseable = formData.get("isPurchaseable") === "true";
       const price = formData.get("price") as string | null;
       const isPublished = formData.get("isPublished") !== "false";
+      const showInGallery = formData.get("showInGallery") !== "false"; // Default true (legacy)
       const creatorSlug = formData.get("creatorSlug") as string || "miacosta";
       const files = formData.getAll("files") as File[];
 
+      // New tag fields
+      const tagGallery = formData.get("tagGallery") === "true";
+      const tagPPV = formData.get("tagPPV") === "true";
+      const tagAI = formData.get("tagAI") === "true";
+      const tagFree = formData.get("tagFree") === "true";
+      const tagVIP = formData.get("tagVIP") === "true";
+      const ppvPriceCreditsStr = formData.get("ppvPriceCredits") as string | null;
+      const ppvPriceCredits = ppvPriceCreditsStr ? parseInt(ppvPriceCreditsStr) : null;
+
+      console.log("[Media POST] Form data:", { title, type, accessTier, creatorSlug, filesCount: files.length, tagGallery, tagPPV, tagFree, tagVIP });
+
       if (!title) {
+        console.log("[Media POST] Error: No title");
         return NextResponse.json({ error: "Title is required" }, { status: 400 });
       }
 
       if (!files || files.length === 0) {
+        console.log("[Media POST] Error: No files");
         return NextResponse.json({ error: "No files provided" }, { status: 400 });
       }
 
       // Create upload directory
       const uploadDir = join(process.cwd(), "public", "uploads", "media");
+      console.log("[Media POST] Upload dir:", uploadDir);
       await mkdir(uploadDir, { recursive: true });
 
       // Process first file (main content)
       const file = files[0];
+      console.log("[Media POST] Processing file:", file.name, "size:", file.size, "type:", file.type);
+
       const ext = file.name.split(".").pop() || "jpg";
       const hash = crypto.randomBytes(16).toString("hex");
       const filename = `${hash}.${ext}`;
@@ -222,7 +319,10 @@ export async function POST(request: NextRequest) {
       const bytes = await file.arrayBuffer();
       const buffer = Buffer.from(bytes);
       const filePath = join(uploadDir, filename);
+
+      console.log("[Media POST] Writing file to:", filePath);
       await writeFile(filePath, buffer);
+      console.log("[Media POST] File written successfully");
 
       const contentUrl = `/uploads/media/${filename}`;
       let thumbnailUrl = contentUrl;
@@ -250,6 +350,8 @@ export async function POST(request: NextRequest) {
         .replace(/(^-|-$)/g, "");
       const uniqueSlug = `${baseSlug}-${crypto.randomBytes(4).toString("hex")}`;
 
+      console.log("[Media POST] Creating DB entry with slug:", uniqueSlug);
+
       // Create media entry
       const media = await prisma.mediaContent.create({
         data: {
@@ -261,6 +363,7 @@ export async function POST(request: NextRequest) {
           isPurchaseable,
           price: isPurchaseable && price ? parseFloat(price) : null,
           isPublished,
+          showInGallery,
           publishedAt: isPublished ? new Date() : null,
           thumbnailUrl,
           previewUrl: thumbnailUrl,
@@ -269,8 +372,32 @@ export async function POST(request: NextRequest) {
           mimeType: file.type,
           duration,
           creatorSlug,
+          // New tag fields
+          tagGallery,
+          tagPPV,
+          tagAI,
+          tagFree,
+          tagVIP,
+          ppvPriceCredits: tagPPV ? ppvPriceCredits : null,
         },
       });
+
+      console.log("[Media POST] Media created:", media.id);
+
+      // Send notification emails to followers if content is published
+      if (isPublished && creatorSlug) {
+        // Run in background, don't block the response
+        notifyFollowersOfNewContent(
+          creatorSlug,
+          {
+            title,
+            type,
+            thumbnailUrl,
+            accessTier,
+          },
+          prisma
+        ).catch((err) => console.error("[Media] Failed to send notifications:", err));
+      }
 
       return NextResponse.json({ media }, { status: 201 });
     }
@@ -288,9 +415,17 @@ export async function POST(request: NextRequest) {
       isPurchaseable,
       price,
       isPublished,
+      // New tag fields
+      tagGallery,
+      tagPPV,
+      tagAI,
+      tagFree,
+      tagVIP,
+      ppvPriceCredits,
+      creatorSlug,
     } = body;
 
-    if (!title || !type || !accessTier || !contentUrl) {
+    if (!title || !type || !contentUrl) {
       return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 }
@@ -309,7 +444,7 @@ export async function POST(request: NextRequest) {
         slug: uniqueSlug,
         description,
         type,
-        accessTier,
+        accessTier: accessTier || "FREE",
         thumbnailUrl,
         previewUrl,
         contentUrl,
@@ -317,14 +452,22 @@ export async function POST(request: NextRequest) {
         price: isPurchaseable ? price : null,
         isPublished: isPublished || false,
         publishedAt: isPublished ? new Date() : null,
+        creatorSlug: creatorSlug || "miacosta",
+        // New tag fields
+        tagGallery: tagGallery || false,
+        tagPPV: tagPPV || false,
+        tagAI: tagAI || false,
+        tagFree: tagFree || false,
+        tagVIP: tagVIP || false,
+        ppvPriceCredits: tagPPV ? ppvPriceCredits : null,
       },
     });
 
     return NextResponse.json({ media }, { status: 201 });
-  } catch (error) {
-    console.error("Create media error:", error);
+  } catch (error: any) {
+    console.error("[Media POST] Error:", error);
     return NextResponse.json(
-      { error: "Failed to create media" },
+      { error: error?.message || "Failed to create media" },
       { status: 500 }
     );
   }
@@ -334,7 +477,9 @@ export async function POST(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     const admin = await isAdmin();
-    if (!admin) {
+    const creator = await isCreator();
+
+    if (!admin && !creator.isCreator) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -363,7 +508,9 @@ export async function DELETE(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   try {
     const admin = await isAdmin();
-    if (!admin) {
+    const creator = await isCreator();
+
+    if (!admin && !creator.isCreator) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -374,6 +521,14 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: "Media ID required" }, { status: 400 });
     }
 
+    // Get current state to check if we're publishing
+    const currentMedia = await prisma.mediaContent.findUnique({
+      where: { id },
+      select: { isPublished: true, creatorSlug: true, title: true, type: true, thumbnailUrl: true, accessTier: true },
+    });
+
+    const isNewlyPublished = updateData.isPublished === true && !currentMedia?.isPublished;
+
     // Handle publish/unpublish
     if (updateData.isPublished !== undefined) {
       updateData.publishedAt = updateData.isPublished ? new Date() : null;
@@ -383,6 +538,20 @@ export async function PATCH(request: NextRequest) {
       where: { id },
       data: updateData,
     });
+
+    // Send notifications if content is being published for the first time
+    if (isNewlyPublished && currentMedia?.creatorSlug) {
+      notifyFollowersOfNewContent(
+        currentMedia.creatorSlug,
+        {
+          title: currentMedia.title,
+          type: currentMedia.type,
+          thumbnailUrl: currentMedia.thumbnailUrl,
+          accessTier: currentMedia.accessTier,
+        },
+        prisma
+      ).catch((err) => console.error("[Media] Failed to send notifications:", err));
+    }
 
     return NextResponse.json({ media });
   } catch (error) {

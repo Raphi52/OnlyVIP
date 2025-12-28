@@ -88,6 +88,7 @@ export async function PUT(request: NextRequest) {
     console.log("[Settings PUT] Body received:", body);
     const {
       creatorSlug,
+      newSlug,
       // Creator fields
       creatorName,
       creatorImage,
@@ -101,6 +102,9 @@ export async function PUT(request: NextRequest) {
       siteName,
       siteDescription,
       welcomeMessage,
+      welcomeMediaId,
+      welcomeMediaUrl,
+      welcomeMediaType,
       primaryColor,
       accentColor,
       pricing,
@@ -115,6 +119,36 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "Creator slug required" }, { status: 400 });
     }
 
+    // Handle slug change
+    let finalSlug = creatorSlug;
+    if (newSlug && newSlug !== creatorSlug) {
+      // Validate new slug format
+      if (!/^[a-z0-9-]+$/.test(newSlug)) {
+        return NextResponse.json({
+          error: "Invalid slug format. Only lowercase letters, numbers, and hyphens allowed."
+        }, { status: 400 });
+      }
+
+      if (newSlug.length < 2) {
+        return NextResponse.json({
+          error: "Slug must be at least 2 characters"
+        }, { status: 400 });
+      }
+
+      // Check if new slug is already taken
+      const existingCreator = await prisma.creator.findUnique({
+        where: { slug: newSlug },
+      });
+
+      if (existingCreator) {
+        return NextResponse.json({
+          error: "This slug is already taken"
+        }, { status: 400 });
+      }
+
+      finalSlug = newSlug;
+    }
+
     // Update or create creator info
     const socialLinks = JSON.stringify({
       instagram: instagram || null,
@@ -122,70 +156,129 @@ export async function PUT(request: NextRequest) {
       tiktok: tiktok || null,
     });
 
-    await prisma.creator.upsert({
-      where: { slug: creatorSlug },
-      update: {
-        displayName: creatorName || "Creator",
-        name: creatorName || "Creator",
-        avatar: creatorImage || null,
-        cardImage: cardImage || null,
-        coverImage: coverImage || null,
-        bio: creatorBio || null,
-        socialLinks,
-        walletEth: walletEth || null,
-        walletBtc: walletBtc || null,
-      },
-      create: {
-        slug: creatorSlug,
-        displayName: creatorName || "Creator",
-        name: creatorName || "Creator",
-        avatar: creatorImage || null,
-        cardImage: cardImage || null,
-        coverImage: coverImage || null,
-        bio: creatorBio || null,
-        socialLinks,
-        walletEth: walletEth || null,
-        walletBtc: walletBtc || null,
-      },
-    });
+    // Use transaction if slug is changing
+    const isSlugChanging = finalSlug !== creatorSlug;
+
+    if (isSlugChanging) {
+      // Update both creator and site settings in a transaction
+      await prisma.$transaction(async (tx) => {
+        // First update the Creator slug
+        await tx.creator.update({
+          where: { slug: creatorSlug },
+          data: {
+            slug: finalSlug,
+            displayName: creatorName || "Creator",
+            name: creatorName || "Creator",
+            avatar: creatorImage || null,
+            cardImage: cardImage || null,
+            coverImage: coverImage || null,
+            bio: creatorBio || null,
+            socialLinks,
+            walletEth: walletEth || null,
+            walletBtc: walletBtc || null,
+          },
+        });
+
+        // Update SiteSettings creatorSlug
+        await tx.siteSettings.updateMany({
+          where: { creatorSlug },
+          data: {
+            creatorSlug: finalSlug,
+            siteName: siteName || null,
+            siteDescription: siteDescription || null,
+            welcomeMessage: welcomeMessage || null,
+            welcomeMediaId: welcomeMediaId || null,
+            welcomeMediaUrl: welcomeMediaUrl || null,
+            primaryColor: primaryColor || null,
+            accentColor: accentColor || null,
+            pricing: pricing ? JSON.stringify(pricing) : "{}",
+            chatEnabled: chatEnabled ?? true,
+            tipsEnabled: tipsEnabled ?? true,
+            ppvEnabled: ppvEnabled ?? true,
+          },
+        });
+      });
+
+      console.log("[Settings PUT] Slug changed from", creatorSlug, "to", finalSlug);
+    } else {
+      // Normal update without slug change
+      await prisma.creator.upsert({
+        where: { slug: creatorSlug },
+        update: {
+          displayName: creatorName || "Creator",
+          name: creatorName || "Creator",
+          avatar: creatorImage || null,
+          cardImage: cardImage || null,
+          coverImage: coverImage || null,
+          bio: creatorBio || null,
+          socialLinks,
+          walletEth: walletEth || null,
+          walletBtc: walletBtc || null,
+        },
+        create: {
+          slug: creatorSlug,
+          displayName: creatorName || "Creator",
+          name: creatorName || "Creator",
+          avatar: creatorImage || null,
+          cardImage: cardImage || null,
+          coverImage: coverImage || null,
+          bio: creatorBio || null,
+          socialLinks,
+          walletEth: walletEth || null,
+          walletBtc: walletBtc || null,
+        },
+      });
+    }
 
     console.log("[Settings PUT] Creator updated, now updating SiteSettings...");
 
-    // Update or create site settings
-    const settings = await prisma.siteSettings.upsert({
-      where: { creatorSlug },
-      update: {
-        siteName: siteName || null,
-        siteDescription: siteDescription || null,
-        welcomeMessage: welcomeMessage || null,
-        primaryColor: primaryColor || null,
-        accentColor: accentColor || null,
-        pricing: pricing ? JSON.stringify(pricing) : "{}",
-        chatEnabled: chatEnabled ?? true,
-        tipsEnabled: tipsEnabled ?? true,
-        ppvEnabled: ppvEnabled ?? true,
-      },
-      create: {
-        creatorSlug,
-        siteName: siteName || null,
-        siteDescription: siteDescription || null,
-        welcomeMessage: welcomeMessage || null,
-        primaryColor: primaryColor || null,
-        accentColor: accentColor || null,
-        pricing: pricing ? JSON.stringify(pricing) : "{}",
-        chatEnabled: chatEnabled ?? true,
-        tipsEnabled: tipsEnabled ?? true,
-        ppvEnabled: ppvEnabled ?? true,
-      },
-    });
+    // Update or create site settings (only if slug didn't change, otherwise it was updated in transaction)
+    let settings;
+    if (!isSlugChanging) {
+      settings = await prisma.siteSettings.upsert({
+        where: { creatorSlug: finalSlug },
+        update: {
+          siteName: siteName || null,
+          siteDescription: siteDescription || null,
+          welcomeMessage: welcomeMessage || null,
+          welcomeMediaId: welcomeMediaId || null,
+          welcomeMediaUrl: welcomeMediaUrl || null,
+          primaryColor: primaryColor || null,
+          accentColor: accentColor || null,
+          pricing: pricing ? JSON.stringify(pricing) : "{}",
+          chatEnabled: chatEnabled ?? true,
+          tipsEnabled: tipsEnabled ?? true,
+          ppvEnabled: ppvEnabled ?? true,
+        },
+        create: {
+          creatorSlug: finalSlug,
+          siteName: siteName || null,
+          siteDescription: siteDescription || null,
+          welcomeMessage: welcomeMessage || null,
+          welcomeMediaId: welcomeMediaId || null,
+          welcomeMediaUrl: welcomeMediaUrl || null,
+          primaryColor: primaryColor || null,
+          accentColor: accentColor || null,
+          pricing: pricing ? JSON.stringify(pricing) : "{}",
+          chatEnabled: chatEnabled ?? true,
+          tipsEnabled: tipsEnabled ?? true,
+          ppvEnabled: ppvEnabled ?? true,
+        },
+      });
+    } else {
+      settings = await prisma.siteSettings.findUnique({
+        where: { creatorSlug: finalSlug },
+      });
+    }
 
     console.log("[Settings PUT] Settings saved:", settings);
 
     return NextResponse.json({
       success: true,
+      newSlug: isSlugChanging ? finalSlug : undefined,
       settings: {
         ...settings,
-        pricing: JSON.parse(settings.pricing || "{}"),
+        pricing: settings ? JSON.parse(settings.pricing || "{}") : {},
       },
     });
   } catch (error) {

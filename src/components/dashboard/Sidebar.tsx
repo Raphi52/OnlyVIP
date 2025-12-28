@@ -38,16 +38,16 @@ const userLinks = [
   { href: "/dashboard", icon: Home, label: "Dashboard" },
   { href: "/dashboard/library", icon: Image, label: "My Library" },
   { href: "/dashboard/messages", icon: MessageCircle, label: "Messages" },
-  { href: "/dashboard/subscription", icon: Star, label: "Subscription" },
   { href: "/dashboard/billing", icon: CreditCard, label: "Billing" },
-  { href: "/dashboard/settings", icon: Settings, label: "Settings" },
 ];
 
 // Navigation pour les créateurs (en plus des liens user)
 const creatorLinks = [
   { href: "/dashboard/creator", icon: Crown, label: "Creator Dashboard" },
-  { href: "/dashboard/creator/media", icon: Upload, label: "Manage Media" },
+  { href: "/dashboard/creator/media", icon: Upload, label: "Media Library" },
+  { href: "/dashboard/creator/members", icon: Users, label: "Members" },
   { href: "/dashboard/creator/messages", icon: MessageCircle, label: "Fan Messages" },
+  { href: "/dashboard/creator/earnings", icon: DollarSign, label: "Earnings" },
   { href: "/dashboard/creator/analytics", icon: BarChart3, label: "Analytics" },
   { href: "/dashboard/creator/settings", icon: Settings, label: "Creator Settings" },
 ];
@@ -385,6 +385,25 @@ export function Sidebar() {
             badge={link.href === "/dashboard/messages" ? unreadCount : undefined}
           />
         ))}
+
+        {/* Become Creator CTA - Only for non-creators */}
+        {!isCreatorUser && (
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.2 }}
+            className="mt-4"
+          >
+            <Link
+              href="/dashboard/become-creator"
+              onClick={() => setIsMobileOpen(false)}
+              className="flex items-center gap-3 px-4 py-3 rounded-xl bg-gradient-to-r from-[var(--gold)]/20 to-[var(--gold)]/5 text-[var(--gold)] border border-[var(--gold)]/30 hover:border-[var(--gold)]/50 transition-all duration-300"
+            >
+              <Sparkles className="w-5 h-5" />
+              <span className="font-medium">Become a Creator</span>
+            </Link>
+          </motion.div>
+        )}
       </nav>
 
       {/* Logout */}

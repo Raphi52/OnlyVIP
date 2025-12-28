@@ -17,6 +17,8 @@ import {
   Lock,
   Palette,
   Camera,
+  Percent,
+  Wallet,
 } from "lucide-react";
 import { Button, Card } from "@/components/ui";
 
@@ -34,6 +36,11 @@ interface SiteSettings {
   registrationEnabled: boolean;
   emailNotifications: boolean;
   pushNotifications: boolean;
+  // Platform commission settings
+  platformWalletEth: string | null;
+  platformWalletBtc: string | null;
+  platformCommission: number;
+  firstMonthFreeCommission: boolean;
 }
 
 export default function AdminSettingsPage() {
@@ -61,6 +68,11 @@ export default function AdminSettingsPage() {
     registrationEnabled: true,
     emailNotifications: true,
     pushNotifications: false,
+    // Platform commission settings
+    platformWalletEth: null,
+    platformWalletBtc: null,
+    platformCommission: 0.05,
+    firstMonthFreeCommission: true,
   });
 
   const isAdmin = (session?.user as any)?.role === "ADMIN";
@@ -504,6 +516,127 @@ export default function AdminSettingsPage() {
                       }`}
                     />
                   </button>
+                </div>
+              </div>
+            </Card>
+          </motion.div>
+
+          {/* Commission & Platform Wallet */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.35 }}
+          >
+            <Card variant="luxury" className="p-6">
+              <h2 className="text-xl font-semibold text-[var(--foreground)] mb-6 flex items-center gap-2">
+                <Percent className="w-5 h-5 text-[var(--gold)]" />
+                Commission & Platform Wallet
+              </h2>
+
+              <div className="space-y-4">
+                {/* Commission Rate */}
+                <div>
+                  <label className="block text-sm font-medium text-[var(--foreground)] mb-2">
+                    Platform Commission Rate (%)
+                  </label>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.1"
+                      value={(settings.platformCommission * 100).toFixed(1)}
+                      onChange={(e) =>
+                        setSettings((prev) => ({
+                          ...prev,
+                          platformCommission: parseFloat(e.target.value) / 100,
+                        }))
+                      }
+                      className="w-24 px-4 py-3 rounded-xl bg-[var(--surface)] border border-[var(--border)] text-[var(--foreground)] focus:outline-none focus:border-[var(--gold)] text-center"
+                    />
+                    <span className="text-[var(--muted)]">%</span>
+                    <span className="text-sm text-[var(--muted)] ml-2">
+                      (Creator receives {((1 - settings.platformCommission) * 100).toFixed(1)}%)
+                    </span>
+                  </div>
+                </div>
+
+                {/* First Month Free Commission */}
+                <div className="flex items-center justify-between p-4 bg-[var(--surface)] rounded-xl">
+                  <div>
+                    <p className="font-medium text-[var(--foreground)]">First Month Free</p>
+                    <p className="text-sm text-[var(--muted)]">0% commission for creators in their first month</p>
+                  </div>
+                  <button
+                    onClick={() =>
+                      setSettings((prev) => ({
+                        ...prev,
+                        firstMonthFreeCommission: !prev.firstMonthFreeCommission,
+                      }))
+                    }
+                    className={`w-14 h-8 rounded-full transition-colors ${
+                      settings.firstMonthFreeCommission ? "bg-[var(--gold)]" : "bg-[var(--border)]"
+                    }`}
+                  >
+                    <div
+                      className={`w-6 h-6 rounded-full bg-white shadow transition-transform ${
+                        settings.firstMonthFreeCommission ? "translate-x-7" : "translate-x-1"
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                {/* Platform Wallet ETH */}
+                <div>
+                  <label className="block text-sm font-medium text-[var(--foreground)] mb-2 flex items-center gap-2">
+                    <Wallet className="w-4 h-4" />
+                    Platform Wallet (ETH/USDT)
+                  </label>
+                  <input
+                    type="text"
+                    value={settings.platformWalletEth || ""}
+                    onChange={(e) =>
+                      setSettings((prev) => ({
+                        ...prev,
+                        platformWalletEth: e.target.value || null,
+                      }))
+                    }
+                    className="w-full px-4 py-3 rounded-xl bg-[var(--surface)] border border-[var(--border)] text-[var(--foreground)] focus:outline-none focus:border-[var(--gold)] font-mono text-sm"
+                    placeholder="0x..."
+                  />
+                </div>
+
+                {/* Platform Wallet BTC */}
+                <div>
+                  <label className="block text-sm font-medium text-[var(--foreground)] mb-2 flex items-center gap-2">
+                    <Wallet className="w-4 h-4" />
+                    Platform Wallet (BTC)
+                  </label>
+                  <input
+                    type="text"
+                    value={settings.platformWalletBtc || ""}
+                    onChange={(e) =>
+                      setSettings((prev) => ({
+                        ...prev,
+                        platformWalletBtc: e.target.value || null,
+                      }))
+                    }
+                    className="w-full px-4 py-3 rounded-xl bg-[var(--surface)] border border-[var(--border)] text-[var(--foreground)] focus:outline-none focus:border-[var(--gold)] font-mono text-sm"
+                    placeholder="bc1... or 1... or 3..."
+                  />
+                </div>
+
+                {/* Info Box */}
+                <div className="p-4 bg-[var(--gold)]/10 border border-[var(--gold)]/30 rounded-xl">
+                  <p className="text-sm text-[var(--foreground)]">
+                    <strong>How it works:</strong> When users spend credits on media, tips, or PPV content,
+                    the platform takes {(settings.platformCommission * 100).toFixed(1)}% commission
+                    {settings.firstMonthFreeCommission && " (0% for creators in their first month)"}.
+                    The remaining {((1 - settings.platformCommission) * 100).toFixed(1)}% goes to the creator.
+                  </p>
+                  <p className="text-sm text-[var(--muted)] mt-2">
+                    1000 credits = 10€ | Example: User spends 1000 credits → Creator receives {(10 * (1 - settings.platformCommission)).toFixed(2)}€
+                  </p>
                 </div>
               </div>
             </Card>

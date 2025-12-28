@@ -18,15 +18,30 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!isChangeHeroConfigured()) {
+    const body = await request.json();
+    const { type, amount, planId, billingInterval, mediaId, messageId, creatorSlug, credits } = body;
+
+    // Fetch creator wallet from database if creatorSlug provided
+    let creatorWalletBtc: string | null = null;
+    let creatorWalletEth: string | null = null;
+
+    if (creatorSlug) {
+      const creator = await prisma.creator.findUnique({
+        where: { slug: creatorSlug },
+        select: { walletBtc: true, walletEth: true },
+      });
+      if (creator) {
+        creatorWalletBtc = creator.walletBtc;
+        creatorWalletEth = creator.walletEth;
+      }
+    }
+
+    if (!isChangeHeroConfigured(creatorWalletBtc, creatorWalletEth)) {
       return NextResponse.json(
         { error: "Card payments not configured - wallet address missing" },
         { status: 500 }
       );
     }
-
-    const body = await request.json();
-    const { type, amount, planId, billingInterval, mediaId, messageId } = body;
 
     if (!amount || amount < 1) {
       return NextResponse.json(
@@ -40,7 +55,7 @@ export async function POST(request: NextRequest) {
 
     let walletAddress: string;
     try {
-      walletAddress = getWalletAddress(cryptoCurrency);
+      walletAddress = getWalletAddress(cryptoCurrency, creatorWalletBtc);
     } catch (error) {
       return NextResponse.json(
         { error: "Wallet not configured" },
@@ -64,13 +79,16 @@ export async function POST(request: NextRequest) {
           messageId,
           cryptoCurrency,
           walletAddress,
+          credits: credits || null,
         }),
       },
     });
 
-    // Generate ChangeHero URL
+    // Generate ChangeHero URL with the payment amount
     const changeHeroUrl = generateChangeHeroUrl({
       cryptoCurrency: "btc",
+      fiatAmount: amount,
+      fiatCurrency: "eur",
     });
 
     return NextResponse.json({
@@ -95,6 +113,7 @@ function mapPaymentType(type: string): string {
     media: "MEDIA_PURCHASE",
     ppv: "PPV_UNLOCK",
     tip: "TIP",
+    credits: "CREDITS_PURCHASE",
   };
   return mapping[type] || "OTHER";
 }

@@ -32,8 +32,9 @@ services:
         condition: service_healthy
     environment:
       - DATABASE_URL=postgresql://viponly:${DB_PASSWORD:-OnlyVIP2024Secure!}@db:5432/viponly
-      - NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost:3000}
+      - NEXTAUTH_URL=${NEXTAUTH_URL:-https://viponly.fun}
       - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:-your-secret-key-change-in-production}
+      - NEXT_PUBLIC_APP_URL=https://viponly.fun
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
       - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY:-}
@@ -46,6 +47,8 @@ services:
       - STRIPE_PRICE_VIP_ANNUAL=${STRIPE_PRICE_VIP_ANNUAL:-}
       - NOWPAYMENTS_API_KEY=${NOWPAYMENTS_API_KEY:-}
       - NOWPAYMENTS_IPN_SECRET=${NOWPAYMENTS_IPN_SECRET:-}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
+      - AI_MODEL=${AI_MODEL:-mistralai/mistral-7b-instruct}
     expose:
       - "3000"
     volumes:
@@ -68,6 +71,49 @@ services:
       - ./public/media:/var/www/media:ro
       - ./public/uploads:/var/www/uploads:ro
       - ./certbot/www:/var/www/certbot:ro
+
+  # AI Queue Processor (cron)
+  ai-cron:
+    image: alpine:latest
+    container_name: viponly-ai-cron
+    restart: unless-stopped
+    depends_on:
+      - app
+    environment:
+      - CRON_SECRET=${CRON_SECRET:-}
+      - APP_URL=http://app:3000
+    entrypoint: /bin/sh
+    command: >
+      -c 'apk add --no-cache curl && while true; do
+        echo "[$(date)] Processing AI queue...";
+        curl -s -H "x-cron-secret: $${CRON_SECRET}" "$${APP_URL}/api/ai/process-queue" || echo "Request failed";
+        sleep 30;
+      done'
+
+  # Database Backup Service
+  backup:
+    image: postgres:16-alpine
+    container_name: viponly-backup
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGHOST: db
+      PGUSER: viponly
+      PGPASSWORD: ${DB_PASSWORD:-OnlyVIP2024Secure!}
+      PGDATABASE: viponly
+    volumes:
+      - ./backups:/backups
+    entrypoint: /bin/sh
+    command: >
+      -c 'while true; do
+        echo "[$(date)] Starting backup...";
+        pg_dump -Fc > /backups/viponly_backup.dump;
+        pg_dump > /backups/viponly_backup.sql;
+        echo "[$(date)] Backup completed!";
+        sleep 3600;
+      done'
 
 volumes:
   postgres_data:

@@ -5,9 +5,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, User, LogOut, Settings, Crown, MessageCircle, Sparkles } from "lucide-react";
+import { Menu, X, User, LogOut, Crown, MessageCircle, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui";
 import { getCreator, Creator } from "@/lib/creators";
+import { CreditBalance } from "@/components/layout/CreditBalance";
 
 interface NavbarProps {
   creatorSlug?: string;
@@ -77,14 +78,22 @@ export function Navbar({ creatorSlug = "miacosta" }: NavbarProps) {
         return;
       }
 
+      // Admins and Creators can always message
+      if (isAdmin || isCreator) {
+        setHasVipAccess(true);
+        return;
+      }
+
       try {
         const res = await fetch("/api/user/subscription");
         if (res.ok) {
           const data = await res.json();
-          setHasVipAccess(
+          // Check if subscription exists and has proper access
+          const hasAccess =
             data.subscription?.plan?.canMessage ||
-            ["PREMIUM", "VIP"].includes(data.subscription?.plan?.accessTier)
-          );
+            ["BASIC", "PREMIUM", "VIP"].includes(data.subscription?.plan?.accessTier) ||
+            data.subscription?.status === "ACTIVE";
+          setHasVipAccess(hasAccess);
         }
       } catch (error) {
         console.error("Error checking VIP access:", error);
@@ -92,7 +101,7 @@ export function Navbar({ creatorSlug = "miacosta" }: NavbarProps) {
     };
 
     checkVipAccess();
-  }, [session?.user?.id]);
+  }, [session?.user?.id, isAdmin, isCreator]);
 
   // Handle Send Message click
   const handleSendMessage = async () => {
@@ -235,6 +244,10 @@ export function Navbar({ creatorSlug = "miacosta" }: NavbarProps) {
             {status === "loading" ? (
               <div className="w-10 h-10 rounded-full bg-white/5 animate-pulse" />
             ) : session ? (
+              <>
+                {/* Credit Balance */}
+                <CreditBalance variant="navbar" />
+
               <div className="relative">
                 <motion.button
                   onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
@@ -293,7 +306,6 @@ export function Navbar({ creatorSlug = "miacosta" }: NavbarProps) {
                           {[
                             { href: "/dashboard", icon: Crown, label: "Dashboard", color: "text-[var(--gold)]" },
                             { href: "/dashboard/messages", icon: MessageCircle, label: "Messages", color: "text-blue-400" },
-                            { href: "/dashboard/settings", icon: Settings, label: "Settings", color: "text-gray-400" },
                           ].map((item) => (
                             <Link
                               key={item.href}
@@ -318,6 +330,7 @@ export function Navbar({ creatorSlug = "miacosta" }: NavbarProps) {
                   )}
                 </AnimatePresence>
               </div>
+              </>
             ) : (
               <div className="flex items-center gap-3">
                 <Link href={`${basePath}/auth/login`}>

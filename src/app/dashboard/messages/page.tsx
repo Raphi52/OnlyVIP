@@ -60,6 +60,7 @@ export default function MessagesPage() {
   const { data: session, status } = useSession();
   const searchParams = useSearchParams();
   const conversationIdFromUrl = searchParams.get("conversation");
+  const userIdFromUrl = searchParams.get("user");
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -72,20 +73,31 @@ export default function MessagesPage() {
   const [autoSelectDone, setAutoSelectDone] = useState(false);
 
   const userId = session?.user?.id;
+  const isCreator = (session?.user as any)?.isCreator;
+  const isAdmin = (session?.user as any)?.role === "ADMIN";
 
-  // Check subscription status
+  // Check subscription status - Creators and Admins can always message
   useEffect(() => {
     const checkSubscription = async () => {
       if (!userId) return;
+
+      // Creators and Admins can always message
+      if (isCreator || isAdmin) {
+        setHasSubscription(true);
+        return;
+      }
 
       try {
         const res = await fetch("/api/user/subscription");
         if (res.ok) {
           const data = await res.json();
-          setHasSubscription(
+          // Both Basic and VIP can message
+          const canMessage =
             data.subscription?.plan?.canMessage ||
-            ["PREMIUM", "VIP"].includes(data.subscription?.plan?.accessTier)
-          );
+            ["BASIC", "PREMIUM", "VIP"].includes(data.subscription?.plan?.accessTier) ||
+            data.subscription?.status === "ACTIVE" ||
+            data.subscription?.status === "TRIALING";
+          setHasSubscription(canMessage);
         }
       } catch (error) {
         console.error("Error checking subscription:", error);
@@ -93,7 +105,7 @@ export default function MessagesPage() {
     };
 
     checkSubscription();
-  }, [userId]);
+  }, [userId, isCreator, isAdmin]);
 
   // Fetch conversations
   const fetchConversations = useCallback(async () => {
@@ -120,7 +132,7 @@ export default function MessagesPage() {
     }
   }, [userId, hasSubscription, fetchConversations, status]);
 
-  // Auto-select conversation from URL param
+  // Auto-select conversation from URL param (by conversation ID)
   useEffect(() => {
     if (conversationIdFromUrl && conversations.length > 0 && !autoSelectDone) {
       const targetConversation = conversations.find(c => c.id === conversationIdFromUrl);
@@ -131,13 +143,57 @@ export default function MessagesPage() {
     }
   }, [conversationIdFromUrl, conversations, autoSelectDone]);
 
+  // Auto-find or create conversation by user ID (for creator messaging members)
+  useEffect(() => {
+    const findOrCreateConversation = async () => {
+      if (!userIdFromUrl || !userId || !hasSubscription || autoSelectDone) return;
+
+      // First check if conversation with this user already exists
+      const existingConv = conversations.find(c => c.otherUser.id === userIdFromUrl);
+      if (existingConv) {
+        setSelectedConversation(existingConv);
+        setAutoSelectDone(true);
+        return;
+      }
+
+      // If not found and we have loaded conversations, try to start a new one
+      if (conversations.length >= 0 && !isLoading) {
+        try {
+          // For creators messaging members, we need to find the member's creator association
+          const res = await fetch("/api/conversations", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ userId: userIdFromUrl }),
+          });
+
+          if (res.ok) {
+            const data = await res.json();
+            if (data.conversationId) {
+              // Refresh conversations to get the new one
+              await fetchConversations();
+              setAutoSelectDone(true);
+            }
+          }
+        } catch (error) {
+          console.error("Error creating conversation:", error);
+        }
+      }
+    };
+
+    findOrCreateConversation();
+  }, [userIdFromUrl, userId, conversations, hasSubscription, autoSelectDone, isLoading, fetchConversations]);
+
   // Fetch messages for selected conversation
-  const fetchMessages = useCallback(async () => {
+  // markAsRead=true marks messages as read (used when user opens conversation)
+  const fetchMessages = useCallback(async (markAsRead: boolean = false) => {
     if (!selectedConversation) return;
 
     setIsLoadingMessages(true);
     try {
-      const res = await fetch(`/api/conversations/${selectedConversation.id}/messages`);
+      const url = markAsRead
+        ? `/api/conversations/${selectedConversation.id}/messages?markAsRead=true`
+        : `/api/conversations/${selectedConversation.id}/messages`;
+      const res = await fetch(url);
       if (res.ok) {
         const data = await res.json();
         setMessages(data);
@@ -151,7 +207,7 @@ export default function MessagesPage() {
 
   useEffect(() => {
     if (selectedConversation) {
-      fetchMessages();
+      fetchMessages(true); // markAsRead=true when user opens conversation
     }
   }, [selectedConversation, fetchMessages]);
 
@@ -169,6 +225,44 @@ export default function MessagesPage() {
     conversationId: selectedConversation?.id || "",
     onNewMessage: handleNewMessage,
   });
+
+  // Fallback polling when Pusher is not connected (every 5 seconds)
+  useEffect(() => {
+    // Skip if Pusher is connected
+    if (isConnected) return;
+    if (!selectedConversation) return;
+
+    const pollMessages = async () => {
+      try {
+        const res = await fetch(`/api/conversations/${selectedConversation.id}/messages`);
+        if (res.ok) {
+          const data = await res.json();
+          setMessages((prev) => {
+            // Only update if there are new messages
+            if (data.length !== prev.length ||
+                (data.length > 0 && prev.length > 0 && data[data.length - 1].id !== prev[prev.length - 1].id)) {
+              return data;
+            }
+            return prev;
+          });
+        }
+      } catch (error) {
+        console.error("Polling error:", error);
+      }
+    };
+
+    // Poll every 5 seconds
+    const interval = setInterval(pollMessages, 5000);
+    return () => clearInterval(interval);
+  }, [isConnected, selectedConversation]);
+
+  // Also poll conversations list every 10 seconds
+  useEffect(() => {
+    if (!userId || !hasSubscription) return;
+
+    const interval = setInterval(fetchConversations, 10000);
+    return () => clearInterval(interval);
+  }, [userId, hasSubscription, fetchConversations]);
 
   // Send message
   const handleSendMessage = async (
@@ -463,7 +557,7 @@ export default function MessagesPage() {
               <p className="text-white/50 mb-8">
                 Upgrade to VIP to start chatting directly with creators.
               </p>
-              <Link href="/dashboard/subscription">
+              <Link href="/miacosta/membership">
                 <Button variant="premium" size="lg" className="w-full gap-2 shadow-xl shadow-[var(--gold)]/20">
                   <Sparkles className="w-5 h-5" />
                   Upgrade to VIP

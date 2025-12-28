@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { getCreator } from "@/lib/creators";
+import { getCreatorFromDB } from "@/lib/creators";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -8,7 +8,7 @@ interface LayoutProps {
 
 export default async function CreatorLayout({ children, params }: LayoutProps) {
   const { creator: creatorSlug } = await params;
-  const creator = getCreator(creatorSlug);
+  const creator = await getCreatorFromDB(creatorSlug);
 
   if (!creator) {
     notFound();

@@ -85,6 +85,7 @@ export function getDefaultCreator(): Creator {
 // Server-side function to get creator from database with fallback
 // Use this in server components for fresh data
 export async function getCreatorFromDB(slug: string): Promise<Creator | undefined> {
+  console.log("[getCreatorFromDB] Looking for slug:", slug);
   try {
     // Dynamic import to avoid issues with client-side code
     const prisma = (await import("@/lib/prisma")).default;
@@ -92,6 +93,7 @@ export async function getCreatorFromDB(slug: string): Promise<Creator | undefine
     const dbCreator = await prisma.creator.findUnique({
       where: { slug: slug.toLowerCase() },
     });
+    console.log("[getCreatorFromDB] DB result:", dbCreator ? "FOUND" : "NOT FOUND");
 
     if (dbCreator) {
       const socialLinks = JSON.parse(dbCreator.socialLinks || "{}");
@@ -120,7 +122,7 @@ export async function getCreatorFromDB(slug: string): Promise<Creator | undefine
     // Fallback to static data if not in database
     return defaultCreators[slug.toLowerCase()];
   } catch (error) {
-    console.error("Error fetching creator from DB:", error);
+    console.error("[getCreatorFromDB] Error:", error);
     // Fallback to static data on error
     return defaultCreators[slug.toLowerCase()];
   }

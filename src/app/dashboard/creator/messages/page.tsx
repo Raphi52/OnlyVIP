@@ -72,7 +72,7 @@ const subscriptionColors: Record<string, string> = {
 export default function CreatorMessagesPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const { selectedCreator } = useAdminCreator();
+  const { selectedCreator, creators, isLoading: creatorsLoading } = useAdminCreator();
   const [activeConversation, setActiveConversation] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -86,13 +86,18 @@ export default function CreatorMessagesPage() {
   const isCreator = (session?.user as any)?.isCreator === true;
   const isAdmin = (session?.user as any)?.role === "ADMIN";
 
-  // Redirect if not a creator/admin
+  // Redirect if not a creator/admin or no creator profile
   useEffect(() => {
-    if (status === "loading") return;
+    if (status === "loading" || creatorsLoading) return;
     if (!session || (!isCreator && !isAdmin)) {
       router.push("/dashboard");
+      return;
     }
-  }, [session, status, isCreator, isAdmin, router]);
+    // If user is marked as creator but has no creator profiles, redirect
+    if (!selectedCreator && !creatorsLoading && creators.length === 0) {
+      router.push("/dashboard");
+    }
+  }, [session, status, isCreator, isAdmin, router, selectedCreator, creatorsLoading, creators.length]);
 
   // Handle new message from Pusher
   const handleNewMessage = useCallback((message: Message) => {
@@ -101,23 +106,27 @@ export default function CreatorMessagesPage() {
       return [...prev, message];
     });
 
-    setConversations((prev) =>
-      prev.map((conv) =>
-        conv.id === message.senderId || conv.id === message.receiverId
-          ? {
-              ...conv,
-              lastMessage: {
-                text: message.isPPV ? "Sent exclusive content" : message.text,
-                isPPV: message.isPPV,
-                createdAt: typeof message.createdAt === 'string' ? message.createdAt : new Date().toISOString(),
-                isRead: false,
-                senderId: message.senderId,
-              },
-            }
-          : conv
-      )
-    );
-  }, []);
+    // Update the conversation's lastMessage
+    // Since Pusher is subscribed to activeConversation, update that one
+    if (activeConversation) {
+      setConversations((prev) =>
+        prev.map((conv) =>
+          conv.id === activeConversation
+            ? {
+                ...conv,
+                lastMessage: {
+                  text: message.isPPV ? "Sent exclusive content" : message.text,
+                  isPPV: message.isPPV,
+                  createdAt: typeof message.createdAt === 'string' ? message.createdAt : new Date().toISOString(),
+                  isRead: false,
+                  senderId: message.senderId,
+                },
+              }
+            : conv
+        )
+      );
+    }
+  }, [activeConversation]);
 
   // Pusher real-time subscription
   const { isConnected } = usePusherChat({
@@ -158,10 +167,15 @@ export default function CreatorMessagesPage() {
   }, [selectedCreator]);
 
   // Fetch messages for active conversation
-  const fetchMessages = useCallback(async (conversationId: string) => {
+  // markAsRead=true marks messages as read (used when user opens conversation)
+  // markAsRead=false for polling (to preserve unread count)
+  const fetchMessages = useCallback(async (conversationId: string, markAsRead: boolean = false) => {
     setIsLoadingMsgs(true);
     try {
-      const res = await fetch(`/api/conversations/${conversationId}/messages`);
+      const url = markAsRead
+        ? `/api/conversations/${conversationId}/messages?markAsRead=true`
+        : `/api/conversations/${conversationId}/messages`;
+      const res = await fetch(url);
       if (res.ok) {
         const data = await res.json();
         setMessages(data);
@@ -182,10 +196,10 @@ export default function CreatorMessagesPage() {
     }
   }, [fetchConversations, selectedCreator]);
 
-  // Load messages when conversation changes
+  // Load messages when conversation changes (mark as read when user clicks)
   useEffect(() => {
     if (activeConversation) {
-      fetchMessages(activeConversation);
+      fetchMessages(activeConversation, true); // markAsRead=true
       setConversations((prev) =>
         prev.map((conv) =>
           conv.id === activeConversation ? { ...conv, unreadCount: 0 } : conv
@@ -214,7 +228,7 @@ export default function CreatorMessagesPage() {
           })
           .catch(console.error);
       }
-    }, 30000);
+    }, 5000);
 
     return () => clearInterval(pollInterval);
   }, [pusherConnected, activeConversation, fetchConversations]);
@@ -253,7 +267,7 @@ export default function CreatorMessagesPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           text: text || null,
-          senderId: selectedCreator?.slug || "creator",
+          senderId: selectedCreator?.userId || selectedCreator?.slug || "creator",
           media: uploadedMedia.map((m) => ({
             type: m.type,
             url: m.url,
@@ -281,7 +295,7 @@ export default function CreatorMessagesPage() {
                     isPPV: isPPV || false,
                     createdAt: new Date().toISOString(),
                     isRead: false,
-                    senderId: selectedCreator?.slug || "creator",
+                    senderId: selectedCreator?.userId || selectedCreator?.slug || "creator",
                   },
                 }
               : conv
@@ -330,7 +344,7 @@ export default function CreatorMessagesPage() {
     reactions: (msg.reactions || []).map((r: any) => ({
       emoji: r.emoji,
       count: r.count,
-      hasReacted: r.users?.includes(selectedCreator?.slug) || false,
+      hasReacted: r.users?.includes(selectedCreator?.userId) || false,
     })),
   })), [messages, selectedCreator]);
 
@@ -603,7 +617,7 @@ export default function CreatorMessagesPage() {
             ) : (
               <ChatWindow
                 conversationId={activeConversation}
-                currentUserId={selectedCreator?.slug || "creator"}
+                currentUserId={selectedCreator?.userId || selectedCreator?.slug || "creator"}
                 otherUser={activeConv.user}
                 messages={transformedMessages}
                 isAdmin={true}

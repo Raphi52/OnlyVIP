@@ -15,7 +15,6 @@ import {
   Plus,
   Eye,
   EyeOff,
-  DollarSign,
   Crown,
   Search,
   Edit,
@@ -24,8 +23,15 @@ import {
   Loader2,
   RefreshCw,
   Play,
+  LayoutGrid,
+  EyeClosed,
+  Tag,
+  Bot,
+  Unlock,
+  Coins,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAdminCreator } from "@/components/providers/AdminCreatorContext";
 
 interface MediaItem {
   id: string;
@@ -36,19 +42,16 @@ interface MediaItem {
   accessTier: "FREE" | "BASIC" | "VIP";
   thumbnailUrl: string | null;
   contentUrl: string;
-  isPurchaseable: boolean;
-  price: number | null;
   viewCount: number;
   isPublished: boolean;
   createdAt: string;
-}
-
-interface Creator {
-  id: string;
-  slug: string;
-  name: string;
-  displayName: string;
-  avatar?: string;
+  // Tag fields
+  tagGallery: boolean;
+  tagPPV: boolean;
+  tagAI: boolean;
+  tagFree: boolean;
+  tagVIP: boolean;
+  ppvPriceCredits: number | null;
 }
 
 const mediaTypes = [
@@ -67,60 +70,56 @@ const accessTiers = [
 export default function CreatorMediaPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [creators, setCreators] = useState<Creator[]>([]);
-  const [selectedCreator, setSelectedCreator] = useState<Creator | null>(null);
+
+  // Use shared creator context from sidebar
+  const { selectedCreator, creators, isLoading: creatorsLoading } = useAdminCreator();
+
   const [media, setMedia] = useState<MediaItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [selectedType, setSelectedType] = useState("PHOTO");
   const [selectedTier, setSelectedTier] = useState("FREE");
-  const [isPurchaseable, setIsPurchaseable] = useState(false);
-  const [price, setPrice] = useState("");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterType, setFilterType] = useState("all");
+  const [filterTag, setFilterTag] = useState("all"); // "all" | "gallery" | "ppv" | "ai" | "free" | "vip"
   const [uploadError, setUploadError] = useState("");
   const [previewItem, setPreviewItem] = useState<MediaItem | null>(null);
   const [editItem, setEditItem] = useState<MediaItem | null>(null);
   const [editTitle, setEditTitle] = useState("");
   const [editDescription, setEditDescription] = useState("");
   const [editAccessTier, setEditAccessTier] = useState("FREE");
-  const [editIsPurchaseable, setEditIsPurchaseable] = useState(false);
-  const [editPrice, setEditPrice] = useState("");
   const [isEditing, setIsEditing] = useState(false);
 
-  const isCreator = (session?.user as any)?.isCreator === true;
+  // New tag states for upload
+  const [tagGallery, setTagGallery] = useState(false);
+  const [tagPPV, setTagPPV] = useState(false);
+  const [tagAI, setTagAI] = useState(false);
+  const [tagFree, setTagFree] = useState(false);
+  const [tagVIP, setTagVIP] = useState(false);
+  const [ppvPriceCredits, setPpvPriceCredits] = useState("");
 
-  // Fetch creator profiles
+  // Edit tag states
+  const [editTagGallery, setEditTagGallery] = useState(false);
+  const [editTagPPV, setEditTagPPV] = useState(false);
+  const [editTagAI, setEditTagAI] = useState(false);
+  const [editTagFree, setEditTagFree] = useState(false);
+  const [editTagVIP, setEditTagVIP] = useState(false);
+  const [editPpvPriceCredits, setEditPpvPriceCredits] = useState("");
+
+  const isCreatorUser = (session?.user as any)?.isCreator === true;
+
+  // Redirect if not creator
   useEffect(() => {
     if (status === "loading") return;
-    if (!session || !isCreator) {
+    if (!session || !isCreatorUser) {
       router.push("/dashboard");
       return;
     }
-    fetchCreators();
-  }, [session, status, isCreator, router]);
-
-  const fetchCreators = async () => {
-    try {
-      const res = await fetch("/api/creator/my-profiles");
-      if (res.ok) {
-        const data = await res.json();
-        setCreators(data.creators || []);
-        if (data.creators?.length > 0) {
-          setSelectedCreator(data.creators[0]);
-        } else {
-          setIsLoading(false);
-        }
-      }
-    } catch (error) {
-      console.error("Error fetching creators:", error);
-      setIsLoading(false);
-    }
-  };
+  }, [session, status, isCreatorUser, router]);
 
   // Fetch media from API
   const fetchMedia = useCallback(async () => {
@@ -160,33 +159,62 @@ export default function CreatorMediaPage() {
   };
 
   const handleUpload = async () => {
-    if (!title || files.length === 0 || !selectedCreator) return;
+    if (!title || files.length === 0 || !selectedCreator) {
+      console.log("[Upload] Missing required fields:", { title, filesCount: files.length, selectedCreator });
+      return;
+    }
 
     setIsUploading(true);
     setUploadError("");
 
     try {
+      console.log("[Upload] Starting upload...");
       const formData = new FormData();
       formData.append("title", title);
       formData.append("description", description);
       formData.append("type", selectedType);
       formData.append("accessTier", selectedTier);
-      formData.append("isPurchaseable", isPurchaseable.toString());
       formData.append("creatorSlug", selectedCreator.slug);
-      if (isPurchaseable && price) {
-        formData.append("price", price);
-      }
       formData.append("isPublished", "true");
 
-      files.forEach((file) => formData.append("files", file));
+      // Add tag fields
+      formData.append("tagGallery", tagGallery.toString());
+      formData.append("tagPPV", tagPPV.toString());
+      formData.append("tagAI", tagAI.toString());
+      formData.append("tagFree", tagFree.toString());
+      formData.append("tagVIP", tagVIP.toString());
+      if (tagPPV && ppvPriceCredits) {
+        formData.append("ppvPriceCredits", ppvPriceCredits);
+      }
 
+      files.forEach((file) => {
+        console.log("[Upload] Adding file:", file.name, file.size);
+        formData.append("files", file);
+      });
+
+      console.log("[Upload] Sending request to /api/media");
       const res = await fetch("/api/media", {
         method: "POST",
         body: formData,
       });
 
-      if (res.ok) {
-        const data = await res.json();
+      console.log("[Upload] Response status:", res.status);
+
+      let data;
+      try {
+        const text = await res.text();
+        console.log("[Upload] Response text:", text.substring(0, 500));
+        data = JSON.parse(text);
+      } catch (parseError) {
+        console.error("[Upload] Failed to parse response:", parseError);
+        setUploadError("Server returned invalid response");
+        return;
+      }
+
+      console.log("[Upload] Response data:", data);
+
+      if (res.ok && data.media) {
+        console.log("[Upload] Success! Media created:", data.media.id);
         setMedia((prev) => [data.media, ...prev]);
         setShowUploadModal(false);
         // Reset form
@@ -195,15 +223,22 @@ export default function CreatorMediaPage() {
         setFiles([]);
         setSelectedType("PHOTO");
         setSelectedTier("FREE");
-        setIsPurchaseable(false);
-        setPrice("");
+        // Reset tags
+        setTagGallery(false);
+        setTagPPV(false);
+        setTagAI(false);
+        setTagFree(false);
+        setTagVIP(false);
+        setPpvPriceCredits("");
+        // Also refresh the list
+        fetchMedia();
       } else {
-        const error = await res.json();
-        setUploadError(error.error || "Upload failed");
+        console.error("[Upload] Error response:", data);
+        setUploadError(data.error || `Upload failed (status: ${res.status})`);
       }
-    } catch (error) {
-      console.error("Upload error:", error);
-      setUploadError("Upload failed. Please try again.");
+    } catch (error: any) {
+      console.error("[Upload] Exception:", error);
+      setUploadError(error?.message || "Upload failed. Please try again.");
     } finally {
       setIsUploading(false);
     }
@@ -248,10 +283,39 @@ export default function CreatorMediaPage() {
     }
   };
 
+  const handleToggleGallery = async (item: MediaItem) => {
+    try {
+      const res = await fetch("/api/media", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: item.id,
+          tagGallery: !item.tagGallery,
+        }),
+      });
+
+      if (res.ok) {
+        setMedia((prev) =>
+          prev.map((m) =>
+            m.id === item.id ? { ...m, tagGallery: !m.tagGallery } : m
+          )
+        );
+      }
+    } catch (error) {
+      console.error("Toggle gallery error:", error);
+    }
+  };
+
   const filteredMedia = media.filter((item) => {
     if (filterType !== "all" && item.type !== filterType) return false;
     if (searchQuery && !item.title.toLowerCase().includes(searchQuery.toLowerCase()))
       return false;
+    // Tag filters
+    if (filterTag === "gallery" && !item.tagGallery) return false;
+    if (filterTag === "ppv" && !item.tagPPV) return false;
+    if (filterTag === "ai" && !item.tagAI) return false;
+    if (filterTag === "free" && !item.tagFree) return false;
+    if (filterTag === "vip" && !item.tagVIP) return false;
     return true;
   });
 
@@ -261,8 +325,13 @@ export default function CreatorMediaPage() {
     setEditTitle(item.title);
     setEditDescription(item.description || "");
     setEditAccessTier(item.accessTier);
-    setEditIsPurchaseable(item.isPurchaseable);
-    setEditPrice(item.price ? String(item.price) : "");
+    // Set tag states
+    setEditTagGallery(item.tagGallery || false);
+    setEditTagPPV(item.tagPPV || false);
+    setEditTagAI(item.tagAI || false);
+    setEditTagFree(item.tagFree || false);
+    setEditTagVIP(item.tagVIP || false);
+    setEditPpvPriceCredits(item.ppvPriceCredits ? String(item.ppvPriceCredits) : "");
   };
 
   // Handle edit save
@@ -279,8 +348,13 @@ export default function CreatorMediaPage() {
           title: editTitle,
           description: editDescription || null,
           accessTier: editAccessTier,
-          isPurchaseable: editIsPurchaseable,
-          price: editIsPurchaseable && editPrice ? parseFloat(editPrice) : null,
+          // Include tag fields
+          tagGallery: editTagGallery,
+          tagPPV: editTagPPV,
+          tagAI: editTagAI,
+          tagFree: editTagFree,
+          tagVIP: editTagVIP,
+          ppvPriceCredits: editTagPPV && editPpvPriceCredits ? parseInt(editPpvPriceCredits) : null,
         }),
       });
 
@@ -302,7 +376,7 @@ export default function CreatorMediaPage() {
     }
   };
 
-  if (status === "loading" || (isLoading && !selectedCreator)) {
+  if (status === "loading" || creatorsLoading) {
     return (
       <div className="p-8 flex items-center justify-center min-h-[50vh]">
         <Loader2 className="w-8 h-8 text-[var(--gold)] animate-spin" />
@@ -310,42 +384,19 @@ export default function CreatorMediaPage() {
     );
   }
 
-  if (!isCreator) {
+  if (!isCreatorUser) {
     return null;
   }
 
   return (
     <div className="p-8">
-      {/* Creator Selector */}
-      {creators.length > 1 && (
-        <div className="mb-6">
-          <p className="text-sm text-gray-400 mb-2">Select a profile:</p>
-          <div className="flex gap-3 flex-wrap">
-            {creators.map((creator) => (
-              <button
-                key={creator.id}
-                onClick={() => setSelectedCreator(creator)}
-                className={`flex items-center gap-3 px-4 py-2 rounded-xl border transition-all ${
-                  selectedCreator?.id === creator.id
-                    ? "bg-[var(--gold)]/20 border-[var(--gold)]/50 text-[var(--gold)]"
-                    : "bg-white/5 border-white/10 text-gray-400 hover:border-white/30"
-                }`}
-              >
-                <div className="w-8 h-8 rounded-lg overflow-hidden">
-                  {creator.avatar ? (
-                    <img src={creator.avatar} alt="" className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full bg-[var(--gold)]/20 flex items-center justify-center">
-                      <span className="text-[var(--gold)] font-bold text-sm">
-                        {creator.name?.charAt(0) || "?"}
-                      </span>
-                    </div>
-                  )}
-                </div>
-                <span className="font-medium">{creator.displayName}</span>
-              </button>
-            ))}
-          </div>
+      {/* Current Creator indicator */}
+      {selectedCreator && (
+        <div className="mb-6 flex items-center gap-3 text-sm text-gray-400">
+          <span>Managing media for:</span>
+          <span className="px-3 py-1 rounded-full bg-[var(--gold)]/10 text-[var(--gold)] font-medium">
+            {selectedCreator.displayName}
+          </span>
         </div>
       )}
 
@@ -390,7 +441,7 @@ export default function CreatorMediaPage() {
             className="w-full pl-10 pr-4 py-2 bg-[var(--surface)] border border-[var(--border)] rounded-xl text-[var(--foreground)] placeholder-[var(--muted)] focus:outline-none focus:border-[var(--gold)]"
           />
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={() => setFilterType("all")}
             className={cn(
@@ -417,6 +468,80 @@ export default function CreatorMediaPage() {
               {type.label}
             </button>
           ))}
+
+          {/* Tag filters */}
+          <div className="h-6 w-px bg-[var(--border)] mx-2" />
+          <button
+            onClick={() => setFilterTag("all")}
+            className={cn(
+              "px-3 py-2 rounded-lg text-sm font-medium transition-all",
+              filterTag === "all"
+                ? "bg-gray-500/20 text-gray-300"
+                : "bg-[var(--surface)] text-[var(--muted)] hover:text-[var(--foreground)]"
+            )}
+          >
+            All Tags
+          </button>
+          <button
+            onClick={() => setFilterTag("gallery")}
+            className={cn(
+              "px-3 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2",
+              filterTag === "gallery"
+                ? "bg-purple-500/20 text-purple-400"
+                : "bg-[var(--surface)] text-[var(--muted)] hover:text-[var(--foreground)]"
+            )}
+          >
+            <LayoutGrid className="w-4 h-4" />
+            Gallery
+          </button>
+          <button
+            onClick={() => setFilterTag("ppv")}
+            className={cn(
+              "px-3 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2",
+              filterTag === "ppv"
+                ? "bg-orange-500/20 text-orange-400"
+                : "bg-[var(--surface)] text-[var(--muted)] hover:text-[var(--foreground)]"
+            )}
+          >
+            <Coins className="w-4 h-4" />
+            PPV
+          </button>
+          <button
+            onClick={() => setFilterTag("ai")}
+            className={cn(
+              "px-3 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2",
+              filterTag === "ai"
+                ? "bg-blue-500/20 text-blue-400"
+                : "bg-[var(--surface)] text-[var(--muted)] hover:text-[var(--foreground)]"
+            )}
+          >
+            <Bot className="w-4 h-4" />
+            AI
+          </button>
+          <button
+            onClick={() => setFilterTag("free")}
+            className={cn(
+              "px-3 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2",
+              filterTag === "free"
+                ? "bg-emerald-500/20 text-emerald-400"
+                : "bg-[var(--surface)] text-[var(--muted)] hover:text-[var(--foreground)]"
+            )}
+          >
+            <Unlock className="w-4 h-4" />
+            Free
+          </button>
+          <button
+            onClick={() => setFilterTag("vip")}
+            className={cn(
+              "px-3 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2",
+              filterTag === "vip"
+                ? "bg-[var(--gold)]/20 text-[var(--gold)]"
+                : "bg-[var(--surface)] text-[var(--muted)] hover:text-[var(--foreground)]"
+            )}
+          >
+            <Crown className="w-4 h-4" />
+            VIP
+          </button>
         </div>
       </motion.div>
 
@@ -500,38 +625,58 @@ export default function CreatorMediaPage() {
                       )}
                       {item.accessTier}
                     </Badge>
-                    {item.isPurchaseable && item.price && (
-                      <Badge className="bg-emerald-500/20 text-emerald-400">
-                        <DollarSign className="w-3 h-3 mr-1" />$
-                        {Number(item.price).toFixed(2)}
-                      </Badge>
-                    )}
                   </div>
 
-                  {/* Published status */}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleTogglePublish(item);
-                    }}
-                    className="absolute top-3 right-3"
-                    title={item.isPublished ? "Published" : "Draft"}
-                  >
-                    <div
-                      className={cn(
-                        "w-8 h-8 rounded-full flex items-center justify-center transition-colors",
-                        item.isPublished
-                          ? "bg-emerald-500/80 hover:bg-emerald-500"
-                          : "bg-[var(--muted)]/80 hover:bg-[var(--muted)]"
-                      )}
+                  {/* Status buttons */}
+                  <div className="absolute top-3 right-3 flex flex-col gap-2">
+                    {/* Published status */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleTogglePublish(item);
+                      }}
+                      title={item.isPublished ? "Published" : "Draft"}
                     >
-                      {item.isPublished ? (
-                        <Eye className="w-4 h-4 text-white" />
-                      ) : (
-                        <EyeOff className="w-4 h-4 text-white" />
-                      )}
-                    </div>
-                  </button>
+                      <div
+                        className={cn(
+                          "w-8 h-8 rounded-full flex items-center justify-center transition-colors",
+                          item.isPublished
+                            ? "bg-emerald-500/80 hover:bg-emerald-500"
+                            : "bg-[var(--muted)]/80 hover:bg-[var(--muted)]"
+                        )}
+                      >
+                        {item.isPublished ? (
+                          <Eye className="w-4 h-4 text-white" />
+                        ) : (
+                          <EyeOff className="w-4 h-4 text-white" />
+                        )}
+                      </div>
+                    </button>
+
+                    {/* Gallery visibility */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleToggleGallery(item);
+                      }}
+                      title={item.tagGallery ? "Visible in Gallery" : "Hidden from Gallery"}
+                    >
+                      <div
+                        className={cn(
+                          "w-8 h-8 rounded-full flex items-center justify-center transition-colors",
+                          item.tagGallery
+                            ? "bg-purple-500/80 hover:bg-purple-500"
+                            : "bg-orange-500/80 hover:bg-orange-500"
+                        )}
+                      >
+                        {item.tagGallery ? (
+                          <LayoutGrid className="w-4 h-4 text-white" />
+                        ) : (
+                          <EyeClosed className="w-4 h-4 text-white" />
+                        )}
+                      </div>
+                    </button>
+                  </div>
 
                   {/* Type icon */}
                   {item.type === "VIDEO" && (
@@ -616,6 +761,12 @@ export default function CreatorMediaPage() {
                 {uploadError && (
                   <div className="mb-4 p-4 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400">
                     {uploadError}
+                  </div>
+                )}
+
+                {!selectedCreator && (
+                  <div className="mb-4 p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/30 text-yellow-400">
+                    No creator profile selected. Please select a creator profile first.
                   </div>
                 )}
 
@@ -738,65 +889,113 @@ export default function CreatorMediaPage() {
                   </div>
                 </div>
 
-                {/* Access Tier */}
+                {/* Media Tags */}
                 <div className="mb-6">
                   <label className="block text-sm font-medium text-[var(--foreground)] mb-3">
-                    Access Tier
+                    <Tag className="w-4 h-4 inline mr-2" />
+                    Media Tags
                   </label>
-                  <div className="grid grid-cols-3 gap-3">
-                    {accessTiers.map((tier) => (
-                      <button
-                        key={tier.id}
-                        onClick={() => setSelectedTier(tier.id)}
-                        className={cn(
-                          "p-3 rounded-xl border-2 transition-all text-center",
-                          selectedTier === tier.id
-                            ? "border-[var(--gold)] bg-[var(--gold)]/10"
-                            : "border-[var(--border)] hover:border-[var(--gold)]/50"
-                        )}
-                      >
-                        <Badge className={tier.color}>{tier.label}</Badge>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Individual Purchase */}
-                <div className="mb-6 p-4 bg-[var(--surface)] rounded-xl">
-                  <div className="flex items-center justify-between mb-4">
-                    <div>
-                      <h4 className="font-medium text-[var(--foreground)]">
-                        Allow Individual Purchase
-                      </h4>
-                      <p className="text-sm text-[var(--muted)]">
-                        Users can buy this content without subscribing
-                      </p>
-                    </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    {/* Gallery Tag */}
                     <button
-                      onClick={() => setIsPurchaseable(!isPurchaseable)}
+                      onClick={() => setTagGallery(!tagGallery)}
                       className={cn(
-                        "w-12 h-6 rounded-full transition-colors",
-                        isPurchaseable ? "bg-[var(--gold)]" : "bg-[var(--border)]"
+                        "p-3 rounded-xl border-2 transition-all flex items-center gap-3",
+                        tagGallery
+                          ? "border-purple-500 bg-purple-500/10"
+                          : "border-[var(--border)] hover:border-purple-500/50"
                       )}
                     >
-                      <div
-                        className={cn(
-                          "w-5 h-5 rounded-full bg-white shadow transition-transform",
-                          isPurchaseable ? "translate-x-6" : "translate-x-0.5"
-                        )}
-                      />
+                      <LayoutGrid className={cn("w-5 h-5", tagGallery ? "text-purple-400" : "text-[var(--muted)]")} />
+                      <div className="text-left">
+                        <div className={cn("font-medium", tagGallery ? "text-purple-400" : "text-[var(--foreground)]")}>Gallery</div>
+                        <div className="text-xs text-[var(--muted)]">Show in public gallery</div>
+                      </div>
+                    </button>
+
+                    {/* Free Tag */}
+                    <button
+                      onClick={() => setTagFree(!tagFree)}
+                      className={cn(
+                        "p-3 rounded-xl border-2 transition-all flex items-center gap-3",
+                        tagFree
+                          ? "border-emerald-500 bg-emerald-500/10"
+                          : "border-[var(--border)] hover:border-emerald-500/50"
+                      )}
+                    >
+                      <Unlock className={cn("w-5 h-5", tagFree ? "text-emerald-400" : "text-[var(--muted)]")} />
+                      <div className="text-left">
+                        <div className={cn("font-medium", tagFree ? "text-emerald-400" : "text-[var(--foreground)]")}>Free</div>
+                        <div className="text-xs text-[var(--muted)]">Visible to everyone</div>
+                      </div>
+                    </button>
+
+                    {/* VIP Tag */}
+                    <button
+                      onClick={() => setTagVIP(!tagVIP)}
+                      className={cn(
+                        "p-3 rounded-xl border-2 transition-all flex items-center gap-3",
+                        tagVIP
+                          ? "border-[var(--gold)] bg-[var(--gold)]/10"
+                          : "border-[var(--border)] hover:border-[var(--gold)]/50"
+                      )}
+                    >
+                      <Crown className={cn("w-5 h-5", tagVIP ? "text-[var(--gold)]" : "text-[var(--muted)]")} />
+                      <div className="text-left">
+                        <div className={cn("font-medium", tagVIP ? "text-[var(--gold)]" : "text-[var(--foreground)]")}>VIP Only</div>
+                        <div className="text-xs text-[var(--muted)]">VIP subscribers only</div>
+                      </div>
+                    </button>
+
+                    {/* AI Tag */}
+                    <button
+                      onClick={() => setTagAI(!tagAI)}
+                      className={cn(
+                        "p-3 rounded-xl border-2 transition-all flex items-center gap-3",
+                        tagAI
+                          ? "border-blue-500 bg-blue-500/10"
+                          : "border-[var(--border)] hover:border-blue-500/50"
+                      )}
+                    >
+                      <Bot className={cn("w-5 h-5", tagAI ? "text-blue-400" : "text-[var(--muted)]")} />
+                      <div className="text-left">
+                        <div className={cn("font-medium", tagAI ? "text-blue-400" : "text-[var(--foreground)]")}>AI Chat</div>
+                        <div className="text-xs text-[var(--muted)]">AI can send this</div>
+                      </div>
                     </button>
                   </div>
-                  {isPurchaseable && (
-                    <Input
-                      label="Price (USD)"
-                      type="number"
-                      value={price}
-                      onChange={(e) => setPrice(e.target.value)}
-                      placeholder="4.99"
-                      leftIcon={<DollarSign className="w-4 h-4" />}
-                    />
-                  )}
+
+                  {/* PPV Tag (full width with price input) */}
+                  <div className="mt-3">
+                    <button
+                      onClick={() => setTagPPV(!tagPPV)}
+                      className={cn(
+                        "w-full p-3 rounded-xl border-2 transition-all flex items-center gap-3",
+                        tagPPV
+                          ? "border-orange-500 bg-orange-500/10"
+                          : "border-[var(--border)] hover:border-orange-500/50"
+                      )}
+                    >
+                      <Coins className={cn("w-5 h-5", tagPPV ? "text-orange-400" : "text-[var(--muted)]")} />
+                      <div className="text-left flex-1">
+                        <div className={cn("font-medium", tagPPV ? "text-orange-400" : "text-[var(--foreground)]")}>PPV (Pay-Per-View)</div>
+                        <div className="text-xs text-[var(--muted)]">Requires credits to unlock</div>
+                      </div>
+                    </button>
+                    {tagPPV && (
+                      <div className="mt-3 pl-4">
+                        <Input
+                          label="Price (credits)"
+                          type="number"
+                          value={ppvPriceCredits}
+                          onChange={(e) => setPpvPriceCredits(e.target.value)}
+                          placeholder="1000 (= 1 media)"
+                          leftIcon={<Coins className="w-4 h-4" />}
+                        />
+                        <p className="text-xs text-[var(--muted)] mt-1">1000 credits = $10</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {/* Actions */}
@@ -811,7 +1010,7 @@ export default function CreatorMediaPage() {
                   <Button
                     variant="premium"
                     onClick={handleUpload}
-                    disabled={!title || files.length === 0 || isUploading}
+                    disabled={!title || files.length === 0 || isUploading || !selectedCreator}
                     className="flex-1"
                   >
                     {isUploading ? (
@@ -900,65 +1099,97 @@ export default function CreatorMediaPage() {
                     />
                   </div>
 
-                  {/* Access Tier */}
+                  {/* Media Tags */}
                   <div>
                     <label className="block text-sm font-medium text-[var(--foreground)] mb-3">
-                      Access Tier
+                      <Tag className="w-4 h-4 inline mr-2" />
+                      Media Tags
                     </label>
-                    <div className="grid grid-cols-3 gap-3">
-                      {accessTiers.map((tier) => (
-                        <button
-                          key={tier.id}
-                          onClick={() => setEditAccessTier(tier.id)}
-                          className={cn(
-                            "p-3 rounded-xl border-2 transition-all text-center",
-                            editAccessTier === tier.id
-                              ? "border-[var(--gold)] bg-[var(--gold)]/10"
-                              : "border-[var(--border)] hover:border-[var(--gold)]/50"
-                          )}
-                        >
-                          <Badge className={tier.color}>{tier.label}</Badge>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Purchaseable */}
-                  <div className="p-4 bg-[var(--surface)] rounded-xl">
-                    <div className="flex items-center justify-between mb-4">
-                      <div>
-                        <h4 className="font-medium text-[var(--foreground)]">
-                          Individual Purchase
-                        </h4>
-                        <p className="text-sm text-[var(--muted)]">
-                          Allow buying without subscription
-                        </p>
-                      </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      {/* Gallery Tag */}
                       <button
-                        onClick={() => setEditIsPurchaseable(!editIsPurchaseable)}
+                        onClick={() => setEditTagGallery(!editTagGallery)}
                         className={cn(
-                          "w-12 h-6 rounded-full transition-colors",
-                          editIsPurchaseable ? "bg-[var(--gold)]" : "bg-[var(--border)]"
+                          "p-2 rounded-lg border-2 transition-all flex items-center gap-2",
+                          editTagGallery
+                            ? "border-purple-500 bg-purple-500/10"
+                            : "border-[var(--border)] hover:border-purple-500/50"
                         )}
                       >
-                        <div
-                          className={cn(
-                            "w-5 h-5 rounded-full bg-white shadow transition-transform",
-                            editIsPurchaseable ? "translate-x-6" : "translate-x-0.5"
-                          )}
-                        />
+                        <LayoutGrid className={cn("w-4 h-4", editTagGallery ? "text-purple-400" : "text-[var(--muted)]")} />
+                        <span className={cn("text-sm", editTagGallery ? "text-purple-400" : "text-[var(--foreground)]")}>Gallery</span>
+                      </button>
+
+                      {/* Free Tag */}
+                      <button
+                        onClick={() => setEditTagFree(!editTagFree)}
+                        className={cn(
+                          "p-2 rounded-lg border-2 transition-all flex items-center gap-2",
+                          editTagFree
+                            ? "border-emerald-500 bg-emerald-500/10"
+                            : "border-[var(--border)] hover:border-emerald-500/50"
+                        )}
+                      >
+                        <Unlock className={cn("w-4 h-4", editTagFree ? "text-emerald-400" : "text-[var(--muted)]")} />
+                        <span className={cn("text-sm", editTagFree ? "text-emerald-400" : "text-[var(--foreground)]")}>Free</span>
+                      </button>
+
+                      {/* VIP Tag */}
+                      <button
+                        onClick={() => setEditTagVIP(!editTagVIP)}
+                        className={cn(
+                          "p-2 rounded-lg border-2 transition-all flex items-center gap-2",
+                          editTagVIP
+                            ? "border-[var(--gold)] bg-[var(--gold)]/10"
+                            : "border-[var(--border)] hover:border-[var(--gold)]/50"
+                        )}
+                      >
+                        <Crown className={cn("w-4 h-4", editTagVIP ? "text-[var(--gold)]" : "text-[var(--muted)]")} />
+                        <span className={cn("text-sm", editTagVIP ? "text-[var(--gold)]" : "text-[var(--foreground)]")}>VIP</span>
+                      </button>
+
+                      {/* AI Tag */}
+                      <button
+                        onClick={() => setEditTagAI(!editTagAI)}
+                        className={cn(
+                          "p-2 rounded-lg border-2 transition-all flex items-center gap-2",
+                          editTagAI
+                            ? "border-blue-500 bg-blue-500/10"
+                            : "border-[var(--border)] hover:border-blue-500/50"
+                        )}
+                      >
+                        <Bot className={cn("w-4 h-4", editTagAI ? "text-blue-400" : "text-[var(--muted)]")} />
+                        <span className={cn("text-sm", editTagAI ? "text-blue-400" : "text-[var(--foreground)]")}>AI</span>
                       </button>
                     </div>
-                    {editIsPurchaseable && (
-                      <Input
-                        label="Price (USD)"
-                        type="number"
-                        value={editPrice}
-                        onChange={(e) => setEditPrice(e.target.value)}
-                        placeholder="4.99"
-                        leftIcon={<DollarSign className="w-4 h-4" />}
-                      />
-                    )}
+
+                    {/* PPV Tag */}
+                    <div className="mt-2">
+                      <button
+                        onClick={() => setEditTagPPV(!editTagPPV)}
+                        className={cn(
+                          "w-full p-2 rounded-lg border-2 transition-all flex items-center gap-2",
+                          editTagPPV
+                            ? "border-orange-500 bg-orange-500/10"
+                            : "border-[var(--border)] hover:border-orange-500/50"
+                        )}
+                      >
+                        <Coins className={cn("w-4 h-4", editTagPPV ? "text-orange-400" : "text-[var(--muted)]")} />
+                        <span className={cn("text-sm", editTagPPV ? "text-orange-400" : "text-[var(--foreground)]")}>PPV</span>
+                      </button>
+                      {editTagPPV && (
+                        <div className="mt-2">
+                          <Input
+                            label="Price (credits)"
+                            type="number"
+                            value={editPpvPriceCredits}
+                            onChange={(e) => setEditPpvPriceCredits(e.target.value)}
+                            placeholder="1000"
+                            leftIcon={<Coins className="w-4 h-4" />}
+                          />
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   {/* Actions */}

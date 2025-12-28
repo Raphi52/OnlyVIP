@@ -37,9 +37,13 @@ export function ChatPreview({ creator }: ChatPreviewProps) {
         const res = await fetch("/api/user/subscription");
         if (res.ok) {
           const data = await res.json();
+          // Both Basic and VIP subscribers can message
           const hasAccess =
             data.subscription?.plan?.canMessage === true ||
-            data.subscription?.plan?.accessTier === "VIP";
+            data.subscription?.plan?.accessTier === "VIP" ||
+            data.subscription?.plan?.accessTier === "BASIC" ||
+            data.subscription?.status === "ACTIVE" ||
+            data.subscription?.status === "TRIALING";
           setCanMessage(hasAccess);
         }
       } catch (error) {
@@ -187,17 +191,18 @@ export function ChatPreview({ creator }: ChatPreviewProps) {
             </Button>
           </motion.div>
 
-          {/* Chat Preview */}
+          {/* Chat Preview - Clickable */}
           <motion.div
             initial={{ opacity: 0, x: 30 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
-            className="relative"
+            className="relative cursor-pointer group"
+            onClick={handleStartChat}
           >
             {/* Glow effect */}
-            <div className="absolute -inset-10 bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-pink-500/10 blur-3xl rounded-full" />
+            <div className="absolute -inset-10 bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-pink-500/10 blur-3xl rounded-full group-hover:from-blue-500/20 group-hover:via-purple-500/20 group-hover:to-pink-500/20 transition-all duration-500" />
 
-            <div className="relative bg-[#111] rounded-3xl border border-white/10 p-6 shadow-2xl max-w-md mx-auto">
+            <div className="relative bg-[#111] rounded-3xl border border-white/10 p-6 shadow-2xl max-w-md mx-auto group-hover:border-[var(--gold)]/30 group-hover:scale-[1.02] transition-all duration-300">
               {/* Chat header */}
               <div className="flex items-center gap-4 pb-5 border-b border-white/10">
                 <div className="relative">

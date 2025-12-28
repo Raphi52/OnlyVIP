@@ -3,84 +3,35 @@
 import { useRef, useState, useEffect } from "react";
 import { motion, useScroll, useTransform, useSpring } from "framer-motion";
 import Link from "next/link";
-import { Lock, Play, Crown, Sparkles, Clock, ArrowRight, Eye } from "lucide-react";
+import { Lock, Play, Crown, Sparkles, ArrowRight, Eye, Coins } from "lucide-react";
 import { Button } from "@/components/ui";
 
 interface ExclusivePreviewProps {
   creatorSlug?: string;
 }
 
-// Preview items with teasers
-const exclusiveItems = [
-  {
-    id: 1,
-    title: "Behind The Scenes",
-    description: "Exclusive photoshoot footage",
-    src: "/media/preview/3039035234726006678_1.jpg",
-    type: "video",
-    duration: "12:34",
-    isNew: true,
-  },
-  {
-    id: 2,
-    title: "Private Collection",
-    description: "VIP-only intimate gallery",
-    src: "/media/preview/3036738115692549406_1.jpg",
-    type: "gallery",
-    count: 45,
-  },
-  {
-    id: 3,
-    title: "Live Session Recording",
-    description: "Last night's exclusive stream",
-    src: "/media/preview/2885347102581834996_1.jpg",
-    type: "video",
-    duration: "45:21",
-    isNew: true,
-  },
-];
+interface MediaItem {
+  id: string;
+  title: string;
+  description?: string;
+  type: "PHOTO" | "VIDEO";
+  thumbnailUrl: string;
+  accessTier: string; // Legacy
+  duration?: number;
+  createdAt: string;
+  // New tag system
+  tagFree?: boolean;
+  tagVIP?: boolean;
+  tagPPV?: boolean;
+  tagGallery?: boolean;
+  ppvPriceCredits?: number | null;
+}
 
-// Countdown timer component
-function CountdownTimer() {
-  const [timeLeft, setTimeLeft] = useState({
-    hours: 5,
-    minutes: 32,
-    seconds: 15,
-  });
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setTimeLeft((prev) => {
-        let { hours, minutes, seconds } = prev;
-        seconds--;
-        if (seconds < 0) {
-          seconds = 59;
-          minutes--;
-          if (minutes < 0) {
-            minutes = 59;
-            hours--;
-            if (hours < 0) {
-              hours = 23;
-            }
-          }
-        }
-        return { hours, minutes, seconds };
-      });
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, []);
-
-  return (
-    <div className="flex items-center gap-2">
-      <Clock className="w-4 h-4 text-[var(--gold)]" />
-      <span className="text-white font-mono">
-        {String(timeLeft.hours).padStart(2, "0")}:
-        {String(timeLeft.minutes).padStart(2, "0")}:
-        {String(timeLeft.seconds).padStart(2, "0")}
-      </span>
-    </div>
-  );
+// Format duration from seconds to MM:SS
+function formatDuration(seconds: number): string {
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return `${mins}:${secs.toString().padStart(2, "0")}`;
 }
 
 // Single preview card with peek effect
@@ -89,7 +40,7 @@ function PreviewCard({
   index,
   basePath,
 }: {
-  item: typeof exclusiveItems[0];
+  item: MediaItem;
   index: number;
   basePath: string;
 }) {
@@ -101,11 +52,18 @@ function PreviewCard({
     offset: ["start end", "end start"],
   });
 
-  // Horizontal parallax - items slide in from sides
   const direction = index % 2 === 0 ? 1 : -1;
   const x = useTransform(scrollYProgress, [0, 0.5], [100 * direction, 0]);
   const opacity = useTransform(scrollYProgress, [0, 0.3], [0, 1]);
   const smoothX = useSpring(x, { stiffness: 100, damping: 30 });
+
+  const isNew = new Date(item.createdAt) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
+  // New tag-based access
+  const isFree = item.tagFree === true;
+  const isVip = item.tagVIP === true;
+  const isPPV = item.tagPPV === true;
+  const shouldBlur = !isFree;
 
   return (
     <motion.div
@@ -117,14 +75,14 @@ function PreviewCard({
     >
       <Link href={`${basePath}/gallery`}>
         <div className="relative aspect-[16/9] lg:aspect-[21/9] rounded-3xl overflow-hidden border-2 border-white/10 hover:border-[var(--gold)]/50 transition-all duration-500 cursor-pointer">
-          {/* Background image with peek effect */}
+          {/* Background image - no blur for FREE content */}
           <div className="absolute inset-0">
             <img
-              src={item.src}
-              alt=""
+              src={item.thumbnailUrl}
+              alt={item.title}
               className="w-full h-full object-cover transition-all duration-700"
               style={{
-                filter: isHovered ? "blur(15px)" : "blur(25px)",
+                filter: shouldBlur ? (isHovered ? "blur(15px)" : "blur(25px)") : "none",
                 transform: isHovered ? "scale(1.05)" : "scale(1.1)",
               }}
             />
@@ -146,43 +104,67 @@ function PreviewCard({
           <div className="absolute inset-0 p-6 lg:p-10 flex flex-col justify-between">
             {/* Top row */}
             <div className="flex items-start justify-between">
-              <div className="flex items-center gap-3">
-                {item.isNew && (
-                  <span className="px-3 py-1 rounded-full bg-green-500 text-white text-xs font-bold animate-pulse">
+              <div className="flex items-center gap-3 flex-wrap">
+                {isNew && (
+                  <span className="px-3 py-1 rounded-full bg-blue-500 text-white text-xs font-bold animate-pulse">
                     NEW
                   </span>
                 )}
-                <span className="px-3 py-1 rounded-full bg-[var(--gold)] text-black text-xs font-bold">
-                  VIP ONLY
-                </span>
+                {isFree && (
+                  <span className="px-3 py-1 rounded-full bg-green-500 text-white text-xs font-bold">
+                    FREE
+                  </span>
+                )}
+                {isVip && (
+                  <span className="px-3 py-1 rounded-full bg-gradient-to-r from-[var(--gold)] to-yellow-500 text-black text-xs font-bold">
+                    VIP ONLY
+                  </span>
+                )}
+                {isPPV && (
+                  <span className="px-3 py-1 rounded-full bg-purple-500 text-white text-xs font-bold flex items-center gap-1">
+                    <Coins className="w-3 h-3" />
+                    {item.ppvPriceCredits || 1000} credits
+                  </span>
+                )}
+                {!isFree && !isVip && !isPPV && (
+                  <span className="px-3 py-1 rounded-full bg-[var(--gold)] text-black text-xs font-bold">
+                    EXCLUSIVE
+                  </span>
+                )}
               </div>
-              {item.type === "video" && item.duration && (
+              {item.type === "VIDEO" && item.duration && (
                 <span className="px-3 py-1 rounded-full bg-black/60 backdrop-blur-sm text-white text-sm font-medium flex items-center gap-2">
                   <Play className="w-3 h-3" />
-                  {item.duration}
+                  {formatDuration(item.duration)}
                 </span>
               )}
-              {item.type === "gallery" && item.count && (
+              {item.type === "PHOTO" && (
                 <span className="px-3 py-1 rounded-full bg-black/60 backdrop-blur-sm text-white text-sm font-medium flex items-center gap-2">
                   <Eye className="w-3 h-3" />
-                  {item.count} photos
+                  Photo
                 </span>
               )}
             </div>
 
-            {/* Center lock icon */}
+            {/* Center icon - play/eye for FREE, lock for paid */}
             <div className="flex items-center justify-center">
               <motion.div
-                className="w-20 h-20 rounded-full bg-black/60 backdrop-blur-md border-2 border-[var(--gold)]/50 flex items-center justify-center"
+                className={`w-20 h-20 rounded-full backdrop-blur-md border-2 flex items-center justify-center ${
+                  isFree
+                    ? "bg-green-500/20 border-green-500/50"
+                    : "bg-black/60 border-[var(--gold)]/50"
+                }`}
                 animate={{
                   scale: isHovered ? 1.1 : 1,
                   borderColor: isHovered
-                    ? "rgba(212,175,55,0.8)"
-                    : "rgba(212,175,55,0.5)",
+                    ? isFree ? "rgba(34,197,94,0.8)" : "rgba(212,175,55,0.8)"
+                    : isFree ? "rgba(34,197,94,0.5)" : "rgba(212,175,55,0.5)",
                 }}
               >
-                {item.type === "video" ? (
-                  <Play className="w-8 h-8 text-[var(--gold)] fill-[var(--gold)]/30" />
+                {item.type === "VIDEO" ? (
+                  <Play className={`w-8 h-8 ${isFree ? "text-green-500 fill-green-500/30" : "text-[var(--gold)] fill-[var(--gold)]/30"}`} />
+                ) : isFree ? (
+                  <Eye className="w-8 h-8 text-green-500" />
                 ) : (
                   <Lock className="w-8 h-8 text-[var(--gold)]" />
                 )}
@@ -195,15 +177,42 @@ function PreviewCard({
                 <h3 className="text-2xl lg:text-3xl font-bold text-white mb-2">
                   {item.title}
                 </h3>
-                <p className="text-gray-400">{item.description}</p>
+                {item.description && (
+                  <p className="text-gray-400">{item.description}</p>
+                )}
               </div>
 
               <motion.div
-                className="flex items-center gap-2 px-5 py-3 rounded-xl bg-[var(--gold)] text-black font-bold"
+                className={`flex items-center gap-2 px-5 py-3 rounded-xl font-bold ${
+                  isFree
+                    ? "bg-green-500 text-white"
+                    : isPPV
+                    ? "bg-purple-500 text-white"
+                    : "bg-[var(--gold)] text-black"
+                }`}
                 animate={{ x: isHovered ? 0 : 10, opacity: isHovered ? 1 : 0.8 }}
               >
-                <Crown className="w-5 h-5" />
-                <span>Unlock</span>
+                {isFree ? (
+                  <>
+                    <Eye className="w-5 h-5" />
+                    <span>View</span>
+                  </>
+                ) : isPPV ? (
+                  <>
+                    <Coins className="w-5 h-5" />
+                    <span>Unlock</span>
+                  </>
+                ) : isVip ? (
+                  <>
+                    <Crown className="w-5 h-5" />
+                    <span>VIP Only</span>
+                  </>
+                ) : (
+                  <>
+                    <Lock className="w-5 h-5" />
+                    <span>Subscribe</span>
+                  </>
+                )}
                 <ArrowRight className="w-4 h-4" />
               </motion.div>
             </div>
@@ -216,6 +225,31 @@ function PreviewCard({
 
 export function ExclusivePreview({ creatorSlug = "miacosta" }: ExclusivePreviewProps) {
   const basePath = `/${creatorSlug}`;
+  const [media, setMedia] = useState<MediaItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchMedia() {
+      try {
+        // Fetch only gallery-tagged media
+        const res = await fetch(`/api/media?creator=${creatorSlug}&limit=3&tagGallery=true`);
+        if (res.ok) {
+          const data = await res.json();
+          setMedia(data.media || []);
+        }
+      } catch (error) {
+        console.error("Error fetching media:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    fetchMedia();
+  }, [creatorSlug]);
+
+  // Don't render if no media and not loading
+  if (!isLoading && media.length === 0) {
+    return null;
+  }
 
   return (
     <section className="py-24 relative overflow-hidden bg-black">
@@ -243,33 +277,40 @@ export function ExclusivePreview({ creatorSlug = "miacosta" }: ExclusivePreviewP
           </motion.span>
 
           <h2 className="text-4xl sm:text-5xl font-bold text-white mb-4">
-            Just Released -{" "}
+            Latest Releases -{" "}
             <span className="gradient-gold-text">Don't Miss Out</span>
           </h2>
 
-          <p className="text-gray-400 text-lg max-w-2xl mx-auto mb-6">
-            Exclusive content uploaded in the last 24 hours. VIP members get
-            instant access.
+          <p className="text-gray-400 text-lg max-w-2xl mx-auto">
+            Exclusive content just for you. VIP members get instant access.
           </p>
-
-          {/* Countdown to next content */}
-          <div className="inline-flex items-center gap-4 px-6 py-3 rounded-full bg-white/5 border border-white/10">
-            <span className="text-gray-400 text-sm">Next upload in:</span>
-            <CountdownTimer />
-          </div>
         </motion.div>
 
+        {/* Loading state */}
+        {isLoading && (
+          <div className="space-y-8">
+            {Array.from({ length: 2 }).map((_, i) => (
+              <div
+                key={i}
+                className="aspect-[21/9] rounded-3xl bg-white/5 animate-pulse"
+              />
+            ))}
+          </div>
+        )}
+
         {/* Preview cards */}
-        <div className="space-y-8">
-          {exclusiveItems.map((item, index) => (
-            <PreviewCard
-              key={item.id}
-              item={item}
-              index={index}
-              basePath={basePath}
-            />
-          ))}
-        </div>
+        {!isLoading && media.length > 0 && (
+          <div className="space-y-8">
+            {media.map((item, index) => (
+              <PreviewCard
+                key={item.id}
+                item={item}
+                index={index}
+                basePath={basePath}
+              />
+            ))}
+          </div>
+        )}
 
         {/* Bottom CTA */}
         <motion.div

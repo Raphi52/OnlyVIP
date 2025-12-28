@@ -1,24 +1,54 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import prisma from "@/lib/prisma";
+import { auth } from "@/lib/auth";
 
+// Check admin auth (cookie or session)
 async function isAdmin(): Promise<boolean> {
   const cookieStore = await cookies();
   const token = cookieStore.get("admin_token");
-  return !!token?.value;
+  if (token?.value) return true;
+
+  const session = await auth();
+  return (session?.user as any)?.role === "ADMIN";
 }
 
-// GET /api/admin/stats - Get dashboard statistics
+// Check creator auth
+async function getCreatorAccess(): Promise<{ isCreator: boolean; userId?: string }> {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return { isCreator: false };
+  }
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { id: true, isCreator: true },
+  });
+  return { isCreator: user?.isCreator === true, userId: session.user.id };
+}
+
+// GET /api/admin/stats - Get dashboard statistics (admin or creator)
 export async function GET(request: NextRequest) {
   try {
     const admin = await isAdmin();
-    if (!admin) {
+    const creator = await getCreatorAccess();
+
+    if (!admin && !creator.isCreator) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // Get creator filter from query params
     const { searchParams } = new URL(request.url);
     const creatorSlug = searchParams.get("creator");
+
+    // If creator is requesting, verify they own the profile
+    if (!admin && creator.isCreator && creatorSlug) {
+      const creatorProfile = await prisma.creator.findFirst({
+        where: { slug: creatorSlug, userId: creator.userId },
+      });
+      if (!creatorProfile) {
+        return NextResponse.json({ error: "Access denied" }, { status: 403 });
+      }
+    }
 
     // Get counts filtered by creator
     const [
@@ -33,14 +63,14 @@ export async function GET(request: NextRequest) {
       // Total users (subscribers for this creator)
       creatorSlug
         ? prisma.subscription.count({
-            where: { creatorSlug, status: "ACTIVE" },
+            where: { creatorSlug, status: { in: ["ACTIVE", "TRIALING"] } },
           })
         : prisma.user.count(),
 
       // Active subscribers for this creator
       prisma.subscription.count({
         where: {
-          status: "ACTIVE",
+          status: { in: ["ACTIVE", "TRIALING"] },
           ...(creatorSlug && { creatorSlug }),
         },
       }),

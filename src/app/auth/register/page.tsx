@@ -1,26 +1,77 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Crown, Mail, Lock, User, Eye, EyeOff, Check } from "lucide-react";
+import { Crown, Mail, Lock, User, Eye, EyeOff, Check, Link2, Loader2, Users, Sparkles } from "lucide-react";
 import { Button, Input, Card } from "@/components/ui";
 
 export default function RegisterPage() {
   const router = useRouter();
 
+  const [accountType, setAccountType] = useState<"fan" | "creator">("fan");
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     password: "",
     confirmPassword: "",
+    slug: "",
   });
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [agreeTerms, setAgreeTerms] = useState(false);
+  const [slugStatus, setSlugStatus] = useState<"idle" | "checking" | "available" | "taken" | "invalid">("idle");
+  const [slugError, setSlugError] = useState("");
+
+  // Auto-generate slug from name
+  useEffect(() => {
+    if (accountType === "creator" && formData.name && !formData.slug) {
+      const generatedSlug = formData.name
+        .toLowerCase()
+        .replace(/\s+/g, "-")
+        .replace(/[^a-z0-9-]/g, "")
+        .replace(/-+/g, "-")
+        .replace(/^-|-$/g, "");
+      setFormData(prev => ({ ...prev, slug: generatedSlug }));
+    }
+  }, [formData.name, accountType]);
+
+  // Check slug availability with debounce
+  useEffect(() => {
+    if (accountType !== "creator" || !formData.slug || formData.slug.length < 3) {
+      setSlugStatus("idle");
+      return;
+    }
+
+    const slugRegex = /^[a-z0-9-]+$/;
+    if (!slugRegex.test(formData.slug)) {
+      setSlugStatus("invalid");
+      setSlugError("Only lowercase letters, numbers, and hyphens");
+      return;
+    }
+
+    setSlugStatus("checking");
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/auth/creator/register?slug=${formData.slug}`);
+        const data = await res.json();
+        if (data.available) {
+          setSlugStatus("available");
+          setSlugError("");
+        } else {
+          setSlugStatus("taken");
+          setSlugError(data.reason === "reserved" ? "This URL is reserved" : "This URL is already taken");
+        }
+      } catch {
+        setSlugStatus("idle");
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [formData.slug, accountType]);
 
   const passwordRequirements = [
     { text: "At least 8 characters", met: formData.password.length >= 8 },
@@ -45,15 +96,43 @@ export default function RegisterPage() {
       return;
     }
 
+    // Creator-specific validation
+    if (accountType === "creator") {
+      if (!formData.slug || formData.slug.length < 3) {
+        setError("Please choose a URL for your page (at least 3 characters)");
+        setIsLoading(false);
+        return;
+      }
+      if (slugStatus === "taken" || slugStatus === "invalid") {
+        setError("Please choose a valid and available URL");
+        setIsLoading(false);
+        return;
+      }
+    }
+
     try {
-      const res = await fetch("/api/auth/register", {
+      // Use different API based on account type
+      const endpoint = accountType === "creator"
+        ? "/api/auth/creator/register"
+        : "/api/auth/register";
+
+      const body = accountType === "creator"
+        ? {
+            name: formData.name,
+            email: formData.email,
+            password: formData.password,
+            slug: formData.slug,
+          }
+        : {
+            name: formData.name,
+            email: formData.email,
+            password: formData.password,
+          };
+
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: formData.name,
-          email: formData.email,
-          password: formData.password,
-        }),
+        body: JSON.stringify(body),
       });
 
       const data = await res.json();
@@ -73,7 +152,12 @@ export default function RegisterPage() {
       if (result?.error) {
         router.push("/auth/login");
       } else {
-        router.push("/dashboard");
+        // Redirect creators to their dashboard, fans to main dashboard
+        if (accountType === "creator" && data.creatorSlug) {
+          router.push("/dashboard/creator");
+        } else {
+          router.push("/dashboard");
+        }
       }
     } catch (err) {
       setError("Something went wrong. Please try again.");
@@ -103,7 +187,7 @@ export default function RegisterPage() {
         </div>
 
         <Card variant="luxury" className="p-8">
-          <div className="text-center mb-8">
+          <div className="text-center mb-6">
             <h1 className="text-2xl font-semibold text-[var(--foreground)] mb-2">
               Create Account
             </h1>
@@ -111,6 +195,62 @@ export default function RegisterPage() {
               Join the exclusive community today
             </p>
           </div>
+
+          {/* Account Type Toggle */}
+          <div className="flex gap-2 p-1 bg-[var(--surface)] rounded-xl mb-6">
+            <button
+              type="button"
+              onClick={() => setAccountType("fan")}
+              className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg text-sm font-medium transition-all ${
+                accountType === "fan"
+                  ? "bg-[var(--gold)] text-black shadow-lg"
+                  : "text-[var(--muted)] hover:text-[var(--foreground)]"
+              }`}
+            >
+              <Users className="w-4 h-4" />
+              Join as Fan
+            </button>
+            <button
+              type="button"
+              onClick={() => setAccountType("creator")}
+              className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg text-sm font-medium transition-all ${
+                accountType === "creator"
+                  ? "bg-[var(--gold)] text-black shadow-lg"
+                  : "text-[var(--muted)] hover:text-[var(--foreground)]"
+              }`}
+            >
+              <Sparkles className="w-4 h-4" />
+              Become Creator
+            </button>
+          </div>
+
+          {/* Creator benefits */}
+          {accountType === "creator" && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              className="mb-6 p-4 rounded-xl bg-[var(--gold)]/10 border border-[var(--gold)]/20"
+            >
+              <p className="text-sm text-[var(--gold)] font-medium mb-2">
+                As a creator you can:
+              </p>
+              <ul className="text-xs text-[var(--muted)] space-y-1">
+                <li className="flex items-center gap-2">
+                  <Check className="w-3 h-3 text-[var(--gold)]" />
+                  Share exclusive content with your fans
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="w-3 h-3 text-[var(--gold)]" />
+                  Earn from subscriptions and tips
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="w-3 h-3 text-[var(--gold)]" />
+                  Get your own custom page URL
+                </li>
+              </ul>
+            </motion.div>
+          )}
 
           {error && (
             <div className="mb-6 p-4 rounded-lg bg-[var(--error)]/10 border border-[var(--error)]/30 text-[var(--error)] text-sm">
@@ -123,7 +263,7 @@ export default function RegisterPage() {
               <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--muted)]" />
               <Input
                 type="text"
-                placeholder="Full name"
+                placeholder={accountType === "creator" ? "Your name / Brand name" : "Full name"}
                 value={formData.name}
                 onChange={(e) =>
                   setFormData({ ...formData, name: e.target.value })
@@ -132,6 +272,52 @@ export default function RegisterPage() {
                 required
               />
             </div>
+
+            {/* Slug field for creators */}
+            {accountType === "creator" && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+              >
+                <div className="relative">
+                  <Link2 className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--muted)]" />
+                  <Input
+                    type="text"
+                    placeholder="your-page-url"
+                    value={formData.slug}
+                    onChange={(e) => {
+                      const value = e.target.value
+                        .toLowerCase()
+                        .replace(/\s+/g, "-")
+                        .replace(/[^a-z0-9-]/g, "");
+                      setFormData({ ...formData, slug: value });
+                    }}
+                    className={`pl-12 pr-12 ${
+                      slugStatus === "available" ? "border-green-500" :
+                      slugStatus === "taken" || slugStatus === "invalid" ? "border-red-500" : ""
+                    }`}
+                    required
+                  />
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                    {slugStatus === "checking" && (
+                      <Loader2 className="w-4 h-4 text-[var(--muted)] animate-spin" />
+                    )}
+                    {slugStatus === "available" && (
+                      <Check className="w-4 h-4 text-green-500" />
+                    )}
+                  </div>
+                </div>
+                <div className="mt-2 flex items-center justify-between">
+                  <p className="text-xs text-[var(--muted)]">
+                    viponly.fun/<span className="text-[var(--gold)]">{formData.slug || "your-page"}</span>
+                  </p>
+                  {slugError && (
+                    <p className="text-xs text-red-400">{slugError}</p>
+                  )}
+                </div>
+              </motion.div>
+            )}
 
             <div className="relative">
               <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--muted)]" />

@@ -13,6 +13,7 @@ import {
   Play,
   Lock,
   Loader2,
+  Sparkles,
 } from "lucide-react";
 import { Button, Card, Badge } from "@/components/ui";
 
@@ -74,6 +75,7 @@ export default function DashboardPage() {
   }, [session]);
 
   const isPremium = subscription && subscription.accessTier !== "FREE";
+  const isCreator = (session?.user as any)?.isCreator === true;
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 pb-24 lg:pb-8">
@@ -120,9 +122,9 @@ export default function DashboardPage() {
                 <p className="text-sm sm:text-base text-[var(--muted)] mb-3 sm:mb-4">
                   Enjoy your exclusive access to premium content and features.
                 </p>
-                <Link href="/dashboard/subscription">
+                <Link href="/dashboard/billing">
                   <Button variant="outline" className="gap-2 w-full sm:w-auto">
-                    Manage Subscription
+                    Manage Billing
                   </Button>
                 </Link>
               </>
@@ -134,7 +136,7 @@ export default function DashboardPage() {
                 <p className="text-sm sm:text-base text-[var(--muted)] mb-3 sm:mb-4">
                   Unlock all exclusive content, direct messaging, and more!
                 </p>
-                <Link href="/dashboard/subscription">
+                <Link href="/miacosta/membership">
                   <Button variant="premium" className="gap-2 w-full sm:w-auto">
                     <Crown className="w-4 h-4" />
                     View Plans
@@ -151,6 +153,38 @@ export default function DashboardPage() {
           </div>
         </Card>
       </motion.div>
+
+      {/* Become Creator Banner - Show only for non-creators */}
+      {!isCreator && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+          className="mb-6 sm:mb-8"
+        >
+          <Card className="p-4 sm:p-6 border-[var(--gold)]/30 bg-gradient-to-r from-[var(--gold)]/5 to-transparent">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+              <div className="w-12 h-12 rounded-full bg-[var(--gold)]/10 flex items-center justify-center flex-shrink-0">
+                <Sparkles className="w-6 h-6 text-[var(--gold)]" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-[var(--foreground)] mb-1">
+                  Want to share your own content?
+                </h3>
+                <p className="text-sm text-[var(--muted)] mb-3 sm:mb-0">
+                  Become a creator and start earning from your exclusive content, direct messages, and more.
+                </p>
+              </div>
+              <Link href="/dashboard/become-creator">
+                <Button variant="premium" className="gap-2 w-full sm:w-auto whitespace-nowrap">
+                  <Crown className="w-4 h-4" />
+                  Become a Creator
+                </Button>
+              </Link>
+            </div>
+          </Card>
+        </motion.div>
+      )}
 
       {/* Quick Stats */}
       <motion.div

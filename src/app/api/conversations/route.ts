@@ -203,7 +203,10 @@ export async function POST(request: NextRequest) {
     });
 
     if (existingConversation) {
-      return NextResponse.json(existingConversation);
+      return NextResponse.json({
+        ...existingConversation,
+        conversationId: existingConversation.id,
+      });
     }
 
     // Create new conversation
@@ -229,7 +232,10 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    return NextResponse.json(conversation);
+    return NextResponse.json({
+      ...conversation,
+      conversationId: conversation.id,
+    });
   } catch (error) {
     console.error("Error creating conversation:", error);
     return NextResponse.json(

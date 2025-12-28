@@ -39,8 +39,9 @@ export async function POST(request: NextRequest) {
         },
       });
 
+      // Both Basic and VIP can message
       const canMessage = subscription?.plan?.canMessage ||
-                         ["VIP"].includes(subscription?.plan?.accessTier || "");
+                         ["BASIC", "VIP"].includes(subscription?.plan?.accessTier || "");
 
       if (!canMessage) {
         return NextResponse.json(

@@ -18,7 +18,7 @@ import { useCurrency } from "@/components/providers/CurrencyProvider";
 interface CryptoPaymentModalProps {
   isOpen: boolean;
   onClose: () => void;
-  type: "media" | "subscription" | "ppv" | "tip";
+  type: "media" | "subscription" | "ppv" | "tip" | "credits";
   mediaId?: string;
   planId?: string;
   billingInterval?: string;
@@ -26,6 +26,7 @@ interface CryptoPaymentModalProps {
   amount?: number;
   title: string;
   price: number;
+  metadata?: Record<string, any>;
 }
 
 const cryptoCurrencies = [
@@ -44,6 +45,7 @@ export function CryptoPaymentModal({
   amount,
   title,
   price,
+  metadata,
 }: CryptoPaymentModalProps) {
   const [selectedCrypto, setSelectedCrypto] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);

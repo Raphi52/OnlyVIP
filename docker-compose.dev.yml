@@ -1,0 +1,48 @@
+services:
+  # PostgreSQL Database
+  db:
+    image: postgres:16-alpine
+    container_name: viponly-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: viponly
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-OnlyVIP2024Secure!}
+      POSTGRES_DB: viponly
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U viponly"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Next.js Application - DEV MODE (hot reload)
+  app:
+    image: node:20-alpine
+    container_name: viponly-app
+    working_dir: /app
+    command: sh -c "npm install --legacy-peer-deps && npx prisma generate && npm run dev"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=postgresql://viponly:${DB_PASSWORD:-OnlyVIP2024Secure!}@db:5432/viponly
+      - NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost:3000}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:-your-secret-key-change-in-production}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY:-}
+      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET:-}
+      - NOWPAYMENTS_API_KEY=${NOWPAYMENTS_API_KEY:-}
+      - NOWPAYMENTS_IPN_SECRET=${NOWPAYMENTS_IPN_SECRET:-}
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/.next
+
+volumes:
+  postgres_data:

@@ -11,7 +11,15 @@ export async function GET(request: NextRequest) {
     }
 
     // Get site settings from database or return defaults
-    const settings = await prisma.siteSettings.findFirst();
+    // Always look for the "default" record first, then fall back to findFirst for backwards compatibility
+    let settings = await prisma.siteSettings.findUnique({
+      where: { id: "default" },
+    });
+
+    // Fallback to findFirst if "default" doesn't exist (migration case)
+    if (!settings) {
+      settings = await prisma.siteSettings.findFirst();
+    }
 
     if (settings) {
       return NextResponse.json(settings);
@@ -32,6 +40,11 @@ export async function GET(request: NextRequest) {
       registrationEnabled: true,
       emailNotifications: true,
       pushNotifications: false,
+      // Platform commission settings
+      platformWalletEth: null,
+      platformWalletBtc: null,
+      platformCommission: 0.05,
+      firstMonthFreeCommission: true,
     });
   } catch (error) {
     console.error("Error fetching site settings:", error);
@@ -69,6 +82,11 @@ export async function PUT(request: NextRequest) {
         registrationEnabled: body.registrationEnabled,
         emailNotifications: body.emailNotifications,
         pushNotifications: body.pushNotifications,
+        // Platform commission settings
+        platformWalletEth: body.platformWalletEth,
+        platformWalletBtc: body.platformWalletBtc,
+        platformCommission: body.platformCommission,
+        firstMonthFreeCommission: body.firstMonthFreeCommission,
       },
       create: {
         id: "default",
@@ -85,6 +103,11 @@ export async function PUT(request: NextRequest) {
         registrationEnabled: body.registrationEnabled ?? true,
         emailNotifications: body.emailNotifications ?? true,
         pushNotifications: body.pushNotifications ?? false,
+        // Platform commission settings
+        platformWalletEth: body.platformWalletEth || null,
+        platformWalletBtc: body.platformWalletBtc || null,
+        platformCommission: body.platformCommission ?? 0.05,
+        firstMonthFreeCommission: body.firstMonthFreeCommission ?? true,
       },
     });
 

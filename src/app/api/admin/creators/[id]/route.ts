@@ -2,7 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 
-// GET /api/admin/creators/[id] - Get a specific creator
+// Helper to determine if a string is a cuid (id) or slug
+function isCuid(str: string): boolean {
+  // cuids are typically 25 characters and start with 'c'
+  return str.length === 25 && str.startsWith("c") && /^[a-z0-9]+$/.test(str);
+}
+
+// GET /api/admin/creators/[id] - Get a specific creator (supports both ID and slug)
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -15,12 +21,18 @@ export async function GET(
 
     const { id } = await params;
 
-    const creator = await prisma.creator.findUnique({
-      where: { id },
-    });
+    // Try to find by id first if it looks like a cuid, otherwise by slug
+    const creator = isCuid(id)
+      ? await prisma.creator.findUnique({ where: { id } })
+      : await prisma.creator.findUnique({ where: { slug: id } });
 
     if (!creator) {
       return NextResponse.json({ error: "Creator not found" }, { status: 404 });
+    }
+
+    // Verify ownership - only allow viewing creators the user owns
+    if (creator.userId !== session.user.id) {
+      return NextResponse.json({ error: "You can only view your own creators" }, { status: 403 });
     }
 
     return NextResponse.json({
@@ -42,7 +54,7 @@ export async function GET(
   }
 }
 
-// PATCH /api/admin/creators/[id] - Update a specific creator
+// PATCH /api/admin/creators/[id] - Update a specific creator (supports both ID and slug)
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -55,6 +67,20 @@ export async function PATCH(
 
     const { id } = await params;
     const body = await request.json();
+
+    // Find creator by id or slug
+    const existingCreator = isCuid(id)
+      ? await prisma.creator.findUnique({ where: { id }, select: { id: true, userId: true } })
+      : await prisma.creator.findUnique({ where: { slug: id }, select: { id: true, userId: true } });
+
+    if (!existingCreator) {
+      return NextResponse.json({ error: "Creator not found" }, { status: 404 });
+    }
+
+    // Verify ownership
+    if (existingCreator.userId !== session.user.id) {
+      return NextResponse.json({ error: "You can only update your own creators" }, { status: 403 });
+    }
 
     const updateData: any = {};
 
@@ -70,8 +96,13 @@ export async function PATCH(
       updateData.socialLinks = JSON.stringify(body.socialLinks);
     }
 
+    // AI Girlfriend Mode fields
+    if (body.aiEnabled !== undefined) updateData.aiEnabled = body.aiEnabled;
+    if (body.aiResponseDelay !== undefined) updateData.aiResponseDelay = body.aiResponseDelay;
+    if (body.aiPersonality !== undefined) updateData.aiPersonality = body.aiPersonality;
+
     const creator = await prisma.creator.update({
-      where: { id },
+      where: { id: existingCreator.id },
       data: updateData,
     });
 
@@ -96,7 +127,7 @@ export async function PATCH(
   }
 }
 
-// DELETE /api/admin/creators/[id] - Delete a specific creator
+// DELETE /api/admin/creators/[id] - Delete a specific creator (supports both ID and slug)
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -111,13 +142,18 @@ export async function DELETE(
     const { searchParams } = new URL(request.url);
     const deleteMedia = searchParams.get("deleteMedia") === "true";
 
-    // Find the creator first
-    const creator = await prisma.creator.findUnique({
-      where: { id },
-    });
+    // Find the creator by id or slug
+    const creator = isCuid(id)
+      ? await prisma.creator.findUnique({ where: { id } })
+      : await prisma.creator.findUnique({ where: { slug: id } });
 
     if (!creator) {
       return NextResponse.json({ error: "Creator not found" }, { status: 404 });
+    }
+
+    // Verify ownership
+    if (creator.userId !== session.user.id) {
+      return NextResponse.json({ error: "You can only delete your own creators" }, { status: 403 });
     }
 
     if (deleteMedia) {
@@ -127,10 +163,10 @@ export async function DELETE(
         prisma.conversation.deleteMany({ where: { creatorSlug: creator.slug } }),
         prisma.payment.deleteMany({ where: { creatorSlug: creator.slug } }),
         prisma.subscription.deleteMany({ where: { creatorSlug: creator.slug } }),
-        prisma.creator.delete({ where: { id } }),
+        prisma.creator.delete({ where: { id: creator.id } }),
       ]);
     } else {
-      await prisma.creator.delete({ where: { id } });
+      await prisma.creator.delete({ where: { id: creator.id } });
     }
 
     return NextResponse.json({ success: true });

@@ -1,24 +1,53 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import prisma from "@/lib/prisma";
+import { auth } from "@/lib/auth";
 
-// Check admin auth
+// Check admin auth (cookie or session)
 async function isAdmin(): Promise<boolean> {
+  // Check cookie first
   const cookieStore = await cookies();
   const token = cookieStore.get("admin_token");
-  return !!token?.value;
+  if (token?.value) return true;
+
+  // Check session role
+  const session = await auth();
+  return (session?.user as any)?.role === "ADMIN";
 }
 
-// GET /api/analytics/stats - Get analytics stats (admin only)
+// Check creator auth
+async function getCreatorAccess(): Promise<{ isCreator: boolean; userId?: string; isAdmin?: boolean }> {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return { isCreator: false };
+  }
+
+  const isSessionAdmin = (session.user as any)?.role === "ADMIN";
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { id: true, isCreator: true, role: true },
+  });
+
+  return {
+    isCreator: user?.isCreator === true,
+    userId: session.user.id,
+    isAdmin: isSessionAdmin || user?.role === "ADMIN",
+  };
+}
+
+// GET /api/analytics/stats - Get analytics stats (admin or creator)
 export async function GET(request: NextRequest) {
   try {
     const admin = await isAdmin();
-    if (!admin) {
+    const creator = await getCreatorAccess();
+
+    if (!admin && !creator.isCreator) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { searchParams } = new URL(request.url);
     const period = searchParams.get("period") || "7d"; // 7d, 30d, 90d
+    const creatorSlug = searchParams.get("creator"); // Filter by creator slug
 
     // Calculate date range
     const now = new Date();
@@ -40,13 +69,32 @@ export async function GET(request: NextRequest) {
         startDate.setDate(startDate.getDate() - 7);
     }
 
+    // Build where clause
+    const whereClause: any = {
+      createdAt: {
+        gte: startDate,
+      },
+    };
+
+    // If creator is requesting, verify they own the profile and filter by their pages
+    if (!admin && creator.isCreator && creatorSlug) {
+      // Verify creator owns this profile
+      const creatorProfile = await prisma.creator.findFirst({
+        where: { slug: creatorSlug, userId: creator.userId },
+      });
+      if (!creatorProfile) {
+        return NextResponse.json({ error: "Access denied" }, { status: 403 });
+      }
+      // Filter by paths that start with the creator's slug
+      whereClause.path = { startsWith: `/${creatorSlug}` };
+    } else if (creatorSlug) {
+      // Admin can view any creator's stats
+      whereClause.path = { startsWith: `/${creatorSlug}` };
+    }
+
     // Get all page views in period
     const pageViews = await prisma.pageView.findMany({
-      where: {
-        createdAt: {
-          gte: startDate,
-        },
-      },
+      where: whereClause,
       orderBy: {
         createdAt: "desc",
       },

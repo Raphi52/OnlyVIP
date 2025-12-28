@@ -42,8 +42,41 @@ model Creator {
   isActive     Boolean  @default(true)
   sortOrder    Int      @default(0)
 
+  // AI Girlfriend Mode
+  aiEnabled        Boolean  @default(false)
+  aiPersonality    String?  // JSON: name, age, traits, interests, style
+  aiResponseDelay  Int      @default(120) // Average delay in seconds (2min default)
+  aiLastActive     DateTime?
+
+  // Earnings tracking
+  pendingBalance   Float    @default(0)  // Balance awaiting payout
+  totalEarned      Float    @default(0)  // Total earned (net after commission)
+  totalPaid        Float    @default(0)  // Total paid out
+  earnings         CreatorEarning[]
+
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+}
+
+// ============= AI RESPONSE QUEUE =============
+
+model AiResponseQueue {
+  id             String   @id @default(cuid())
+  messageId      String   @unique
+  conversationId String
+  creatorSlug    String
+  scheduledAt    DateTime // When AI should respond
+  status         String   @default("PENDING") // PENDING | PROCESSING | COMPLETED | FAILED
+  response       String?  // Generated response
+  mediaId        String?  // Media ID to attach as PPV
+  attempts       Int      @default(0)
+  maxAttempts    Int      @default(3)
+  error          String?
+  createdAt      DateTime @default(now())
+  processedAt    DateTime?
+
+  @@index([status, scheduledAt])
+  @@index([creatorSlug])
 }
 
 // ============= AUTHENTICATION =============
@@ -61,6 +94,13 @@ model User {
   isCreator       Boolean   @default(false)
   creatorProfiles Creator[]
 
+  // VIP status (manual grant by admin)
+  isVip           Boolean   @default(false)
+
+  // Credits system
+  creditBalance   Int       @default(0)
+  creditTransactions CreditTransaction[]
+
   // Stripe
   stripeCustomerId String?
 
@@ -77,6 +117,9 @@ model User {
   sentMessages      Message[]       @relation("sender")
   receivedMessages  Message[]       @relation("receiver")
   conversations     ConversationParticipant[]
+
+  // Creator earnings (payments made by this user)
+  creatorEarnings   CreatorEarning[]
 
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
@@ -119,6 +162,71 @@ model VerificationToken {
 
 // Role: "USER" | "ADMIN"
 
+// ============= CREDITS SYSTEM =============
+
+model CreditTransaction {
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  amount         Int      // Positive = add, Negative = spend
+  balance        Int      // Balance after transaction
+
+  type           String   // "SUBSCRIPTION_GRANT" | "PURCHASE" | "MEDIA_UNLOCK" | "TIP" | "PPV" | "EXPIRATION" | "ADMIN_GRANT" | "RECURRING_GRANT"
+
+  // Optional references
+  mediaId        String?
+  messageId      String?
+  subscriptionId String?
+
+  description    String?
+  expiresAt      DateTime? // When these credits expire
+
+  createdAt      DateTime @default(now())
+
+  @@index([userId])
+  @@index([type])
+  @@index([expiresAt])
+}
+
+// CreditTransactionType: "SUBSCRIPTION_GRANT" | "PURCHASE" | "MEDIA_UNLOCK" | "TIP" | "PPV" | "EXPIRATION" | "ADMIN_GRANT" | "RECURRING_GRANT"
+
+// ============= CREATOR EARNINGS =============
+
+model CreatorEarning {
+  id              String   @id @default(cuid())
+  creatorSlug     String
+  creator         Creator  @relation(fields: [creatorSlug], references: [slug], onDelete: Cascade)
+
+  // Transaction source
+  type            String   // "MEDIA_UNLOCK" | "TIP" | "PPV" | "SUBSCRIPTION"
+  sourceId        String?  // mediaId, messageId, subscriptionId, etc.
+
+  // Amounts (in EUR)
+  grossAmount     Float    // Gross amount before commission
+  commissionRate  Float    // 0.00 or 0.05 (5%)
+  commissionAmount Float   // Platform commission taken
+  netAmount       Float    // Net amount for creator
+
+  // Status
+  status          String   @default("PENDING")  // "PENDING" | "PAID"
+  paidAt          DateTime?
+  payoutTxId      String?  // Transaction ID when paid out
+
+  // User who paid
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt       DateTime @default(now())
+
+  @@index([creatorSlug])
+  @@index([status])
+  @@index([userId])
+}
+
+// CreatorEarningType: "MEDIA_UNLOCK" | "TIP" | "PPV" | "SUBSCRIPTION"
+// CreatorEarningStatus: "PENDING" | "PAID"
+
 // ============= SUBSCRIPTION PLANS =============
 
 model SubscriptionPlan {
@@ -141,6 +249,11 @@ model SubscriptionPlan {
   accessTier         String   // "FREE" | "BASIC" | "VIP"
   canMessage         Boolean  @default(false)
   downloadLimit      Int?
+
+  // Credits (new system)
+  initialCredits     Int      @default(0)     // Credits given at subscription start (Basic=1000, VIP=5000)
+  recurringCredits   Int      @default(0)     // Credits given every interval (VIP=1000)
+  creditIntervalDays Int      @default(6)     // Days between recurring credits
 
   // Features (JSON string)
   features           String   @default("[]")
@@ -183,6 +296,10 @@ model Subscription {
   trialStart           DateTime?
   trialEnd             DateTime?
 
+  // Credits tracking
+  lastCreditGrant      DateTime?          // Last time recurring credits were granted
+  nextCreditGrant      DateTime?          // Next scheduled credit grant
+
   metadata             String?
 
   user                 User               @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -196,6 +313,28 @@ model Subscription {
 // SubscriptionStatus: "PENDING" | "TRIALING" | "ACTIVE" | "PAST_DUE" | "CANCELED" | "UNPAID" | "EXPIRED"
 // BillingInterval: "MONTHLY" | "ANNUAL"
 // PaymentProvider: "STRIPE" | "NOWPAYMENTS" | "MANUAL"
+
+// ============= CREATOR MEMBER MANAGEMENT =============
+
+model CreatorMember {
+  id           String   @id @default(cuid())
+  creatorSlug  String
+  userId       String
+
+  // Permissions
+  isVip        Boolean  @default(false)  // VIP granted by creator
+  isBlocked    Boolean  @default(false)  // Blocked by creator
+
+  // Notes (optional - for creator reference)
+  notes        String?
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([creatorSlug, userId])
+  @@index([creatorSlug])
+  @@index([userId])
+}
 
 // ============= MEDIA CONTENT =============
 
@@ -211,10 +350,18 @@ model MediaContent {
   // Type
   type           String      // "PHOTO" | "VIDEO" | "AUDIO" | "PACK"
 
-  // Access
+  // Access (legacy - keeping for backwards compatibility)
   accessTier     String      @default("FREE") // "FREE" | "BASIC" | "VIP"
   isPurchaseable Boolean     @default(false)
   price          Float?
+
+  // Tags system (new)
+  tagGallery     Boolean     @default(false)  // Show in public gallery
+  tagPPV         Boolean     @default(false)  // Pay-per-view content
+  tagAI          Boolean     @default(false)  // AI chatting can use this
+  tagFree        Boolean     @default(false)  // Free for everyone (including visitors)
+  tagVIP         Boolean     @default(false)  // VIP subscribers only
+  ppvPriceCredits Int?                        // Price in credits if tagPPV (1000 = 1 media)
 
   // Files
   thumbnailUrl   String?
@@ -241,6 +388,7 @@ model MediaContent {
   // Status
   isPublished    Boolean     @default(false)
   isFeatured     Boolean     @default(false)
+  showInGallery  Boolean     @default(true)  // If false, won't appear on homepage/gallery (legacy, use tagGallery)
   publishedAt    DateTime?
 
   // Relations
@@ -249,6 +397,11 @@ model MediaContent {
 
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
+
+  @@index([tagGallery])
+  @@index([tagFree])
+  @@index([tagVIP])
+  @@index([tagAI])
 }
 
 model Category {
@@ -512,6 +665,8 @@ model SiteSettings {
   siteDescription String?
   siteUrl         String?
   welcomeMessage  String?
+  welcomeMediaId  String?  // ID of MediaContent to send with welcome message
+  welcomeMediaUrl String?  // Direct URL if uploaded separately
 
   // Branding
   logo            String?
@@ -537,6 +692,38 @@ model SiteSettings {
   emailNotifications   Boolean  @default(true)
   pushNotifications    Boolean  @default(false)
 
+  // Platform commission settings
+  platformWalletEth        String?
+  platformWalletBtc        String?
+  platformCommission       Float    @default(0.05)  // 5% default
+  firstMonthFreeCommission Boolean  @default(true)  // 0% first month
+
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+}
+
+// ============= ACCOUNTING QUEUE =============
+
+model AccountingQueue {
+  id          String   @id @default(cuid())
+
+  // Payload data (JSON)
+  payload     String
+
+  // Status
+  status      String   @default("PENDING") // "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED"
+
+  // Retry info
+  attempts    Int      @default(0)
+  maxAttempts Int      @default(5)
+  lastError   String?
+  nextRetryAt DateTime?
+
+  // Timestamps
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  processedAt DateTime?
+
+  @@index([status])
+  @@index([nextRetryAt])
 }

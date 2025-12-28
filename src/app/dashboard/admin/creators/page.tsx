@@ -19,6 +19,8 @@ import {
   DollarSign,
   X,
   Upload,
+  Bot,
+  Settings,
 } from "lucide-react";
 import { Button, Card, Badge } from "@/components/ui";
 import { useAdminCreator } from "@/components/providers/AdminCreatorContext";
@@ -31,6 +33,7 @@ interface Creator {
   avatar: string | null;
   coverImage: string | null;
   isActive: boolean;
+  aiEnabled: boolean;
   subscriberCount: number;
   photoCount: number;
   videoCount: number;
@@ -393,6 +396,12 @@ export default function AdminCreatorsPage() {
                       >
                         {creator.isActive ? "Active" : "Inactive"}
                       </Badge>
+                      {creator.aiEnabled && (
+                        <Badge className="bg-purple-500/20 text-purple-400 flex items-center gap-1">
+                          <Bot className="w-3 h-3" />
+                          AI
+                        </Badge>
+                      )}
                     </div>
                     <p className="text-sm text-[var(--muted)] mb-2">
                       @{creator.slug}
@@ -435,6 +444,15 @@ export default function AdminCreatorsPage() {
                     >
                       <Edit className="w-4 h-4 mr-2" />
                       Edit
+                    </Button>
+                    <Button
+                      variant={creator.aiEnabled ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => router.push(`/dashboard/admin/creators/${creator.slug}/ai`)}
+                      className={creator.aiEnabled ? "bg-purple-500/20 text-purple-400 border-purple-500/30 hover:bg-purple-500/30" : ""}
+                    >
+                      <Bot className="w-4 h-4 mr-2" />
+                      AI
                     </Button>
                     <Button
                       variant="outline"

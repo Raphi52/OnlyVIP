@@ -5,6 +5,7 @@ import { motion, useScroll, useTransform, useSpring, useInView } from "framer-mo
 import Link from "next/link";
 import { Play, Crown, Sparkles, ChevronDown, Lock, Heart, Users, Camera, Eye, Star, Instagram, Twitter } from "lucide-react";
 import { Button } from "@/components/ui";
+import { FollowButton } from "@/components/FollowButton";
 import { Creator } from "@/lib/creators";
 
 interface HeroProps {
@@ -228,12 +229,11 @@ export function Hero({ creator }: HeroProps) {
                   <Button
                     variant="premium"
                     size="lg"
-                    className="gap-3 text-lg px-10 py-7 shadow-2xl shadow-[var(--gold)]/30 hover:shadow-[var(--gold)]/50 transition-shadow relative overflow-hidden group"
+                    className="gap-3 text-lg px-8 py-6 shadow-2xl shadow-[var(--gold)]/30 hover:shadow-[var(--gold)]/50 transition-shadow relative overflow-hidden group whitespace-nowrap"
                   >
                     <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
-                    <Crown className="w-6 h-6" />
-                    <span>Join VIP Now</span>
-                    <span className="text-sm opacity-80">$29.99/mo</span>
+                    <Crown className="w-5 h-5 flex-shrink-0" />
+                    <span className="flex-shrink-0">Join VIP</span>
                   </Button>
                 </Link>
                 <Link href={`${basePath}/gallery`}>
@@ -246,6 +246,7 @@ export function Hero({ creator }: HeroProps) {
                     Preview Gallery
                   </Button>
                 </Link>
+                <FollowButton creatorSlug={creatorSlug} className="text-lg px-8 py-7" />
               </motion.div>
 
               {/* Social Links */}

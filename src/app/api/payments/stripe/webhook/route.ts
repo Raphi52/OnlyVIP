@@ -5,6 +5,11 @@ import { prisma } from "@/lib/prisma";
 import { stripe, verifyWebhookSignature } from "@/lib/stripe";
 import { sendToAccounting } from "@/lib/crypto-accounting";
 import { calculateFees } from "@/lib/fees";
+import {
+  sendPaymentConfirmationEmail,
+  sendSubscriptionRenewalEmail,
+  sendSubscriptionCancelledEmail,
+} from "@/lib/email";
 
 export async function POST(request: NextRequest) {
   try {
@@ -130,8 +135,17 @@ async function handleCheckoutComplete(session: Stripe.Checkout.Session) {
       },
     });
 
-    // Send to accounting
+    // Send to accounting and email
     const user = await prisma.user.findUnique({ where: { id: userId } });
+    const media = await prisma.mediaContent.findUnique({
+      where: { id: mediaId },
+      select: { title: true, creatorSlug: true },
+    });
+    const creator = media?.creatorSlug ? await prisma.creator.findUnique({
+      where: { slug: media.creatorSlug },
+      select: { displayName: true },
+    }) : null;
+
     await sendToAccounting({
       externalId: payment.id,
       amountUsd: payment.amount,
@@ -145,6 +159,17 @@ async function handleCheckoutComplete(session: Stripe.Checkout.Session) {
       userId: userId,
       metadata: { mediaId, provider: "STRIPE", platformFee, netAmount },
     });
+
+    // Send payment confirmation email
+    if (user?.email) {
+      await sendPaymentConfirmationEmail(user.email, user.name || "", {
+        type: "purchase",
+        amount,
+        currency: session.currency?.toUpperCase() || "USD",
+        creatorName: creator?.displayName || "Creator",
+        itemName: media?.title || "Media",
+      });
+    }
   }
 
   if (type === "ppv_unlock") {
@@ -203,8 +228,13 @@ async function handleCheckoutComplete(session: Stripe.Checkout.Session) {
       },
     });
 
-    // Send to accounting
+    // Send to accounting and email
     const user = await prisma.user.findUnique({ where: { id: userId } });
+    const ppvMessage = await prisma.message.findUnique({
+      where: { id: messageId },
+      include: { sender: { select: { name: true } } },
+    });
+
     await sendToAccounting({
       externalId: payment.id,
       amountUsd: payment.amount,
@@ -218,6 +248,17 @@ async function handleCheckoutComplete(session: Stripe.Checkout.Session) {
       userId: userId,
       metadata: { messageId, provider: "STRIPE", platformFee: ppvFees.platformFee, netAmount: ppvFees.netAmount },
     });
+
+    // Send payment confirmation email
+    if (user?.email) {
+      await sendPaymentConfirmationEmail(user.email, user.name || "", {
+        type: "purchase",
+        amount: ppvAmount,
+        currency: session.currency?.toUpperCase() || "USD",
+        creatorName: ppvMessage?.sender?.name || "Creator",
+        itemName: "Exclusive content",
+      });
+    }
   }
 
   if (type === "tip") {
@@ -267,8 +308,13 @@ async function handleCheckoutComplete(session: Stripe.Checkout.Session) {
       },
     });
 
-    // Send to accounting
+    // Send to accounting and email
     const user = await prisma.user.findUnique({ where: { id: userId } });
+    const recipient = recipientId ? await prisma.user.findUnique({
+      where: { id: recipientId },
+      select: { name: true },
+    }) : null;
+
     await sendToAccounting({
       externalId: payment.id,
       amountUsd: payment.amount,
@@ -281,6 +327,16 @@ async function handleCheckoutComplete(session: Stripe.Checkout.Session) {
       userId: userId,
       metadata: { messageId, recipientId, provider: "STRIPE", platformFee: tipFees.platformFee, netAmount: tipFees.netAmount },
     });
+
+    // Send payment confirmation email
+    if (user?.email) {
+      await sendPaymentConfirmationEmail(user.email, user.name || "", {
+        type: "tip",
+        amount: tipAmount,
+        currency: session.currency?.toUpperCase() || "USD",
+        creatorName: recipient?.name || "Creator",
+      });
+    }
   }
 }
 
@@ -346,9 +402,27 @@ async function handleSubscriptionUpdate(subscription: Stripe.Subscription) {
     },
   });
 
-  // Send welcome message for new subscriptions
+  // Send welcome message and email for new subscriptions
   if (isNewSubscription && creatorSlug) {
     await sendWelcomeMessage(userId, creatorSlug);
+
+    // Send subscription confirmation email
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    const creator = await prisma.creator.findUnique({
+      where: { slug: creatorSlug },
+      select: { displayName: true },
+    });
+
+    if (user?.email) {
+      const amount = billingInterval === "ANNUAL" ? plan.annualPrice : plan.monthlyPrice;
+      await sendPaymentConfirmationEmail(user.email, user.name || "", {
+        type: "subscription",
+        amount,
+        currency: "USD",
+        creatorName: creator?.displayName || creatorSlug,
+        planName: plan.name,
+      });
+    }
   }
 }
 
@@ -424,6 +498,12 @@ async function sendWelcomeMessage(userId: string, creatorSlug: string) {
 }
 
 async function handleSubscriptionCanceled(subscription: Stripe.Subscription) {
+  // Get subscription details before updating
+  const existingSub = await prisma.subscription.findFirst({
+    where: { stripeSubscriptionId: subscription.id },
+    include: { user: true, plan: true },
+  });
+
   await prisma.subscription.updateMany({
     where: { stripeSubscriptionId: subscription.id },
     data: {
@@ -431,6 +511,24 @@ async function handleSubscriptionCanceled(subscription: Stripe.Subscription) {
       canceledAt: new Date(),
     },
   });
+
+  // Send cancellation email
+  if (existingSub?.user?.email && existingSub.creatorSlug) {
+    const creator = await prisma.creator.findUnique({
+      where: { slug: existingSub.creatorSlug },
+      select: { displayName: true },
+    });
+
+    await sendSubscriptionCancelledEmail(
+      existingSub.user.email,
+      existingSub.user.name || "",
+      {
+        creatorName: creator?.displayName || existingSub.creatorSlug,
+        planName: existingSub.plan?.name || "Subscription",
+        expiresAt: existingSub.currentPeriodEnd,
+      }
+    );
+  }
 }
 
 async function handleInvoicePaid(invoice: Stripe.Invoice) {
@@ -486,6 +584,27 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
     userId: user.id,
     metadata: { invoiceId: invoice.id, subscriptionId, provider: "STRIPE", platformFee: subFees.platformFee, netAmount: subFees.netAmount },
   });
+
+  // Send renewal email (for recurring payments, not first payment)
+  const existingSub = await prisma.subscription.findFirst({
+    where: { stripeSubscriptionId: subscriptionId as string },
+    include: { plan: true },
+  });
+
+  if (existingSub && existingSub.creatorSlug) {
+    const creator = await prisma.creator.findUnique({
+      where: { slug: existingSub.creatorSlug },
+      select: { displayName: true },
+    });
+
+    await sendSubscriptionRenewalEmail(user.email, user.name || "", {
+      creatorName: creator?.displayName || existingSub.creatorSlug,
+      planName: existingSub.plan?.name || "Subscription",
+      amount: subAmount,
+      currency: (invoiceData.currency || "usd").toUpperCase(),
+      nextBillingDate: existingSub.currentPeriodEnd,
+    });
+  }
 }
 
 async function handleInvoiceFailed(invoice: Stripe.Invoice) {

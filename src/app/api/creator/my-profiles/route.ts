@@ -26,13 +26,48 @@ export async function GET() {
         displayName: true,
         avatar: true,
         coverImage: true,
-        photoCount: true,
-        videoCount: true,
-        subscriberCount: true,
       },
     });
 
-    // Format the response
+    // Get actual counts from MediaContent and Subscription tables
+    const creatorSlugs = creators.map((c) => c.slug);
+
+    // Count media per creator
+    const mediaCounts = await prisma.mediaContent.groupBy({
+      by: ["creatorSlug", "type"],
+      where: { creatorSlug: { in: creatorSlugs } },
+      _count: { id: true },
+    });
+
+    // Count subscribers per creator
+    const subscriberCounts = await prisma.subscription.groupBy({
+      by: ["creatorSlug"],
+      where: {
+        creatorSlug: { in: creatorSlugs },
+        status: { in: ["ACTIVE", "TRIALING"] },
+      },
+      _count: { id: true },
+    });
+
+    // Build lookup maps
+    const mediaCountMap: Record<string, { photos: number; videos: number }> = {};
+    for (const count of mediaCounts) {
+      if (!mediaCountMap[count.creatorSlug]) {
+        mediaCountMap[count.creatorSlug] = { photos: 0, videos: 0 };
+      }
+      if (count.type === "PHOTO") {
+        mediaCountMap[count.creatorSlug].photos = count._count.id;
+      } else if (count.type === "VIDEO") {
+        mediaCountMap[count.creatorSlug].videos = count._count.id;
+      }
+    }
+
+    const subscriberCountMap: Record<string, number> = {};
+    for (const count of subscriberCounts) {
+      subscriberCountMap[count.creatorSlug] = count._count.id;
+    }
+
+    // Format the response with real counts
     const formattedCreators = creators.map((creator) => ({
       id: creator.id,
       slug: creator.slug,
@@ -41,9 +76,9 @@ export async function GET() {
       avatar: creator.avatar,
       coverImage: creator.coverImage,
       stats: {
-        photos: creator.photoCount,
-        videos: creator.videoCount,
-        subscribers: creator.subscriberCount,
+        photos: mediaCountMap[creator.slug]?.photos || 0,
+        videos: mediaCountMap[creator.slug]?.videos || 0,
+        subscribers: subscriberCountMap[creator.slug] || 0,
       },
     }));
 

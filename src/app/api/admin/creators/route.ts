@@ -5,22 +5,75 @@ import { join } from "path";
 import crypto from "crypto";
 import prisma from "@/lib/prisma";
 
-// GET /api/admin/creators - Get all creators
+// GET /api/admin/creators - Get creators owned by the current user
 export async function GET(request: NextRequest) {
   try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Only fetch creators that belong to the current user
     const creators = await prisma.creator.findMany({
+      where: { userId: session.user.id },
       orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+      include: {
+        user: {
+          select: { id: true, name: true, email: true },
+        },
+      },
     });
 
-    // Transform for frontend compatibility
+    // Get actual counts from MediaContent and Subscription tables
+    const creatorSlugs = creators.map((c) => c.slug);
+
+    // Count media per creator
+    const mediaCounts = await prisma.mediaContent.groupBy({
+      by: ["creatorSlug", "type"],
+      where: { creatorSlug: { in: creatorSlugs } },
+      _count: { id: true },
+    });
+
+    // Count subscribers per creator
+    const subscriberCounts = await prisma.subscription.groupBy({
+      by: ["creatorSlug"],
+      where: {
+        creatorSlug: { in: creatorSlugs },
+        status: { in: ["ACTIVE", "TRIALING"] },
+      },
+      _count: { id: true },
+    });
+
+    // Build lookup maps
+    const mediaCountMap: Record<string, { photos: number; videos: number }> = {};
+    for (const count of mediaCounts) {
+      if (!mediaCountMap[count.creatorSlug]) {
+        mediaCountMap[count.creatorSlug] = { photos: 0, videos: 0 };
+      }
+      if (count.type === "PHOTO") {
+        mediaCountMap[count.creatorSlug].photos = count._count.id;
+      } else if (count.type === "VIDEO") {
+        mediaCountMap[count.creatorSlug].videos = count._count.id;
+      }
+    }
+
+    const subscriberCountMap: Record<string, number> = {};
+    for (const count of subscriberCounts) {
+      subscriberCountMap[count.creatorSlug] = count._count.id;
+    }
+
+    // Transform for frontend compatibility with real counts
     const transformedCreators = creators.map((creator) => ({
       ...creator,
       socialLinks: JSON.parse(creator.socialLinks || "{}"),
       theme: JSON.parse(creator.theme || "{}"),
+      photoCount: mediaCountMap[creator.slug]?.photos || 0,
+      videoCount: mediaCountMap[creator.slug]?.videos || 0,
+      subscriberCount: subscriberCountMap[creator.slug] || 0,
       stats: {
-        photos: creator.photoCount,
-        videos: creator.videoCount,
-        subscribers: creator.subscriberCount,
+        photos: mediaCountMap[creator.slug]?.photos || 0,
+        videos: mediaCountMap[creator.slug]?.videos || 0,
+        subscribers: subscriberCountMap[creator.slug] || 0,
       },
     }));
 
@@ -57,7 +110,7 @@ export async function POST(request: NextRequest) {
 
       name = formData.get("name") as string;
       displayName = formData.get("displayName") as string || name;
-      slug = (formData.get("slug") as string) || name.toLowerCase().replace(/\s+/g, "").replace(/[^a-z0-9]/g, "");
+      slug = (formData.get("slug") as string) || name.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "").replace(/-+/g, "-").replace(/^-|-$/g, "");
       bio = formData.get("bio") as string | null;
 
       const instagram = formData.get("instagram") as string;
@@ -101,7 +154,7 @@ export async function POST(request: NextRequest) {
       const body = await request.json();
       name = body.name;
       displayName = body.displayName || name;
-      slug = body.slug || name.toLowerCase().replace(/\s+/g, "").replace(/[^a-z0-9]/g, "");
+      slug = body.slug || name.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "").replace(/-+/g, "-").replace(/^-|-$/g, "");
       bio = body.bio;
       socialLinks = body.socialLinks || {};
       avatarUrl = body.avatar;
@@ -131,7 +184,15 @@ export async function POST(request: NextRequest) {
         coverImage: coverImageUrl,
         socialLinks: JSON.stringify(socialLinks),
         theme: JSON.stringify({}),
+        userId: session.user.id, // Link creator to the current user
+        isActive: true,
       },
+    });
+
+    // Also mark the user as a creator if not already
+    await prisma.user.update({
+      where: { id: session.user.id },
+      data: { isCreator: true },
     });
 
     return NextResponse.json({
@@ -155,9 +216,11 @@ export async function POST(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   try {
     const session = await auth();
-    if (!session || (session.user as any)?.role !== "ADMIN") {
+    if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const isAdmin = (session.user as any)?.role === "ADMIN";
 
     const contentType = request.headers.get("content-type") || "";
     let id: string;
@@ -235,6 +298,20 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: "Creator ID is required" }, { status: 400 });
     }
 
+    // Verify ownership - only allow updating creators the user owns
+    const existingCreator = await prisma.creator.findUnique({
+      where: { id },
+      select: { userId: true },
+    });
+
+    if (!existingCreator) {
+      return NextResponse.json({ error: "Creator not found" }, { status: 404 });
+    }
+
+    if (existingCreator.userId !== session.user.id) {
+      return NextResponse.json({ error: "You can only update your own creators" }, { status: 403 });
+    }
+
     const creator = await prisma.creator.update({
       where: { id },
       data: updateData,
@@ -265,7 +342,7 @@ export async function PATCH(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     const session = await auth();
-    if (!session || (session.user as any)?.role !== "ADMIN") {
+    if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -288,6 +365,11 @@ export async function DELETE(request: NextRequest) {
 
     if (!creator) {
       return NextResponse.json({ error: "Creator not found" }, { status: 404 });
+    }
+
+    // Verify ownership - only allow deleting creators the user owns
+    if (creator.userId !== session.user.id) {
+      return NextResponse.json({ error: "You can only delete your own creators" }, { status: 403 });
     }
 
     // Count associated data

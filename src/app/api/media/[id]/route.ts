@@ -102,6 +102,13 @@ export async function GET(
       createdAt: media.createdAt,
       hasAccess: hasAccess || hasPurchased,
       hasPurchased,
+      // New tag fields
+      tagGallery: media.tagGallery,
+      tagPPV: media.tagPPV,
+      tagAI: media.tagAI,
+      tagFree: media.tagFree,
+      tagVIP: media.tagVIP,
+      ppvPriceCredits: media.ppvPriceCredits,
     };
 
     // Include content URL only if user has access or is admin
@@ -160,6 +167,13 @@ export async function PATCH(
       isPurchaseable,
       price,
       isPublished,
+      // New tag fields
+      tagGallery,
+      tagPPV,
+      tagAI,
+      tagFree,
+      tagVIP,
+      ppvPriceCredits,
     } = body;
 
     const media = await prisma.mediaContent.findUnique({
@@ -213,6 +227,13 @@ export async function PATCH(
             : isPublished === false
             ? null
             : media.publishedAt,
+        // New tag fields
+        tagGallery: tagGallery ?? media.tagGallery,
+        tagPPV: tagPPV ?? media.tagPPV,
+        tagAI: tagAI ?? media.tagAI,
+        tagFree: tagFree ?? media.tagFree,
+        tagVIP: tagVIP ?? media.tagVIP,
+        ppvPriceCredits: tagPPV === true ? (ppvPriceCredits ?? media.ppvPriceCredits) : tagPPV === false ? null : media.ppvPriceCredits,
       },
     });
 

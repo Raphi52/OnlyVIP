@@ -3,15 +3,14 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
-import { Home, Image, MessageCircle, Star, Settings } from "lucide-react";
+import { Home, Image, MessageCircle, CreditCard } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { href: "/dashboard", icon: Home, label: "Home" },
   { href: "/dashboard/library", icon: Image, label: "Library" },
   { href: "/dashboard/messages", icon: MessageCircle, label: "Messages" },
-  { href: "/dashboard/subscription", icon: Star, label: "Plan" },
-  { href: "/dashboard/settings", icon: Settings, label: "Settings" },
+  { href: "/dashboard/billing", icon: CreditCard, label: "Billing" },
 ];
 
 export function MobileNav() {

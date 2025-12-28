@@ -39,6 +39,11 @@ interface Creator {
 
 const creatorFeatures = [
   {
+    icon: DollarSign,
+    title: "0% First Month",
+    description: "Keep 100% of your earnings for your first month. Only 5% platform fee after.",
+  },
+  {
     icon: Lock,
     title: "Exclusive Content",
     description: "Share photos, videos and exclusive content with paying subscribers only.",
@@ -47,11 +52,6 @@ const creatorFeatures = [
     icon: MessageCircle,
     title: "Direct Messaging",
     description: "Chat directly with your fans. Send PPV messages and receive tips.",
-  },
-  {
-    icon: DollarSign,
-    title: "Multiple Revenue Streams",
-    description: "Subscriptions, pay-per-view content, tips, and media sales.",
   },
   {
     icon: Shield,
@@ -106,7 +106,7 @@ export default function HomePage() {
                     </Button>
                   </Link>
                   {session.user?.image ? (
-                    <Link href="/dashboard/settings">
+                    <Link href="/dashboard">
                       <img
                         src={session.user.image}
                         alt={session.user.name || "Profile"}
@@ -114,7 +114,7 @@ export default function HomePage() {
                       />
                     </Link>
                   ) : (
-                    <Link href="/dashboard/settings">
+                    <Link href="/dashboard">
                       <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[var(--gold)] to-amber-600 flex items-center justify-center text-black font-bold text-sm">
                         {session.user?.name?.charAt(0) || "U"}
                       </div>
@@ -356,16 +356,16 @@ export default function HomePage() {
 
                   <div className="space-y-4 mb-8">
                     <div className="flex items-center justify-between py-3 border-b border-white/10">
-                      <span className="text-gray-400">Platform fee</span>
-                      <span className="text-white font-semibold">3%</span>
+                      <span className="text-gray-400">First month</span>
+                      <span className="text-[var(--gold)] font-bold text-xl">0% fee</span>
                     </div>
                     <div className="flex items-center justify-between py-3 border-b border-white/10">
-                      <span className="text-gray-400">You keep</span>
-                      <span className="text-[var(--gold)] font-bold text-xl">97%</span>
+                      <span className="text-gray-400">After first month</span>
+                      <span className="text-white font-semibold">Only 5%</span>
                     </div>
                     <div className="flex items-center justify-between py-3">
-                      <span className="text-gray-400">Monthly fee</span>
-                      <span className="text-white font-semibold">$0</span>
+                      <span className="text-gray-400">Monthly subscription</span>
+                      <span className="text-white font-semibold">Free</span>
                     </div>
                   </div>
 

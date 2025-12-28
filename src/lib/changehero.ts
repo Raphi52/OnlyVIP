@@ -14,8 +14,16 @@ export interface ChangeHeroParams {
 
 /**
  * Get wallet address for receiving payments
+ * @param currency - BTC or ETH
+ * @param creatorWallet - Optional creator wallet from database (takes precedence)
  */
-export function getWalletAddress(currency: string): string {
+export function getWalletAddress(currency: string, creatorWallet?: string | null): string {
+  // Use creator wallet if provided
+  if (creatorWallet) {
+    return creatorWallet;
+  }
+
+  // Fallback to env for backward compatibility
   const addresses: Record<string, string | undefined> = {
     BTC: process.env.WALLET_BTC,
     ETH: process.env.WALLET_ETH,
@@ -34,14 +42,27 @@ export function getWalletAddress(currency: string): string {
  */
 export function generateChangeHeroUrl(params: ChangeHeroParams): string {
   const cryptoPath = params.cryptoCurrency.toLowerCase();
-  return `${CHANGEHERO_BUY_URL}/${cryptoPath}`;
+  const queryParams = new URLSearchParams();
+
+  // Set default amount
+  if (params.fiatAmount) {
+    queryParams.set("amount", params.fiatAmount.toString());
+  }
+
+  // Set fiat currency (default EUR)
+  queryParams.set("from", params.fiatCurrency?.toLowerCase() || "eur");
+
+  const queryString = queryParams.toString();
+  return `${CHANGEHERO_BUY_URL}/${cryptoPath}${queryString ? `?${queryString}` : ""}`;
 }
 
 /**
  * Check if ChangeHero payments are configured
+ * @param creatorWalletBtc - Optional creator BTC wallet from database
+ * @param creatorWalletEth - Optional creator ETH wallet from database
  */
-export function isChangeHeroConfigured(): boolean {
-  return !!(process.env.WALLET_BTC || process.env.WALLET_ETH);
+export function isChangeHeroConfigured(creatorWalletBtc?: string | null, creatorWalletEth?: string | null): boolean {
+  return !!(creatorWalletBtc || creatorWalletEth || process.env.WALLET_BTC || process.env.WALLET_ETH);
 }
 
 /**

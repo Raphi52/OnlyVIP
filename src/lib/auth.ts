@@ -53,6 +53,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             return null;
           }
 
+          // Check if email is verified
+          if (!user.emailVerified) {
+            throw new Error("EMAIL_NOT_VERIFIED");
+          }
+
           return {
             id: user.id,
             email: user.email,
@@ -62,7 +67,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             isCreator: user.isCreator,
             creatorSlug: user.creatorProfiles?.[0]?.slug || null,
           };
-        } catch (error) {
+        } catch (error: any) {
+          // Propagate email not verified error
+          if (error?.message === "EMAIL_NOT_VERIFIED") {
+            throw new Error("EMAIL_NOT_VERIFIED");
+          }
           console.error("[AUTH ERROR]", error);
           return null;
         }
@@ -115,13 +124,31 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       }
       return true;
     },
-    async jwt({ token, user, account }) {
+    async jwt({ token, user, account, trigger }) {
       if (user) {
         token.id = user.id;
         token.role = (user as any).role || "USER";
         token.isCreator = (user as any).isCreator || false;
         token.creatorSlug = (user as any).creatorSlug || null;
       }
+
+      // Refresh user data from database when session is updated
+      if (trigger === "update" && token.id) {
+        try {
+          const freshUser = await prisma.user.findUnique({
+            where: { id: token.id as string },
+            include: { creatorProfiles: { select: { slug: true } } },
+          });
+          if (freshUser) {
+            token.role = freshUser.role as "ADMIN" | "USER";
+            token.isCreator = freshUser.isCreator;
+            token.creatorSlug = freshUser.creatorProfiles?.[0]?.slug || null;
+          }
+        } catch (error) {
+          console.error("[JWT REFRESH ERROR]", error);
+        }
+      }
+
       return token;
     },
     async session({ session, token }) {

@@ -27,16 +27,19 @@ import {
   Heart,
   Filter,
   ChevronDown,
+  Coins,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCurrency } from "@/components/providers/CurrencyProvider";
 import { CryptoPaymentModal } from "@/components/payments";
+import { MediaUnlockModal } from "@/components/media/MediaUnlockModal";
 
 const categories = [
   { id: "All", label: "All", icon: Sparkles },
   { id: "Photos", label: "Photos", icon: Camera },
   { id: "Videos", label: "Videos", icon: Film },
-  { id: "Exclusive", label: "VIP", icon: Crown },
+  { id: "VIP", label: "VIP", icon: Crown },
+  { id: "PPV", label: "PPV", icon: Coins },
   { id: "Free", label: "Free", icon: Heart },
 ];
 
@@ -46,12 +49,18 @@ interface MediaItem {
   title: string;
   thumbnailUrl: string | null;
   contentUrl: string;
-  accessTier: "FREE" | "BASIC" | "VIP";
+  accessTier: "FREE" | "BASIC" | "VIP"; // Legacy
   isPurchaseable: boolean;
   price: number | null;
   duration: number | null;
   hasAccess?: boolean;
   hasPurchased?: boolean;
+  // New tag system
+  tagFree?: boolean;
+  tagVIP?: boolean;
+  tagPPV?: boolean;
+  tagGallery?: boolean;
+  ppvPriceCredits?: number | null;
 }
 
 const tierVariants: Record<string, "free" | "basic" | "vip" | "premium"> = {
@@ -81,29 +90,59 @@ export default function GalleryPage() {
     price: number;
   } | null>(null);
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
+  const [userCredits, setUserCredits] = useState(0);
+  const [isVIP, setIsVIP] = useState(false);
+  const [showUnlockModal, setShowUnlockModal] = useState<MediaItem | null>(null);
   const { formatPrice } = useCurrency();
 
   const tierOrder = ["FREE", "BASIC", "VIP"];
 
+  // New tag-based access check
   const hasAccessToMedia = (item: MediaItem) => {
-    if (item.accessTier === "FREE") return true;
+    // Free content = accessible to everyone
+    if (item.tagFree) return true;
+    // Already purchased = accessible
     if (purchasedIds.has(item.id)) return true;
+    // VIP only content
+    if (item.tagVIP && !isVIP) return false;
+    // PPV content = needs to be purchased
+    if (item.tagPPV) return false;
+    // Default: check subscription
     const userTierIndex = tierOrder.indexOf(userTier);
     const mediaTierIndex = tierOrder.indexOf(item.accessTier);
     return userTierIndex >= mediaTierIndex;
+  };
+
+  // Check if content needs credits to unlock (PPV)
+  const needsCreditsToUnlock = (item: MediaItem) => {
+    if (item.tagFree) return false;
+    if (purchasedIds.has(item.id)) return false;
+    if (item.tagVIP && !isVIP) return false; // VIP required first
+    return item.tagPPV === true;
   };
 
   useEffect(() => {
     const fetchUserAccess = async () => {
       if (!session?.user?.id) return;
       try {
+        // Fetch subscription status
         const subRes = await fetch("/api/user/subscription");
         if (subRes.ok) {
           const subData = await subRes.json();
           if (subData.subscription?.plan?.accessTier) {
             setUserTier(subData.subscription.plan.accessTier);
+            setIsVIP(subData.subscription.plan.accessTier === "VIP");
           }
         }
+
+        // Fetch credit balance
+        const creditsRes = await fetch("/api/user/credits");
+        if (creditsRes.ok) {
+          const creditsData = await creditsRes.json();
+          setUserCredits(creditsData.balance || 0);
+        }
+
+        // Fetch purchased media
         const libRes = await fetch("/api/user/library?tab=purchased");
         if (libRes.ok) {
           const libData = await libRes.json();
@@ -122,7 +161,8 @@ export default function GalleryPage() {
   useEffect(() => {
     const fetchMedia = async () => {
       try {
-        const res = await fetch("/api/media?published=true");
+        // Fetch only published media that are tagged for gallery
+        const res = await fetch(`/api/media?published=true&tagGallery=true&creator=${creatorSlug}`);
         if (res.ok) {
           const data = await res.json();
           setMediaItems(data.media || []);
@@ -134,7 +174,7 @@ export default function GalleryPage() {
       }
     };
     fetchMedia();
-  }, []);
+  }, [creatorSlug]);
 
   const handlePurchase = (mediaId: string) => {
     if (!session?.user) {
@@ -189,8 +229,9 @@ export default function GalleryPage() {
     if (activeCategory === "All") return true;
     if (activeCategory === "Photos") return item.type === "PHOTO";
     if (activeCategory === "Videos") return item.type === "VIDEO";
-    if (activeCategory === "Exclusive") return item.accessTier === "VIP";
-    if (activeCategory === "Free") return item.accessTier === "FREE";
+    if (activeCategory === "VIP") return item.tagVIP === true;
+    if (activeCategory === "PPV") return item.tagPPV === true;
+    if (activeCategory === "Free") return item.tagFree === true;
     return true;
   });
 
@@ -204,7 +245,8 @@ export default function GalleryPage() {
   const stats = {
     photos: mediaItems.filter((m) => m.type === "PHOTO").length,
     videos: mediaItems.filter((m) => m.type === "VIDEO").length,
-    exclusive: mediaItems.filter((m) => m.accessTier === "VIP").length,
+    vip: mediaItems.filter((m) => m.tagVIP === true).length,
+    ppv: mediaItems.filter((m) => m.tagPPV === true).length,
   };
 
   return (
@@ -273,10 +315,28 @@ export default function GalleryPage() {
               <div className="flex items-center gap-3 px-5 py-3 rounded-2xl bg-white/5 border border-white/10">
                 <Crown className="w-5 h-5 text-[var(--gold)]" />
                 <div>
-                  <p className="text-2xl font-bold text-white">{stats.exclusive}</p>
+                  <p className="text-2xl font-bold text-white">{stats.vip}</p>
                   <p className="text-xs text-gray-500">VIP Only</p>
                 </div>
               </div>
+              {stats.ppv > 0 && (
+                <div className="flex items-center gap-3 px-5 py-3 rounded-2xl bg-white/5 border border-white/10">
+                  <Coins className="w-5 h-5 text-purple-400" />
+                  <div>
+                    <p className="text-2xl font-bold text-white">{stats.ppv}</p>
+                    <p className="text-xs text-gray-500">PPV</p>
+                  </div>
+                </div>
+              )}
+              {session?.user && (
+                <div className="flex items-center gap-3 px-5 py-3 rounded-2xl bg-purple-500/10 border border-purple-500/30">
+                  <Coins className="w-5 h-5 text-purple-400" />
+                  <div>
+                    <p className="text-2xl font-bold text-white">{userCredits.toLocaleString()}</p>
+                    <p className="text-xs text-gray-500">Your Credits</p>
+                  </div>
+                </div>
+              )}
             </motion.div>
 
             {/* Filters */}
@@ -377,7 +437,18 @@ export default function GalleryPage() {
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: index * 0.03 }}
                       className="group cursor-pointer"
-                      onClick={() => setSelectedMedia(item.id)}
+                      onClick={() => {
+                        // If PPV and not purchased, show unlock modal
+                        if (needsCreditsToUnlock(item)) {
+                          if (!session?.user) {
+                            router.push(`/${creatorSlug}/auth/login?callbackUrl=/${creatorSlug}/gallery`);
+                            return;
+                          }
+                          setShowUnlockModal(item);
+                        } else {
+                          setSelectedMedia(item.id);
+                        }
+                      }}
                       onMouseEnter={() => setHoveredItem(item.id)}
                       onMouseLeave={() => setHoveredItem(null)}
                     >
@@ -423,13 +494,24 @@ export default function GalleryPage() {
                               </>
                             )}
                           </Badge>
-                          <Badge
-                            variant={tierVariants[item.accessTier] || "default"}
-                            className="backdrop-blur-sm"
-                          >
-                            {item.accessTier === "VIP" && <Crown className="w-3 h-3" />}
-                            {item.accessTier}
-                          </Badge>
+                          {/* New tag-based badges */}
+                          {item.tagFree && (
+                            <Badge className="bg-green-500 text-white border-0 backdrop-blur-sm">
+                              FREE
+                            </Badge>
+                          )}
+                          {item.tagVIP && (
+                            <Badge className="bg-gradient-to-r from-[var(--gold)] to-yellow-500 text-black border-0 backdrop-blur-sm">
+                              <Crown className="w-3 h-3" />
+                              VIP
+                            </Badge>
+                          )}
+                          {item.tagPPV && (
+                            <Badge className="bg-purple-500 text-white border-0 backdrop-blur-sm">
+                              <Coins className="w-3 h-3" />
+                              {item.ppvPriceCredits || 1000}
+                            </Badge>
+                          )}
                         </div>
 
                         {/* Status badge - Top Right */}
@@ -470,16 +552,31 @@ export default function GalleryPage() {
                           <h3 className="text-white font-semibold text-base mb-2 line-clamp-1 group-hover:text-[var(--gold-light)] transition-colors">
                             {item.title}
                           </h3>
-                          {item.price && item.isPurchaseable && !isPurchased && !canAccess && (
+                          {/* PPV unlock prompt */}
+                          {needsCreditsToUnlock(item) && (
                             <motion.div
                               initial={{ opacity: 0, y: 10 }}
                               animate={{ opacity: isHovered ? 1 : 0, y: isHovered ? 0 : 10 }}
                               className="flex items-center gap-2"
                             >
-                              <Badge variant="price" className="text-sm px-3 py-1">
-                                {formatPrice(item.price)}
+                              <Badge className="bg-purple-500 text-white border-0 text-sm px-3 py-1">
+                                <Coins className="w-3 h-3 mr-1" />
+                                {item.ppvPriceCredits || 1000} credits
                               </Badge>
-                              <span className="text-xs text-gray-400">One-time purchase</span>
+                              <span className="text-xs text-gray-400">Tap to unlock</span>
+                            </motion.div>
+                          )}
+                          {/* VIP only prompt */}
+                          {item.tagVIP && !isVIP && !item.tagPPV && !purchasedIds.has(item.id) && (
+                            <motion.div
+                              initial={{ opacity: 0, y: 10 }}
+                              animate={{ opacity: isHovered ? 1 : 0, y: isHovered ? 0 : 10 }}
+                              className="flex items-center gap-2"
+                            >
+                              <Badge className="bg-[var(--gold)] text-black border-0 text-sm px-3 py-1">
+                                <Crown className="w-3 h-3 mr-1" />
+                                VIP Only
+                              </Badge>
                             </motion.div>
                           )}
                         </div>
@@ -792,6 +889,28 @@ export default function GalleryPage() {
         title={showCryptoModal?.title || ""}
         price={showCryptoModal?.price || 0}
       />
+
+      {/* Media Unlock Modal for PPV */}
+      {showUnlockModal && (
+        <MediaUnlockModal
+          isOpen={true}
+          onClose={() => setShowUnlockModal(null)}
+          media={{
+            id: showUnlockModal.id,
+            title: showUnlockModal.title,
+            thumbnailUrl: showUnlockModal.thumbnailUrl || "/placeholder.jpg",
+            type: showUnlockModal.type as "PHOTO" | "VIDEO",
+            ppvPriceCredits: showUnlockModal.ppvPriceCredits || 1000,
+            tagVIP: showUnlockModal.tagVIP,
+          }}
+          userCredits={userCredits}
+          isVIP={isVIP}
+          onSuccess={(newBalance) => {
+            setUserCredits(newBalance);
+            setPurchasedIds((prev) => new Set([...prev, showUnlockModal.id]));
+          }}
+        />
+      )}
 
       <Footer creatorSlug={creatorSlug} />
     </>

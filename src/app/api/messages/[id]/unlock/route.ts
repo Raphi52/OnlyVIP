@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { spendCredits, getCreditBalance } from "@/lib/credits";
+import { recordCreatorEarning } from "@/lib/commission";
 
-// POST /api/messages/[id]/unlock - Unlock PPV message content
+// POST /api/messages/[id]/unlock - Unlock PPV message content using credits
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -16,13 +18,23 @@ export async function POST(
     const { id: messageId } = await params;
     const userId = session.user.id;
 
-    // Get the message
+    // Get the message with media and source content
     const message = await prisma.message.findUnique({
       where: { id: messageId },
       include: {
         conversation: {
-          include: {
+          select: {
+            creatorSlug: true,
             participants: true,
+          },
+        },
+        media: {
+          include: {
+            media: {
+              select: {
+                contentUrl: true,
+              },
+            },
           },
         },
       },
@@ -58,44 +70,103 @@ export async function POST(
     });
 
     if (existingPayment) {
+      // Return unlocked media
+      const unlockedMedia = message.media.map((m) => ({
+        id: m.id,
+        type: m.type,
+        url: m.media?.contentUrl || m.url,
+        previewUrl: m.previewUrl,
+      }));
+      return NextResponse.json({
+        success: true,
+        unlocked: true,
+        alreadyUnlocked: true,
+        media: unlockedMedia,
+      });
+    }
+
+    // ppvPrice is now in credits
+    const priceInCredits = message.ppvPrice;
+
+    // Check credit balance
+    const balance = await getCreditBalance(userId);
+    if (balance < priceInCredits) {
       return NextResponse.json(
-        { error: "Already unlocked", unlocked: true },
-        { status: 200 }
+        { error: "Insufficient credits", balance, required: priceInCredits },
+        { status: 400 }
       );
     }
 
-    // Create payment record and unlock
-    const [payment, messagePayment] = await prisma.$transaction([
-      prisma.payment.create({
-        data: {
-          userId,
-          amount: message.ppvPrice,
-          currency: "USD",
-          provider: "MOONPAY",
-          status: "COMPLETED",
-          type: "PPV_UNLOCK",
-          description: `PPV unlock for message`,
-        },
-      }),
+    // Spend credits
+    const creditResult = await spendCredits(userId, priceInCredits, "PPV", {
+      messageId,
+      description: `PPV unlock for message`,
+    });
+
+    // Parse current unlocked users
+    const currentUnlockedBy: string[] = JSON.parse(message.ppvUnlockedBy || "[]");
+
+    // Add user to unlocked list if not already there
+    if (!currentUnlockedBy.includes(userId)) {
+      currentUnlockedBy.push(userId);
+    }
+
+    // Create message payment record and update unlock list
+    const [messagePayment, updatedMessage] = await prisma.$transaction([
       prisma.messagePayment.create({
         data: {
           messageId,
           userId,
-          amount: message.ppvPrice,
+          amount: priceInCredits,
           type: "PPV_UNLOCK",
-          provider: "MOONPAY",
+          provider: "CREDITS",
           status: "COMPLETED",
         },
       }),
+      // Update the message's ppvUnlockedBy array
+      prisma.message.update({
+        where: { id: messageId },
+        data: { ppvUnlockedBy: JSON.stringify(currentUnlockedBy) },
+      }),
     ]);
+
+    // Record creator earning (commission applied)
+    if (message.conversation.creatorSlug) {
+      try {
+        await recordCreatorEarning(
+          message.conversation.creatorSlug,
+          userId,
+          priceInCredits,
+          "PPV",
+          messageId
+        );
+      } catch (earningError) {
+        console.error("Failed to record creator earning:", earningError);
+      }
+    }
+
+    // Return unlocked media with actual content URLs
+    const unlockedMedia = message.media.map((m) => ({
+      id: m.id,
+      type: m.type,
+      url: m.media?.contentUrl || m.url,
+      previewUrl: m.previewUrl,
+    }));
 
     return NextResponse.json({
       success: true,
       unlocked: true,
-      paymentId: payment.id,
+      newBalance: creditResult.newBalance,
+      media: unlockedMedia,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error unlocking PPV:", error);
+    if (error.message === "Insufficient credits") {
+      return NextResponse.json(
+        { error: "Insufficient credits" },
+        { status: 400 }
+      );
+    }
     return NextResponse.json(
       { error: "Failed to unlock content" },
       { status: 500 }
