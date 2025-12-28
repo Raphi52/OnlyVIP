@@ -24,9 +24,7 @@ const membershipTiers = [
     description: "Access basic content & messaging",
     monthlyCredits: 999, // ~$9.99
     annualCredits: 9588, // ~$95.88 (save 20%)
-    bonusCredits: 500, // Bonus credits included monthly
     features: [
-      "500 bonus credits/month",
       "Access to basic gallery",
       "Direct messaging",
       "Support the creator",
@@ -41,10 +39,8 @@ const membershipTiers = [
     description: "Full access & maximum perks",
     monthlyCredits: 2999, // ~$29.99
     annualCredits: 28788, // ~$287.88 (save 20%)
-    bonusCredits: 2000, // Bonus credits included monthly
     isPopular: true,
     features: [
-      "2000 bonus credits/month",
       "Full gallery access",
       "VIP-only content",
       "Priority messaging",
@@ -121,7 +117,6 @@ export function Pricing({ creatorSlug = "miacosta" }: PricingProps) {
                   ...plan,
                   monthlyCredits: customPlan.monthlyCredits ?? plan.monthlyCredits,
                   annualCredits: customPlan.annualCredits ?? plan.annualCredits,
-                  bonusCredits: customPlan.bonusCredits ?? plan.bonusCredits,
                 };
               }
               return plan;
@@ -186,7 +181,7 @@ export function Pricing({ creatorSlug = "miacosta" }: PricingProps) {
 
       // Success!
       setUserBalance(data.newBalance);
-      setSuccessMessage(`Welcome to ${plan.name}! You received ${data.bonusCreditsAdded} bonus credits.`);
+      setSuccessMessage(`Welcome to ${plan.name}! Your subscription is now active.`);
 
       // Redirect to dashboard after a delay
       setTimeout(() => {
@@ -227,11 +222,11 @@ export function Pricing({ creatorSlug = "miacosta" }: PricingProps) {
             Membership & Credits
           </motion.span>
           <h2 className="text-4xl sm:text-5xl font-bold text-white mb-4">
-            Get <span className="gradient-gold-text">Free Credits</span> Monthly
+            Unlock <span className="gradient-gold-text">Exclusive Access</span>
           </h2>
           <p className="text-gray-400 text-lg max-w-2xl mx-auto">
-            Subscribe to receive free credits every month. Use them to unlock exclusive content,
-            send tips, and access PPV media.
+            Subscribe to access exclusive content, direct messaging, and VIP perks.
+            Buy credits to unlock PPV media and send tips.
           </p>
         </motion.div>
 
@@ -244,11 +239,11 @@ export function Pricing({ creatorSlug = "miacosta" }: PricingProps) {
         >
           <div className="text-center p-6 rounded-2xl bg-white/5 border border-white/10">
             <div className="w-12 h-12 rounded-xl bg-purple-500/20 flex items-center justify-center mx-auto mb-4">
-              <Gift className="w-6 h-6 text-purple-400" />
+              <Crown className="w-6 h-6 text-purple-400" />
             </div>
             <h3 className="text-lg font-semibold text-white mb-2">1. Subscribe</h3>
             <p className="text-sm text-gray-400">
-              Choose a plan and get free credits delivered to your account monthly
+              Choose a plan to unlock exclusive content and messaging access
             </p>
           </div>
           <div className="text-center p-6 rounded-2xl bg-white/5 border border-white/10">
@@ -365,17 +360,6 @@ export function Pricing({ creatorSlug = "miacosta" }: PricingProps) {
                   <p className="text-gray-400 text-sm">
                     {plan.description}
                   </p>
-                </div>
-
-                {/* Monthly Bonus Credits */}
-                <div className="text-center mb-6 p-4 rounded-2xl bg-green-500/10 border border-green-500/20">
-                  <div className="flex items-center justify-center gap-2 mb-1">
-                    <Gift className="w-5 h-5 text-green-400" />
-                    <span className="text-3xl font-bold text-white">
-                      +{plan.bonusCredits.toLocaleString()}
-                    </span>
-                  </div>
-                  <p className="text-sm text-green-300">bonus credits every month</p>
                 </div>
 
                 {/* Price in Credits */}

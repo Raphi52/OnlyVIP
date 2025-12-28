@@ -60,14 +60,14 @@ export async function GET(request: NextRequest) {
           throw new Error("Original message not found");
         }
 
-        // Get conversation context (last 10 messages)
+        // Get conversation context (last 20 messages for better coherence)
         const conversationMessages = await prisma.message.findMany({
           where: {
             conversationId: queueItem.conversationId,
             isDeleted: false,
           },
           orderBy: { createdAt: "desc" },
-          take: 10,
+          take: 20,
           include: {
             sender: { select: { id: true, isCreator: true } },
           },

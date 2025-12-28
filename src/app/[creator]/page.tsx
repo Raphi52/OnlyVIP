@@ -58,7 +58,7 @@ export default async function CreatorHome({ params }: PageProps) {
         {/* Pricing - Subscription plans */}
         <Pricing creatorSlug={creatorSlug} />
       </main>
-      <Footer creatorSlug={creatorSlug} />
+      <Footer creatorSlug={creatorSlug} creatorName={creator.displayName} />
     </>
   );
 }

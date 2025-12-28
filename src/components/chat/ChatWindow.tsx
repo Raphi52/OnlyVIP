@@ -3,8 +3,8 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence, useScroll, useTransform } from "framer-motion";
 import {
-  Send, Plus, Sparkles, Loader2, Play, X, Lock, DollarSign,
-  Search, Smile, ArrowLeft, ChevronDown, Mic, Image, Camera,
+  Send, Plus, Sparkles, Loader2, Play, X, Lock, Coins,
+  Search, Smile, ArrowLeft, ChevronDown, Mic, Image,
   Gift, Heart, Paperclip, StopCircle
 } from "lucide-react";
 import { useInView } from "react-intersection-observer";
@@ -73,13 +73,14 @@ interface ChatWindowProps {
   onUnlockPPV: (messageId: string) => void;
   onSendTip: (messageId: string, amount: number) => void;
   onReact?: (messageId: string, emoji: string) => void;
-  onMarkAsRead?: (messageId: string) => void;
+  onMarkAsRead?: () => void;
   onAISuggest?: (lastUserMessage: string) => Promise<string>;
   onSearch?: (query: string) => Promise<SearchResult[]>;
   onBack?: () => void;
 }
 
-const tipAmounts = [5, 10, 25, 50, 100];
+// Tip amounts in credits (100 credits = $1)
+const tipAmounts = [100, 500, 1000, 2500, 5000];
 
 // Group messages by date and sender
 function groupMessages(messages: Message[], currentUserId: string) {
@@ -141,6 +142,58 @@ export function ChatWindow({
   onSearch,
   onBack,
 }: ChatWindowProps) {
+  // Local state for reactions (to update UI instantly)
+  const [localReactions, setLocalReactions] = useState<Record<string, Reaction[]>>({});
+
+  // Update local reactions after API call
+  const updateLocalReactions = (messageId: string, emoji: string, action: "added" | "removed") => {
+    setLocalReactions(prev => {
+      const currentReactions = prev[messageId] || messages.find(m => m.id === messageId)?.reactions || [];
+      const existingIdx = currentReactions.findIndex(r => r.emoji === emoji);
+
+      if (action === "added") {
+        if (existingIdx >= 0) {
+          const updated = [...currentReactions];
+          updated[existingIdx] = { ...updated[existingIdx], count: updated[existingIdx].count + 1, hasReacted: true };
+          return { ...prev, [messageId]: updated };
+        } else {
+          return { ...prev, [messageId]: [...currentReactions, { emoji, count: 1, hasReacted: true }] };
+        }
+      } else {
+        if (existingIdx >= 0) {
+          const updated = [...currentReactions];
+          if (updated[existingIdx].count <= 1) {
+            updated.splice(existingIdx, 1);
+          } else {
+            updated[existingIdx] = { ...updated[existingIdx], count: updated[existingIdx].count - 1, hasReacted: false };
+          }
+          return { ...prev, [messageId]: updated };
+        }
+      }
+      return prev;
+    });
+  };
+
+  // Handle react - always update local state for instant UI
+  const handleReact = async (messageId: string, emoji: string) => {
+    try {
+      const res = await fetch(`/api/messages/${messageId}/reactions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ emoji }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        updateLocalReactions(messageId, emoji, data.action);
+        // Also call parent handler if provided
+        onReact?.(messageId, emoji);
+      }
+    } catch (err) {
+      // Silent fail
+    }
+  };
+
   // State
   const [newMessage, setNewMessage] = useState("");
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -209,11 +262,14 @@ export function ChatWindow({
 
   // Scroll to bottom on initial load
   useEffect(() => {
-    if (messages.length > 0) {
-      setTimeout(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "instant" });
-      }, 100);
-    }
+    // Scroll immediately and after a delay to ensure content is rendered
+    const scrollToBottom = () => {
+      messagesEndRef.current?.scrollIntoView({ behavior: "instant" });
+    };
+
+    scrollToBottom();
+    setTimeout(scrollToBottom, 100);
+    setTimeout(scrollToBottom, 300);
   }, [conversationId]);
 
   // Scroll on new messages
@@ -229,13 +285,16 @@ export function ChatWindow({
     }
   }, [messages, isAtBottom, currentUserId]);
 
-  // Mark messages as read
+  // Mark messages as read (batch approach - call once when at bottom with unread messages)
   useEffect(() => {
     if (isAtBottom && onMarkAsRead) {
-      const unreadMessages = messages.filter(
+      const hasUnreadMessages = messages.some(
         (m) => m.senderId !== currentUserId && !m.isRead
       );
-      unreadMessages.forEach((m) => onMarkAsRead(m.id));
+      if (hasUnreadMessages) {
+        // Call once to batch mark all unread messages
+        onMarkAsRead();
+      }
     }
   }, [isAtBottom, messages, currentUserId, onMarkAsRead]);
 
@@ -521,13 +580,14 @@ export function ChatWindow({
                   senderAvatar={message.senderId !== currentUserId ? otherUser.image : undefined}
                   isRead={message.isRead}
                   isDelivered={true}
-                  reactions={message.reactions}
+                  reactions={localReactions[message.id] || message.reactions}
                   replyTo={message.replyTo}
                   isFirstInGroup={message.isFirstInGroup}
                   isLastInGroup={message.isLastInGroup}
+                  isCurrentUserCreator={isAdmin}
                   onUnlock={onUnlockPPV}
                   onTip={(id) => setShowTipModal(id)}
-                  onReact={onReact}
+                  onReact={handleReact}
                   onReply={handleReply}
                   onMediaClick={(media) => handleMediaClick(media, message.media || [])}
                   onQuoteClick={handleQuoteClick}
@@ -730,14 +790,14 @@ export function ChatWindow({
         className="relative z-20 p-3 md:p-4 border-t border-white/5 bg-[#0a0a0a]/80 backdrop-blur-xl"
         style={{ paddingBottom: "max(12px, env(safe-area-inset-bottom))" }}
       >
-        <div className="flex items-center gap-2">
+        <div className="flex items-end gap-2 pb-[2px]">
           {/* Attach button */}
-          <div className="relative">
+          <div className="relative mb-[7px]">
             <motion.button
               whileTap={{ scale: 0.9 }}
               onClick={() => setShowAttachMenu(!showAttachMenu)}
               className={cn(
-                "w-11 h-11 flex items-center justify-center rounded-full transition-all",
+                "w-10 h-10 flex items-center justify-center rounded-full transition-all",
                 showAttachMenu
                   ? "bg-[var(--gold)] text-black"
                   : "bg-white/5 hover:bg-white/10 text-[var(--gold)]"
@@ -767,13 +827,20 @@ export function ChatWindow({
                       </div>
                       <span className="text-xs text-white/70">Gallery</span>
                     </button>
-                    <button className="flex flex-col items-center gap-1.5 p-3 rounded-xl hover:bg-white/5 transition-colors">
-                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-pink-500 to-rose-600 flex items-center justify-center">
-                        <Camera className="w-6 h-6 text-white" />
-                      </div>
-                      <span className="text-xs text-white/70">Camera</span>
-                    </button>
-                    <button className="flex flex-col items-center gap-1.5 p-3 rounded-xl hover:bg-white/5 transition-colors">
+                    <button
+                      onClick={() => {
+                        setShowAttachMenu(false);
+                        // Open tip modal with a special "gift" mode - use last message id or create general tip
+                        const lastReceivedMessage = messages.filter(m => m.senderId !== currentUserId).pop();
+                        if (lastReceivedMessage) {
+                          setShowTipModal(lastReceivedMessage.id);
+                        } else {
+                          // Create a general tip request - use conversation ID as fallback
+                          setShowTipModal("gift-" + conversationId);
+                        }
+                      }}
+                      className="flex flex-col items-center gap-1.5 p-3 rounded-xl hover:bg-white/5 transition-colors"
+                    >
                       <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[var(--gold)] to-amber-600 flex items-center justify-center">
                         <Gift className="w-6 h-6 text-black" />
                       </div>
@@ -800,7 +867,7 @@ export function ChatWindow({
               whileTap={{ scale: 0.9 }}
               onClick={handleAISuggest}
               disabled={isLoadingAI || !getLastUserMessage()}
-              className="w-11 h-11 flex items-center justify-center rounded-full bg-gradient-to-r from-violet-500 to-purple-600 disabled:opacity-40 disabled:cursor-not-allowed shadow-lg shadow-purple-500/20"
+              className="w-10 h-10 mb-[7px] flex items-center justify-center rounded-full bg-gradient-to-r from-violet-500 to-purple-600 disabled:opacity-40 disabled:cursor-not-allowed shadow-lg shadow-purple-500/20"
             >
               {isLoadingAI ? (
                 <Loader2 className="w-5 h-5 text-white animate-spin" />
@@ -854,7 +921,7 @@ export function ChatWindow({
             onClick={handleSend}
             disabled={isSending || (!newMessage.trim() && selectedFiles.length === 0)}
             className={cn(
-              "w-11 h-11 flex items-center justify-center rounded-full transition-all",
+              "w-10 h-10 mb-[7px] flex items-center justify-center rounded-full transition-all",
               (newMessage.trim() || selectedFiles.length > 0)
                 ? "bg-gradient-to-r from-[var(--gold)] to-amber-600 shadow-lg shadow-[var(--gold)]/30"
                 : "bg-white/10 cursor-not-allowed"
@@ -912,34 +979,40 @@ export function ChatWindow({
                       transition={{ delay: i * 0.05 }}
                       whileTap={{ scale: 0.95 }}
                       onClick={() => handleTip(showTipModal, amount)}
-                      className="py-4 rounded-2xl bg-white/5 hover:bg-[var(--gold)]/10 active:bg-[var(--gold)]/20 border border-white/5 hover:border-[var(--gold)]/30 text-white text-lg font-semibold transition-all"
+                      className="py-4 rounded-2xl bg-white/5 hover:bg-[var(--gold)]/10 active:bg-[var(--gold)]/20 border border-white/5 hover:border-[var(--gold)]/30 text-white text-lg font-semibold transition-all flex items-center justify-center gap-1.5"
                     >
-                      ${amount}
+                      <Coins className="w-4 h-4 text-[var(--gold)]" />
+                      {amount.toLocaleString()}
                     </motion.button>
                   ))}
                 </div>
 
                 <div className="flex gap-2 mb-4">
                   <div className="relative flex-1">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40 text-lg">$</span>
+                    <Coins className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--gold)]" />
                     <input
                       type="number"
                       value={customTip}
                       onChange={(e) => setCustomTip(e.target.value)}
-                      placeholder="Custom"
-                      min="1"
-                      className="w-full pl-8 pr-4 py-4 rounded-2xl bg-white/5 border border-white/10 text-white text-lg focus:outline-none focus:border-[var(--gold)] transition-colors"
+                      placeholder="Custom amount"
+                      min="100"
+                      step="100"
+                      className="w-full pl-12 pr-4 py-4 rounded-2xl bg-white/5 border border-white/10 text-white text-lg focus:outline-none focus:border-[var(--gold)] transition-colors"
                     />
                   </div>
                   <Button
                     variant="premium"
-                    disabled={!customTip || parseFloat(customTip) < 1}
+                    disabled={!customTip || parseFloat(customTip) < 100}
                     onClick={() => handleTip(showTipModal, parseFloat(customTip))}
                     className="px-6 text-lg"
                   >
                     Send
                   </Button>
                 </div>
+
+                <p className="text-xs text-white/40 text-center mb-4">
+                  Minimum: 100 credits
+                </p>
 
                 <button
                   onClick={() => setShowTipModal(null)}

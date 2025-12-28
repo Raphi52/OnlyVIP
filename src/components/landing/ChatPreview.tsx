@@ -3,8 +3,8 @@
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
-import { MessageCircle, Heart, DollarSign, Lock, Send, Sparkles, Check, Zap, Loader2 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { MessageCircle, Heart, DollarSign, Lock, Send, Sparkles, Check, Zap, Loader2, Crown, X, Coins } from "lucide-react";
 import { Button, Badge } from "@/components/ui";
 import { Creator } from "@/lib/creators";
 
@@ -12,17 +12,27 @@ interface ChatPreviewProps {
   creator?: Creator;
 }
 
+interface VipPlan {
+  name: string;
+  priceCredits: number;
+  features: string[];
+}
+
 export function ChatPreview({ creator }: ChatPreviewProps) {
   const { data: session } = useSession();
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [canMessage, setCanMessage] = useState(false);
+  const [showVipModal, setShowVipModal] = useState(false);
+  const [userCredits, setUserCredits] = useState(0);
+  const [vipPrice, setVipPrice] = useState(5000); // Default 5000 credits = 50€
+  const [isPurchasing, setIsPurchasing] = useState(false);
 
   const creatorSlug = creator?.slug || "miacosta";
   const basePath = `/${creatorSlug}`;
   const creatorName = creator?.displayName || "Mia";
 
-  // Check if user can message
+  // Check if user has VIP for this specific creator
   useEffect(() => {
     const checkSubscription = async () => {
       if (!session?.user?.id) return;
@@ -34,17 +44,35 @@ export function ChatPreview({ creator }: ChatPreviewProps) {
       }
 
       try {
-        const res = await fetch("/api/user/subscription");
+        // Check subscription for this specific creator
+        const res = await fetch(`/api/user/subscription?creatorSlug=${creatorSlug}`);
         if (res.ok) {
           const data = await res.json();
-          // Both Basic and VIP subscribers can message
+          // Check if user has active subscription for THIS creator
           const hasAccess =
-            data.subscription?.plan?.canMessage === true ||
-            data.subscription?.plan?.accessTier === "VIP" ||
-            data.subscription?.plan?.accessTier === "BASIC" ||
-            data.subscription?.status === "ACTIVE" ||
-            data.subscription?.status === "TRIALING";
+            data.subscription?.creatorSlug === creatorSlug &&
+            (data.subscription?.status === "ACTIVE" || data.subscription?.status === "TRIALING") &&
+            (data.subscription?.plan?.canMessage === true ||
+             data.subscription?.plan?.accessTier === "VIP" ||
+             data.subscription?.plan?.accessTier === "BASIC");
           setCanMessage(hasAccess);
+
+          // Also get user credits
+          if (data.credits !== undefined) {
+            setUserCredits(data.credits);
+          }
+        }
+
+        // Get VIP price for this creator
+        const pricingRes = await fetch(`/api/creators/${creatorSlug}/pricing`);
+        if (pricingRes.ok) {
+          const pricingData = await pricingRes.json();
+          const vipPlan = pricingData.plans?.find((p: any) =>
+            p.accessTier === "VIP" || p.name?.toLowerCase().includes("vip")
+          );
+          if (vipPlan?.priceCredits) {
+            setVipPrice(vipPlan.priceCredits);
+          }
         }
       } catch (error) {
         console.error("Error checking subscription:", error);
@@ -52,7 +80,7 @@ export function ChatPreview({ creator }: ChatPreviewProps) {
     };
 
     checkSubscription();
-  }, [session?.user?.id]);
+  }, [session?.user?.id, creatorSlug]);
 
   // Handle start chat click
   const handleStartChat = async () => {
@@ -62,7 +90,8 @@ export function ChatPreview({ creator }: ChatPreviewProps) {
     }
 
     if (!canMessage) {
-      router.push(`${basePath}/membership`);
+      // Show VIP purchase modal instead of redirecting
+      setShowVipModal(true);
       return;
     }
 
@@ -79,13 +108,59 @@ export function ChatPreview({ creator }: ChatPreviewProps) {
       } else {
         const error = await res.json();
         console.error("Error:", error);
-        router.push(`${basePath}/membership`);
+        setShowVipModal(true);
       }
     } catch (error) {
       console.error("Error starting conversation:", error);
-      router.push(`${basePath}/membership`);
+      setShowVipModal(true);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Handle VIP purchase with credits
+  const handlePurchaseVip = async () => {
+    if (userCredits < vipPrice) {
+      // Not enough credits - redirect to buy credits
+      router.push("/dashboard?tab=credits");
+      return;
+    }
+
+    setIsPurchasing(true);
+    try {
+      const res = await fetch("/api/subscription/purchase-with-credits", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          creatorSlug,
+          tier: "VIP",
+          credits: vipPrice
+        }),
+      });
+
+      if (res.ok) {
+        setCanMessage(true);
+        setShowVipModal(false);
+        setUserCredits(prev => prev - vipPrice);
+        // Start conversation
+        const convRes = await fetch("/api/conversations/start", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ creatorSlug }),
+        });
+        if (convRes.ok) {
+          router.push("/dashboard/messages");
+        }
+      } else {
+        const error = await res.json();
+        console.error("Purchase error:", error);
+        alert(error.error || "Failed to purchase VIP");
+      }
+    } catch (error) {
+      console.error("Purchase error:", error);
+      alert("Failed to purchase VIP");
+    } finally {
+      setIsPurchasing(false);
     }
   };
 
@@ -369,6 +444,134 @@ export function ChatPreview({ creator }: ChatPreviewProps) {
           </motion.div>
         </div>
       </div>
+
+      {/* VIP Purchase Modal */}
+      <AnimatePresence>
+        {showVipModal && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md"
+              onClick={() => setShowVipModal(false)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 50 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 50 }}
+              className="fixed inset-x-4 top-1/2 -translate-y-1/2 md:inset-auto md:left-1/2 md:top-1/2 md:-translate-x-1/2 md:w-full md:max-w-md z-50"
+            >
+              <div className="bg-gradient-to-b from-[#1a1a1a] to-[#0a0a0a] border border-white/10 rounded-3xl p-6 shadow-2xl">
+                {/* Close button */}
+                <button
+                  onClick={() => setShowVipModal(false)}
+                  className="absolute top-4 right-4 p-2 rounded-full hover:bg-white/10 text-white/50 hover:text-white transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+
+                {/* Header */}
+                <div className="text-center mb-6">
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ type: "spring", stiffness: 400, damping: 20 }}
+                    className="w-20 h-20 rounded-full bg-gradient-to-br from-[var(--gold)] via-amber-400 to-amber-600 flex items-center justify-center mx-auto mb-4 shadow-xl shadow-[var(--gold)]/30"
+                  >
+                    <Crown className="w-10 h-10 text-black" />
+                  </motion.div>
+                  <h3 className="text-2xl font-bold text-white">Become VIP</h3>
+                  <p className="text-sm text-white/50 mt-1">
+                    Unlock direct messaging with {creatorName}
+                  </p>
+                </div>
+
+                {/* Benefits */}
+                <div className="space-y-3 mb-6">
+                  {[
+                    "Direct private messages",
+                    "Exclusive PPV content access",
+                    "Priority responses",
+                    "Send tips & gifts"
+                  ].map((benefit, i) => (
+                    <motion.div
+                      key={benefit}
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: i * 0.1 }}
+                      className="flex items-center gap-3"
+                    >
+                      <div className="w-6 h-6 rounded-full bg-[var(--gold)]/20 flex items-center justify-center">
+                        <Check className="w-4 h-4 text-[var(--gold)]" />
+                      </div>
+                      <span className="text-white/80">{benefit}</span>
+                    </motion.div>
+                  ))}
+                </div>
+
+                {/* Price */}
+                <div className="bg-white/5 rounded-2xl p-4 mb-6 border border-white/10">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-white/50 text-sm">VIP Access</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Coins className="w-5 h-5 text-[var(--gold)]" />
+                        <span className="text-2xl font-bold text-white">{vipPrice.toLocaleString()}</span>
+                        <span className="text-white/50">credits</span>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-white/50 text-sm">Your balance</p>
+                      <p className={`text-lg font-semibold ${userCredits >= vipPrice ? 'text-green-400' : 'text-red-400'}`}>
+                        {userCredits.toLocaleString()} credits
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Action buttons */}
+                {userCredits >= vipPrice ? (
+                  <Button
+                    variant="premium"
+                    className="w-full py-4 text-lg gap-2"
+                    onClick={handlePurchaseVip}
+                    disabled={isPurchasing}
+                  >
+                    {isPurchasing ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                      <Crown className="w-5 h-5" />
+                    )}
+                    Unlock VIP Access
+                  </Button>
+                ) : (
+                  <div className="space-y-3">
+                    <p className="text-center text-red-400 text-sm">
+                      You need {(vipPrice - userCredits).toLocaleString()} more credits
+                    </p>
+                    <Button
+                      variant="premium"
+                      className="w-full py-4 text-lg gap-2"
+                      onClick={() => router.push("/dashboard?tab=credits")}
+                    >
+                      <Coins className="w-5 h-5" />
+                      Buy Credits
+                    </Button>
+                  </div>
+                )}
+
+                <button
+                  onClick={() => setShowVipModal(false)}
+                  className="w-full mt-3 py-3 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 font-medium transition-colors"
+                >
+                  Maybe later
+                </button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </section>
   );
 }

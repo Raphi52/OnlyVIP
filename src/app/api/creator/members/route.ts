@@ -20,13 +20,28 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Not a creator" }, { status: 403 });
     }
 
+    // Get creator filter from query params
+    const { searchParams } = new URL(request.url);
+    const creatorSlugParam = searchParams.get("creator");
+
     // Get creator profiles owned by this user
     const creators = await prisma.creator.findMany({
       where: { userId },
       select: { slug: true },
     });
 
-    const creatorSlugs = creators.map((c) => c.slug);
+    const ownedSlugs = creators.map((c) => c.slug);
+
+    // If a specific creator is requested, verify ownership and use only that one
+    let creatorSlugs: string[];
+    if (creatorSlugParam) {
+      if (!ownedSlugs.includes(creatorSlugParam)) {
+        return NextResponse.json({ error: "Not authorized for this creator" }, { status: 403 });
+      }
+      creatorSlugs = [creatorSlugParam];
+    } else {
+      creatorSlugs = ownedSlugs;
+    }
 
     // Get all followers/members for these creators
     const memberRecords = await prisma.creatorMember.findMany({

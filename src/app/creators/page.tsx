@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { Button, Card, Badge } from "@/components/ui";
 import { cn } from "@/lib/utils";
+import { CREATOR_CATEGORIES, getCategoryById, getCategoriesFromJson } from "@/lib/categories";
 
 interface Creator {
   id: string;
@@ -39,7 +40,7 @@ interface Creator {
   photoCount: number;
   videoCount: number;
   subscriberCount: number;
-  category?: string;
+  categories: string[]; // Array of category IDs
   createdAt?: string;
 }
 
@@ -91,7 +92,7 @@ export default function CreatorsPage() {
 
     // Category filter
     if (selectedCategory) {
-      result = result.filter((c) => c.category === selectedCategory);
+      result = result.filter((c) => c.categories?.includes(selectedCategory));
     }
 
     // Sort
@@ -118,10 +119,13 @@ export default function CreatorsPage() {
     return result;
   }, [creators, searchQuery, sortBy, selectedCategory]);
 
-  // Categories (derived from creators)
-  const categories = useMemo(() => {
-    const cats = new Set(creators.map((c) => c.category).filter(Boolean));
-    return Array.from(cats) as string[];
+  // Get active categories (only show categories that at least one creator has)
+  const activeCategories = useMemo(() => {
+    const usedCats = new Set<string>();
+    creators.forEach((c) => {
+      c.categories?.forEach((cat) => usedCats.add(cat));
+    });
+    return CREATOR_CATEGORIES.filter((cat) => usedCats.has(cat.id));
   }, [creators]);
 
   const sortOptions: { value: SortOption; label: string; icon: any }[] = [
@@ -297,41 +301,39 @@ export default function CreatorsPage() {
             </div>
           </motion.div>
 
-          {/* Category Pills (if any) */}
-          {categories.length > 0 && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.2 }}
-              className="flex flex-wrap gap-2 mb-8 justify-center"
+          {/* Category Pills */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.2 }}
+            className="flex flex-wrap gap-2 mb-8 justify-center"
+          >
+            <button
+              onClick={() => setSelectedCategory(null)}
+              className={cn(
+                "px-4 py-2 rounded-full text-sm font-medium transition-all",
+                !selectedCategory
+                  ? "bg-[var(--gold)] text-black"
+                  : "bg-white/5 text-gray-400 hover:bg-white/10 border border-white/10"
+              )}
             >
+              All
+            </button>
+            {CREATOR_CATEGORIES.slice(0, 15).map((cat) => (
               <button
-                onClick={() => setSelectedCategory(null)}
+                key={cat.id}
+                onClick={() => setSelectedCategory(cat.id)}
                 className={cn(
                   "px-4 py-2 rounded-full text-sm font-medium transition-all",
-                  !selectedCategory
+                  selectedCategory === cat.id
                     ? "bg-[var(--gold)] text-black"
-                    : "bg-white/5 text-gray-400 hover:bg-white/10 border border-white/10"
+                    : cn(cat.color, "hover:opacity-80 border border-white/10")
                 )}
               >
-                All
+                {cat.label}
               </button>
-              {categories.map((cat) => (
-                <button
-                  key={cat}
-                  onClick={() => setSelectedCategory(cat)}
-                  className={cn(
-                    "px-4 py-2 rounded-full text-sm font-medium transition-all capitalize",
-                    selectedCategory === cat
-                      ? "bg-[var(--gold)] text-black"
-                      : "bg-white/5 text-gray-400 hover:bg-white/10 border border-white/10"
-                  )}
-                >
-                  {cat}
-                </button>
-              ))}
-            </motion.div>
-          )}
+            ))}
+          </motion.div>
         </div>
       </section>
 
@@ -559,22 +561,30 @@ function CreatorCard({ creator, size }: { creator: Creator; size: GridSize }) {
             </div>
           </div>
 
-          {/* VIP badge */}
-          <div className="absolute top-3 right-3">
-            <div className="px-2.5 py-1 rounded-full bg-[var(--gold)] text-black text-xs font-bold flex items-center gap-1 shadow-lg">
-              <Crown className="w-3 h-3" />
-              VIP
-            </div>
-          </div>
-
-          {/* New badge */}
-          {creator.createdAt && isNewCreator(creator.createdAt) && (
-            <div className="absolute top-3 left-3">
-              <div className="px-2.5 py-1 rounded-full bg-green-500 text-white text-xs font-bold animate-pulse">
+          {/* Category tags */}
+          <div className="absolute top-3 left-3 right-3 flex flex-wrap gap-1.5">
+            {/* New badge */}
+            {creator.createdAt && isNewCreator(creator.createdAt) && (
+              <span className="px-2 py-0.5 rounded-full bg-green-500 text-white text-[10px] font-bold">
                 NEW
-              </div>
-            </div>
-          )}
+              </span>
+            )}
+            {/* Category tags (show first 2) */}
+            {creator.categories?.slice(0, 2).map((catId) => {
+              const cat = getCategoryById(catId);
+              return cat ? (
+                <span
+                  key={catId}
+                  className={cn(
+                    "px-2 py-0.5 rounded-full text-[10px] font-bold",
+                    cat.color
+                  )}
+                >
+                  {cat.label}
+                </span>
+              ) : null;
+            })}
+          </div>
         </div>
       </Card>
     </Link>

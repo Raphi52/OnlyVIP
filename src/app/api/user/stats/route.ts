@@ -14,31 +14,25 @@ export async function GET() {
 
     // Get all stats in parallel
     const [
-      unlockedContent,
-      messageCount,
-      subscription,
-      recentMedia,
+      user,
+      subscriptions,
+      recentTransactions,
+      unreadMessages,
     ] = await Promise.all([
-      // Count of purchased media + accessible media based on subscription
-      prisma.mediaPurchase.count({
-        where: {
-          userId,
-          status: "COMPLETED",
+      // Get user with credit balance
+      prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+          creditBalance: true,
+          name: true,
         },
       }),
 
-      // Count of messages received
-      prisma.message.count({
-        where: {
-          receiverId: userId,
-        },
-      }),
-
-      // Active subscription with plan
-      prisma.subscription.findFirst({
+      // Active subscriptions with creator info
+      prisma.subscription.findMany({
         where: {
           userId,
-          status: "ACTIVE",
+          status: { in: ["ACTIVE", "TRIALING"] },
         },
         include: {
           plan: true,
@@ -48,78 +42,68 @@ export async function GET() {
         },
       }),
 
-      // Recent published media (for content preview)
-      prisma.mediaContent.findMany({
-        where: {
-          isPublished: true,
-        },
-        orderBy: {
-          createdAt: "desc",
-        },
-        take: 6,
+      // Recent credit transactions
+      prisma.creditTransaction.findMany({
+        where: { userId },
+        orderBy: { createdAt: "desc" },
+        take: 10,
         select: {
           id: true,
-          title: true,
+          amount: true,
           type: true,
-          thumbnailUrl: true,
-          accessTier: true,
-          isPurchaseable: true,
-          price: true,
+          description: true,
+          createdAt: true,
+        },
+      }),
+
+      // Unread messages count (exclude self-sent messages)
+      prisma.message.count({
+        where: {
+          receiverId: userId,
+          senderId: { not: userId },
+          isRead: false,
         },
       }),
     ]);
 
-    // Determine user's access tier
-    const userTier = subscription?.plan?.accessTier || "FREE";
-    const tierOrder = ["FREE", "BASIC", "VIP"];
-    const userTierIndex = tierOrder.indexOf(userTier);
+    // Get creator info for each subscription
+    const subscriptionsWithCreators = await Promise.all(
+      subscriptions.map(async (sub) => {
+        const creator = sub.creatorSlug
+          ? await prisma.creator.findUnique({
+              where: { slug: sub.creatorSlug },
+              select: {
+                slug: true,
+                displayName: true,
+                avatar: true,
+              },
+            })
+          : null;
 
-    // Get user's purchased media IDs
-    const purchasedMediaIds = await prisma.mediaPurchase.findMany({
-      where: {
-        userId,
-        status: "COMPLETED",
-      },
-      select: {
-        mediaId: true,
-      },
-    });
-    const purchasedIds = new Set(purchasedMediaIds.map((p) => p.mediaId));
-
-    // Mark content as locked/unlocked based on user's tier and purchases
-    const contentWithAccess = recentMedia.map((media) => {
-      const mediaTierIndex = tierOrder.indexOf(media.accessTier);
-      const hasAccess = userTierIndex >= mediaTierIndex || purchasedIds.has(media.id);
-
-      return {
-        id: media.id,
-        title: media.title,
-        type: media.type.toLowerCase(),
-        thumbnail: media.thumbnailUrl || "/placeholder.jpg",
-        isLocked: !hasAccess,
-        accessTier: media.accessTier,
-      };
-    });
+        return {
+          id: sub.id,
+          planId: sub.planId,
+          planName: sub.plan?.name || sub.planId,
+          status: sub.status,
+          currentPeriodEnd: sub.currentPeriodEnd,
+          creatorSlug: sub.creatorSlug,
+          creator: creator,
+        };
+      })
+    );
 
     return NextResponse.json({
-      stats: {
-        unlockedContent,
-        messageCount,
-        currentPlan: subscription?.plan?.name || "Free",
-        planTier: userTier,
-        canMessage: subscription?.plan?.canMessage || false,
-      },
-      subscription: subscription
-        ? {
-            id: subscription.id,
-            planName: subscription.plan.name,
-            accessTier: subscription.plan.accessTier,
-            status: subscription.status,
-            currentPeriodEnd: subscription.currentPeriodEnd,
-            canMessage: subscription.plan.canMessage,
-          }
-        : null,
-      recentContent: contentWithAccess,
+      creditBalance: user?.creditBalance || 0,
+      userName: user?.name || "User",
+      subscriptions: subscriptionsWithCreators,
+      recentTransactions: recentTransactions.map((tx) => ({
+        id: tx.id,
+        amount: tx.amount,
+        type: tx.type,
+        description: tx.description,
+        createdAt: tx.createdAt,
+      })),
+      unreadMessages,
     });
   } catch (error) {
     console.error("Error fetching user stats:", error);

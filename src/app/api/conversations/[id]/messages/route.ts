@@ -55,6 +55,24 @@ export async function GET(
             userId: true,
           },
         },
+        replyTo: {
+          select: {
+            id: true,
+            text: true,
+            senderId: true,
+            sender: {
+              select: {
+                name: true,
+              },
+            },
+            media: {
+              select: {
+                type: true,
+              },
+              take: 1,
+            },
+          },
+        },
       },
       orderBy: { createdAt: "asc" },
       take: limit,
@@ -69,6 +87,7 @@ export async function GET(
     const markAsRead = searchParams.get("markAsRead") === "true";
 
     if (markAsRead) {
+      // Mark all unread messages as read
       await prisma.message.updateMany({
         where: {
           conversationId,
@@ -76,6 +95,15 @@ export async function GET(
           isRead: false,
         },
         data: { isRead: true },
+      });
+
+      // Also update participant's lastReadAt for consistency
+      await prisma.conversationParticipant.updateMany({
+        where: {
+          conversationId,
+          userId: currentUserId,
+        },
+        data: { lastReadAt: new Date() },
       });
     }
 
@@ -134,6 +162,11 @@ export async function GET(
           };
         }),
         reactions,
+        replyTo: msg.replyTo ? {
+          id: msg.replyTo.id,
+          text: msg.replyTo.text,
+          senderName: msg.replyTo.sender?.name || "User",
+        } : undefined,
         createdAt: msg.createdAt,
       };
     });
@@ -164,7 +197,7 @@ export async function POST(
 
     const { id: conversationId } = await params;
     const body = await request.json();
-    const { text, media, isPPV, ppvPrice, senderId } = body;
+    const { text, media, isPPV, ppvPrice, senderId, replyToId } = body;
 
     // Use senderId from body if provided, otherwise use session user
     const actualSenderId = senderId || session.user.id;
@@ -197,6 +230,7 @@ export async function POST(
         senderId: actualSenderId,
         receiverId,
         text: text || null,
+        replyToId: replyToId || null,
         isPPV: isPPV || false,
         ppvPrice: isPPV && ppvPrice ? ppvPrice : null,
         ppvUnlockedBy: "[]",
@@ -217,6 +251,18 @@ export async function POST(
             id: true,
             name: true,
             image: true,
+          },
+        },
+        replyTo: {
+          select: {
+            id: true,
+            text: true,
+            senderId: true,
+            sender: {
+              select: {
+                name: true,
+              },
+            },
           },
         },
       },
@@ -245,6 +291,11 @@ export async function POST(
         url: m.url,
         previewUrl: m.previewUrl,
       })),
+      replyTo: message.replyTo ? {
+        id: message.replyTo.id,
+        text: message.replyTo.text,
+        senderName: message.replyTo.sender?.name || "User",
+      } : undefined,
       createdAt: message.createdAt,
     };
 

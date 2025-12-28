@@ -3,7 +3,7 @@
 import { useState, useRef, useCallback, useEffect, memo } from "react";
 import { motion, AnimatePresence, PanInfo, useMotionValue, useTransform } from "framer-motion";
 import {
-  Lock, Play, Pause, DollarSign, Check, CheckCheck,
+  Lock, Play, Pause, Coins, Check, CheckCheck,
   CornerUpLeft, Heart, ThumbsUp, Laugh, Frown, Flame,
   MoreHorizontal, Volume2, VolumeX, Download, Maximize2
 } from "lucide-react";
@@ -46,6 +46,7 @@ interface MessageBubbleProps {
   replyTo?: QuotedMessage;
   isFirstInGroup?: boolean;
   isLastInGroup?: boolean;
+  isCurrentUserCreator?: boolean; // Hide tip button for creators
   onUnlock?: (messageId: string) => void;
   onTip?: (messageId: string) => void;
   onReact?: (messageId: string, emoji: string) => void;
@@ -74,6 +75,7 @@ export const MessageBubble = memo(function MessageBubble({
   replyTo,
   isFirstInGroup = true,
   isLastInGroup = true,
+  isCurrentUserCreator = false,
   onUnlock,
   onTip,
   onReact,
@@ -226,7 +228,7 @@ export const MessageBubble = memo(function MessageBubble({
         style={{ x }}
         onDragEnd={handleDragEnd}
         className={cn(
-          "relative max-w-[75%] min-w-[80px]",
+          "relative max-w-[75%] min-w-[80px] group/message",
           isSent ? "ml-auto" : "mr-auto"
         )}
         onTouchStart={handleTouchStart}
@@ -487,9 +489,9 @@ export const MessageBubble = memo(function MessageBubble({
 
         {/* Desktop hover actions */}
         <div className={cn(
-          "absolute top-1/2 -translate-y-1/2 hidden md:flex items-center gap-1",
-          "opacity-0 group-hover:opacity-100 transition-all duration-200",
-          isSent ? "left-0 -translate-x-full pr-2" : "right-0 translate-x-full pl-2"
+          "absolute top-2 hidden md:flex items-center gap-1 pointer-events-auto z-20",
+          "opacity-0 group-hover/message:opacity-100 hover:opacity-100 transition-all duration-200",
+          isSent ? "left-0 -translate-x-full pr-3" : "right-0 translate-x-full pl-3"
         )}>
           <motion.button
             whileHover={{ scale: 1.1 }}
@@ -507,14 +509,14 @@ export const MessageBubble = memo(function MessageBubble({
           >
             <CornerUpLeft className="w-4 h-4" />
           </motion.button>
-          {!isSent && (
+          {!isSent && !isCurrentUserCreator && (
             <motion.button
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
               onClick={() => onTip?.(id)}
               className="p-2 rounded-full bg-[var(--gold)]/20 hover:bg-[var(--gold)]/30 text-[var(--gold)] transition-colors backdrop-blur-md"
             >
-              <DollarSign className="w-4 h-4" />
+              <Coins className="w-4 h-4" />
             </motion.button>
           )}
         </div>
@@ -616,7 +618,7 @@ export const MessageBubble = memo(function MessageBubble({
                     className="w-full flex items-center gap-4 px-4 py-3.5 rounded-xl active:bg-white/5 transition-colors"
                   >
                     <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[var(--gold)]/30 to-amber-600/30 flex items-center justify-center">
-                      <DollarSign className="w-5 h-5 text-[var(--gold)]" />
+                      <Coins className="w-5 h-5 text-[var(--gold)]" />
                     </div>
                     <span className="text-white font-medium">Send Tip</span>
                   </button>

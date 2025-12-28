@@ -2,14 +2,20 @@ import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { Pricing } from "@/components/landing";
 
-export default function MembershipPage() {
+interface PageProps {
+  params: Promise<{ creator: string }>;
+}
+
+export default async function MembershipPage({ params }: PageProps) {
+  const { creator: creatorSlug } = await params;
+
   return (
     <>
-      <Navbar />
+      <Navbar creatorSlug={creatorSlug} />
       <main className="pt-16">
-        <Pricing />
+        <Pricing creatorSlug={creatorSlug} />
       </main>
-      <Footer />
+      <Footer creatorSlug={creatorSlug} />
     </>
   );
 }

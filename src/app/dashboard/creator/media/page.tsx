@@ -389,7 +389,7 @@ export default function CreatorMediaPage() {
   }
 
   return (
-    <div className="p-8">
+    <div className="p-4 sm:p-8 pb-24 sm:pb-8">
       {/* Current Creator indicator */}
       {selectedCreator && (
         <div className="mb-6 flex items-center gap-3 text-sm text-gray-400">
@@ -571,7 +571,7 @@ export default function CreatorMediaPage() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.2 }}
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+          className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6"
         >
           {filteredMedia.map((item, index) => (
             <motion.div
@@ -613,18 +613,37 @@ export default function CreatorMediaPage() {
                     </div>
                   )}
 
-                  {/* Status badges */}
-                  <div className="absolute top-3 left-3 flex flex-col gap-2">
-                    <Badge
-                      className={
-                        accessTiers.find((t) => t.id === item.accessTier)?.color
-                      }
-                    >
-                      {item.accessTier === "VIP" && (
+                  {/* Status badges - based on tags */}
+                  <div className="absolute top-3 left-3 flex flex-wrap gap-1.5 max-w-[80%]">
+                    {item.tagPPV && (
+                      <Badge className="bg-orange-500/20 text-orange-400">
+                        <Coins className="w-3 h-3 mr-1" />
+                        {item.ppvPriceCredits ? `${item.ppvPriceCredits}` : "PPV"}
+                      </Badge>
+                    )}
+                    {item.tagVIP && (
+                      <Badge className="bg-[var(--gold)]/20 text-[var(--gold)]">
                         <Crown className="w-3 h-3 mr-1" />
-                      )}
-                      {item.accessTier}
-                    </Badge>
+                        VIP
+                      </Badge>
+                    )}
+                    {item.tagAI && (
+                      <Badge className="bg-blue-500/20 text-blue-400">
+                        <Bot className="w-3 h-3 mr-1" />
+                        AI
+                      </Badge>
+                    )}
+                    {item.tagFree && !item.tagPPV && !item.tagVIP && (
+                      <Badge className="bg-emerald-500/20 text-emerald-400">
+                        <Unlock className="w-3 h-3 mr-1" />
+                        Free
+                      </Badge>
+                    )}
+                    {!item.tagPPV && !item.tagVIP && !item.tagFree && (
+                      <Badge className="bg-gray-500/20 text-gray-400">
+                        No tag
+                      </Badge>
+                    )}
                   </div>
 
                   {/* Status buttons */}

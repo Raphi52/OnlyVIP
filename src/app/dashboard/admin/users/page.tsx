@@ -14,6 +14,10 @@ import {
   RefreshCw,
   Check,
   Mail,
+  Coins,
+  X,
+  Trash2,
+  AlertTriangle,
 } from "lucide-react";
 import { Button, Card, Badge } from "@/components/ui";
 
@@ -24,8 +28,10 @@ interface User {
   image: string | null;
   role: "USER" | "ADMIN";
   isCreator: boolean;
+  isVip: boolean;
   emailVerified: Date | null;
   subscriptions: { creatorId: string }[];
+  creditBalance: number;
   createdAt: string;
 }
 
@@ -36,6 +42,11 @@ export default function AdminUsersPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterRole, setFilterRole] = useState<string>("all");
+  const [creditsModal, setCreditsModal] = useState<{ userId: string; userName: string } | null>(null);
+  const [creditsAmount, setCreditsAmount] = useState("");
+  const [isGivingCredits, setIsGivingCredits] = useState(false);
+  const [deleteModal, setDeleteModal] = useState<{ userId: string; userName: string } | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const isAdmin = (session?.user as any)?.role === "ADMIN";
 
@@ -134,6 +145,69 @@ export default function AdminUsersPage() {
     }
   };
 
+  const handleGiveCredits = async () => {
+    if (!creditsModal || !creditsAmount) return;
+
+    const amount = parseInt(creditsAmount);
+    if (isNaN(amount) || amount <= 0) {
+      alert("Please enter a valid amount");
+      return;
+    }
+
+    setIsGivingCredits(true);
+    try {
+      const res = await fetch(`/api/admin/users/${creditsModal.userId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ creditGrant: amount }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setUsers((prev) =>
+          prev.map((u) =>
+            u.id === creditsModal.userId
+              ? { ...u, creditBalance: data.newBalance }
+              : u
+          )
+        );
+        setCreditsModal(null);
+        setCreditsAmount("");
+        alert(`Successfully added ${amount} credits!`);
+      } else {
+        alert("Failed to give credits");
+      }
+    } catch (error) {
+      console.error("Error giving credits:", error);
+      alert("Failed to give credits");
+    } finally {
+      setIsGivingCredits(false);
+    }
+  };
+
+  const handleDeleteUser = async () => {
+    if (!deleteModal) return;
+
+    setIsDeleting(true);
+    try {
+      const res = await fetch(`/api/admin/users/${deleteModal.userId}`, {
+        method: "DELETE",
+      });
+
+      if (res.ok) {
+        setUsers((prev) => prev.filter((u) => u.id !== deleteModal.userId));
+        setDeleteModal(null);
+      } else {
+        alert("Failed to delete user");
+      }
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      alert("Failed to delete user");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   const filteredUsers = users.filter((user) => {
     const matchesSearch =
       user.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -200,21 +274,28 @@ export default function AdminUsersPage() {
           />
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          {["all", "admin", "creator", "user", "pending", "verified"].map((filter) => (
+          {[
+            { key: "all", label: "All" },
+            { key: "admin", label: "Admin" },
+            { key: "creator", label: "Creator" },
+            { key: "user", label: "User" },
+            { key: "pending", label: "Pending Email" },
+            { key: "verified", label: "Verified" },
+          ].map((filter) => (
             <button
-              key={filter}
-              onClick={() => setFilterRole(filter)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all capitalize ${
-                filterRole === filter
-                  ? filter === "pending"
+              key={filter.key}
+              onClick={() => setFilterRole(filter.key)}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                filterRole === filter.key
+                  ? filter.key === "pending"
                     ? "bg-yellow-500 text-black"
-                    : filter === "verified"
+                    : filter.key === "verified"
                     ? "bg-emerald-500 text-black"
                     : "bg-[var(--gold)] text-[var(--background)]"
                   : "bg-[var(--surface)] text-[var(--muted)] hover:text-[var(--foreground)]"
               }`}
             >
-              {filter}
+              {filter.label}
             </button>
           ))}
         </div>
@@ -225,7 +306,7 @@ export default function AdminUsersPage() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
-        className="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-8"
+        className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-8"
       >
         <Card variant="luxury" className="p-4">
           <div className="flex items-center gap-3">
@@ -286,7 +367,7 @@ export default function AdminUsersPage() {
               <p className="text-2xl font-bold text-[var(--foreground)]">
                 {users.filter((u) => !u.emailVerified).length}
               </p>
-              <p className="text-sm text-[var(--muted)]">Pending</p>
+              <p className="text-sm text-[var(--muted)]">Pending Email</p>
             </div>
           </div>
         </Card>
@@ -326,7 +407,7 @@ export default function AdminUsersPage() {
                       Status
                     </th>
                     <th className="text-left py-4 px-4 text-sm font-medium text-[var(--muted)]">
-                      Subscriptions
+                      Credits
                     </th>
                     <th className="text-left py-4 px-4 text-sm font-medium text-[var(--muted)]">
                       Joined
@@ -402,8 +483,13 @@ export default function AdminUsersPage() {
                           </Badge>
                         )}
                       </td>
-                      <td className="py-4 px-4 text-[var(--foreground)]">
-                        {user.subscriptions?.length || 0}
+                      <td className="py-4 px-4">
+                        <div className="flex items-center gap-1.5">
+                          <Coins className="w-4 h-4 text-[var(--gold)]" />
+                          <span className="text-[var(--foreground)] font-medium">
+                            {(user.creditBalance || 0).toLocaleString()}
+                          </span>
+                        </div>
                       </td>
                       <td className="py-4 px-4 text-[var(--muted)] text-sm">
                         {new Date(user.createdAt).toLocaleDateString()}
@@ -451,6 +537,23 @@ export default function AdminUsersPage() {
                           >
                             {user.isCreator ? "Remove Creator" : "Make Creator"}
                           </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setCreditsModal({ userId: user.id, userName: user.name || user.email })}
+                            className="border-[var(--gold)]/50 text-[var(--gold)] hover:bg-[var(--gold)]/10"
+                          >
+                            <Coins className="w-3 h-3 mr-1" />
+                            Give Credits
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setDeleteModal({ userId: user.id, userName: user.name || user.email })}
+                            className="border-red-500/50 text-red-400 hover:bg-red-500/10"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </Button>
                         </div>
                       </td>
                     </tr>
@@ -460,6 +563,160 @@ export default function AdminUsersPage() {
             </div>
           </Card>
         </motion.div>
+      )}
+
+      {/* Give Credits Modal */}
+      {creditsModal && (
+        <>
+          <div
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50"
+            onClick={() => setCreditsModal(null)}
+          />
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6 w-full max-w-md shadow-2xl"
+            >
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-[var(--gold)]/20 flex items-center justify-center">
+                    <Coins className="w-5 h-5 text-[var(--gold)]" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-[var(--foreground)]">Give Credits</h3>
+                    <p className="text-sm text-[var(--muted)]">{creditsModal.userName}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setCreditsModal(null)}
+                  className="p-2 rounded-lg hover:bg-white/10 text-[var(--muted)]"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-[var(--foreground)] mb-2">
+                    Amount of Credits
+                  </label>
+                  <input
+                    type="number"
+                    value={creditsAmount}
+                    onChange={(e) => setCreditsAmount(e.target.value)}
+                    placeholder="e.g. 1000"
+                    min="1"
+                    className="w-full px-4 py-3 bg-[var(--background)] border border-[var(--border)] rounded-xl text-[var(--foreground)] placeholder-[var(--muted)] focus:outline-none focus:border-[var(--gold)]"
+                  />
+                  <p className="text-xs text-[var(--muted)] mt-1">
+                    100 credits = $1.00
+                  </p>
+                </div>
+
+                <div className="flex gap-2">
+                  {[100, 500, 1000, 5000].map((amount) => (
+                    <button
+                      key={amount}
+                      onClick={() => setCreditsAmount(amount.toString())}
+                      className="flex-1 py-2 rounded-lg bg-[var(--gold)]/10 text-[var(--gold)] text-sm font-medium hover:bg-[var(--gold)]/20 transition-colors"
+                    >
+                      {amount}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="flex gap-3 pt-2">
+                  <Button
+                    variant="ghost"
+                    className="flex-1"
+                    onClick={() => setCreditsModal(null)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="premium"
+                    className="flex-1"
+                    onClick={handleGiveCredits}
+                    disabled={isGivingCredits || !creditsAmount}
+                  >
+                    {isGivingCredits ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <>
+                        <Coins className="w-4 h-4 mr-2" />
+                        Give Credits
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        </>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteModal && (
+        <>
+          <div
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50"
+            onClick={() => setDeleteModal(null)}
+          />
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="bg-[var(--surface)] border border-red-500/30 rounded-2xl p-6 w-full max-w-md shadow-2xl"
+            >
+              <div className="flex items-center gap-4 mb-6">
+                <div className="w-12 h-12 rounded-xl bg-red-500/20 flex items-center justify-center">
+                  <AlertTriangle className="w-6 h-6 text-red-400" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-[var(--foreground)]">Delete User</h3>
+                  <p className="text-sm text-[var(--muted)]">This action cannot be undone</p>
+                </div>
+              </div>
+
+              <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 mb-6">
+                <p className="text-sm text-red-300">
+                  You are about to permanently delete <strong className="text-red-400">{deleteModal.userName}</strong> and all their data:
+                </p>
+                <ul className="mt-2 text-sm text-red-300/80 list-disc list-inside space-y-1">
+                  <li>Messages & conversations</li>
+                  <li>Subscriptions & payments</li>
+                  <li>Credit transactions</li>
+                  <li>Sessions & accounts</li>
+                </ul>
+              </div>
+
+              <div className="flex gap-3">
+                <Button
+                  variant="ghost"
+                  className="flex-1"
+                  onClick={() => setDeleteModal(null)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  className="flex-1 bg-red-500 hover:bg-red-600 text-white"
+                  onClick={handleDeleteUser}
+                  disabled={isDeleting}
+                >
+                  {isDeleting ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <>
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Delete User
+                    </>
+                  )}
+                </Button>
+              </div>
+            </motion.div>
+          </div>
+        </>
       )}
     </div>
   );

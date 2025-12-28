@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
@@ -72,10 +72,20 @@ const tierVariants: Record<string, "free" | "basic" | "vip" | "premium"> = {
 
 export default function GalleryPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const creatorSlug = params.creator as string;
   const { data: session } = useSession();
   const router = useRouter();
-  const [activeCategory, setActiveCategory] = useState("All");
+
+  // Read initial filter from URL (?type=PHOTO or ?type=VIDEO)
+  const initialCategory = (() => {
+    const typeParam = searchParams.get("type");
+    if (typeParam === "PHOTO") return "Photos";
+    if (typeParam === "VIDEO") return "Videos";
+    return "All";
+  })();
+
+  const [activeCategory, setActiveCategory] = useState(initialCategory);
   const [isGridView, setIsGridView] = useState(true);
   const [selectedMedia, setSelectedMedia] = useState<string | null>(null);
   const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);

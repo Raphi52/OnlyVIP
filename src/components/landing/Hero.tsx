@@ -86,8 +86,7 @@ export function Hero({ creator }: HeroProps) {
   // Parallax transforms
   const imageY = useTransform(scrollYProgress, [0, 1], [0, 200]);
   const imageScale = useTransform(scrollYProgress, [0, 0.5], [1, 1.1]);
-  const textY = useTransform(scrollYProgress, [0, 1], [0, -100]);
-  const opacity = useTransform(scrollYProgress, [0, 0.8], [1, 0]);
+  const textY = useTransform(scrollYProgress, [0, 1], [0, -50]);
 
   // Smooth spring animations
   const smoothY = useSpring(imageY, { stiffness: 100, damping: 30 });
@@ -157,7 +156,7 @@ export function Hero({ creator }: HeroProps) {
       {/* Main content */}
       <motion.div
         className="relative z-20 min-h-screen flex flex-col justify-center px-6"
-        style={{ y: textY, opacity }}
+        style={{ y: textY }}
       >
         <div className="max-w-7xl mx-auto w-full">
           <div className="grid lg:grid-cols-2 gap-8 lg:gap-16 items-center">
@@ -384,7 +383,7 @@ export function Hero({ creator }: HeroProps) {
 
                 {/* Floating elements */}
                 <motion.div
-                  className="absolute -top-4 -left-4 w-16 h-16 rounded-2xl bg-gradient-to-br from-[var(--gold)] to-yellow-600 flex items-center justify-center shadow-lg shadow-[var(--gold)]/30"
+                  className="absolute -top-4 left-1/2 -translate-x-1/2 w-16 h-16 rounded-2xl bg-gradient-to-br from-[var(--gold)] to-yellow-600 flex items-center justify-center shadow-lg shadow-[var(--gold)]/30"
                   animate={{ y: [0, -10, 0], rotate: [0, 5, 0] }}
                   transition={{ duration: 3, repeat: Infinity }}
                 >
@@ -408,27 +407,27 @@ export function Hero({ creator }: HeroProps) {
           initial={{ opacity: 0, y: 50 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 1 }}
-          className="mt-16 lg:mt-24"
+          className="mt-16 lg:mt-24 px-2"
         >
           <div className="max-w-4xl mx-auto">
-            <div className="grid grid-cols-3 gap-4 lg:gap-8">
+            <div className="grid grid-cols-3 gap-2 sm:gap-4 lg:gap-8">
               {[
-                { icon: Camera, value: 450, suffix: "+", label: "Exclusive Photos" },
-                { icon: Play, value: 25, suffix: "+", label: "HD Videos" },
-                { icon: Users, value: 2500, suffix: "+", label: "VIP Members" },
+                { icon: Camera, value: 450, suffix: "+", label: "Photos" },
+                { icon: Play, value: 25, suffix: "+", label: "Videos" },
+                { icon: Users, value: 2500, suffix: "+", label: "Members" },
               ].map((stat, index) => (
                 <motion.div
                   key={stat.label}
                   initial={{ opacity: 0, y: 30 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 1.2 + index * 0.15 }}
-                  className="text-center p-4 lg:p-6 rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10 hover:border-[var(--gold)]/30 transition-all group hover:bg-white/10"
+                  className="text-center p-3 sm:p-4 lg:p-6 rounded-xl sm:rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10 hover:border-[var(--gold)]/30 transition-all group hover:bg-white/10 min-w-0"
                 >
-                  <stat.icon className="w-6 h-6 lg:w-8 lg:h-8 text-[var(--gold)] mx-auto mb-2 lg:mb-3 group-hover:scale-110 transition-transform" />
-                  <p className="text-2xl lg:text-4xl font-bold gradient-gold-text mb-1">
+                  <stat.icon className="w-5 h-5 sm:w-6 sm:h-6 lg:w-8 lg:h-8 text-[var(--gold)] mx-auto mb-1 sm:mb-2 lg:mb-3 group-hover:scale-110 transition-transform" />
+                  <p className="text-xl sm:text-2xl lg:text-4xl font-bold gradient-gold-text mb-0.5 sm:mb-1">
                     <AnimatedCounter value={stat.value} suffix={stat.suffix} />
                   </p>
-                  <p className="text-xs lg:text-sm text-gray-500">{stat.label}</p>
+                  <p className="text-[10px] sm:text-xs lg:text-sm text-gray-500 truncate">{stat.label}</p>
                 </motion.div>
               ))}
             </div>

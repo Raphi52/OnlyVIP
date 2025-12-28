@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 // GET /api/creators - List all active creators
 export async function GET(request: NextRequest) {
   try {
-    const creators = await prisma.creator.findMany({
+    const creatorsRaw = await prisma.creator.findMany({
       where: {
         isActive: true,
       },
@@ -19,6 +19,7 @@ export async function GET(request: NextRequest) {
         photoCount: true,
         videoCount: true,
         subscriberCount: true,
+        categories: true,
         createdAt: true,
       },
       orderBy: [
@@ -27,7 +28,29 @@ export async function GET(request: NextRequest) {
       ],
     });
 
-    return NextResponse.json({ creators });
+    // Parse categories JSON for each creator
+    const creators = creatorsRaw.map((creator) => ({
+      ...creator,
+      categories: (() => {
+        try {
+          const parsed = JSON.parse(creator.categories || "[]");
+          return Array.isArray(parsed) ? parsed : [];
+        } catch {
+          return [];
+        }
+      })(),
+    }));
+
+    // Return with no-cache headers to ensure fresh data
+    return NextResponse.json(
+      { creators },
+      {
+        headers: {
+          "Cache-Control": "no-store, no-cache, must-revalidate",
+          "Pragma": "no-cache",
+        },
+      }
+    );
   } catch (error) {
     console.error("Error fetching creators:", error);
     return NextResponse.json(

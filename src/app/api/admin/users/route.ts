@@ -32,6 +32,7 @@ export async function GET(request: NextRequest) {
         isCreator: true,
         isVip: true,
         emailVerified: true,
+        creditBalance: true,
         createdAt: true,
         subscriptions: {
           where: { status: "ACTIVE" },
@@ -52,6 +53,7 @@ export async function GET(request: NextRequest) {
       isCreator: user.isCreator,
       isVip: user.isVip,
       emailVerified: user.emailVerified,
+      creditBalance: user.creditBalance || 0,
       subscriptions: user.subscriptions,
       createdAt: user.createdAt,
     }));

@@ -60,21 +60,48 @@ export async function GET(request: NextRequest) {
       orderBy: { updatedAt: "desc" },
     });
 
+    // Filter out self-conversations (where there's no other participant)
+    const validConversations = conversations.filter((conv) => {
+      // Must have at least 2 participants, or at least one participant that's not the current user
+      const otherParticipant = conv.participants.find((p) => p.userId !== userId);
+      return otherParticipant !== undefined;
+    });
+
     // Transform data for frontend
     const transformedConversations = await Promise.all(
-      conversations.map(async (conv) => {
+      validConversations.map(async (conv) => {
         // Get the other user (not current user)
-        // For self-conversations (admin testing), show self as other user
         const otherParticipant = conv.participants.find(
           (p) => p.userId !== userId
-        ) || conv.participants[0];
+        );
         const otherUser = otherParticipant?.user;
 
-        // Check if the other user is a creator and get their avatar
+        // Determine display name/image based on who is viewing:
+        // - If current user is the CREATOR owner -> show FAN's info
+        // - If current user is a FAN -> show CREATOR's profile info
         let userImage = otherUser?.image;
         let userName = otherUser?.name || otherUser?.email?.split("@")[0] || "User";
 
-        if (otherUser?.id) {
+        // Check if current user owns the creator profile for this conversation
+        let currentUserIsCreatorOwner = false;
+        if (conv.creatorSlug) {
+          const creatorProfile = await prisma.creator.findUnique({
+            where: { slug: conv.creatorSlug },
+            select: { userId: true, avatar: true, displayName: true },
+          });
+
+          if (creatorProfile) {
+            currentUserIsCreatorOwner = creatorProfile.userId === userId;
+
+            // Only show creator profile info if current user is NOT the creator owner (i.e., is a fan)
+            if (!currentUserIsCreatorOwner) {
+              userImage = creatorProfile.avatar || userImage;
+              userName = creatorProfile.displayName || userName;
+            }
+            // If current user IS the creator owner, keep showing the fan's info (otherUser)
+          }
+        } else if (otherUser?.id && !currentUserIsCreatorOwner) {
+          // Fallback: find any creator profile for the other user (when no creatorSlug)
           const creator = await prisma.creator.findFirst({
             where: { userId: otherUser.id },
             select: { avatar: true, displayName: true },
@@ -94,6 +121,9 @@ export async function GET(request: NextRequest) {
             isRead: false,
           },
         });
+
+        // Get current user's participant settings (pin/mute)
+        const currentParticipant = conv.participants.find(p => p.userId === userId);
 
         // Get other user's subscription (for admin/creator view)
         let subscriptionName = null;
@@ -140,6 +170,8 @@ export async function GET(request: NextRequest) {
             : null,
           unreadCount,
           subscription: subscriptionName,
+          isPinned: currentParticipant?.isPinned || false,
+          isMuted: currentParticipant?.isMuted || false,
           createdAt: conv.createdAt,
           updatedAt: conv.updatedAt,
         };

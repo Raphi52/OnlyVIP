@@ -35,6 +35,11 @@ interface Message {
     count: number;
     users: string[];
   }[];
+  replyTo?: {
+    id: string;
+    text?: string;
+    senderName: string;
+  };
   createdAt: string;
 }
 
@@ -197,6 +202,11 @@ export default function MessagesPage() {
       if (res.ok) {
         const data = await res.json();
         setMessages(data);
+
+        // Notify sidebar to update unread count when messages are marked as read
+        if (markAsRead) {
+          window.dispatchEvent(new Event("unread-count-updated"));
+        }
       }
     } catch (error) {
       console.error("Error fetching messages:", error);
@@ -220,10 +230,52 @@ export default function MessagesPage() {
     fetchConversations();
   }, [fetchConversations]);
 
+  // Handle messages read event from Pusher (when other user reads our messages)
+  const handleMessagesRead = useCallback((data: { readerId: string }) => {
+    // Update local message state to show read receipts for messages we sent to that reader
+    setMessages((prev) =>
+      prev.map((msg) =>
+        msg.senderId === userId && msg.receiverId === data.readerId
+          ? { ...msg, isRead: true }
+          : msg
+      )
+    );
+  }, [userId]);
+
+  // Handle marking messages as read (batch approach)
+  const handleMarkAsRead = useCallback(async () => {
+    if (!selectedConversation) return;
+
+    try {
+      // Use batch approach - fetch with markAsRead=true
+      await fetch(`/api/conversations/${selectedConversation.id}/messages?markAsRead=true`);
+
+      // Update local state
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.senderId !== userId ? { ...msg, isRead: true } : msg
+        )
+      );
+
+      // Update unread count in conversation list
+      setConversations((prev) =>
+        prev.map((conv) =>
+          conv.id === selectedConversation.id ? { ...conv, unreadCount: 0 } : conv
+        )
+      );
+
+      // Notify sidebar to update unread count
+      window.dispatchEvent(new Event("unread-count-updated"));
+    } catch (error) {
+      console.error("Error marking messages as read:", error);
+    }
+  }, [selectedConversation, userId]);
+
   // Pusher real-time connection
   const { isConnected } = usePusherChat({
     conversationId: selectedConversation?.id || "",
     onNewMessage: handleNewMessage,
+    onMessagesRead: handleMessagesRead,
   });
 
   // Fallback polling when Pusher is not connected (every 5 seconds)
@@ -269,7 +321,8 @@ export default function MessagesPage() {
     text: string,
     mediaFiles?: File[],
     isPPV?: boolean,
-    ppvPrice?: number
+    ppvPrice?: number,
+    replyToId?: string
   ) => {
     if (!selectedConversation || !userId) return;
     if (!text && (!mediaFiles || mediaFiles.length === 0)) return;
@@ -309,6 +362,7 @@ export default function MessagesPage() {
           text: text || null,
           senderId: userId,
           media: uploadedMedia.length > 0 ? uploadedMedia : undefined,
+          replyToId: replyToId || undefined,
         }),
       });
 
@@ -383,6 +437,88 @@ export default function MessagesPage() {
       return dateB - dateA;
     });
   }, [conversations, searchQuery]);
+
+  // Handle AI suggestion
+  const handleAISuggest = async (lastUserMessage: string): Promise<string> => {
+    if (!selectedConversation) {
+      throw new Error("No conversation selected");
+    }
+
+    const res = await fetch(`/api/conversations/${selectedConversation.id}/ai-suggest`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+    });
+
+    if (!res.ok) {
+      throw new Error("Failed to get AI suggestion");
+    }
+
+    const data = await res.json();
+    return data.suggestion;
+  };
+
+  // Handle pin conversation
+  const handlePinConversation = async (conversationId: string, isPinned: boolean) => {
+    try {
+      const res = await fetch(`/api/conversations/${conversationId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isPinned }),
+      });
+
+      if (res.ok) {
+        setConversations((prev) =>
+          prev.map((conv) =>
+            conv.id === conversationId ? { ...conv, isPinned } : conv
+          )
+        );
+      }
+    } catch (error) {
+      console.error("Error pinning conversation:", error);
+    }
+    setShowConversationMenu(null);
+  };
+
+  // Handle mute conversation
+  const handleMuteConversation = async (conversationId: string, isMuted: boolean) => {
+    try {
+      const res = await fetch(`/api/conversations/${conversationId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isMuted }),
+      });
+
+      if (res.ok) {
+        setConversations((prev) =>
+          prev.map((conv) =>
+            conv.id === conversationId ? { ...conv, isMuted } : conv
+          )
+        );
+      }
+    } catch (error) {
+      console.error("Error muting conversation:", error);
+    }
+    setShowConversationMenu(null);
+  };
+
+  // Handle delete conversation
+  const handleDeleteConversation = async (conversationId: string) => {
+    try {
+      const res = await fetch(`/api/conversations/${conversationId}`, {
+        method: "DELETE",
+      });
+
+      if (res.ok) {
+        setConversations((prev) => prev.filter((conv) => conv.id !== conversationId));
+        if (selectedConversation?.id === conversationId) {
+          setSelectedConversation(null);
+        }
+      }
+    } catch (error) {
+      console.error("Error deleting conversation:", error);
+    }
+    setShowConversationMenu(null);
+  };
 
   // Handle reaction
   const handleReact = async (messageId: string, emoji: string) => {
@@ -730,15 +866,35 @@ export default function MessagesPage() {
                         exit={{ opacity: 0, scale: 0.95, y: -10 }}
                         className="absolute right-4 top-full -mt-2 z-20 bg-[#1a1a1a] border border-white/10 rounded-xl shadow-2xl overflow-hidden"
                       >
-                        <button className="w-full flex items-center gap-3 px-4 py-3 text-sm text-white hover:bg-white/5 transition-colors">
-                          <Pin className="w-4 h-4" />
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handlePinConversation(conv.id, !conv.isPinned);
+                          }}
+                          className="w-full flex items-center gap-3 px-4 py-3 text-sm text-white hover:bg-white/5 transition-colors"
+                        >
+                          <Pin className={cn("w-4 h-4", conv.isPinned && "text-[var(--gold)]")} />
                           {conv.isPinned ? "Unpin" : "Pin"}
                         </button>
-                        <button className="w-full flex items-center gap-3 px-4 py-3 text-sm text-white hover:bg-white/5 transition-colors">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleMuteConversation(conv.id, !conv.isMuted);
+                          }}
+                          className="w-full flex items-center gap-3 px-4 py-3 text-sm text-white hover:bg-white/5 transition-colors"
+                        >
                           {conv.isMuted ? <Bell className="w-4 h-4" /> : <BellOff className="w-4 h-4" />}
                           {conv.isMuted ? "Unmute" : "Mute"}
                         </button>
-                        <button className="w-full flex items-center gap-3 px-4 py-3 text-sm text-red-400 hover:bg-red-500/10 transition-colors">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (confirm("Are you sure you want to delete this conversation?")) {
+                              handleDeleteConversation(conv.id);
+                            }
+                          }}
+                          className="w-full flex items-center gap-3 px-4 py-3 text-sm text-red-400 hover:bg-red-500/10 transition-colors"
+                        >
                           <Trash2 className="w-4 h-4" />
                           Delete
                         </button>
@@ -780,10 +936,13 @@ export default function MessagesPage() {
                 isOnline: selectedConversation.otherUser.isOnline,
               }}
               messages={transformedMessages}
+              isAdmin={isCreator}
               onSendMessage={handleSendMessage}
               onUnlockPPV={handleUnlockPPV}
               onSendTip={handleSendTip}
               onReact={handleReact}
+              onMarkAsRead={handleMarkAsRead}
+              onAISuggest={isCreator ? handleAISuggest : undefined}
               isSending={isSending}
               onBack={() => setSelectedConversation(null)}
             />

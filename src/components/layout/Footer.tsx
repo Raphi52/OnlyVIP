@@ -6,10 +6,12 @@ import { getCreator } from "@/lib/creators";
 
 interface FooterProps {
   creatorSlug?: string;
+  creatorName?: string;
 }
 
-export function Footer({ creatorSlug = "miacosta" }: FooterProps) {
+export function Footer({ creatorSlug = "miacosta", creatorName }: FooterProps) {
   const creator = getCreator(creatorSlug);
+  const displayName = creatorName || creator?.displayName || "Creator";
   const basePath = `/${creatorSlug}`;
 
   const footerLinks = {
@@ -42,7 +44,7 @@ export function Footer({ creatorSlug = "miacosta" }: FooterProps) {
             <Link href={basePath} className="flex items-center gap-2 mb-4">
               <Crown className="w-6 h-6 text-[var(--gold)]" />
               <span className="text-xl font-semibold gradient-gold-text">
-                {creator?.displayName || "Creator"}
+                {displayName}
               </span>
             </Link>
             <p className="text-sm text-[var(--muted)]">
@@ -112,7 +114,7 @@ export function Footer({ creatorSlug = "miacosta" }: FooterProps) {
 
         <div className="mt-12 pt-8 border-t border-[var(--border)]">
           <p className="text-center text-sm text-[var(--muted)]">
-            &copy; {new Date().getFullYear()} {creator?.displayName || "Creator"}. All rights reserved.
+            &copy; {new Date().getFullYear()} {displayName}. All rights reserved.
           </p>
         </div>
       </div>

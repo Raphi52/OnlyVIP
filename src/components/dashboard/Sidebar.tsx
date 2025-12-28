@@ -29,15 +29,16 @@ import {
   Trash2,
   ExternalLink,
   Check,
+  Wallet,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAdminCreator, Creator } from "@/components/providers/AdminCreatorContext";
 
 // Navigation pour les utilisateurs normaux
 const userLinks = [
+  { href: "/dashboard/messages", icon: MessageCircle, label: "Messages" },
   { href: "/dashboard", icon: Home, label: "Dashboard" },
   { href: "/dashboard/library", icon: Image, label: "My Library" },
-  { href: "/dashboard/messages", icon: MessageCircle, label: "Messages" },
   { href: "/dashboard/billing", icon: CreditCard, label: "Billing" },
 ];
 
@@ -46,7 +47,6 @@ const creatorLinks = [
   { href: "/dashboard/creator", icon: Crown, label: "Creator Dashboard" },
   { href: "/dashboard/creator/media", icon: Upload, label: "Media Library" },
   { href: "/dashboard/creator/members", icon: Users, label: "Members" },
-  { href: "/dashboard/creator/messages", icon: MessageCircle, label: "Fan Messages" },
   { href: "/dashboard/creator/earnings", icon: DollarSign, label: "Earnings" },
   { href: "/dashboard/creator/analytics", icon: BarChart3, label: "Analytics" },
   { href: "/dashboard/creator/settings", icon: Settings, label: "Creator Settings" },
@@ -58,6 +58,7 @@ const adminLinks = [
   { href: "/dashboard/admin/creators", icon: Crown, label: "All Creators" },
   { href: "/dashboard/admin/users", icon: Users, label: "All Users" },
   { href: "/dashboard/admin/payments", icon: DollarSign, label: "All Payments" },
+  { href: "/dashboard/admin/payouts", icon: Wallet, label: "Creator Payouts" },
   { href: "/dashboard/admin/analytics", icon: BarChart3, label: "Site Analytics" },
   { href: "/dashboard/admin/settings", icon: Globe, label: "Site Settings" },
 ];
@@ -97,7 +98,17 @@ export function Sidebar() {
     fetchUnreadCount();
     // Refresh every 30 seconds
     const interval = setInterval(fetchUnreadCount, 30000);
-    return () => clearInterval(interval);
+
+    // Listen for custom event when messages are read
+    const handleUnreadUpdate = () => {
+      fetchUnreadCount();
+    };
+    window.addEventListener("unread-count-updated", handleUnreadUpdate);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("unread-count-updated", handleUnreadUpdate);
+    };
   }, [fetchUnreadCount]);
 
   const NavLink = ({
@@ -113,7 +124,13 @@ export function Sidebar() {
     badge?: number;
     index?: number;
   }) => {
-    const isActive = pathname === href || pathname.startsWith(href + "/");
+    // More precise active detection to avoid conflicts
+    const isExactMatch = pathname === href;
+    const isChildMatch = pathname.startsWith(href + "/");
+
+    // These routes should only match exactly, not their children
+    const exactMatchOnly = href === "/dashboard" || href === "/dashboard/creator" || href === "/dashboard/admin";
+    const isActive = exactMatchOnly ? isExactMatch : (isExactMatch || isChildMatch);
 
     return (
       <motion.div
@@ -125,24 +142,37 @@ export function Sidebar() {
           href={href}
           onClick={() => setIsMobileOpen(false)}
           className={cn(
-            "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300",
+            "relative flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 group",
             isActive
-              ? "bg-gradient-to-r from-[var(--gold)]/20 to-[var(--gold)]/5 text-[var(--gold)] border border-[var(--gold)]/30"
+              ? "bg-gradient-to-r from-[var(--gold)]/15 to-[var(--gold)]/5 text-white border border-[var(--gold)]/30"
               : "text-gray-400 hover:text-white hover:bg-white/5 border border-transparent"
           )}
         >
-          <Icon className={cn("w-5 h-5", isActive && "text-[var(--gold)]")} />
-          <span className="flex-1 font-medium">{label}</span>
+          {/* Active indicator - golden bar */}
+          {isActive && (
+            <motion.div
+              layoutId="sidebar-active-indicator"
+              className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 rounded-full bg-gradient-to-b from-[var(--gold)] to-amber-600 shadow-lg shadow-[var(--gold)]/50"
+              transition={{ type: "spring", stiffness: 500, damping: 30 }}
+            />
+          )}
+          {/* Icon - always gold color */}
+          <Icon className={cn(
+            "w-5 h-5 transition-colors",
+            isActive ? "text-[var(--gold)]" : "text-[var(--gold)]/70 group-hover:text-[var(--gold)]"
+          )} />
+          <span className={cn(
+            "flex-1 font-medium transition-colors",
+            isActive && "text-white"
+          )}>{label}</span>
           {badge && badge > 0 && (
             <span className="px-2 py-0.5 text-xs font-bold bg-[var(--gold)] text-black rounded-full">
               {badge}
             </span>
           )}
+          {/* Subtle glow effect on active */}
           {isActive && (
-            <motion.div
-              layoutId="activeIndicator"
-              className="w-1.5 h-1.5 rounded-full bg-[var(--gold)]"
-            />
+            <div className="absolute inset-0 rounded-xl bg-[var(--gold)]/5 pointer-events-none" />
           )}
         </Link>
       </motion.div>
@@ -245,7 +275,7 @@ export function Sidebar() {
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  className="fixed inset-0 z-40"
+                  className="fixed inset-0 z-[60]"
                   onClick={() => setIsCreatorDropdownOpen(false)}
                 />
                 <motion.div
@@ -253,7 +283,7 @@ export function Sidebar() {
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: -10, scale: 0.95 }}
                   transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                  className="absolute left-0 right-0 mt-2 bg-black/95 backdrop-blur-xl border border-[var(--gold)]/20 rounded-xl shadow-2xl shadow-black/50 overflow-hidden z-50"
+                  className="absolute left-0 right-0 mt-2 bg-black/95 backdrop-blur-xl border border-[var(--gold)]/20 rounded-xl shadow-2xl shadow-black/50 overflow-hidden z-[70]"
                 >
                   <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-[var(--gold)]/50 to-transparent" />
 
@@ -366,7 +396,7 @@ export function Sidebar() {
                 key={link.href}
                 {...link}
                 index={index + (isAdmin ? adminLinks.length : 0)}
-                badge={link.href === "/dashboard/creator/messages" ? unreadCount : undefined}
+                badge={undefined}
               />
             ))}
             <div className="h-4" />

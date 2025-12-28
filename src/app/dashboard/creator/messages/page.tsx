@@ -109,6 +109,9 @@ export default function CreatorMessagesPage() {
     // Update the conversation's lastMessage
     // Since Pusher is subscribed to activeConversation, update that one
     if (activeConversation) {
+      // If message is from us (creator), it's read. If from fan and we're viewing, consider it read.
+      const isFromCreator = message.senderId === selectedCreator?.userId || message.senderId === selectedCreator?.slug;
+
       setConversations((prev) =>
         prev.map((conv) =>
           conv.id === activeConversation
@@ -118,20 +121,60 @@ export default function CreatorMessagesPage() {
                   text: message.isPPV ? "Sent exclusive content" : message.text,
                   isPPV: message.isPPV,
                   createdAt: typeof message.createdAt === 'string' ? message.createdAt : new Date().toISOString(),
-                  isRead: false,
+                  isRead: isFromCreator, // Our messages are read, fan messages need to be marked as read
                   senderId: message.senderId,
                 },
+                // If message is from fan, increment unread count
+                unreadCount: isFromCreator ? conv.unreadCount : conv.unreadCount + 1,
               }
             : conv
         )
       );
     }
-  }, [activeConversation]);
+  }, [activeConversation, selectedCreator]);
+
+  // Handle messages read event from Pusher (when fan reads our messages)
+  const handleMessagesRead = useCallback((data: { readerId: string }) => {
+    // When a fan reads messages, mark all our messages to them as read
+    setMessages((prev) =>
+      prev.map((msg) =>
+        msg.receiverId === data.readerId ? { ...msg, isRead: true } : msg
+      )
+    );
+  }, []);
+
+  // Handle marking messages as read (batch approach)
+  const handleMarkAsRead = useCallback(async () => {
+    if (!activeConversation) return;
+
+    try {
+      await fetch(`/api/conversations/${activeConversation}/messages?markAsRead=true`);
+
+      // Update local state
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.senderId !== selectedCreator?.userId && msg.senderId !== selectedCreator?.slug
+            ? { ...msg, isRead: true }
+            : msg
+        )
+      );
+
+      // Reset unread count
+      setConversations((prev) =>
+        prev.map((conv) =>
+          conv.id === activeConversation ? { ...conv, unreadCount: 0 } : conv
+        )
+      );
+    } catch (error) {
+      console.error("Error marking messages as read:", error);
+    }
+  }, [activeConversation, selectedCreator]);
 
   // Pusher real-time subscription
   const { isConnected } = usePusherChat({
     conversationId: activeConversation || "",
     onNewMessage: handleNewMessage,
+    onMessagesRead: handleMessagesRead,
   });
 
   useEffect(() => {
@@ -623,6 +666,7 @@ export default function CreatorMessagesPage() {
                 isAdmin={true}
                 isSending={isSending}
                 onSendMessage={handleSendMessage}
+                onMarkAsRead={handleMarkAsRead}
                 onUnlockPPV={(messageId) => {
                   console.log("User unlock PPV:", messageId);
                 }}

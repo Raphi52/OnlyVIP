@@ -117,6 +117,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Get the actual plan from database
+    const plan = await prisma.subscriptionPlan.findFirst({
+      where: {
+        OR: [
+          { slug: planId },
+          { accessTier: planId.toUpperCase() },
+        ],
+      },
+    });
+
+    if (!plan) {
+      return NextResponse.json(
+        { error: "Plan not found" },
+        { status: 404 }
+      );
+    }
+
     // Spend credits
     const spendResult = await spendCredits(userId, creditsRequired, "SUBSCRIPTION", {
       description: `${planId.toUpperCase()} subscription (${interval}) for ${creatorSlug}`,
@@ -135,7 +152,7 @@ export async function POST(request: NextRequest) {
     const subscription = await prisma.subscription.create({
       data: {
         userId,
-        planId: planId.toUpperCase(),
+        planId: plan.id,
         creatorSlug,
         status: "ACTIVE",
         paymentProvider: "CREDITS",

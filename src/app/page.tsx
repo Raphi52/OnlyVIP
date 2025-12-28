@@ -23,6 +23,8 @@ import {
   Search,
 } from "lucide-react";
 import { Button, Card } from "@/components/ui";
+import { getCategoryById } from "@/lib/categories";
+import { cn } from "@/lib/utils";
 
 interface Creator {
   id: string;
@@ -35,6 +37,7 @@ interface Creator {
   photoCount: number;
   videoCount: number;
   subscriberCount: number;
+  categories?: string[];
 }
 
 const creatorFeatures = [
@@ -155,16 +158,9 @@ export default function HomePage() {
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-4">
               Discover <span className="gradient-gold-text">Exclusive</span> Creators
             </h1>
-            <p className="text-lg text-gray-400 max-w-2xl mx-auto mb-6">
+            <p className="text-lg text-gray-400 max-w-2xl mx-auto">
               Subscribe to your favorite creators and access exclusive content, private messages, and more.
             </p>
-            <Link href="/creators">
-              <Button variant="outline" className="gap-2">
-                <Search className="w-4 h-4" />
-                Browse All Creators
-                <ArrowRight className="w-4 h-4" />
-              </Button>
-            </Link>
           </motion.div>
 
           {/* Creators Grid */}
@@ -242,13 +238,25 @@ export default function HomePage() {
                           </div>
                         </div>
 
-                        {/* VIP badge */}
-                        <div className="absolute top-3 right-3">
-                          <div className="px-2 py-1 rounded-full bg-[var(--gold)]/90 text-black text-xs font-bold flex items-center gap-1">
-                            <Crown className="w-3 h-3" />
-                            VIP
+                        {/* Category tags */}
+                        {creator.categories && creator.categories.length > 0 && (
+                          <div className="absolute top-3 right-3 flex flex-col gap-1 items-end">
+                            {creator.categories.slice(0, 2).map((catId) => {
+                              const cat = getCategoryById(catId);
+                              return cat ? (
+                                <span
+                                  key={catId}
+                                  className={cn(
+                                    "px-2 py-0.5 rounded-full text-[10px] font-bold backdrop-blur-sm",
+                                    cat.color
+                                  )}
+                                >
+                                  {cat.label}
+                                </span>
+                              ) : null;
+                            })}
                           </div>
-                        </div>
+                        )}
                       </div>
                     </Card>
                   </Link>

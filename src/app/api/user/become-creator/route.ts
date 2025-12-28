@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
-// POST /api/user/become-creator - Upgrade existing user to creator
+// POST /api/user/become-creator - Create creator profile directly
 export async function POST(request: NextRequest) {
   try {
     const session = await auth();
@@ -16,6 +16,31 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const { slug, displayName } = body;
+
+    // Get current user
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        isCreator: true,
+      },
+    });
+
+    if (!user) {
+      return NextResponse.json(
+        { error: "User not found" },
+        { status: 404 }
+      );
+    }
+
+    if (user.isCreator) {
+      return NextResponse.json(
+        { error: "You are already a creator" },
+        { status: 400 }
+      );
+    }
 
     // Validate slug
     if (!slug || slug.length < 3 || slug.length > 30) {
@@ -39,26 +64,6 @@ export async function POST(request: NextRequest) {
     if (reservedSlugs.includes(cleanSlug)) {
       return NextResponse.json(
         { error: "This URL is reserved. Please choose another one." },
-        { status: 400 }
-      );
-    }
-
-    // Check if user is already a creator
-    const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      select: { id: true, name: true, email: true, isCreator: true },
-    });
-
-    if (!user) {
-      return NextResponse.json(
-        { error: "User not found" },
-        { status: 404 }
-      );
-    }
-
-    if (user.isCreator) {
-      return NextResponse.json(
-        { error: "You are already a creator" },
         { status: 400 }
       );
     }
@@ -113,13 +118,13 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("Become creator error:", error);
     return NextResponse.json(
-      { error: "Failed to create creator profile. Please try again." },
+      { error: "Failed to process request. Please try again." },
       { status: 500 }
     );
   }
 }
 
-// GET /api/user/become-creator?slug=xxx - Check slug availability
+// GET /api/user/become-creator - Check slug availability
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);

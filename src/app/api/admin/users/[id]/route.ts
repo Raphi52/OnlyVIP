@@ -16,6 +16,43 @@ export async function PATCH(
     const { id } = await params;
     const body = await request.json();
 
+    // Handle credit grant separately
+    if (body.creditGrant && body.creditGrant > 0) {
+      const user = await prisma.user.findUnique({
+        where: { id },
+        select: { creditBalance: true },
+      });
+
+      if (!user) {
+        return NextResponse.json({ error: "User not found" }, { status: 404 });
+      }
+
+      const newBalance = (user.creditBalance || 0) + body.creditGrant;
+
+      // Create transaction record
+      await prisma.creditTransaction.create({
+        data: {
+          userId: id,
+          amount: body.creditGrant,
+          balance: newBalance,
+          type: "ADMIN_GRANT",
+          description: body.creditDescription || "Admin credit grant",
+        },
+      });
+
+      // Update user balance
+      const updatedUser = await prisma.user.update({
+        where: { id },
+        data: { creditBalance: newBalance },
+      });
+
+      return NextResponse.json({
+        user: updatedUser,
+        creditsAdded: body.creditGrant,
+        newBalance,
+      });
+    }
+
     const updateData: any = {};
     if (body.role !== undefined) updateData.role = body.role;
     if (body.isCreator !== undefined) updateData.isCreator = body.isCreator;
@@ -40,7 +77,7 @@ export async function PATCH(
   }
 }
 
-// DELETE /api/admin/users/[id] - Delete user
+// DELETE /api/admin/users/[id] - Delete user and all related data
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -53,8 +90,47 @@ export async function DELETE(
 
     const { id } = await params;
 
-    await prisma.user.delete({
-      where: { id },
+    // Delete everything in a transaction for clean removal
+    await prisma.$transaction(async (tx) => {
+      // Delete messages sent or received by user
+      await tx.message.deleteMany({
+        where: { OR: [{ senderId: id }, { receiverId: id }] },
+      });
+
+      // Delete conversation participants
+      await tx.conversationParticipant.deleteMany({
+        where: { userId: id },
+      });
+
+      // Delete reactions
+      await tx.messageReaction.deleteMany({
+        where: { userId: id },
+      });
+
+      // Delete subscriptions
+      await tx.subscription.deleteMany({
+        where: { userId: id },
+      });
+
+      // Delete credit transactions
+      await tx.creditTransaction.deleteMany({
+        where: { userId: id },
+      });
+
+      // Delete accounts (OAuth)
+      await tx.account.deleteMany({
+        where: { userId: id },
+      });
+
+      // Delete sessions
+      await tx.session.deleteMany({
+        where: { userId: id },
+      });
+
+      // Finally delete user (cascades remaining relations)
+      await tx.user.delete({
+        where: { id },
+      });
     });
 
     return NextResponse.json({ success: true });

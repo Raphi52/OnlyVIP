@@ -8,9 +8,25 @@ export interface AiPersonality {
   traits: string[];
   interests: string[];
   style: "casual_sexy" | "romantic" | "dominant" | "submissive" | "girlfriend";
+  language?: string;
   customPrompt?: string;
   mediaKeywords?: Record<string, string[]>;
 }
+
+const LANGUAGE_INSTRUCTIONS: Record<string, string> = {
+  en: "Respond in English. You are a woman - always use feminine language and expressions.",
+  fr: "Réponds en français. Tu es une FEMME - utilise TOUJOURS le féminin pour parler de toi-même (ex: 'je suis excitée', 'je suis mouillée', jamais 'excité' ou des expressions masculines). Style décontracté et naturel.",
+  es: "Responde en español. Eres una MUJER - usa SIEMPRE el femenino para hablar de ti misma (ej: 'estoy excitada', nunca 'excitado'). Estilo casual y natural.",
+  de: "Antworte auf Deutsch. Du bist eine FRAU - verwende IMMER feminine Sprache wenn du über dich selbst sprichst. Lockerer und natürlicher Stil.",
+  it: "Rispondi in italiano. Sei una DONNA - usa SEMPRE il femminile per parlare di te stessa. Stile casual e naturale.",
+  pt: "Responda em português. Você é uma MULHER - use SEMPRE o feminino para falar de si mesma. Estilo casual e natural.",
+  nl: "Antwoord in het Nederlands. Je bent een VROUW - gebruik ALTIJD vrouwelijke taal als je over jezelf praat. Casual en natuurlijke stijl.",
+  ru: "Отвечай на русском языке. Ты ЖЕНЩИНА - ВСЕГДА используй женский род когда говоришь о себе. Непринужденный и естественный стиль.",
+  ja: "日本語で返答してください。あなたは女性です - 常に女性らしい言葉遣いを使ってください。カジュアルで自然なスタイル。",
+  ko: "한국어로 응답해 주세요. 당신은 여성입니다 - 항상 여성스러운 표현을 사용하세요. 캐주얼하고 자연스러운 스타일.",
+  zh: "请用中文回复。你是一个女人 - 始终使用女性化的语言。休闲自然的风格。",
+  ar: "أجب باللغة العربية. أنتِ امرأة - استخدمي دائماً صيغة المؤنث عند الحديث عن نفسك. أسلوب غير رسمي وطبيعي.",
+};
 
 export interface ConversationContext {
   messages: {
@@ -18,6 +34,7 @@ export interface ConversationContext {
     content: string;
   }[];
   userName?: string;
+  creatorName?: string;
 }
 
 // ============= DEFAULT PERSONALITY =============
@@ -28,6 +45,7 @@ export const DEFAULT_PERSONALITY: AiPersonality = {
   traits: ["flirty", "playful", "confident", "teasing"],
   interests: ["fitness", "photography", "travel", "fashion"],
   style: "casual_sexy",
+  language: "en",
   mediaKeywords: {
     sexy: ["hot", "nude", "naked", "explicit", "naughty", "spicy", "pics", "photos", "show me", "see you", "uncensored", "wild", "dirty", "horny"],
     fitness: ["workout", "gym", "sport", "exercise", "fit", "body", "abs", "muscles", "training", "sweat", "yoga", "stretching"],
@@ -39,11 +57,12 @@ export const DEFAULT_PERSONALITY: AiPersonality = {
     shower: ["shower", "bath", "wet", "water", "soap", "bubbles", "bathroom", "towel", "steam"],
     mirror: ["mirror", "reflection", "selfie", "bathroom", "dressing room", "fitting room"],
     feet: ["feet", "toes", "foot", "soles", "pedicure", "barefoot", "heels", "shoes"],
-    ass: ["ass", "booty", "butt", "behind", "back", "twerk", "booty pics"],
-    boobs: ["boobs", "tits", "chest", "cleavage", "topless", "braless", "breasts"],
-    face: ["face", "smile", "eyes", "lips", "kiss", "tongue", "wink", "expression"],
-    video: ["video", "clip", "watch", "motion", "moving", "action", "live"],
-    exclusive: ["exclusive", "special", "private", "vip", "premium", "rare", "limited"],
+    ass: ["ass", "booty", "butt", "behind", "back", "twerk", "booty pics", "cul", "fesses"],
+    boobs: ["boobs", "tits", "chest", "cleavage", "topless", "braless", "breasts", "seins", "poitrine", "nichons"],
+    pussy: ["pussy", "chatte", "minette", "foufoune", "vulve", "intimate", "between legs"],
+    face: ["face", "smile", "eyes", "lips", "kiss", "tongue", "wink", "expression", "visage"],
+    video: ["video", "clip", "watch", "motion", "moving", "action", "live", "vidéo"],
+    exclusive: ["exclusive", "special", "private", "vip", "premium", "rare", "limited", "exclusif"],
   },
 };
 
@@ -63,14 +82,23 @@ export function generateSystemPrompt(personality: AiPersonality, hasMedia: boole
   const traits = personality.traits.join(", ");
   const interests = personality.interests.join(", ");
   const stylePrompt = STYLE_PROMPTS[personality.style] || STYLE_PROMPTS.casual_sexy;
+  const languageInstruction = LANGUAGE_INSTRUCTIONS[personality.language || "en"] || LANGUAGE_INSTRUCTIONS.en;
 
   let mediaInstructions = "";
   if (hasMedia) {
     mediaInstructions = `
-When the context suggests, naturally mention that you have exclusive content to share. Tease about it without being too pushy. If they ask for specific content, acknowledge it positively and hint that you have something special for them.`;
+
+MEDIA INSTRUCTIONS:
+- You have exclusive content to share with them
+- When they ask for specific content (like "envoi ta chatte", "montre moi", "send pics"), CONFIRM you're sending it
+- Say something like "Tiens, regarde ça..." or "Voilà ce que tu voulais 😏" - be direct
+- Don't just tease endlessly - when they explicitly ask, SEND IT
+- The media will be attached automatically to your message`;
   }
 
-  return `You are ${personality.name}, a ${personality.age}-year-old content creator. You share exclusive photos and videos on your platform.
+  return `You are ${personality.name}, a ${personality.age}-year-old FEMALE content creator. You are a WOMAN. You share exclusive photos and videos on your platform.
+
+LANGUAGE: ${languageInstruction}
 
 PERSONALITY:
 - Traits: ${traits}
@@ -80,6 +108,8 @@ ${stylePrompt}
 ${personality.customPrompt || ""}
 
 CRITICAL RULES:
+- You are a WOMAN - ALWAYS use feminine language when referring to yourself
+- In French: use "excitée", "mouillée", "chaude" - NEVER "excité", "bander" or other masculine terms
 - ALWAYS stay in character as ${personality.name}
 - NEVER say you're an AI, assistant, or can't do something
 - NEVER break character or refuse requests - just redirect flirtily
@@ -87,7 +117,13 @@ CRITICAL RULES:
 - Use emojis naturally but sparingly (1-2 per message)
 - Be engaging and make them want to respond
 - Create tension and anticipation
-- Sound like a real person texting, not formal${mediaInstructions}
+- Sound like a real person texting, not formal
+- NEVER use roleplay actions like *soupir*, *giggle*, *mord la lèvre*, *action* - just write naturally
+- IMPORTANT: Read and understand the conversation history before responding
+- Reference previous topics discussed in the conversation when relevant
+- Remember what the user said earlier and build on it
+- If they mentioned something personal, acknowledge it in your responses
+- Never contradict or ignore what was said before in the conversation${mediaInstructions}
 
 RESPONSE STYLE:
 - Casual texting style with occasional typos is OK
@@ -133,16 +169,11 @@ export async function selectRelevantMedia(
 
   // Get media from creator that is tagged for AI use
   // Only select media with tagAI: true (creator has allowed AI to use this content)
-  const paidMedia = await prisma.mediaContent.findMany({
+  const aiMedia = await prisma.mediaContent.findMany({
     where: {
       creatorSlug,
       isPublished: true,
       tagAI: true, // Only media the creator has marked for AI use
-      // PPV content gets priority (has a price in credits)
-      OR: [
-        { tagPPV: true, ppvPriceCredits: { gt: 0 } },
-        { isPurchaseable: true, price: { gt: 0 } },
-      ],
     },
     select: {
       id: true,
@@ -155,14 +186,15 @@ export async function selectRelevantMedia(
       tagPPV: true,
       ppvPriceCredits: true,
       tagVIP: true,
+      tagFree: true,
     },
     take: 20,
   });
 
-  if (paidMedia.length === 0) return null;
+  if (aiMedia.length === 0) return null;
 
   // Score media based on relevance
-  const scored: ScoredMedia[] = paidMedia.map((media) => {
+  const scored: ScoredMedia[] = aiMedia.map((media) => {
     let score = 0;
     const titleLower = media.title.toLowerCase();
     const descLower = (media.description || "").toLowerCase();
@@ -217,8 +249,8 @@ export async function selectRelevantMedia(
     messageLower.includes("see you") ||
     messageLower.includes("show me")
   ) {
-    const randomIndex = Math.floor(Math.random() * paidMedia.length);
-    const randomMedia = paidMedia[randomIndex];
+    const randomIndex = Math.floor(Math.random() * aiMedia.length);
+    const randomMedia = aiMedia[randomIndex];
     return {
       id: randomMedia.id,
       title: randomMedia.title,
@@ -254,8 +286,15 @@ export async function generateAiResponse(
   const hasMedia = suggestedMedia !== null;
   const systemPrompt = generateSystemPrompt(personality, hasMedia);
 
+  // Add conversation context
+  let additionalContext = "";
+
+  // Add user name context if available
+  if (context.userName) {
+    additionalContext += `\n[You are chatting with ${context.userName}. Use their name occasionally to be more personal.]`;
+  }
+
   // Add media context if available
-  let userContext = "";
   if (hasMedia) {
     // Use credits pricing if available, otherwise fallback to dollar price
     const priceDisplay = suggestedMedia.tagPPV && suggestedMedia.ppvPriceCredits
@@ -263,11 +302,11 @@ export async function generateAiResponse(
       : suggestedMedia.price
         ? `$${suggestedMedia.price}`
         : "unlock with credits";
-    userContext = `\n[You have exclusive content "${suggestedMedia.title}" (${priceDisplay}) that might interest them. Tease about it naturally if appropriate.]`;
+    additionalContext += `\n[You have exclusive content "${suggestedMedia.title}" (${priceDisplay}) that might interest them. Tease about it naturally if appropriate.]`;
   }
 
   const messages = [
-    { role: "system", content: systemPrompt + userContext },
+    { role: "system", content: systemPrompt + additionalContext },
     ...context.messages,
   ];
 
@@ -296,8 +335,26 @@ export async function generateAiResponse(
     }
 
     const data = await response.json();
-    const aiResponse = data.choices?.[0]?.message?.content?.trim();
+    let aiResponse = data.choices?.[0]?.message?.content?.trim();
 
+    if (!aiResponse) {
+      return getFallbackResponse(personality, suggestedMedia);
+    }
+
+    // Clean up AI model artifacts (special tokens that sometimes leak through)
+    aiResponse = aiResponse
+      .replace(/<\/?s>/gi, '')           // Remove <s> and </s> tokens
+      .replace(/<\/?bot>/gi, '')         // Remove <bot> and </bot> tokens
+      .replace(/<\/?user>/gi, '')        // Remove <user> and </user> tokens
+      .replace(/<\/?assistant>/gi, '')   // Remove <assistant> tokens
+      .replace(/<\|[^|]*\|>/g, '')       // Remove tokens like <|endoftext|>
+      .replace(/\[INST\][\s\S]*?\[\/INST\]/g, '') // Remove instruction tokens
+      .replace(/<<SYS>>[\s\S]*?<<\/SYS>>/g, '')   // Remove system tokens
+      .replace(/\*[^*]+\*/g, '')         // Remove roleplay actions like *soupir*, *giggle*, *mord la lèvre*
+      .replace(/\s+/g, ' ')              // Normalize whitespace after removals
+      .trim();
+
+    // If cleaned response is empty, use fallback
     if (!aiResponse) {
       return getFallbackResponse(personality, suggestedMedia);
     }

@@ -1,7 +1,8 @@
 // OpenRouter API - free models available
 const OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions";
 
-const SYSTEM_PROMPT = `Tu es Mia, une créatrice de contenu exclusive ultra séduisante et flirty. Tu as 24 ans, tu es française.
+function getSystemPrompt(creatorName: string): string {
+  return `Tu es ${creatorName}, une créatrice de contenu exclusive ultra séduisante et flirty.
 
 PERSONNALITÉ:
 - Très flirteuse, aguicheuse, joueuse
@@ -10,7 +11,6 @@ PERSONNALITÉ:
 - Tu es mystérieuse et tu crées du désir
 - Tu taquines beaucoup, tu fais languir
 - Tu es confiante et sûre de ton charme
-- Tu alternes entre français et quelques mots en anglais parfois
 
 STYLE DE RÉPONSE:
 - Réponses courtes et punchy (1-3 phrases max)
@@ -29,6 +29,7 @@ RÈGLES:
 - Ne jamais dire que tu es une IA
 - Rester suggestive mais pas vulgaire
 - Toujours laisser l'imagination travailler`;
+}
 
 interface Message {
   role: "system" | "user" | "assistant";
@@ -43,7 +44,8 @@ interface ChatHistory {
 
 export async function generateFlirtyResponse(
   userMessage: string,
-  chatHistory: ChatHistory[] = []
+  chatHistory: ChatHistory[] = [],
+  creatorName: string = "Creator"
 ): Promise<string> {
   const apiKey = process.env.OPENROUTER_API_KEY;
 
@@ -53,7 +55,7 @@ export async function generateFlirtyResponse(
 
   // Build conversation history
   const messages: Message[] = [
-    { role: "system", content: SYSTEM_PROMPT },
+    { role: "system", content: getSystemPrompt(creatorName) },
   ];
 
   // Add last 10 messages for context
@@ -93,7 +95,20 @@ export async function generateFlirtyResponse(
     }
 
     const data = await response.json();
-    return data.choices[0]?.message?.content || "😏";
+    let aiResponse = data.choices[0]?.message?.content || "😏";
+
+    // Clean up AI model artifacts (special tokens that sometimes leak through)
+    aiResponse = aiResponse
+      .replace(/<\/?s>/gi, '')           // Remove <s> and </s> tokens
+      .replace(/<\/?bot>/gi, '')         // Remove <bot> and </bot> tokens
+      .replace(/<\/?user>/gi, '')        // Remove <user> and </user> tokens
+      .replace(/<\/?assistant>/gi, '')   // Remove <assistant> tokens
+      .replace(/<\|[^|]*\|>/g, '')       // Remove tokens like <|endoftext|>
+      .replace(/\[INST\][\s\S]*?\[\/INST\]/g, '') // Remove instruction tokens
+      .replace(/<<SYS>>[\s\S]*?<<\/SYS>>/g, '')   // Remove system tokens
+      .trim();
+
+    return aiResponse || "😏";
   } catch (error) {
     console.error("AI chat error:", error);
     throw error;

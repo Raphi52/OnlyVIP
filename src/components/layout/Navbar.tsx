@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, User, LogOut, Crown, MessageCircle, Sparkles } from "lucide-react";
+import { User, LogOut, Crown, MessageCircle, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui";
 import { getCreator, Creator } from "@/lib/creators";
 import { CreditBalance } from "@/components/layout/CreditBalance";
@@ -17,10 +17,10 @@ interface NavbarProps {
 export function Navbar({ creatorSlug = "miacosta" }: NavbarProps) {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [hasVipAccess, setHasVipAccess] = useState(false);
+  const [isCheckingVip, setIsCheckingVip] = useState(true);
   const [isStartingChat, setIsStartingChat] = useState(false);
   const [creator, setCreator] = useState<Creator | undefined>(getCreator(creatorSlug));
   const [userCreatorAvatar, setUserCreatorAvatar] = useState<string | null>(null);
@@ -73,14 +73,18 @@ export function Navbar({ creatorSlug = "miacosta" }: NavbarProps) {
   // Check VIP subscription status
   useEffect(() => {
     const checkVipAccess = async () => {
+      setIsCheckingVip(true);
+
       if (!session?.user?.id) {
         setHasVipAccess(false);
+        setIsCheckingVip(false);
         return;
       }
 
       // Admins and Creators can always message
       if (isAdmin || isCreator) {
         setHasVipAccess(true);
+        setIsCheckingVip(false);
         return;
       }
 
@@ -97,6 +101,8 @@ export function Navbar({ creatorSlug = "miacosta" }: NavbarProps) {
         }
       } catch (error) {
         console.error("Error checking VIP access:", error);
+      } finally {
+        setIsCheckingVip(false);
       }
     };
 
@@ -105,15 +111,20 @@ export function Navbar({ creatorSlug = "miacosta" }: NavbarProps) {
 
   // Handle Send Message click
   const handleSendMessage = async () => {
+    // Still loading session or checking VIP - wait
+    if (status === "loading" || isCheckingVip) {
+      return;
+    }
+
     // Not logged in -> login page
     if (!session) {
-      router.push(`${basePath}/auth/login`);
+      window.location.href = `${basePath}/auth/login`;
       return;
     }
 
     // Not VIP -> membership page
     if (!hasVipAccess) {
-      router.push(`${basePath}/membership`);
+      window.location.href = `${basePath}/membership`;
       return;
     }
 
@@ -128,14 +139,14 @@ export function Navbar({ creatorSlug = "miacosta" }: NavbarProps) {
 
       if (res.ok) {
         const data = await res.json();
-        router.push(`/dashboard/messages?conversation=${data.conversationId}`);
+        window.location.href = `/dashboard/messages?conversation=${data.conversationId}`;
       } else {
         // Fallback to messages page
-        router.push("/dashboard/messages");
+        window.location.href = "/dashboard/messages";
       }
     } catch (error) {
       console.error("Error starting conversation:", error);
-      router.push("/dashboard/messages");
+      window.location.href = "/dashboard/messages";
     } finally {
       setIsStartingChat(false);
     }
@@ -364,171 +375,19 @@ export function Navbar({ creatorSlug = "miacosta" }: NavbarProps) {
             )}
           </div>
 
-          {/* Mobile Menu Button */}
-          <motion.button
-            className="md:hidden p-3 rounded-xl bg-white/5 border border-white/10 hover:border-[var(--gold)]/30 transition-colors"
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            whileTap={{ scale: 0.95 }}
+          {/* Mobile: Send Message Button (replaces menu) */}
+          <button
+            type="button"
+            className="md:hidden flex items-center gap-2 px-4 py-2.5 rounded-full bg-gradient-to-r from-[var(--gold)] to-yellow-600 text-black font-bold text-sm active:scale-95 transition-transform disabled:opacity-50"
+            onClick={handleSendMessage}
+            disabled={isStartingChat || status === "loading" || isCheckingVip}
           >
-            {isMobileMenuOpen ? (
-              <X className="w-5 h-5 text-[var(--gold)]" />
-            ) : (
-              <Menu className="w-5 h-5 text-gray-300" />
-            )}
-          </motion.button>
+            <MessageCircle className={`w-4 h-4 ${isStartingChat || isCheckingVip ? "animate-pulse" : ""}`} />
+            <span>{(status === "loading" || isCheckingVip) ? "..." : "Message"}</span>
+          </button>
         </div>
       </div>
 
-      {/* Mobile Menu - Full Screen Overlay */}
-      <AnimatePresence>
-        {isMobileMenuOpen && (
-          <>
-            {/* Backdrop */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="md:hidden fixed inset-0 bg-black/90 backdrop-blur-xl z-40"
-              onClick={() => setIsMobileMenuOpen(false)}
-            />
-
-            {/* Menu Content */}
-            <motion.div
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.3 }}
-              className="md:hidden fixed inset-x-0 top-20 bottom-0 z-50 overflow-y-auto"
-            >
-              <div className="min-h-full px-6 py-8 flex flex-col">
-                {/* Creator Card */}
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.1 }}
-                  className="mb-8 p-4 rounded-2xl bg-white/5 border border-[var(--gold)]/20"
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 rounded-full bg-gradient-to-br from-[var(--gold)] to-yellow-600 p-[2px]">
-                      <img
-                        src={creator?.avatar || "/placeholder-avatar.jpg"}
-                        alt=""
-                        className="w-full h-full rounded-full object-cover"
-                      />
-                    </div>
-                    <div>
-                      <p className="text-lg font-bold text-white">{creator?.displayName || "Creator"}</p>
-                      <p className="text-sm text-gray-400 flex items-center gap-1.5">
-                        <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                        Online now
-                      </p>
-                    </div>
-                  </div>
-                </motion.div>
-
-                {/* Navigation Links */}
-                <div className="space-y-3 mb-8">
-                  {navLinks.map((link, index) => (
-                    <motion.div
-                      key={link.href}
-                      initial={{ opacity: 0, x: -30 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.15 + index * 0.1 }}
-                    >
-                      <Link
-                        href={link.href}
-                        className="flex items-center gap-4 px-5 py-4 rounded-2xl bg-white/5 border border-white/10 text-white hover:border-[var(--gold)]/30 hover:bg-[var(--gold)]/5 transition-all active:scale-[0.98]"
-                        onClick={() => setIsMobileMenuOpen(false)}
-                      >
-                        <div className="w-10 h-10 rounded-xl bg-[var(--gold)]/10 flex items-center justify-center">
-                          <link.icon className="w-5 h-5 text-[var(--gold)]" />
-                        </div>
-                        <span className="text-lg font-medium">{link.label}</span>
-                      </Link>
-                    </motion.div>
-                  ))}
-                  {/* Send Message Button - Mobile */}
-                  <motion.div
-                    initial={{ opacity: 0, x: -30 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.25 }}
-                  >
-                    <button
-                      onClick={() => {
-                        setIsMobileMenuOpen(false);
-                        handleSendMessage();
-                      }}
-                      disabled={isStartingChat}
-                      className="w-full flex items-center gap-4 px-5 py-4 rounded-2xl bg-white/5 border border-white/10 text-white hover:border-[var(--gold)]/30 hover:bg-[var(--gold)]/5 transition-all active:scale-[0.98] disabled:opacity-50"
-                    >
-                      <div className="w-10 h-10 rounded-xl bg-[var(--gold)]/10 flex items-center justify-center">
-                        <MessageCircle className={`w-5 h-5 text-[var(--gold)] ${isStartingChat ? "animate-pulse" : ""}`} />
-                      </div>
-                      <span className="text-lg font-medium">Send Message</span>
-                    </button>
-                  </motion.div>
-                </div>
-
-                {/* Auth Section */}
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.35 }}
-                  className="mt-auto space-y-3"
-                >
-                  {session ? (
-                    <>
-                      <Link href="/dashboard" onClick={() => setIsMobileMenuOpen(false)}>
-                        <motion.button
-                          className="w-full flex items-center justify-center gap-3 px-6 py-4 rounded-2xl bg-gradient-to-r from-[var(--gold)] to-yellow-600 text-black font-bold text-lg shadow-lg shadow-[var(--gold)]/20"
-                          whileTap={{ scale: 0.98 }}
-                        >
-                          <Crown className="w-6 h-6" />
-                          My Dashboard
-                        </motion.button>
-                      </Link>
-
-                      {/* Separator */}
-                      <div className="h-4" />
-
-                      <button
-                        onClick={() => signOut()}
-                        className="w-full flex items-center justify-center gap-3 px-6 py-4 rounded-2xl border border-red-500/20 text-red-400 hover:text-red-300 hover:border-red-500/30 hover:bg-red-500/5 transition-all"
-                      >
-                        <LogOut className="w-5 h-5" />
-                        Sign out
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <Link href={`${basePath}/auth/register`} onClick={() => setIsMobileMenuOpen(false)}>
-                        <motion.button
-                          className="w-full flex items-center justify-center gap-3 px-6 py-4 rounded-2xl bg-gradient-to-r from-[var(--gold)] to-yellow-600 text-black font-bold text-lg shadow-lg shadow-[var(--gold)]/20"
-                          whileTap={{ scale: 0.98 }}
-                        >
-                          <Crown className="w-6 h-6" />
-                          Join VIP
-                        </motion.button>
-                      </Link>
-                      <Link href={`${basePath}/auth/login`} onClick={() => setIsMobileMenuOpen(false)}>
-                        <motion.button
-                          className="w-full px-6 py-4 rounded-2xl border border-white/10 text-gray-300 hover:border-[var(--gold)]/30 hover:text-white transition-all text-lg"
-                          whileTap={{ scale: 0.98 }}
-                        >
-                          Already a member? Sign in
-                        </motion.button>
-                      </Link>
-                    </>
-                  )}
-                </motion.div>
-
-                {/* Bottom Spacing */}
-                <div className="h-8" />
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
     </motion.nav>
   );
 }

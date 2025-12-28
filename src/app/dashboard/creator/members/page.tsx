@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
@@ -17,6 +17,7 @@ import {
   Calendar,
 } from "lucide-react";
 import { Button, Card, Badge } from "@/components/ui";
+import { useAdminCreator } from "@/components/providers/AdminCreatorContext";
 
 interface Member {
   id: string;
@@ -39,6 +40,7 @@ interface Member {
 export default function CreatorMembersPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const { selectedCreator, isLoading: creatorsLoading } = useAdminCreator();
   const [members, setMembers] = useState<Member[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -52,13 +54,16 @@ export default function CreatorMembersPage() {
       router.push("/dashboard");
       return;
     }
-    fetchMembers();
   }, [session, status, isCreator, router]);
 
-  const fetchMembers = async () => {
+  const fetchMembers = useCallback(async () => {
+    if (!selectedCreator) {
+      setIsLoading(false);
+      return;
+    }
     setIsLoading(true);
     try {
-      const res = await fetch("/api/creator/members");
+      const res = await fetch(`/api/creator/members?creator=${selectedCreator.slug}`);
       if (res.ok) {
         const data = await res.json();
         setMembers(data.members || []);
@@ -68,7 +73,13 @@ export default function CreatorMembersPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [selectedCreator]);
+
+  useEffect(() => {
+    if (selectedCreator) {
+      fetchMembers();
+    }
+  }, [selectedCreator, fetchMembers]);
 
   const handleToggleVip = async (member: Member) => {
     try {
@@ -135,7 +146,7 @@ export default function CreatorMembersPage() {
     return matchesSearch && matchesFilter;
   });
 
-  if (status === "loading" || isLoading) {
+  if (status === "loading" || isLoading || creatorsLoading) {
     return (
       <div className="p-8 flex items-center justify-center min-h-[50vh]">
         <Loader2 className="w-8 h-8 text-[var(--gold)] animate-spin" />

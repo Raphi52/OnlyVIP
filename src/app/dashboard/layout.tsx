@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { MobileNav } from "@/components/dashboard/MobileNav";
+import { MessagesFAB } from "@/components/dashboard/MessagesFAB";
 import { AdminCreatorProvider } from "@/components/providers/AdminCreatorContext";
 
 export default async function DashboardLayout({
@@ -23,6 +24,7 @@ export default async function DashboardLayout({
           {children}
         </main>
         <MobileNav />
+        <MessagesFAB />
       </div>
     </AdminCreatorProvider>
   );

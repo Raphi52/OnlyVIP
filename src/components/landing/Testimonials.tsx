@@ -162,22 +162,22 @@ export function Testimonials() {
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="mt-16 text-center"
+          className="mt-16 text-center px-4"
         >
-          <div className="inline-flex items-center gap-8 px-8 py-4 rounded-2xl bg-gradient-to-r from-[var(--gold)]/10 via-[var(--gold)]/5 to-[var(--gold)]/10 border border-[var(--gold)]/20">
-            <div>
-              <p className="text-3xl font-bold gradient-gold-text">2,500+</p>
-              <p className="text-sm text-gray-400">Happy Members</p>
+          <div className="inline-flex flex-wrap items-center justify-center gap-4 sm:gap-8 px-4 sm:px-8 py-4 rounded-2xl bg-gradient-to-r from-[var(--gold)]/10 via-[var(--gold)]/5 to-[var(--gold)]/10 border border-[var(--gold)]/20 max-w-full">
+            <div className="px-2">
+              <p className="text-2xl sm:text-3xl font-bold gradient-gold-text">2,500+</p>
+              <p className="text-xs sm:text-sm text-gray-400">Members</p>
             </div>
-            <div className="w-px h-12 bg-[var(--gold)]/20" />
-            <div>
-              <p className="text-3xl font-bold gradient-gold-text">4.9</p>
-              <p className="text-sm text-gray-400">Average Rating</p>
+            <div className="hidden sm:block w-px h-12 bg-[var(--gold)]/20" />
+            <div className="px-2">
+              <p className="text-2xl sm:text-3xl font-bold gradient-gold-text">4.9</p>
+              <p className="text-xs sm:text-sm text-gray-400">Rating</p>
             </div>
-            <div className="w-px h-12 bg-[var(--gold)]/20" />
-            <div>
-              <p className="text-3xl font-bold gradient-gold-text">98%</p>
-              <p className="text-sm text-gray-400">Satisfaction</p>
+            <div className="hidden sm:block w-px h-12 bg-[var(--gold)]/20" />
+            <div className="px-2">
+              <p className="text-2xl sm:text-3xl font-bold gradient-gold-text">98%</p>
+              <p className="text-xs sm:text-sm text-gray-400">Satisfaction</p>
             </div>
           </div>
         </motion.div>

@@ -29,9 +29,25 @@ interface AiPersonality {
   traits: string[];
   interests: string[];
   style: "casual_sexy" | "romantic" | "dominant" | "submissive" | "girlfriend";
+  language: string;
   customPrompt?: string;
   mediaKeywords?: Record<string, string[]>;
 }
+
+const LANGUAGE_OPTIONS = [
+  { value: "en", label: "English", flag: "🇬🇧" },
+  { value: "fr", label: "Français", flag: "🇫🇷" },
+  { value: "es", label: "Español", flag: "🇪🇸" },
+  { value: "de", label: "Deutsch", flag: "🇩🇪" },
+  { value: "it", label: "Italiano", flag: "🇮🇹" },
+  { value: "pt", label: "Português", flag: "🇵🇹" },
+  { value: "nl", label: "Nederlands", flag: "🇳🇱" },
+  { value: "ru", label: "Русский", flag: "🇷🇺" },
+  { value: "ja", label: "日本語", flag: "🇯🇵" },
+  { value: "ko", label: "한국어", flag: "🇰🇷" },
+  { value: "zh", label: "中文", flag: "🇨🇳" },
+  { value: "ar", label: "العربية", flag: "🇸🇦" },
+];
 
 const DEFAULT_MEDIA_KEYWORDS: Record<string, string[]> = {
   sexy: ["hot", "nude", "naked", "explicit", "naughty", "spicy", "pics", "photos", "show me", "see you", "uncensored", "wild", "dirty", "horny"],
@@ -95,6 +111,7 @@ export default function CreatorAiSettingsPage({
     traits: ["flirty", "playful", "confident"],
     interests: ["fitness", "photography", "travel"],
     style: "casual_sexy",
+    language: "en",
     customPrompt: "",
     mediaKeywords: DEFAULT_MEDIA_KEYWORDS,
   });
@@ -136,6 +153,7 @@ export default function CreatorAiSettingsPage({
               traits: parsed.traits || ["flirty", "playful", "confident"],
               interests: parsed.interests || ["fitness", "photography", "travel"],
               style: parsed.style || "casual_sexy",
+              language: parsed.language || "en",
               customPrompt: parsed.customPrompt || "",
               mediaKeywords: parsed.mediaKeywords || DEFAULT_MEDIA_KEYWORDS,
             });
@@ -143,7 +161,7 @@ export default function CreatorAiSettingsPage({
             // Use defaults
           }
         } else {
-          setPersonality((prev) => ({ ...prev, name: data.displayName || "", mediaKeywords: DEFAULT_MEDIA_KEYWORDS }));
+          setPersonality((prev) => ({ ...prev, name: data.displayName || "", language: "en", mediaKeywords: DEFAULT_MEDIA_KEYWORDS }));
         }
       }
     } catch (error) {
@@ -399,7 +417,7 @@ export default function CreatorAiSettingsPage({
                 <h3 className="font-semibold text-[var(--foreground)]">Personality</h3>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {/* Name */}
                 <div>
                   <label className="block text-sm font-medium text-[var(--foreground)] mb-2">
@@ -427,6 +445,24 @@ export default function CreatorAiSettingsPage({
                     onChange={(e) => setPersonality({ ...personality, age: parseInt(e.target.value) || 24 })}
                     className="w-full px-4 py-3 rounded-xl bg-[var(--background)] border border-[var(--border)] text-[var(--foreground)] focus:outline-none focus:border-[var(--gold)]"
                   />
+                </div>
+
+                {/* Language */}
+                <div>
+                  <label className="block text-sm font-medium text-[var(--foreground)] mb-2">
+                    Language
+                  </label>
+                  <select
+                    value={personality.language}
+                    onChange={(e) => setPersonality({ ...personality, language: e.target.value })}
+                    className="w-full px-4 py-3 rounded-xl bg-[var(--background)] border border-[var(--border)] text-[var(--foreground)] focus:outline-none focus:border-[var(--gold)]"
+                  >
+                    {LANGUAGE_OPTIONS.map((lang) => (
+                      <option key={lang.value} value={lang.value}>
+                        {lang.flag} {lang.label}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
 

@@ -21,22 +21,35 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { type, amount, planId, billingInterval, mediaId, messageId, creatorSlug, credits } = body;
 
-    // Fetch creator wallet from database if creatorSlug provided
-    let creatorWalletBtc: string | null = null;
-    let creatorWalletEth: string | null = null;
+    // Fetch wallet address - use creator wallet if creatorSlug provided, otherwise use platform wallet
+    let walletBtc: string | null = null;
+    let walletEth: string | null = null;
 
     if (creatorSlug) {
+      // For creator-specific payments
       const creator = await prisma.creator.findUnique({
         where: { slug: creatorSlug },
         select: { walletBtc: true, walletEth: true },
       });
       if (creator) {
-        creatorWalletBtc = creator.walletBtc;
-        creatorWalletEth = creator.walletEth;
+        walletBtc = creator.walletBtc;
+        walletEth = creator.walletEth;
       }
     }
 
-    if (!isChangeHeroConfigured(creatorWalletBtc, creatorWalletEth)) {
+    // If no creator wallet or no creatorSlug (like credits purchase), use platform wallet
+    if (!walletBtc && !walletEth) {
+      const siteSettings = await prisma.siteSettings.findUnique({
+        where: { id: "default" },
+        select: { platformWalletBtc: true, platformWalletEth: true },
+      });
+      if (siteSettings) {
+        walletBtc = siteSettings.platformWalletBtc;
+        walletEth = siteSettings.platformWalletEth;
+      }
+    }
+
+    if (!isChangeHeroConfigured(walletBtc, walletEth)) {
       return NextResponse.json(
         { error: "Card payments not configured - wallet address missing" },
         { status: 500 }
@@ -55,7 +68,7 @@ export async function POST(request: NextRequest) {
 
     let walletAddress: string;
     try {
-      walletAddress = getWalletAddress(cryptoCurrency, creatorWalletBtc);
+      walletAddress = getWalletAddress(cryptoCurrency, walletBtc);
     } catch (error) {
       return NextResponse.json(
         { error: "Wallet not configured" },

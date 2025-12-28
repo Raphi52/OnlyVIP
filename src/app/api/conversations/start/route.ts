@@ -16,6 +16,7 @@ export async function POST(request: NextRequest) {
 
     const userId = session.user.id;
     const { creatorSlug } = await request.json();
+    console.log("[conversations/start] Received creatorSlug:", creatorSlug);
 
     if (!creatorSlug) {
       return NextResponse.json(
@@ -28,6 +29,12 @@ export async function POST(request: NextRequest) {
     const isAdmin = (session.user as any).role === "ADMIN";
 
     if (!isAdmin) {
+      // Check if user has VIP flag set by admin
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { isVip: true },
+      });
+
       // Check user's subscription allows messaging
       const subscription = await prisma.subscription.findFirst({
         where: {
@@ -39,8 +46,9 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      // Both Basic and VIP can message
-      const canMessage = subscription?.plan?.canMessage ||
+      // VIP users (admin-granted) or subscribers can message
+      const canMessage = user?.isVip ||
+                         subscription?.plan?.canMessage ||
                          ["BASIC", "VIP"].includes(subscription?.plan?.accessTier || "");
 
       if (!canMessage) {
@@ -66,15 +74,19 @@ export async function POST(request: NextRequest) {
 
     const creatorUserId = creator.userId;
 
-    // Check if conversation already exists between user and creator
+    // Check if conversation already exists between user and this specific creator profile
+    // We must check creatorSlug too, because one owner can have multiple creator profiles
+    console.log("[conversations/start] Looking for existing conversation with creatorSlug:", creatorSlug, "creatorUserId:", creatorUserId, "userId:", userId);
     const existingConversation = await prisma.conversation.findFirst({
       where: {
+        creatorSlug,
         AND: [
           { participants: { some: { userId: creatorUserId } } },
           { participants: { some: { userId } } },
         ],
       },
     });
+    console.log("[conversations/start] Existing conversation found:", existingConversation?.id || "NONE");
 
     if (existingConversation) {
       return NextResponse.json({
