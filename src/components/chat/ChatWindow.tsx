@@ -5,8 +5,10 @@ import { motion, AnimatePresence, useScroll, useTransform } from "framer-motion"
 import {
   Send, Plus, Sparkles, Loader2, Play, X, Lock, Coins,
   Search, Smile, ArrowLeft, ChevronDown, Mic, Image,
-  Gift, Heart, Paperclip, StopCircle
+  Gift, Heart, Paperclip, StopCircle, MoreVertical,
+  Bell, BellOff, Trash2, Images
 } from "lucide-react";
+import Link from "next/link";
 import { useInView } from "react-intersection-observer";
 import { MessageBubble } from "./MessageBubble";
 import { DateSeparator } from "./DateSeparator";
@@ -64,11 +66,13 @@ interface ChatWindowProps {
     name: string;
     image?: string;
     isOnline?: boolean;
+    slug?: string;
   };
   messages: Message[];
   isAdmin?: boolean;
   isSending?: boolean;
   isTyping?: boolean;
+  isMuted?: boolean;
   onSendMessage: (text: string, media?: File[], isPPV?: boolean, ppvPrice?: number, replyToId?: string) => void;
   onUnlockPPV: (messageId: string) => void;
   onSendTip: (messageId: string, amount: number) => void;
@@ -77,6 +81,8 @@ interface ChatWindowProps {
   onAISuggest?: (lastUserMessage: string) => Promise<string>;
   onSearch?: (query: string) => Promise<SearchResult[]>;
   onBack?: () => void;
+  onMute?: (isMuted: boolean) => void;
+  onDelete?: () => void;
 }
 
 // Tip amounts in credits (100 credits = $1)
@@ -133,6 +139,7 @@ export function ChatWindow({
   isAdmin,
   isSending,
   isTyping,
+  isMuted,
   onSendMessage,
   onUnlockPPV,
   onSendTip,
@@ -141,6 +148,8 @@ export function ChatWindow({
   onAISuggest,
   onSearch,
   onBack,
+  onMute,
+  onDelete,
 }: ChatWindowProps) {
   // Local state for reactions (to update UI instantly)
   const [localReactions, setLocalReactions] = useState<Record<string, Reaction[]>>({});
@@ -215,6 +224,7 @@ export function ChatWindow({
   const [isDraggingFiles, setIsDraggingFiles] = useState(false);
   const [showAttachMenu, setShowAttachMenu] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
+  const [showSettingsMenu, setShowSettingsMenu] = useState(false);
 
   // Refs
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -523,19 +533,107 @@ export function ChatWindow({
           </div>
         </div>
 
-        {/* Search button */}
-        <motion.button
-          whileTap={{ scale: 0.9 }}
-          onClick={() => setShowSearch(!showSearch)}
-          className={cn(
-            "p-2.5 rounded-full transition-all",
-            showSearch
-              ? "bg-[var(--gold)]/20 text-[var(--gold)]"
-              : "hover:bg-white/5 active:bg-white/10 text-white/50"
-          )}
-        >
-          <Search className="w-5 h-5" />
-        </motion.button>
+        {/* Action buttons */}
+        <div className="flex items-center gap-1">
+          {/* Search button */}
+          <motion.button
+            whileTap={{ scale: 0.9 }}
+            onClick={() => setShowSearch(!showSearch)}
+            className={cn(
+              "p-2.5 rounded-full transition-all",
+              showSearch
+                ? "bg-[var(--gold)]/20 text-[var(--gold)]"
+                : "hover:bg-white/5 active:bg-white/10 text-white/50"
+            )}
+          >
+            <Search className="w-5 h-5" />
+          </motion.button>
+
+          {/* Settings button */}
+          <div className="relative">
+            <motion.button
+              whileTap={{ scale: 0.9 }}
+              onClick={() => setShowSettingsMenu(!showSettingsMenu)}
+              className={cn(
+                "p-2.5 rounded-full transition-all",
+                showSettingsMenu
+                  ? "bg-[var(--gold)]/20 text-[var(--gold)]"
+                  : "hover:bg-white/5 active:bg-white/10 text-white/50"
+              )}
+            >
+              <MoreVertical className="w-5 h-5" />
+            </motion.button>
+
+            {/* Settings dropdown */}
+            <AnimatePresence>
+              {showSettingsMenu && (
+                <>
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setShowSettingsMenu(false)}
+                  />
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                    className="absolute right-0 top-full mt-2 z-50 bg-[#1a1a1a] border border-white/10 rounded-xl shadow-2xl overflow-hidden min-w-[180px]"
+                  >
+                    {/* Mute notifications */}
+                    {onMute && (
+                      <button
+                        onClick={() => {
+                          onMute(!isMuted);
+                          setShowSettingsMenu(false);
+                        }}
+                        className="w-full flex items-center gap-3 px-4 py-3 text-sm text-white hover:bg-white/5 transition-colors"
+                      >
+                        {isMuted ? (
+                          <>
+                            <Bell className="w-4 h-4 text-[var(--gold)]" />
+                            Unmute
+                          </>
+                        ) : (
+                          <>
+                            <BellOff className="w-4 h-4" />
+                            Mute notifications
+                          </>
+                        )}
+                      </button>
+                    )}
+
+                    {/* View all media - link to creator gallery */}
+                    {otherUser.slug && (
+                      <Link
+                        href={`/${otherUser.slug}/gallery`}
+                        onClick={() => setShowSettingsMenu(false)}
+                        className="w-full flex items-center gap-3 px-4 py-3 text-sm text-white hover:bg-white/5 transition-colors"
+                      >
+                        <Images className="w-4 h-4" />
+                        View all media
+                      </Link>
+                    )}
+
+                    {/* Delete conversation */}
+                    {onDelete && (
+                      <button
+                        onClick={() => {
+                          if (confirm("Are you sure you want to delete this conversation?")) {
+                            onDelete();
+                            setShowSettingsMenu(false);
+                          }
+                        }}
+                        className="w-full flex items-center gap-3 px-4 py-3 text-sm text-red-400 hover:bg-red-500/10 transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        Delete conversation
+                      </button>
+                    )}
+                  </motion.div>
+                </>
+              )}
+            </AnimatePresence>
+          </div>
+        </div>
       </motion.div>
 
       {/* Search bar */}
@@ -942,87 +1040,117 @@ export function ChatWindow({
       {/* Tip Modal */}
       <AnimatePresence>
         {showTipModal && (
-          <>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-sm p-0 sm:p-4"
+            onClick={() => setShowTipModal(null)}
+          >
             <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md"
-              onClick={() => setShowTipModal(null)}
-            />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9, y: 50 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 50 }}
-              className="fixed inset-x-4 top-1/2 -translate-y-1/2 md:inset-auto md:left-1/2 md:top-1/2 md:-translate-x-1/2 md:w-full md:max-w-sm z-50"
+              initial={{ y: "100%", opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: "100%", opacity: 0 }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full sm:max-w-md bg-[#0d0d0f] border border-white/10 rounded-t-2xl sm:rounded-2xl overflow-hidden"
             >
-              <div className="bg-gradient-to-b from-[#1a1a1a] to-[#0a0a0a] border border-white/10 rounded-3xl p-6 shadow-2xl">
-                <div className="text-center mb-6">
-                  <motion.div
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    transition={{ type: "spring", stiffness: 400, damping: 20 }}
-                    className="w-20 h-20 rounded-full bg-gradient-to-br from-[var(--gold)] via-amber-400 to-amber-600 flex items-center justify-center mx-auto mb-4 shadow-xl shadow-[var(--gold)]/30"
-                  >
-                    <Heart className="w-10 h-10 text-black" fill="black" />
-                  </motion.div>
-                  <h3 className="text-2xl font-bold text-white">Send a Tip</h3>
-                  <p className="text-sm text-white/50 mt-1">Show your appreciation</p>
-                </div>
-
-                <div className="grid grid-cols-3 gap-2 mb-4">
-                  {tipAmounts.map((amount, i) => (
-                    <motion.button
-                      key={amount}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: i * 0.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => handleTip(showTipModal, amount)}
-                      className="py-4 rounded-2xl bg-white/5 hover:bg-[var(--gold)]/10 active:bg-[var(--gold)]/20 border border-white/5 hover:border-[var(--gold)]/30 text-white text-lg font-semibold transition-all flex items-center justify-center gap-1.5"
-                    >
-                      <Coins className="w-4 h-4 text-[var(--gold)]" />
-                      {amount.toLocaleString()}
-                    </motion.button>
-                  ))}
-                </div>
-
-                <div className="flex gap-2 mb-4">
-                  <div className="relative flex-1">
-                    <Coins className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--gold)]" />
-                    <input
-                      type="number"
-                      value={customTip}
-                      onChange={(e) => setCustomTip(e.target.value)}
-                      placeholder="Custom amount"
-                      min="100"
-                      step="100"
-                      className="w-full pl-12 pr-4 py-4 rounded-2xl bg-white/5 border border-white/10 text-white text-lg focus:outline-none focus:border-[var(--gold)] transition-colors"
-                    />
+              {/* Header */}
+              <div className="p-5 border-b border-white/10">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-pink-500/20 flex items-center justify-center">
+                    <Heart className="w-5 h-5 text-pink-400" fill="currentColor" />
                   </div>
-                  <Button
-                    variant="premium"
-                    disabled={!customTip || parseFloat(customTip) < 100}
-                    onClick={() => handleTip(showTipModal, parseFloat(customTip))}
-                    className="px-6 text-lg"
-                  >
-                    Send
-                  </Button>
+                  <div>
+                    <h3 className="text-lg font-bold text-white">
+                      Send a Tip
+                    </h3>
+                    <p className="text-sm text-gray-400">
+                      Show your appreciation
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Content */}
+              <div className="p-5 space-y-5">
+                {/* Step 1: Select amount */}
+                <div className="flex gap-4">
+                  <div className="flex-shrink-0 w-7 h-7 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-400 font-bold text-sm">
+                    1
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium text-white mb-3">
+                      Select or enter an amount
+                    </p>
+                    <div className="grid grid-cols-3 gap-2">
+                      {tipAmounts.map((amount) => (
+                        <motion.button
+                          key={amount}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() => handleTip(showTipModal, amount)}
+                          className="py-3 rounded-xl bg-white/5 hover:bg-purple-500/10 border border-white/10 hover:border-purple-500/30 text-white font-semibold transition-all flex items-center justify-center gap-1.5"
+                        >
+                          <Coins className="w-3.5 h-3.5 text-purple-400" />
+                          {amount.toLocaleString()}
+                        </motion.button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
 
-                <p className="text-xs text-white/40 text-center mb-4">
-                  Minimum: 100 credits
-                </p>
+                {/* Step 2: Custom amount */}
+                <div className="flex gap-4">
+                  <div className="flex-shrink-0 w-7 h-7 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-400 font-bold text-sm">
+                    2
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium text-white mb-3">
+                      Or enter a custom amount
+                    </p>
+                    <div className="flex gap-2">
+                      <div className="relative flex-1">
+                        <Coins className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-purple-400" />
+                        <input
+                          type="number"
+                          value={customTip}
+                          onChange={(e) => setCustomTip(e.target.value)}
+                          placeholder="Enter amount"
+                          min="100"
+                          step="100"
+                          className="w-full pl-10 pr-4 py-3 rounded-xl bg-black/50 border border-white/10 text-white focus:outline-none focus:border-purple-500 transition-colors"
+                        />
+                      </div>
+                      <button
+                        disabled={!customTip || parseFloat(customTip) < 100}
+                        onClick={() => handleTip(showTipModal, parseFloat(customTip))}
+                        className="px-5 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-purple-500 text-white font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Send
+                      </button>
+                    </div>
+                  </div>
+                </div>
 
+                {/* Info */}
+                <div className="bg-purple-500/10 border border-purple-500/20 rounded-xl p-4">
+                  <p className="text-sm text-purple-400">
+                    <strong>Note:</strong> Minimum tip is 100 credits. Tips are non-refundable.
+                  </p>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="p-5 border-t border-white/10">
                 <button
                   onClick={() => setShowTipModal(null)}
-                  className="w-full py-4 rounded-2xl bg-white/5 hover:bg-white/10 text-white font-medium transition-colors"
+                  className="w-full px-4 py-3 rounded-xl border border-white/10 text-gray-400 hover:bg-white/5 transition-colors font-medium"
                 >
                   Cancel
                 </button>
               </div>
             </motion.div>
-          </>
+          </motion.div>
         )}
       </AnimatePresence>
 

@@ -515,7 +515,7 @@ export function Pricing({ creatorSlug = "miacosta" }: PricingProps) {
               </div>
               <div className="text-center">
                 <MessageCircle className="w-6 h-6 text-blue-400 mx-auto mb-2" />
-                <p className="text-sm text-gray-300">Priority Chat</p>
+                <p className="text-sm text-gray-300">Unlock Messages</p>
               </div>
               <div className="text-center">
                 <Sparkles className="w-6 h-6 text-[var(--gold)] mx-auto mb-2" />
@@ -580,49 +580,112 @@ export function Pricing({ creatorSlug = "miacosta" }: PricingProps) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-sm p-0 sm:p-4"
             onClick={() => setShowInsufficientModal(false)}
           >
             <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-[#0a0a0a] border border-white/10 rounded-3xl p-8 max-w-md w-full"
+              initial={{ y: "100%", opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: "100%", opacity: 0 }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              className="w-full sm:max-w-md bg-[#0d0d0f] border border-white/10 rounded-t-2xl sm:rounded-2xl overflow-hidden"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="text-center">
-                <div className="w-16 h-16 rounded-full bg-red-500/20 flex items-center justify-center mx-auto mb-4">
-                  <AlertCircle className="w-8 h-8 text-red-400" />
+              {/* Header */}
+              <div className="p-5 border-b border-white/10">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-red-500/20 flex items-center justify-center">
+                    <AlertCircle className="w-5 h-5 text-red-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-white">
+                      Not Enough Credits
+                    </h3>
+                    <p className="text-sm text-gray-400">
+                      You need more credits to continue
+                    </p>
+                  </div>
                 </div>
-                <h3 className="text-2xl font-bold text-white mb-2">
-                  Not Enough Credits
-                </h3>
-                <p className="text-gray-400 mb-6">
-                  You need <span className="text-white font-semibold">{requiredCredits.toLocaleString()}</span> credits
-                  but only have <span className="text-white font-semibold">{userBalance.toLocaleString()}</span>.
-                </p>
-                <div className="bg-white/5 rounded-xl p-4 mb-6">
-                  <p className="text-sm text-gray-400 mb-2">You need</p>
-                  <p className="text-3xl font-bold text-purple-400">
-                    {(requiredCredits - userBalance).toLocaleString()}
+              </div>
+
+              {/* Content */}
+              <div className="p-5 space-y-5">
+                {/* Step 1: Required */}
+                <div className="flex gap-4">
+                  <div className="flex-shrink-0 w-7 h-7 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-400 font-bold text-sm">
+                    1
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium text-white">
+                      Required amount
+                    </p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Coins className="w-4 h-4 text-purple-400" />
+                      <span className="text-purple-400 font-bold">
+                        {requiredCredits.toLocaleString()} credits
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Step 2: Your balance */}
+                <div className="flex gap-4">
+                  <div className="flex-shrink-0 w-7 h-7 rounded-full bg-red-500/20 flex items-center justify-center text-red-400 font-bold text-sm">
+                    2
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium text-white">
+                      Your balance
+                    </p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Coins className="w-4 h-4 text-red-400" />
+                      <span className="text-red-400 font-bold">
+                        {userBalance.toLocaleString()} credits
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Step 3: Missing */}
+                <div className="flex gap-4">
+                  <div className="flex-shrink-0 w-7 h-7 rounded-full bg-orange-500/20 flex items-center justify-center text-orange-400 font-bold text-sm">
+                    3
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium text-white">
+                      Missing credits
+                    </p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Coins className="w-4 h-4 text-orange-400" />
+                      <span className="text-orange-400 font-bold">
+                        {(requiredCredits - userBalance).toLocaleString()} credits needed
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Info box */}
+                <div className="bg-purple-500/10 border border-purple-500/20 rounded-xl p-4">
+                  <p className="text-sm text-purple-400">
+                    <strong>Tip:</strong> Buy a credit package to get bonus credits and save more!
                   </p>
-                  <p className="text-sm text-gray-400">more credits</p>
                 </div>
-                <div className="flex gap-3">
-                  <Button
-                    variant="ghost"
-                    className="flex-1"
-                    onClick={() => setShowInsufficientModal(false)}
-                  >
-                    Cancel
-                  </Button>
-                  <Link href="/credits" className="flex-1">
-                    <Button variant="premium" className="w-full gap-2">
-                      <Coins className="w-4 h-4" />
-                      Buy Credits
-                    </Button>
-                  </Link>
-                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="p-5 border-t border-white/10 flex gap-3">
+                <button
+                  onClick={() => setShowInsufficientModal(false)}
+                  className="flex-1 px-4 py-3 rounded-xl border border-white/10 text-gray-400 hover:bg-white/5 transition-colors font-medium"
+                >
+                  Cancel
+                </button>
+                <Link href="/credits" className="flex-1">
+                  <button className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-purple-500 text-white font-semibold hover:opacity-90 transition-opacity">
+                    <Coins className="w-4 h-4" />
+                    Buy Credits
+                  </button>
+                </Link>
               </div>
             </motion.div>
           </motion.div>

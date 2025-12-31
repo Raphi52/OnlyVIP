@@ -17,15 +17,11 @@ import {
   TrendingUp,
   Gift,
   Loader2,
-  Check,
   CreditCard,
   Bitcoin,
-  ExternalLink,
   X,
-  Copy,
-  CheckCircle,
 } from "lucide-react";
-import { CryptoPaymentModal, DisputeForm } from "@/components/payments";
+import { CryptoPaymentModal, DisputeForm, MixPayModal } from "@/components/payments";
 import { cn } from "@/lib/utils";
 import { HelpCircle } from "lucide-react";
 
@@ -70,29 +66,9 @@ export default function CreditsPage() {
   const [selectedPackage, setSelectedPackage] = useState<CreditPackage | null>(null);
   const [showPaymentMethodModal, setShowPaymentMethodModal] = useState(false);
   const [showCryptoModal, setShowCryptoModal] = useState(false);
-  const [isProcessingCard, setIsProcessingCard] = useState(false);
-  const [showChangeHeroModal, setShowChangeHeroModal] = useState(false);
-  const [changeHeroData, setChangeHeroData] = useState<{
-    url: string;
-    walletAddress: string;
-    credits: number;
-  } | null>(null);
-  const [walletCopied, setWalletCopied] = useState(false);
+  const [showMixPayModal, setShowMixPayModal] = useState(false);
   const [showDisputeForm, setShowDisputeForm] = useState(false);
 
-  // Restore ChangeHero modal state from localStorage on mount
-  useEffect(() => {
-    const savedData = localStorage.getItem("changeHeroModalData");
-    if (savedData) {
-      try {
-        const parsed = JSON.parse(savedData);
-        setChangeHeroData(parsed);
-        setShowChangeHeroModal(true);
-      } catch (e) {
-        localStorage.removeItem("changeHeroModalData");
-      }
-    }
-  }, []);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -132,73 +108,8 @@ export default function CreditsPage() {
     setShowPaymentMethodModal(false);
     if (method === "crypto") {
       setShowCryptoModal(true);
-    } else if (selectedPackage) {
-      handleCardPayment(selectedPackage);
-    }
-  };
-
-  const handleCardPayment = async (pkg: CreditPackage) => {
-    setIsProcessingCard(true);
-    try {
-      const totalCredits = getTotalCredits(pkg);
-      const res = await fetch("/api/payments/card/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          type: "credits",
-          amount: pkg.price,
-          credits: totalCredits,
-        }),
-      });
-
-      const data = await res.json();
-
-      if (data.changeHeroUrl) {
-        // Show the ChangeHero instruction modal
-        const modalData = {
-          url: data.changeHeroUrl,
-          walletAddress: data.walletAddress,
-          credits: totalCredits,
-        };
-        setChangeHeroData(modalData);
-        setShowChangeHeroModal(true);
-        // Save to localStorage so modal persists when user returns from ChangeHero
-        localStorage.setItem("changeHeroModalData", JSON.stringify(modalData));
-      } else if (data.error) {
-        alert(data.error);
-      }
-    } catch (error) {
-      console.error("Card payment error:", error);
-      alert("Failed to create payment. Please try again.");
-    } finally {
-      setIsProcessingCard(false);
-      setSelectedPackage(null);
-    }
-  };
-
-  const handleChangeHeroConfirm = () => {
-    if (changeHeroData?.url) {
-      window.open(changeHeroData.url, "_blank");
-    }
-    // Don't close the modal - keep it open for when user returns
-  };
-
-  const closeChangeHeroModal = () => {
-    setShowChangeHeroModal(false);
-    setChangeHeroData(null);
-    setWalletCopied(false);
-    localStorage.removeItem("changeHeroModalData");
-  };
-
-  const copyWalletAddress = async () => {
-    if (changeHeroData?.walletAddress) {
-      try {
-        await navigator.clipboard.writeText(changeHeroData.walletAddress);
-        setWalletCopied(true);
-        setTimeout(() => setWalletCopied(false), 3000);
-      } catch (err) {
-        console.error("Failed to copy:", err);
-      }
+    } else {
+      setShowMixPayModal(true);
     }
   };
 
@@ -319,15 +230,10 @@ export default function CreditsPage() {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.1 + index * 0.05 }}
-                    whileHover={{ scale: isProcessingCard ? 1 : 1.02 }}
-                    onClick={() => !isProcessingCard && handlePackageSelect(pkg)}
+                    whileHover={{ scale: 1.02 }}
+                    onClick={() => handlePackageSelect(pkg)}
                     className={cn(
-                      "relative rounded-2xl border p-5 transition-all",
-                      isProcessingCard && selectedPackage?.id === pkg.id
-                        ? "opacity-50 cursor-wait"
-                        : isProcessingCard
-                        ? "opacity-30 cursor-not-allowed"
-                        : "cursor-pointer",
+                      "relative rounded-2xl border p-5 transition-all cursor-pointer",
                       pkg.popular
                         ? "bg-purple-500/10 border-purple-500/50 shadow-lg shadow-purple-500/20"
                         : pkg.bestValue
@@ -335,12 +241,6 @@ export default function CreditsPage() {
                         : "bg-white/5 border-white/10 hover:border-purple-500/30"
                     )}
                   >
-                    {/* Loading overlay */}
-                    {isProcessingCard && selectedPackage?.id === pkg.id && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-2xl z-10">
-                        <Loader2 className="w-8 h-8 text-white animate-spin" />
-                      </div>
-                    )}
                     {/* Badge */}
                     {pkg.popular && (
                       <div className="absolute -top-3 left-1/2 -translate-x-1/2">
@@ -580,15 +480,10 @@ export default function CreditsPage() {
                 {/* Card Option */}
                 <button
                   onClick={() => handlePaymentMethodSelect("card")}
-                  disabled={isProcessingCard}
-                  className="w-full flex items-center gap-4 p-4 bg-[var(--surface)] hover:bg-blue-500/10 border border-[var(--border)] hover:border-blue-500/50 rounded-xl transition-all group disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full flex items-center gap-4 p-4 bg-[var(--surface)] hover:bg-blue-500/10 border border-[var(--border)] hover:border-blue-500/50 rounded-xl transition-all group"
                 >
                   <div className="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center">
-                    {isProcessingCard ? (
-                      <Loader2 className="w-6 h-6 text-blue-400 animate-spin" />
-                    ) : (
-                      <CreditCard className="w-6 h-6 text-blue-400" />
-                    )}
+                    <CreditCard className="w-6 h-6 text-blue-400" />
                   </div>
                   <div className="flex-1 text-left">
                     <p className="font-semibold text-[var(--foreground)] group-hover:text-blue-400 transition-colors">
@@ -625,142 +520,19 @@ export default function CreditsPage() {
         />
       )}
 
-      {/* ChangeHero Instructions Modal */}
-      <AnimatePresence>
-        {showChangeHeroModal && changeHeroData && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-sm p-0 sm:p-4"
-            onClick={closeChangeHeroModal}
-          >
-            <motion.div
-              initial={{ y: "100%", opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: "100%", opacity: 0 }}
-              transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              onClick={(e) => e.stopPropagation()}
-              className="w-full sm:max-w-md bg-[#0d0d0f] border border-white/10 rounded-t-2xl sm:rounded-2xl overflow-hidden"
-            >
-              {/* Header */}
-              <div className="p-5 border-b border-white/10">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center">
-                    <CreditCard className="w-5 h-5 text-blue-400" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-bold text-white">
-                      Card Payment Instructions
-                    </h3>
-                    <p className="text-sm text-gray-400">
-                      Purchase {changeHeroData.credits.toLocaleString()} credits
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Content */}
-              <div className="p-5 space-y-5">
-                {/* Step 1 */}
-                <div className="flex gap-4">
-                  <div className="flex-shrink-0 w-7 h-7 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-400 font-bold text-sm">
-                    1
-                  </div>
-                  <div>
-                    <p className="font-medium text-white">
-                      Buy crypto on ChangeHero
-                    </p>
-                    <p className="text-sm text-gray-400 mt-1">
-                      Click the button below to purchase crypto using your credit card on ChangeHero (no KYC required under €700).
-                    </p>
-                  </div>
-                </div>
-
-                {/* Step 2 */}
-                <div className="flex gap-4">
-                  <div className="flex-shrink-0 w-7 h-7 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-400 font-bold text-sm">
-                    2
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-medium text-white">
-                      Send to this wallet address
-                    </p>
-                    <p className="text-sm text-gray-400 mt-1 mb-2">
-                      When prompted for a destination address on ChangeHero, use:
-                    </p>
-                    <div className="bg-black/50 border border-white/10 rounded-xl p-3 flex items-center gap-2">
-                      <code className="flex-1 text-xs text-purple-400 break-all font-mono">
-                        {changeHeroData.walletAddress}
-                      </code>
-                      <button
-                        onClick={copyWalletAddress}
-                        className={cn(
-                          "flex-shrink-0 p-2 rounded-lg transition-all",
-                          walletCopied
-                            ? "bg-green-500/20 text-green-400"
-                            : "bg-white/10 text-gray-400 hover:bg-white/20"
-                        )}
-                      >
-                        {walletCopied ? (
-                          <CheckCircle className="w-4 h-4" />
-                        ) : (
-                          <Copy className="w-4 h-4" />
-                        )}
-                      </button>
-                    </div>
-                    {walletCopied && (
-                      <p className="text-xs text-green-400 mt-2 flex items-center gap-1">
-                        <CheckCircle className="w-3 h-3" />
-                        Wallet address copied to clipboard!
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Step 3 */}
-                <div className="flex gap-4">
-                  <div className="flex-shrink-0 w-7 h-7 rounded-full bg-green-500/20 flex items-center justify-center text-green-400 font-bold text-sm">
-                    3
-                  </div>
-                  <div>
-                    <p className="font-medium text-white">
-                      Credits added automatically
-                    </p>
-                    <p className="text-sm text-gray-400 mt-1">
-                      Your credits will be added to your account within minutes once we receive the payment.
-                    </p>
-                  </div>
-                </div>
-
-                {/* Warning */}
-                <div className="bg-orange-500/10 border border-orange-500/30 rounded-xl p-4">
-                  <p className="text-sm text-orange-400">
-                    <strong>Important:</strong> Make sure to copy the wallet address correctly. Funds sent to wrong addresses cannot be recovered.
-                  </p>
-                </div>
-              </div>
-
-              {/* Footer */}
-              <div className="p-5 border-t border-white/10 flex gap-3">
-                <button
-                  onClick={closeChangeHeroModal}
-                  className="flex-1 px-4 py-3 rounded-xl border border-white/10 text-gray-400 hover:bg-white/5 transition-colors font-medium"
-                >
-                  Done
-                </button>
-                <button
-                  onClick={handleChangeHeroConfirm}
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-purple-500 text-white font-semibold hover:opacity-90 transition-opacity"
-                >
-                  Go to ChangeHero
-                  <ExternalLink className="w-4 h-4" />
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* MixPay Card Payment Modal */}
+      {selectedPackage && (
+        <MixPayModal
+          isOpen={showMixPayModal}
+          onClose={() => {
+            setShowMixPayModal(false);
+            setSelectedPackage(null);
+          }}
+          amount={selectedPackage.price}
+          credits={selectedPackage.credits}
+          bonusCredits={selectedPackage.bonus}
+        />
+      )}
 
       {/* Dispute Form Modal */}
       <DisputeForm
