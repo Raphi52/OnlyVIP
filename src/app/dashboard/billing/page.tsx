@@ -16,8 +16,10 @@ import {
   Gift,
   Loader2,
   RefreshCw,
+  HelpCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { DisputeForm } from "@/components/payments";
 
 interface Transaction {
   id: string;
@@ -73,6 +75,7 @@ export default function BillingPage() {
   const [filter, setFilter] = useState("all");
   const [isLoading, setIsLoading] = useState(true);
   const [isManaging, setIsManaging] = useState(false);
+  const [showDisputeForm, setShowDisputeForm] = useState(false);
 
   const fetchBilling = async () => {
     try {
@@ -374,6 +377,39 @@ export default function BillingPage() {
           </Card>
         </motion.div>
       )}
+
+      {/* Dispute Button */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.5 }}
+        className="mt-8"
+      >
+        <button
+          onClick={() => setShowDisputeForm(true)}
+          className="w-full p-4 bg-[var(--surface)] hover:bg-[var(--surface-hover)] border border-[var(--border)] hover:border-orange-500/50 rounded-xl transition-all group"
+        >
+          <div className="flex items-center justify-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-orange-500/10 flex items-center justify-center group-hover:bg-orange-500/20 transition-colors">
+              <HelpCircle className="w-5 h-5 text-orange-400" />
+            </div>
+            <div className="text-left">
+              <p className="font-medium text-[var(--foreground)] group-hover:text-orange-400 transition-colors">
+                I Didn&apos;t Receive My Credits
+              </p>
+              <p className="text-sm text-[var(--muted)]">
+                Submit a dispute if your payment wasn&apos;t credited
+              </p>
+            </div>
+          </div>
+        </button>
+      </motion.div>
+
+      {/* Dispute Form Modal */}
+      <DisputeForm
+        isOpen={showDisputeForm}
+        onClose={() => setShowDisputeForm(false)}
+      />
     </div>
   );
 }

@@ -7,76 +7,439 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ============= AGENCY =============
+
+model Agency {
+  id   String @id @default(cuid())
+  name String
+  slug String @unique
+
+  // Owner (user who created the agency)
+  ownerId String
+  owner   User   @relation("AgencyOwner", fields: [ownerId], references: [id])
+
+  // Public profile (for Find Agency)
+  logo          String?
+  website       String?
+  description   String? @db.Text
+  publicVisible Boolean @default(false) // Show in Find Agency (must fill profile first)
+
+  // Extended public profile
+  tagline         String? // Short tagline
+  services        String? @db.Text // JSON array: ["Management", "Chatting", "Marketing"]
+  specialties     String? @db.Text // JSON array of content categories
+  minRevenueShare Int? // Min revenue share offered to creators
+  maxRevenueShare Int? // Max revenue share offered to creators
+  socialLinks     String? @db.Text // JSON: {instagram, twitter, tiktok}
+  portfolioImages String? @db.Text // JSON array of image URLs
+  location        String? // Country/Region
+  languages       String? @db.Text // JSON array: ["English", "French"]
+  yearsInBusiness Int?
+
+  // Settings (controlled by Admin)
+  aiEnabled   Boolean @default(false) // AI disabled by default
+  maxCreators Int     @default(10)
+  maxChatters Int     @default(20)
+  platformFee Float   @default(0.10) // 10% platform commission
+
+  // Status
+  status String @default("ACTIVE") // ACTIVE | SUSPENDED | BANNED
+
+  // Relations
+  creators        Creator[]
+  chatters        Chatter[]
+  aiPersonalities AgencyAiPersonality[]
+  scripts         Script[]
+  applications    AgencyApplication[]
+  listing         AgencyListing?
+  earnings        AgencyEarning[]
+
+  // Balance tracking
+  pendingBalance Float @default(0) // Balance awaiting payout
+  totalEarned    Float @default(0) // Total earned (net after chatter commission)
+  totalPaid      Float @default(0) // Total paid out
+
+  // Stats cache
+  totalRevenue  Float @default(0)
+  averageRating Float @default(0)
+  reviewCount   Int   @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// AgencyStatus: "ACTIVE" | "SUSPENDED" | "BANNED"
+
+// ============= CHATTER (human employee) =============
+
+model Chatter {
+  id String @id @default(cuid())
+
+  // Auth
+  email        String  @unique
+  passwordHash String
+  name         String
+  avatar       String?
+
+  // Agency
+  agencyId String
+  agency   Agency @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+
+  // Assigned creators (many-to-many)
+  assignedCreators ChatterCreatorAssignment[]
+
+  // Commission
+  commissionEnabled Boolean @default(false)
+  commissionRate    Float   @default(0.10) // 10% by default
+
+  // Balance tracking
+  pendingBalance Float @default(0) // Balance awaiting payout
+  totalPaid      Float @default(0) // Total paid out
+
+  // Stats
+  totalEarnings        Float @default(0)
+  totalMessages        Int   @default(0)
+  totalSales           Int   @default(0)
+  messagesOutsideShift Int   @default(0) // Messages sent outside scheduled shift
+
+  // Status
+  isActive     Boolean   @default(true)
+  lastActiveAt DateTime?
+
+  // Schedule - JSON: { "monday": [{"start": "09:00", "end": "17:00"}], ... }
+  schedule String? // JSON string for work schedule
+
+  // Attributed earnings
+  earnings ChatterEarning[]
+
+  // Messages sent by this chatter
+  messages Message[] @relation("ChatterMessages")
+
+  // Conversations assigned to this chatter
+  assignedConversations Conversation[] @relation("AssignedConversations")
+
+  // AI Suggestions sent by this chatter
+  sentSuggestions AiSuggestion[] @relation("SentBySuggestions")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([agencyId])
+}
+
+model ChatterCreatorAssignment {
+  id          String @id @default(cuid())
+  chatterId   String
+  creatorSlug String
+
+  chatter Chatter @relation(fields: [chatterId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([chatterId, creatorSlug])
+  @@index([creatorSlug])
+}
+
+// ============= AGENCY AI PERSONALITY =============
+
+model AgencyAiPersonality {
+  id   String @id @default(cuid())
+  name String // "Sweet", "Dominant", etc.
+
+  // Agency & Creator
+  agencyId    String
+  agency      Agency @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  creatorSlug String // Assigned to which creator
+
+  // Personality config
+  personality String // JSON: traits, style, tone, etc.
+
+  // Tone matching (for auto-switching)
+  primaryTone  String? // "romantic", "playful", "explicit", "casual", "demanding"
+  toneKeywords String? // JSON array of keywords that trigger this personality
+
+  // A/B Testing
+  trafficShare Int     @default(100) // % of traffic (0-100)
+  isActive     Boolean @default(true)
+
+  // Media Settings for this AI personality
+  aiMediaEnabled   Boolean @default(true)  // AI can send media in conversations
+  aiMediaFrequency Int     @default(4)     // Send media every X messages on average
+  aiPPVRatio       Int     @default(30)    // % of media that are PPV (0-100)
+  aiTeasingEnabled Boolean @default(true)  // AI can tease about PPV before sending
+
+  // Stats
+  totalEarnings  Float @default(0)
+  totalMessages  Int   @default(0)
+  totalSales     Int   @default(0)
+  conversionRate Float @default(0)
+
+  // Attributed earnings
+  earnings AiPersonalityEarning[]
+
+  // Messages sent by this AI personality
+  messages Message[] @relation("AiPersonalityMessages")
+
+  // Conversation assignments
+  conversations Conversation[]
+  switchesFrom  PersonalitySwitch[] @relation("SwitchFrom")
+  switchesTo    PersonalitySwitch[] @relation("SwitchTo")
+
+  // AI Suggestions generated by this personality
+  aiSuggestions AiSuggestion[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([creatorSlug])
+  @@index([agencyId])
+  @@index([primaryTone])
+}
+
+// ============= PERSONALITY SWITCH TRACKING =============
+
+model PersonalitySwitch {
+  id String @id @default(cuid())
+
+  // Conversation
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  // From/To personalities
+  fromPersonalityId String?
+  fromPersonality   AgencyAiPersonality? @relation("SwitchFrom", fields: [fromPersonalityId], references: [id], onDelete: SetNull)
+
+  toPersonalityId String
+  toPersonality   AgencyAiPersonality @relation("SwitchTo", fields: [toPersonalityId], references: [id], onDelete: Cascade)
+
+  // Switch reason
+  reason       String // "auto_tone", "manual", "initial_assignment"
+  detectedTone String? // Tone that triggered the switch (if auto)
+  triggeredBy  String? // userId if manual switch
+
+  createdAt DateTime @default(now())
+
+  @@index([conversationId])
+  @@index([toPersonalityId])
+  @@index([reason])
+  @@index([createdAt])
+}
+
+// ============= SCRIPTS LIBRARY =============
+
+model Script {
+  id String @id @default(cuid())
+
+  // Agency
+  agencyId String
+  agency   Agency @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+
+  // Script content
+  name     String // "Sexy intro", "PPV pitch", etc.
+  content  String // The script text
+  category String // "GREETING" | "PPV_PITCH" | "FOLLOW_UP" | "CLOSING" | "CUSTOM"
+
+  // Optional: specific to a creator
+  creatorSlug String?
+
+  // Stats
+  usageCount       Int   @default(0)
+  salesGenerated   Int   @default(0)
+  revenueGenerated Float @default(0)
+  conversionRate   Float @default(0) // Calculated: salesGenerated / usageCount
+
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([agencyId])
+  @@index([creatorSlug])
+}
+
+// ScriptCategory: "GREETING" | "PPV_PITCH" | "FOLLOW_UP" | "CLOSING" | "CUSTOM"
+
+// ============= EARNINGS ATTRIBUTION =============
+
+model AgencyEarning {
+  id String @id @default(cuid())
+
+  agencyId String
+  agency   Agency @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+
+  // Original earning reference
+  creatorEarningId String
+  creatorEarning   CreatorEarning @relation(fields: [creatorEarningId], references: [id], onDelete: Cascade)
+
+  // Amounts (in EUR)
+  grossAmount   Float // Gross amount (after platform commission)
+  agencyShare   Float // % agency keeps (e.g., 0.30 = 30%)
+  agencyGross   Float // Agency gross before chatter commission
+  chatterAmount Float @default(0) // What chatter earns (deducted from agency)
+  netAmount     Float // Net for agency (after chatter commission)
+
+  // Type
+  type String // "PPV" | "TIP" | "MEDIA_UNLOCK" | "SUBSCRIPTION"
+
+  // Status
+  status String    @default("PENDING") // "PENDING" | "PAID"
+  paidAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([agencyId])
+  @@index([creatorEarningId])
+  @@index([status])
+}
+
+model ChatterEarning {
+  id String @id @default(cuid())
+
+  chatterId String
+  chatter   Chatter @relation(fields: [chatterId], references: [id], onDelete: Cascade)
+
+  // Original earning reference
+  creatorEarningId String
+  creatorEarning   CreatorEarning @relation(fields: [creatorEarningId], references: [id], onDelete: Cascade)
+
+  // Amounts
+  grossAmount      Float // Sale amount (agency gross)
+  commissionRate   Float // % chatter commission
+  commissionAmount Float // What chatter earns
+
+  // Attribution info
+  attributedMessageId String? // Message that triggered the sale
+  delayedAttribution  Boolean @default(false) // If > 1h after message
+
+  // Type
+  type String // "PPV" | "TIP" | "MEDIA_UNLOCK"
+
+  // Status
+  status String    @default("PENDING") // "PENDING" | "PAID"
+  paidAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([chatterId])
+  @@index([creatorEarningId])
+  @@index([status])
+}
+
+model AiPersonalityEarning {
+  id String @id @default(cuid())
+
+  aiPersonalityId String
+  aiPersonality   AgencyAiPersonality @relation(fields: [aiPersonalityId], references: [id], onDelete: Cascade)
+
+  // Original earning reference
+  creatorEarningId String
+  creatorEarning   CreatorEarning @relation(fields: [creatorEarningId], references: [id], onDelete: Cascade)
+
+  // Amounts
+  grossAmount Float
+
+  // Attribution info
+  attributedMessageId String?
+
+  // Type
+  type String // "PPV" | "TIP" | "MEDIA_UNLOCK"
+
+  createdAt DateTime @default(now())
+
+  @@index([aiPersonalityId])
+  @@index([creatorEarningId])
+}
+
 // ============= CREATORS =============
 
 model Creator {
-  id           String   @id @default(cuid())
-  slug         String   @unique
-  name         String
-  displayName  String
-  avatar       String?
-  cardImage    String?
-  coverImage   String?
-  bio          String?
+  id          String  @id @default(cuid())
+  slug        String  @unique
+  name        String
+  displayName String
+  avatar      String?
+  cardImage   String?
+  coverImage  String?
+  bio         String?
 
   // Link to user account (creator owner) - one user can manage multiple creators
-  userId       String?
-  user         User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  // Agency (optional - a creator can be managed by an agency)
+  agencyId String?
+  agency   Agency? @relation(fields: [agencyId], references: [id], onDelete: SetNull)
 
   // Social links (JSON string)
-  socialLinks  String   @default("{}")
+  socialLinks String @default("{}")
 
   // Theme customization (JSON string)
-  theme        String   @default("{}")
+  theme String @default("{}")
 
   // Payment wallets
-  walletEth    String?
-  walletBtc    String?
+  walletEth String?
+  walletBtc String?
 
   // Stats cache
-  photoCount      Int   @default(0)
-  videoCount      Int   @default(0)
-  subscriberCount Int   @default(0)
+  photoCount      Int @default(0)
+  videoCount      Int @default(0)
+  subscriberCount Int @default(0)
 
   // Status
-  isActive     Boolean  @default(true)
-  sortOrder    Int      @default(0)
+  isActive  Boolean @default(true)
+  sortOrder Int     @default(0)
 
   // Category tags (JSON array of strings)
-  categories   String   @default("[]")
+  categories String @default("[]")
 
-  // AI Girlfriend Mode
-  aiEnabled        Boolean  @default(false)
-  aiPersonality    String?  // JSON: name, age, traits, interests, style
-  aiResponseDelay  Int      @default(120) // Average delay in seconds (2min default)
-  aiLastActive     DateTime?
+  // AI Girlfriend Mode (legacy - for non-agency creators)
+  aiEnabled       Boolean   @default(false)
+  aiPersonality   String? // JSON: name, age, traits, interests, style
+  aiResponseDelay Int       @default(120) // Average delay in seconds (2min default)
+  aiLastActive    DateTime?
+
+  // AI Media Sending Settings
+  aiMediaEnabled   Boolean @default(true) // AI can send media in conversations
+  aiMediaFrequency Int     @default(4) // Send media every X messages on average
+  aiPPVRatio       Int     @default(30) // % of media that are PPV (0-100)
+  aiTeasingEnabled Boolean @default(true) // AI can tease before sending PPV
 
   // Earnings tracking
-  pendingBalance   Float    @default(0)  // Balance awaiting payout
-  totalEarned      Float    @default(0)  // Total earned (net after commission)
-  totalPaid        Float    @default(0)  // Total paid out
-  earnings         CreatorEarning[]
+  pendingBalance Float            @default(0) // Balance awaiting payout
+  totalEarned    Float            @default(0) // Total earned (net after commission)
+  totalPaid      Float            @default(0) // Total paid out
+  earnings       CreatorEarning[]
 
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  // Model listing for Find Agency marketplace
+  modelListing ModelListing?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([agencyId])
 }
 
 // ============= AI RESPONSE QUEUE =============
 
 model AiResponseQueue {
-  id             String   @id @default(cuid())
-  messageId      String   @unique
+  id             String    @id @default(cuid())
+  messageId      String    @unique
   conversationId String
   creatorSlug    String
   scheduledAt    DateTime // When AI should respond
-  status         String   @default("PENDING") // PENDING | PROCESSING | COMPLETED | FAILED
-  response       String?  // Generated response
-  mediaId        String?  // Media ID to attach as PPV
-  attempts       Int      @default(0)
-  maxAttempts    Int      @default(3)
+  status         String    @default("PENDING") // PENDING | PROCESSING | COMPLETED | FAILED
+  response       String? // Generated response
+  mediaId        String? // Media ID to attach as PPV
+  attempts       Int       @default(0)
+  maxAttempts    Int       @default(3)
   error          String?
-  createdAt      DateTime @default(now())
+  createdAt      DateTime  @default(now())
   processedAt    DateTime?
+
+  // AI Media Decision
+  shouldSendMedia Boolean @default(false) // AI decided to send media
+  mediaDecision   String? // "FREE" | "PPV" | "TEASE"
+  teaseText       String? // Teaser text if teasing
 
   @@index([status, scheduledAt])
   @@index([creatorSlug])
@@ -97,35 +460,38 @@ model User {
   isCreator       Boolean   @default(false)
   creatorProfiles Creator[]
 
-  // VIP status (manual grant by admin)
-  isVip           Boolean   @default(false)
+  // Agency ownership
+  isAgencyOwner Boolean  @default(false)
+  ownedAgencies Agency[] @relation("AgencyOwner")
 
   // Credits system
-  creditBalance   Int       @default(0)
+  creditBalance      Int                 @default(0) // Total (paid + bonus) for display
+  paidCredits        Int                 @default(0) // Paid credits - usable everywhere
+  bonusCredits       Int                 @default(0) // Bonus credits - PPV catalog only
   creditTransactions CreditTransaction[]
 
   // Stripe
   stripeCustomerId String?
 
   // Auth
-  accounts      Account[]
-  sessions      Session[]
+  accounts Account[]
+  sessions Session[]
 
   // Subscriptions & Purchases
-  subscriptions     Subscription[]
-  mediaPurchases    MediaPurchase[]
-  messagePurchases  MessagePayment[]
+  subscriptions    Subscription[]
+  mediaPurchases   MediaPurchase[]
+  messagePurchases MessagePayment[]
 
   // Chat
-  sentMessages      Message[]       @relation("sender")
-  receivedMessages  Message[]       @relation("receiver")
-  conversations     ConversationParticipant[]
+  sentMessages     Message[]                 @relation("sender")
+  receivedMessages Message[]                 @relation("receiver")
+  conversations    ConversationParticipant[]
 
   // Creator earnings (payments made by this user)
-  creatorEarnings   CreatorEarning[]
+  creatorEarnings CreatorEarning[]
 
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Account {
@@ -168,24 +534,25 @@ model VerificationToken {
 // ============= CREDITS SYSTEM =============
 
 model CreditTransaction {
-  id             String   @id @default(cuid())
-  userId         String
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  amount         Int      // Positive = add, Negative = spend
-  balance        Int      // Balance after transaction
+  amount  Int // Positive = add, Negative = spend
+  balance Int // Balance after transaction
 
-  type           String   // "SUBSCRIPTION_GRANT" | "PURCHASE" | "MEDIA_UNLOCK" | "TIP" | "PPV" | "EXPIRATION" | "ADMIN_GRANT" | "RECURRING_GRANT"
+  type       String // "SUBSCRIPTION_GRANT" | "PURCHASE" | "MEDIA_UNLOCK" | "TIP" | "PPV" | "EXPIRATION" | "ADMIN_GRANT" | "RECURRING_GRANT"
+  creditType String @default("PAID") // "PAID" | "BONUS"
 
   // Optional references
   mediaId        String?
   messageId      String?
   subscriptionId String?
 
-  description    String?
-  expiresAt      DateTime? // When these credits expire
+  description String?
+  expiresAt   DateTime? // When these credits expire
 
-  createdAt      DateTime @default(now())
+  createdAt DateTime @default(now())
 
   @@index([userId])
   @@index([type])
@@ -197,34 +564,46 @@ model CreditTransaction {
 // ============= CREATOR EARNINGS =============
 
 model CreatorEarning {
-  id              String   @id @default(cuid())
-  creatorSlug     String
-  creator         Creator  @relation(fields: [creatorSlug], references: [slug], onDelete: Cascade)
+  id          String  @id @default(cuid())
+  creatorSlug String
+  creator     Creator @relation(fields: [creatorSlug], references: [slug], onDelete: Cascade)
 
   // Transaction source
-  type            String   // "MEDIA_UNLOCK" | "TIP" | "PPV" | "SUBSCRIPTION"
-  sourceId        String?  // mediaId, messageId, subscriptionId, etc.
+  type     String // "MEDIA_UNLOCK" | "TIP" | "PPV" | "SUBSCRIPTION"
+  sourceId String? // mediaId, messageId, subscriptionId, etc.
 
   // Amounts (in EUR)
-  grossAmount     Float    // Gross amount before commission
-  commissionRate  Float    // 0.00 or 0.05 (5%)
-  commissionAmount Float   // Platform commission taken
-  netAmount       Float    // Net amount for creator
+  grossAmount      Float // Gross amount before commission
+  commissionRate   Float // 0.00 or 0.05 (5%)
+  commissionAmount Float // Platform commission taken
+  netAmount        Float // Net amount for creator
 
   // Status
-  status          String   @default("PENDING")  // "PENDING" | "PAID"
-  paidAt          DateTime?
-  payoutTxId      String?  // Transaction ID when paid out
+  status     String    @default("PENDING") // "PENDING" | "PAID"
+  paidAt     DateTime?
+  payoutTxId String? // Transaction ID when paid out
 
   // User who paid
-  userId          String
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  createdAt       DateTime @default(now())
+  // Attribution (who generated this sale)
+  chatterId           String? // Human chatter who made the sale
+  aiPersonalityId     String? // AI personality who made the sale
+  attributedMessageId String? // The message that triggered the sale
+
+  // Attribution earnings
+  agencyEarnings        AgencyEarning[]
+  chatterEarnings       ChatterEarning[]
+  aiPersonalityEarnings AiPersonalityEarning[]
+
+  createdAt DateTime @default(now())
 
   @@index([creatorSlug])
   @@index([status])
   @@index([userId])
+  @@index([chatterId])
+  @@index([aiPersonalityId])
 }
 
 // CreatorEarningType: "MEDIA_UNLOCK" | "TIP" | "PPV" | "SUBSCRIPTION"
@@ -233,15 +612,15 @@ model CreatorEarning {
 // ============= SUBSCRIPTION PLANS =============
 
 model SubscriptionPlan {
-  id                 String   @id @default(cuid())
-  name               String   @unique
-  slug               String   @unique
-  description        String?
+  id          String  @id @default(cuid())
+  name        String  @unique
+  slug        String  @unique
+  description String?
 
   // Pricing
-  monthlyPrice       Float
-  annualPrice        Float
-  currency           String   @default("USD")
+  monthlyPrice Float
+  annualPrice  Float
+  currency     String @default("USD")
 
   // Stripe
   stripeProductId    String?
@@ -249,67 +628,67 @@ model SubscriptionPlan {
   stripePriceAnnual  String?
 
   // Access
-  accessTier         String   // "FREE" | "BASIC" | "VIP"
-  canMessage         Boolean  @default(false)
-  downloadLimit      Int?
+  accessTier    String // "FREE" | "BASIC" | "VIP"
+  canMessage    Boolean @default(false)
+  downloadLimit Int?
 
   // Credits (new system)
-  initialCredits     Int      @default(0)     // Credits given at subscription start (Basic=1000, VIP=5000)
-  recurringCredits   Int      @default(0)     // Credits given every interval (VIP=1000)
-  creditIntervalDays Int      @default(6)     // Days between recurring credits
+  initialCredits     Int @default(0) // Credits given at subscription start (Basic=1000, VIP=5000)
+  recurringCredits   Int @default(0) // Credits given every interval (VIP=1000)
+  creditIntervalDays Int @default(6) // Days between recurring credits
 
   // Features (JSON string)
-  features           String   @default("[]")
+  features String @default("[]")
 
   // Display
-  isPopular          Boolean  @default(false)
-  isActive           Boolean  @default(true)
-  sortOrder          Int      @default(0)
+  isPopular Boolean @default(false)
+  isActive  Boolean @default(true)
+  sortOrder Int     @default(0)
 
-  subscriptions      Subscription[]
+  subscriptions Subscription[]
 
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Subscription {
-  id                   String             @id @default(cuid())
-  userId               String
-  planId               String
+  id     String @id @default(cuid())
+  userId String
+  planId String
 
   // Creator
-  creatorSlug          String             @default("miacosta")
+  creatorSlug String @default("miacosta")
 
   // Status
-  status               String             @default("PENDING") // "PENDING" | "TRIALING" | "ACTIVE" | "PAST_DUE" | "CANCELED" | "UNPAID" | "EXPIRED"
+  status String @default("PENDING") // "PENDING" | "TRIALING" | "ACTIVE" | "PAST_DUE" | "CANCELED" | "UNPAID" | "EXPIRED"
 
   // Payment
-  paymentProvider      String             // "STRIPE" | "NOWPAYMENTS" | "MANUAL"
-  stripeSubscriptionId String?            @unique
+  paymentProvider      String // "STRIPE" | "NOWPAYMENTS" | "MANUAL"
+  stripeSubscriptionId String? @unique
   stripeCustomerId     String?
 
   // Billing
-  billingInterval      String             @default("MONTHLY") // "MONTHLY" | "ANNUAL"
-  currentPeriodStart   DateTime
-  currentPeriodEnd     DateTime
-  cancelAtPeriodEnd    Boolean            @default(false)
-  canceledAt           DateTime?
+  billingInterval    String    @default("MONTHLY") // "MONTHLY" | "ANNUAL"
+  currentPeriodStart DateTime
+  currentPeriodEnd   DateTime
+  cancelAtPeriodEnd  Boolean   @default(false)
+  canceledAt         DateTime?
 
   // Trial
-  trialStart           DateTime?
-  trialEnd             DateTime?
+  trialStart DateTime?
+  trialEnd   DateTime?
 
   // Credits tracking
-  lastCreditGrant      DateTime?          // Last time recurring credits were granted
-  nextCreditGrant      DateTime?          // Next scheduled credit grant
+  lastCreditGrant DateTime? // Last time recurring credits were granted
+  nextCreditGrant DateTime? // Next scheduled credit grant
 
-  metadata             String?
+  metadata String?
 
-  user                 User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  plan                 SubscriptionPlan   @relation(fields: [planId], references: [id])
+  user User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan SubscriptionPlan @relation(fields: [planId], references: [id])
 
-  createdAt            DateTime           @default(now())
-  updatedAt            DateTime           @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 // AccessTier: "FREE" | "BASIC" | "VIP"
@@ -320,19 +699,19 @@ model Subscription {
 // ============= CREATOR MEMBER MANAGEMENT =============
 
 model CreatorMember {
-  id           String   @id @default(cuid())
-  creatorSlug  String
-  userId       String
+  id          String @id @default(cuid())
+  creatorSlug String
+  userId      String
 
   // Permissions
-  isVip        Boolean  @default(false)  // VIP granted by creator
-  isBlocked    Boolean  @default(false)  // Blocked by creator
+  isVip     Boolean @default(false) // VIP granted by creator
+  isBlocked Boolean @default(false) // Blocked by creator
 
   // Notes (optional - for creator reference)
-  notes        String?
+  notes String?
 
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([creatorSlug, userId])
   @@index([creatorSlug])
@@ -342,64 +721,64 @@ model CreatorMember {
 // ============= MEDIA CONTENT =============
 
 model MediaContent {
-  id             String      @id @default(cuid())
-  title          String
-  slug           String      @unique
-  description    String?
+  id          String  @id @default(cuid())
+  title       String
+  slug        String  @unique
+  description String?
 
   // Creator
-  creatorSlug    String      @default("miacosta")
+  creatorSlug String @default("miacosta")
 
   // Type
-  type           String      // "PHOTO" | "VIDEO" | "AUDIO" | "PACK"
+  type String // "PHOTO" | "VIDEO" | "AUDIO" | "PACK"
 
   // Access (legacy - keeping for backwards compatibility)
-  accessTier     String      @default("FREE") // "FREE" | "BASIC" | "VIP"
-  isPurchaseable Boolean     @default(false)
+  accessTier     String  @default("FREE") // "FREE" | "BASIC" | "VIP"
+  isPurchaseable Boolean @default(false)
   price          Float?
 
   // Tags system (new)
-  tagGallery     Boolean     @default(false)  // Show in public gallery
-  tagPPV         Boolean     @default(false)  // Pay-per-view content
-  tagAI          Boolean     @default(false)  // AI chatting can use this
-  tagFree        Boolean     @default(false)  // Free for everyone (including visitors)
-  tagVIP         Boolean     @default(false)  // VIP subscribers only
-  ppvPriceCredits Int?                        // Price in credits if tagPPV (1000 = 1 media)
+  tagGallery      Boolean @default(false) // Show in public gallery
+  tagPPV          Boolean @default(false) // Pay-per-view content
+  tagAI           Boolean @default(false) // AI chatting can use this
+  tagFree         Boolean @default(false) // Free for everyone (including visitors)
+  tagVIP          Boolean @default(false) // VIP subscribers only
+  ppvPriceCredits Int? // Price in credits if tagPPV (1000 = 1 media)
 
   // Files
-  thumbnailUrl   String?
-  previewUrl     String?
-  contentUrl     String
-  storageKey     String?
+  thumbnailUrl String?
+  previewUrl   String?
+  contentUrl   String
+  storageKey   String?
 
   // Metadata
-  fileSize       Int?
-  duration       Int?
-  width          Int?
-  height         Int?
-  mimeType       String?
+  fileSize Int?
+  duration Int?
+  width    Int?
+  height   Int?
+  mimeType String?
 
   // Organization
-  categoryId     String?
-  category       Category?   @relation(fields: [categoryId], references: [id])
-  tags           String      @default("[]")
+  categoryId String?
+  category   Category? @relation(fields: [categoryId], references: [id])
+  tags       String    @default("[]")
 
   // Stats
-  viewCount      Int         @default(0)
-  purchaseCount  Int         @default(0)
+  viewCount     Int @default(0)
+  purchaseCount Int @default(0)
 
   // Status
-  isPublished    Boolean     @default(false)
-  isFeatured     Boolean     @default(false)
-  showInGallery  Boolean     @default(true)  // If false, won't appear on homepage/gallery (legacy, use tagGallery)
-  publishedAt    DateTime?
+  isPublished   Boolean   @default(false)
+  isFeatured    Boolean   @default(false)
+  showInGallery Boolean   @default(true) // If false, won't appear on homepage/gallery (legacy, use tagGallery)
+  publishedAt   DateTime?
 
   // Relations
-  purchases      MediaPurchase[]
-  messageMedia   MessageMedia[]
+  purchases    MediaPurchase[]
+  messageMedia MessageMedia[]
 
-  createdAt      DateTime    @default(now())
-  updatedAt      DateTime    @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([tagGallery])
   @@index([tagFree])
@@ -408,18 +787,18 @@ model MediaContent {
 }
 
 model Category {
-  id          String         @id @default(cuid())
-  name        String         @unique
-  slug        String         @unique
+  id          String  @id @default(cuid())
+  name        String  @unique
+  slug        String  @unique
   description String?
   coverImage  String?
-  sortOrder   Int            @default(0)
-  isActive    Boolean        @default(true)
+  sortOrder   Int     @default(0)
+  isActive    Boolean @default(true)
 
-  media       MediaContent[]
+  media MediaContent[]
 
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 // MediaType: "PHOTO" | "VIDEO" | "AUDIO" | "PACK"
@@ -427,27 +806,27 @@ model Category {
 // ============= MEDIA PURCHASES =============
 
 model MediaPurchase {
-  id            String        @id @default(cuid())
-  userId        String
-  mediaId       String
+  id      String @id @default(cuid())
+  userId  String
+  mediaId String
 
   // Payment
-  amount        Float
-  currency      String        @default("USD")
-  provider      String        // "STRIPE" | "NOWPAYMENTS" | "MANUAL"
-  providerTxId  String?
-  status        String        @default("PENDING") // "PENDING" | "COMPLETED" | "FAILED" | "REFUNDED" | "CANCELLED"
+  amount       Float
+  currency     String  @default("USD")
+  provider     String // "STRIPE" | "NOWPAYMENTS" | "MANUAL"
+  providerTxId String?
+  status       String  @default("PENDING") // "PENDING" | "COMPLETED" | "FAILED" | "REFUNDED" | "CANCELLED"
 
   // Access
   expiresAt     DateTime?
-  downloadCount Int           @default(0)
+  downloadCount Int       @default(0)
   maxDownloads  Int?
 
-  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  media         MediaContent  @relation(fields: [mediaId], references: [id])
+  user  User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  media MediaContent @relation(fields: [mediaId], references: [id])
 
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([userId, mediaId])
 }
@@ -457,79 +836,118 @@ model MediaPurchase {
 // ============= CHAT SYSTEM =============
 
 model Conversation {
-  id           String   @id @default(cuid())
+  id String @id @default(cuid())
 
   // Creator
-  creatorSlug  String   @default("miacosta")
+  creatorSlug String @default("miacosta")
 
-  participants ConversationParticipant[]
-  messages     Message[]
+  // AI Personality Assignment (per-conversation)
+  aiPersonalityId String?
+  aiPersonality   AgencyAiPersonality? @relation(fields: [aiPersonalityId], references: [id], onDelete: SetNull)
 
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  // Tone tracking for adaptive switching
+  detectedTone   String? // "romantic", "playful", "explicit", "casual", "demanding"
+  toneConfidence Float? // 0-1 confidence score
+  lastToneCheck  DateTime?
+  autoToneSwitch Boolean   @default(true) // Auto-switch enabled by default
+
+  // AI Mode (for AI assisted workflow)
+  aiMode String @default("auto") // "auto" | "assisted" | "disabled"
+
+  // Chatter assignment (for handoff)
+  assignedChatterId String?
+  assignedChatter   Chatter? @relation("AssignedConversations", fields: [assignedChatterId], references: [id], onDelete: SetNull)
+
+  // Relations
+  participants        ConversationParticipant[]
+  messages            Message[]
+  personalitySwitches PersonalitySwitch[]
+  aiSuggestions       AiSuggestion[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([aiPersonalityId])
+  @@index([assignedChatterId])
+  @@index([aiMode])
 }
 
 model ConversationParticipant {
-  id             String       @id @default(cuid())
+  id             String @id @default(cuid())
   conversationId String
   userId         String
 
-  lastReadAt     DateTime?
-  isTyping       Boolean      @default(false)
-  isPinned       Boolean      @default(false)
-  isMuted        Boolean      @default(false)
+  lastReadAt DateTime?
+  isTyping   Boolean   @default(false)
+  isPinned   Boolean   @default(false)
+  isMuted    Boolean   @default(false)
 
-  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([conversationId, userId])
 }
 
 model Message {
-  id             String       @id @default(cuid())
+  id             String @id @default(cuid())
   conversationId String
   senderId       String
   receiverId     String
 
   // Content
-  text           String?
+  text String?
 
   // Reply/Quote
-  replyToId      String?
-  replyTo        Message?     @relation("MessageReplies", fields: [replyToId], references: [id])
-  replies        Message[]    @relation("MessageReplies")
+  replyToId String?
+  replyTo   Message?  @relation("MessageReplies", fields: [replyToId], references: [id])
+  replies   Message[] @relation("MessageReplies")
 
   // PPV (Pay-Per-View)
-  isPPV          Boolean      @default(false)
-  ppvPrice       Float?
-  ppvUnlockedBy  String       @default("[]")
+  isPPV         Boolean @default(false)
+  ppvPrice      Float?
+  ppvUnlockedBy String  @default("[]")
 
   // Tips received
-  totalTips      Float        @default(0)
+  totalTips Float @default(0)
 
   // Status
-  isRead         Boolean      @default(false)
-  isDeleted      Boolean      @default(false)
+  isRead    Boolean @default(false)
+  isDeleted Boolean @default(false)
+
+  // AI Generated flag (for UI badges)
+  isAiGenerated Boolean @default(false)
+
+  // Attribution (who sent this message on behalf of creator)
+  chatterId       String? // If sent by a human chatter
+  chatter         Chatter?             @relation("ChatterMessages", fields: [chatterId], references: [id], onDelete: SetNull)
+  aiPersonalityId String? // If sent by an AI personality
+  aiPersonality   AgencyAiPersonality? @relation("AiPersonalityMessages", fields: [aiPersonalityId], references: [id], onDelete: SetNull)
+  scriptId        String? // If a script was used
 
   // Relations
-  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  sender         User         @relation("sender", fields: [senderId], references: [id])
-  receiver       User         @relation("receiver", fields: [receiverId], references: [id])
-  media          MessageMedia[]
-  payments       MessagePayment[]
-  reactions      MessageReaction[]
+  conversation Conversation      @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       User              @relation("sender", fields: [senderId], references: [id])
+  receiver     User              @relation("receiver", fields: [receiverId], references: [id])
+  media        MessageMedia[]
+  payments     MessagePayment[]
+  reactions    MessageReaction[]
+  aiSuggestion AiSuggestion? // Link to AI suggestion if this was from a suggestion
 
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([chatterId])
+  @@index([aiPersonalityId])
+  @@index([isAiGenerated])
 }
 
 model MessageReaction {
-  id        String   @id @default(cuid())
+  id        String @id @default(cuid())
   messageId String
   userId    String
-  emoji     String   // "❤️" | "😂" | "😮" | "😢" | "👍" | "👎"
+  emoji     String // "❤️" | "😂" | "😮" | "😢" | "👍" | "👎"
 
-  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
 
@@ -537,40 +955,40 @@ model MessageReaction {
 }
 
 model MessageMedia {
-  id         String        @id @default(cuid())
-  messageId  String
+  id        String @id @default(cuid())
+  messageId String
 
   // Link to existing media or direct upload
-  mediaId    String?
+  mediaId String?
 
   // Direct upload
-  type       String    // "PHOTO" | "VIDEO" | "AUDIO" | "PACK"
+  type       String // "PHOTO" | "VIDEO" | "AUDIO" | "PACK"
   url        String
   previewUrl String?
 
-  message    Message       @relation(fields: [messageId], references: [id], onDelete: Cascade)
-  media      MediaContent? @relation(fields: [mediaId], references: [id])
+  message Message       @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  media   MediaContent? @relation(fields: [mediaId], references: [id])
 
-  createdAt  DateTime      @default(now())
+  createdAt DateTime @default(now())
 }
 
 model MessagePayment {
-  id        String             @id @default(cuid())
+  id        String @id @default(cuid())
   messageId String
   userId    String
 
-  type      String             // "PPV_UNLOCK" | "TIP"
-  amount    Float
-  currency  String             @default("USD")
+  type     String // "PPV_UNLOCK" | "TIP"
+  amount   Float
+  currency String @default("USD")
 
-  provider  String             // "STRIPE" | "NOWPAYMENTS" | "MANUAL"
+  provider     String // "STRIPE" | "NOWPAYMENTS" | "MANUAL"
   providerTxId String?
-  status    String             @default("PENDING") // "PENDING" | "COMPLETED" | "FAILED" | "REFUNDED" | "CANCELLED"
+  status       String  @default("PENDING") // "PENDING" | "COMPLETED" | "FAILED" | "REFUNDED" | "CANCELLED"
 
-  message   Message            @relation(fields: [messageId], references: [id])
-  user      User               @relation(fields: [userId], references: [id])
+  message Message @relation(fields: [messageId], references: [id])
+  user    User    @relation(fields: [userId], references: [id])
 
-  createdAt DateTime           @default(now())
+  createdAt DateTime @default(now())
 }
 
 // MessagePaymentType: "PPV_UNLOCK" | "TIP"
@@ -578,59 +996,95 @@ model MessagePayment {
 // ============= GENERAL PAYMENTS =============
 
 model Payment {
-  id           String        @id @default(cuid())
-  userId       String
+  id     String @id @default(cuid())
+  userId String
 
   // Creator
-  creatorSlug  String        @default("miacosta")
+  creatorSlug String @default("miacosta")
 
-  amount       Float
-  currency     String        @default("USD")
+  amount   Float
+  currency String @default("USD")
 
   // Platform fee (3%)
-  platformFee  Float         @default(0)
-  netAmount    Float         @default(0)
+  platformFee Float @default(0)
+  netAmount   Float @default(0)
 
-  provider     String        // "STRIPE" | "NOWPAYMENTS" | "MANUAL"
+  provider     String // "STRIPE" | "NOWPAYMENTS" | "MANUAL"
   providerTxId String?
 
-  status       String        @default("PENDING") // "PENDING" | "COMPLETED" | "FAILED" | "REFUNDED" | "CANCELLED"
+  status String @default("PENDING") // "PENDING" | "COMPLETED" | "FAILED" | "REFUNDED" | "CANCELLED"
 
-  type         String        // "SUBSCRIPTION" | "MEDIA_PURCHASE" | "PPV_UNLOCK" | "TIP"
-  description  String?
+  type        String // "SUBSCRIPTION" | "MEDIA_PURCHASE" | "PPV_UNLOCK" | "TIP"
+  description String?
 
-  metadata     String?
+  metadata String?
 
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 // PaymentType: "SUBSCRIPTION" | "MEDIA_PURCHASE" | "PPV_UNLOCK" | "TIP"
 
+// ============= PAYMENT DISPUTES =============
+
+model PaymentDispute {
+  id     String @id @default(cuid())
+  userId String
+
+  // Payment info
+  transactionId   String? // If they have it
+  paymentMethod   String // "card" | "crypto"
+  amount          Float
+  transactionHash String? // Blockchain TX hash
+  walletAddress   String? // Wallet they sent from
+  paymentDate     DateTime
+  cryptoCurrency  String? // "BTC", "ETH", "USDT", etc.
+
+  // Contact
+  email       String
+  description String @db.Text
+
+  // Resolution
+  status       String    @default("PENDING") // "PENDING" | "INVESTIGATING" | "RESOLVED" | "REJECTED"
+  resolution   String? // Admin notes
+  creditAmount Int? // Credits given if resolved
+  resolvedAt   DateTime?
+  resolvedBy   String? // Admin user ID
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+// DisputeStatus: "PENDING" | "INVESTIGATING" | "RESOLVED" | "REJECTED"
+
 // ============= ANALYTICS =============
 
 model PageView {
-  id          String   @id @default(cuid())
+  id String @id @default(cuid())
 
   // Page info
-  path        String
-  referrer    String?
+  path     String
+  referrer String?
 
   // Visitor info
-  visitorId   String   // Anonymous visitor ID (from cookie)
-  userId      String?  // Logged in user ID (optional)
+  visitorId String // Anonymous visitor ID (from cookie)
+  userId    String? // Logged in user ID (optional)
 
   // Device/Browser info
-  userAgent   String?
-  device      String?  // "desktop" | "mobile" | "tablet"
-  browser     String?
-  os          String?
-  country     String?
+  userAgent String?
+  device    String? // "desktop" | "mobile" | "tablet"
+  browser   String?
+  os        String?
+  country   String?
 
   // Session
-  sessionId   String
+  sessionId String
 
-  createdAt   DateTime @default(now())
+  createdAt DateTime @default(now())
 
   @@index([path])
   @@index([visitorId])
@@ -639,96 +1093,305 @@ model PageView {
 }
 
 model DailyStats {
-  id            String   @id @default(cuid())
-  date          DateTime @unique
+  id   String   @id @default(cuid())
+  date DateTime @unique
 
   // Visits
-  totalViews    Int      @default(0)
-  uniqueVisitors Int     @default(0)
+  totalViews     Int @default(0)
+  uniqueVisitors Int @default(0)
 
   // Top pages (JSON)
-  topPages      String   @default("[]")
+  topPages String @default("[]")
 
   // Sources
-  topReferrers  String   @default("[]")
+  topReferrers String @default("[]")
 
   // Devices
-  deviceStats   String   @default("{}")
+  deviceStats String @default("{}")
 
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 // ============= SITE SETTINGS =============
 
 model SiteSettings {
-  id              String   @id @default(cuid())
-  creatorSlug     String?  @unique
+  id          String  @id @default(cuid())
+  creatorSlug String? @unique
 
   // Site settings
   siteName        String?
   siteDescription String?
   siteUrl         String?
   welcomeMessage  String?
-  welcomeMediaId  String?  // ID of MediaContent to send with welcome message
-  welcomeMediaUrl String?  // Direct URL if uploaded separately
+  welcomeMediaId  String? // ID of MediaContent to send with welcome message
+  welcomeMediaUrl String? // Direct URL if uploaded separately
 
   // Branding
-  logo            String?
-  favicon         String?
-  primaryColor    String?
-  accentColor     String?
+  logo         String?
+  favicon      String?
+  primaryColor String?
+  accentColor  String?
 
   // Pricing (stored as JSON string)
-  pricing         String   @default("{}")
+  pricing String @default("{}")
 
   // Payment toggles
-  stripeEnabled   Boolean  @default(true)
-  cryptoEnabled   Boolean  @default(false)
+  stripeEnabled Boolean @default(true)
+  cryptoEnabled Boolean @default(false)
 
   // Features toggles
-  chatEnabled     Boolean  @default(true)
-  tipsEnabled     Boolean  @default(true)
-  ppvEnabled      Boolean  @default(true)
+  chatEnabled Boolean @default(true)
+  tipsEnabled Boolean @default(true)
+  ppvEnabled  Boolean @default(true)
 
   // System toggles
-  maintenanceMode      Boolean  @default(false)
-  registrationEnabled  Boolean  @default(true)
-  emailNotifications   Boolean  @default(true)
-  pushNotifications    Boolean  @default(false)
+  maintenanceMode     Boolean @default(false)
+  registrationEnabled Boolean @default(true)
+  emailNotifications  Boolean @default(true)
+  pushNotifications   Boolean @default(false)
 
   // Platform commission settings
   platformWalletEth        String?
   platformWalletBtc        String?
-  platformCommission       Float    @default(0.05)  // 5% default
-  firstMonthFreeCommission Boolean  @default(true)  // 0% first month
+  platformCommission       Float   @default(0.05) // 5% default
+  firstMonthFreeCommission Boolean @default(true) // 0% first month
 
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 // ============= ACCOUNTING QUEUE =============
 
 model AccountingQueue {
-  id          String   @id @default(cuid())
+  id String @id @default(cuid())
 
   // Payload data (JSON)
-  payload     String
+  payload String
 
   // Status
-  status      String   @default("PENDING") // "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED"
+  status String @default("PENDING") // "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED"
 
   // Retry info
-  attempts    Int      @default(0)
-  maxAttempts Int      @default(5)
+  attempts    Int       @default(0)
+  maxAttempts Int       @default(5)
   lastError   String?
   nextRetryAt DateTime?
 
   // Timestamps
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
   processedAt DateTime?
 
   @@index([status])
   @@index([nextRetryAt])
+}
+
+// ============= MARKETPLACE: FIND MODEL / FIND AGENCY =============
+
+model ModelListing {
+  id        String  @id @default(cuid())
+  creatorId String  @unique
+  creator   Creator @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+
+  // Profile
+  bio         String?  @db.Text
+  photos      String[] // Array of photo URLs (max 5)
+  socialLinks String   @default("{}") // JSON: { instagram, twitter, tiktok, etc }
+  tags        String[] // Content category tags
+
+  // Terms
+  revenueShare    Int     @default(70) // % creator keeps (70 = creator 70%, agency 30%)
+  chattingEnabled Boolean @default(true) // Willing to do chatting
+
+  // Stats (cached from reviews)
+  averageRating Float @default(0)
+  reviewCount   Int   @default(0)
+
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  applications AgencyApplication[]
+
+  @@index([isActive])
+  @@index([revenueShare])
+  @@index([averageRating])
+}
+
+model AgencyListing {
+  id       String @id @default(cuid())
+  agencyId String @unique
+  agency   Agency @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+
+  // What they're looking for
+  headline     String? // "Looking for experienced creators"
+  description  String? @db.Text // Detailed description
+  lookingFor   String? @db.Text // JSON array: ["Female", "Male", "Couple"]
+  contentTypes String? @db.Text // JSON array: ["Solo", "B/G", "Fetish"]
+  requirements String? @db.Text // What they require from models
+
+  // Terms offered
+  minRevenueShare   Int     @default(50) // Min % creator keeps
+  maxRevenueShare   Int     @default(70) // Max % creator keeps
+  providesContent   Boolean @default(false) // Do they provide content/shoots
+  providesChatting  Boolean @default(true) // Do they provide chatters
+  providesMarketing Boolean @default(true) // Do they provide marketing
+
+  // Location preferences
+  location      String? // Agency location
+  acceptsRemote Boolean @default(true)
+
+  // Stats (cached from reviews)
+  averageRating Float @default(0)
+  reviewCount   Int   @default(0)
+
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  applications AgencyApplication[]
+
+  @@index([isActive])
+  @@index([averageRating])
+}
+
+model AgencyApplication {
+  id String @id @default(cuid())
+
+  // Model listing (can be null if agency initiates)
+  modelListingId String?
+  modelListing   ModelListing? @relation(fields: [modelListingId], references: [id], onDelete: Cascade)
+
+  // Agency listing (can be null if model initiates)
+  agencyListingId String?
+  agencyListing   AgencyListing? @relation(fields: [agencyListingId], references: [id], onDelete: Cascade)
+
+  // Agency
+  agencyId String
+  agency   Agency @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+
+  // Direction: who initiated the contact
+  initiatedBy String // "MODEL" or "AGENCY"
+
+  // Status
+  status String @default("PENDING") // PENDING, ACCEPTED, REJECTED, IGNORED
+
+  // Optional message with request
+  message String? @db.Text
+
+  // Conversation (if started after acceptance)
+  conversationId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([modelListingId, agencyId])
+  @@index([agencyId])
+  @@index([status])
+}
+
+// ApplicationStatus: "PENDING" | "ACCEPTED" | "REJECTED" | "IGNORED"
+// ApplicationInitiator: "MODEL" | "AGENCY"
+
+model AgencyReview {
+  id String @id @default(cuid())
+
+  // Reviewer
+  reviewerId   String // User ID of the reviewer
+  reviewerType String // "MODEL" or "AGENCY"
+
+  // Reviewed target
+  targetId   String // Agency ID (if model reviews) or Creator ID (if agency reviews)
+  targetType String // "AGENCY" or "MODEL"
+
+  // Review content
+  rating  Int // 1-5 stars
+  comment String? @db.Text
+
+  // Eligibility tracking - when collaboration started
+  collaborationStartedAt DateTime
+
+  createdAt DateTime @default(now())
+
+  @@unique([reviewerId, targetId])
+  @@index([targetId, targetType])
+  @@index([rating])
+}
+
+// ============= AI SUGGESTIONS (for AI-assisted mode) =============
+
+model AiSuggestion {
+  id String @id @default(cuid())
+
+  // Conversation
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  // Link to message if sent
+  messageId String?  @unique
+  message   Message? @relation(fields: [messageId], references: [id], onDelete: SetNull)
+
+  // Suggestion content
+  content       String  @db.Text
+  mediaDecision String? // "FREE" | "PPV" | "TEASE" | "NONE"
+  mediaId       String?
+
+  // AI Personality that generated this
+  personalityId String
+  personality   AgencyAiPersonality @relation(fields: [personalityId], references: [id], onDelete: Cascade)
+
+  // Status
+  status        String  @default("pending") // "pending" | "sent" | "edited" | "rejected" | "expired"
+  editedContent String? @db.Text // If chatter edited before sending
+
+  // Who sent it (if sent)
+  sentById String?
+  sentBy   Chatter? @relation("SentBySuggestions", fields: [sentById], references: [id], onDelete: SetNull)
+
+  // Timing
+  expiresAt DateTime // Suggestions expire after X minutes
+  sentAt    DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([conversationId])
+  @@index([personalityId])
+  @@index([status])
+  @@index([expiresAt])
+}
+
+// ============= FAN PROFILE (for AI memory) =============
+
+model FanProfile {
+  id String @id @default(cuid())
+
+  // Fan identification
+  fanUserId   String
+  creatorSlug String
+
+  // Detected preferences
+  preferredTone   String? // "romantic", "playful", "explicit", etc.
+  preferredTopics String[] @default([]) // ["fitness", "travel", "flirty"]
+  spendingTier    String? // "whale", "regular", "free"
+  activityLevel   String? // "daily", "weekly", "occasional"
+  timezone        String?
+  language        String?
+
+  // Aggregated history
+  totalSpent    Float     @default(0)
+  totalMessages Int       @default(0)
+  lastSeen      DateTime?
+  firstSeen     DateTime  @default(now())
+
+  // AI-generated notes/summary
+  notes String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([fanUserId, creatorSlug])
+  @@index([creatorSlug])
+  @@index([spendingTier])
+  @@index([activityLevel])
 }

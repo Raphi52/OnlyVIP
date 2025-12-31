@@ -37,8 +37,14 @@ interface IPNPayload {
 }
 
 export const CRYPTO_CURRENCIES = [
-  { id: "btc", name: "Bitcoin", symbol: "BTC", color: "#F7931A" },
-  { id: "eth", name: "Ethereum", symbol: "ETH", color: "#627EEA" },
+  { id: "usdttrc20", name: "USDT (TRC20)", symbol: "USDT", color: "#26A17B", stable: true },
+  { id: "usdterc20", name: "USDT (ERC20)", symbol: "USDT", color: "#26A17B", stable: true },
+  { id: "usdcsol", name: "USDC (Solana)", symbol: "USDC", color: "#2775CA", stable: true },
+  { id: "btc", name: "Bitcoin", symbol: "BTC", color: "#F7931A", stable: false },
+  { id: "eth", name: "Ethereum", symbol: "ETH", color: "#627EEA", stable: false },
+  { id: "ltc", name: "Litecoin", symbol: "LTC", color: "#BFBBBB", stable: false },
+  { id: "sol", name: "Solana", symbol: "SOL", color: "#9945FF", stable: false },
+  { id: "trx", name: "Tron", symbol: "TRX", color: "#FF0013", stable: false },
 ];
 
 interface InvoiceResponse {

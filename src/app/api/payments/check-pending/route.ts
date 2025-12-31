@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getBTCTransactions, usdToSatoshis } from "@/lib/blockchain-monitor";
+import { addCredits } from "@/lib/credits";
 
 // This endpoint checks pending payments and activates subscriptions
 // Can be called via cron job (e.g., every 5 minutes) or manually
@@ -157,6 +158,29 @@ export async function POST(req: Request) {
                   data: { ppvUnlockedBy: JSON.stringify(unlockedBy) },
                 });
               }
+            }
+          } else if (payment.type === "CREDITS" && payment.userId) {
+            // Credits purchase - add credits to user account
+            const creditsToAdd = metadata.credits || Math.floor(Number(payment.amount) * 100);
+
+            if (creditsToAdd > 0) {
+              const result = await addCredits(
+                payment.userId,
+                creditsToAdd,
+                "PURCHASE",
+                {
+                  creditType: "PAID",
+                  description: `Card purchase via ChangeHero - Payment ${payment.id}`,
+                }
+              );
+
+              // Update user's credit balance
+              await prisma.user.update({
+                where: { id: payment.userId },
+                data: { creditBalance: result.newBalance },
+              });
+
+              console.log(`[CHECK-PENDING] Added ${creditsToAdd} credits to user ${payment.userId}. New balance: ${result.newBalance}`);
             }
           }
 

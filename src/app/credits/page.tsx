@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { Button, Badge, Card } from "@/components/ui";
@@ -21,26 +21,30 @@ import {
   CreditCard,
   Bitcoin,
   ExternalLink,
+  X,
+  Copy,
+  CheckCircle,
 } from "lucide-react";
-import { CryptoPaymentModal } from "@/components/payments";
+import { CryptoPaymentModal, DisputeForm } from "@/components/payments";
 import { cn } from "@/lib/utils";
+import { HelpCircle } from "lucide-react";
 
 interface CreditPackage {
   id: string;
-  credits: number;
+  credits: number;       // Paid credits (usable everywhere)
   price: number;
-  bonus?: number;
+  bonus?: number;        // Bonus credits (PPV catalog only)
   popular?: boolean;
   bestValue?: boolean;
 }
 
 const creditPackages: CreditPackage[] = [
-  { id: "starter", credits: 100, price: 1 },
-  { id: "basic", credits: 500, price: 5, bonus: 50 },
-  { id: "standard", credits: 1000, price: 10, bonus: 150, popular: true },
-  { id: "premium", credits: 2500, price: 25, bonus: 500 },
-  { id: "pro", credits: 5000, price: 50, bonus: 1250, bestValue: true },
-  { id: "elite", credits: 10000, price: 100, bonus: 3000 },
+  { id: "starter", credits: 1000, price: 10 },
+  { id: "basic", credits: 2000, price: 20, bonus: 100 },
+  { id: "standard", credits: 5000, price: 50, bonus: 500 },
+  { id: "premium", credits: 10000, price: 100, bonus: 2000, popular: true },
+  { id: "pro", credits: 50000, price: 500, bonus: 12500 },
+  { id: "elite", credits: 100000, price: 1000, bonus: 35000, bestValue: true },
 ];
 
 interface Transaction {
@@ -51,12 +55,12 @@ interface Transaction {
   createdAt: string;
 }
 
-type PaymentMethod = "crypto" | "card";
-
 export default function CreditsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [balance, setBalance] = useState(0);
+  const [paidCredits, setPaidCredits] = useState(0);
+  const [bonusCredits, setBonusCredits] = useState(0);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [nextExpiration, setNextExpiration] = useState<{
     date: string;
@@ -64,9 +68,31 @@ export default function CreditsPage() {
   } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedPackage, setSelectedPackage] = useState<CreditPackage | null>(null);
+  const [showPaymentMethodModal, setShowPaymentMethodModal] = useState(false);
   const [showCryptoModal, setShowCryptoModal] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("crypto");
   const [isProcessingCard, setIsProcessingCard] = useState(false);
+  const [showChangeHeroModal, setShowChangeHeroModal] = useState(false);
+  const [changeHeroData, setChangeHeroData] = useState<{
+    url: string;
+    walletAddress: string;
+    credits: number;
+  } | null>(null);
+  const [walletCopied, setWalletCopied] = useState(false);
+  const [showDisputeForm, setShowDisputeForm] = useState(false);
+
+  // Restore ChangeHero modal state from localStorage on mount
+  useEffect(() => {
+    const savedData = localStorage.getItem("changeHeroModalData");
+    if (savedData) {
+      try {
+        const parsed = JSON.parse(savedData);
+        setChangeHeroData(parsed);
+        setShowChangeHeroModal(true);
+      } catch (e) {
+        localStorage.removeItem("changeHeroModalData");
+      }
+    }
+  }, []);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -85,7 +111,9 @@ export default function CreditsPage() {
       if (res.ok) {
         const data = await res.json();
         setBalance(data.balance || 0);
-        setTransactions(data.recentTransactions || []);
+        setPaidCredits(data.paidCredits || 0);
+        setBonusCredits(data.bonusCredits || 0);
+        setTransactions(data.transactions || []);
         setNextExpiration(data.nextExpiration);
       }
     } catch (error) {
@@ -97,10 +125,15 @@ export default function CreditsPage() {
 
   const handlePackageSelect = (pkg: CreditPackage) => {
     setSelectedPackage(pkg);
-    if (paymentMethod === "crypto") {
+    setShowPaymentMethodModal(true);
+  };
+
+  const handlePaymentMethodSelect = (method: "crypto" | "card") => {
+    setShowPaymentMethodModal(false);
+    if (method === "crypto") {
       setShowCryptoModal(true);
-    } else {
-      handleCardPayment(pkg);
+    } else if (selectedPackage) {
+      handleCardPayment(selectedPackage);
     }
   };
 
@@ -121,10 +154,16 @@ export default function CreditsPage() {
       const data = await res.json();
 
       if (data.changeHeroUrl) {
-        // Open ChangeHero in new tab
-        window.open(data.changeHeroUrl, "_blank");
-        // Show wallet address info
-        alert(`After buying crypto on ChangeHero, send it to:\n${data.walletAddress}\n\nYour credits will be added once we receive the payment.`);
+        // Show the ChangeHero instruction modal
+        const modalData = {
+          url: data.changeHeroUrl,
+          walletAddress: data.walletAddress,
+          credits: totalCredits,
+        };
+        setChangeHeroData(modalData);
+        setShowChangeHeroModal(true);
+        // Save to localStorage so modal persists when user returns from ChangeHero
+        localStorage.setItem("changeHeroModalData", JSON.stringify(modalData));
       } else if (data.error) {
         alert(data.error);
       }
@@ -134,6 +173,32 @@ export default function CreditsPage() {
     } finally {
       setIsProcessingCard(false);
       setSelectedPackage(null);
+    }
+  };
+
+  const handleChangeHeroConfirm = () => {
+    if (changeHeroData?.url) {
+      window.open(changeHeroData.url, "_blank");
+    }
+    // Don't close the modal - keep it open for when user returns
+  };
+
+  const closeChangeHeroModal = () => {
+    setShowChangeHeroModal(false);
+    setChangeHeroData(null);
+    setWalletCopied(false);
+    localStorage.removeItem("changeHeroModalData");
+  };
+
+  const copyWalletAddress = async () => {
+    if (changeHeroData?.walletAddress) {
+      try {
+        await navigator.clipboard.writeText(changeHeroData.walletAddress);
+        setWalletCopied(true);
+        setTimeout(() => setWalletCopied(false), 3000);
+      } catch (err) {
+        console.error("Failed to copy:", err);
+      }
     }
   };
 
@@ -210,8 +275,28 @@ export default function CreditsPage() {
                   </div>
                   <div>
                     <p className="text-4xl font-bold text-white">{balance.toLocaleString()}</p>
-                    <p className="text-sm text-gray-500">Available credits</p>
+                    <p className="text-sm text-gray-500">Total credits</p>
                   </div>
+                </div>
+                {/* Paid vs Bonus breakdown */}
+                <div className="mt-4 pt-4 border-t border-white/10">
+                  <div className="flex items-center justify-between text-sm mb-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-emerald-400"></div>
+                      <span className="text-gray-400">Paid Credits</span>
+                    </div>
+                    <span className="text-emerald-400 font-medium">{paidCredits.toLocaleString()}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-purple-400"></div>
+                      <span className="text-gray-400">Bonus Credits</span>
+                    </div>
+                    <span className="text-purple-400 font-medium">{bonusCredits.toLocaleString()}</span>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-3">
+                    Paid credits: chat, tips, PPV • Bonus credits: PPV catalog only
+                  </p>
                 </div>
               </div>
             </motion.div>
@@ -223,43 +308,9 @@ export default function CreditsPage() {
               transition={{ delay: 0.2 }}
               className="mb-16"
             >
-              <h2 className="text-2xl font-bold text-white text-center mb-6">
+              <h2 className="text-2xl font-bold text-white text-center mb-8">
                 Choose a Package
               </h2>
-
-              {/* Payment Method Selector */}
-              <div className="flex justify-center gap-4 mb-8">
-                <button
-                  onClick={() => setPaymentMethod("crypto")}
-                  className={cn(
-                    "flex items-center gap-2 px-6 py-3 rounded-xl border transition-all",
-                    paymentMethod === "crypto"
-                      ? "bg-purple-500/20 border-purple-500 text-white"
-                      : "bg-white/5 border-white/10 text-gray-400 hover:border-white/30"
-                  )}
-                >
-                  <Bitcoin className="w-5 h-5" />
-                  <span>Crypto</span>
-                </button>
-                <button
-                  onClick={() => setPaymentMethod("card")}
-                  className={cn(
-                    "flex items-center gap-2 px-6 py-3 rounded-xl border transition-all",
-                    paymentMethod === "card"
-                      ? "bg-blue-500/20 border-blue-500 text-white"
-                      : "bg-white/5 border-white/10 text-gray-400 hover:border-white/30"
-                  )}
-                >
-                  <CreditCard className="w-5 h-5" />
-                  <span>Credit Card</span>
-                </button>
-              </div>
-
-              {paymentMethod === "card" && (
-                <p className="text-center text-sm text-gray-400 mb-6">
-                  Pay with Visa, Mastercard or Apple Pay. No KYC under €150.
-                </p>
-              )}
 
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 {creditPackages.map((pkg, index) => (
@@ -309,23 +360,24 @@ export default function CreditsPage() {
                     )}
 
                     <div className="text-center">
-                      <div className="flex items-center justify-center gap-1 mb-2">
-                        <Coins className="w-5 h-5 text-purple-400" />
+                      <div className="flex items-center justify-center gap-1 mb-1">
+                        <Coins className="w-5 h-5 text-emerald-400" />
                         <span className="text-2xl font-bold text-white">
-                          {getTotalCredits(pkg).toLocaleString()}
+                          {pkg.credits.toLocaleString()}
                         </span>
                       </div>
+                      <p className="text-xs text-emerald-400/80 mb-2">paid credits</p>
                       {pkg.bonus && (
-                        <div className="flex items-center justify-center gap-1 text-xs text-green-400 mb-3">
+                        <div className="flex items-center justify-center gap-1 text-xs text-purple-400 mb-3">
                           <Gift className="w-3 h-3" />
-                          +{pkg.bonus.toLocaleString()} bonus
+                          +{pkg.bonus.toLocaleString()} bonus (PPV only)
                         </div>
                       )}
                       <div className="text-3xl font-bold text-white mb-1">
                         ${pkg.price}
                       </div>
                       <div className="text-xs text-gray-500">
-                        ${((pkg.price / getTotalCredits(pkg)) * 100).toFixed(2)} per 100
+                        ${((pkg.price / pkg.credits) * 100).toFixed(2)} per 100 paid
                       </div>
                     </div>
                   </motion.div>
@@ -415,9 +467,148 @@ export default function CreditsPage() {
                 </div>
               </motion.div>
             )}
+
+            {/* Dispute Button */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5 }}
+              className="mt-8"
+            >
+              <button
+                onClick={() => setShowDisputeForm(true)}
+                className="w-full p-4 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-orange-500/50 rounded-2xl transition-all group"
+              >
+                <div className="flex items-center justify-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-orange-500/20 flex items-center justify-center group-hover:bg-orange-500/30 transition-colors">
+                    <HelpCircle className="w-5 h-5 text-orange-400" />
+                  </div>
+                  <div className="text-left">
+                    <p className="font-medium text-white group-hover:text-orange-400 transition-colors">
+                      I Didn&apos;t Receive My Credits
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      Submit a dispute if your payment wasn&apos;t credited
+                    </p>
+                  </div>
+                </div>
+              </button>
+            </motion.div>
           </div>
         </section>
       </main>
+
+      {/* Payment Method Selection Modal */}
+      <AnimatePresence>
+        {showPaymentMethodModal && selectedPackage && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-sm p-0 sm:p-4"
+            onClick={() => {
+              setShowPaymentMethodModal(false);
+              setSelectedPackage(null);
+            }}
+          >
+            <motion.div
+              initial={{ y: "100%", opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: "100%", opacity: 0 }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full sm:max-w-md bg-[var(--background)] border border-[var(--border)] rounded-t-2xl sm:rounded-2xl overflow-hidden"
+            >
+              {/* Header */}
+              <div className="p-5 border-b border-[var(--border)]">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-lg font-bold text-[var(--foreground)]">
+                    Choose Payment Method
+                  </h3>
+                  <button
+                    onClick={() => {
+                      setShowPaymentMethodModal(false);
+                      setSelectedPackage(null);
+                    }}
+                    className="p-2 rounded-xl hover:bg-[var(--surface)] transition-colors"
+                  >
+                    <X className="w-5 h-5 text-[var(--muted)]" />
+                  </button>
+                </div>
+                {/* Package summary */}
+                <div className="flex items-center gap-3 p-3 bg-purple-500/10 rounded-xl">
+                  <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center">
+                    <Coins className="w-5 h-5 text-purple-400" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-semibold text-[var(--foreground)]">
+                      {selectedPackage.credits.toLocaleString()} credits
+                      {selectedPackage.bonus && (
+                        <span className="text-purple-400 text-sm ml-1">
+                          +{selectedPackage.bonus.toLocaleString()} bonus
+                        </span>
+                      )}
+                    </p>
+                    <p className="text-sm text-[var(--muted)]">
+                      ${selectedPackage.price}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Payment Options */}
+              <div className="p-5 space-y-3">
+                {/* Crypto Option */}
+                <button
+                  onClick={() => handlePaymentMethodSelect("crypto")}
+                  className="w-full flex items-center gap-4 p-4 bg-[var(--surface)] hover:bg-purple-500/10 border border-[var(--border)] hover:border-purple-500/50 rounded-xl transition-all group"
+                >
+                  <div className="w-12 h-12 rounded-xl bg-orange-500/20 flex items-center justify-center">
+                    <Bitcoin className="w-6 h-6 text-orange-400" />
+                  </div>
+                  <div className="flex-1 text-left">
+                    <p className="font-semibold text-[var(--foreground)] group-hover:text-purple-400 transition-colors">
+                      Pay with Crypto
+                    </p>
+                    <p className="text-sm text-[var(--muted)]">
+                      Bitcoin, Ethereum, USDT & more
+                    </p>
+                  </div>
+                  <ArrowRight className="w-5 h-5 text-[var(--muted)] group-hover:text-purple-400 transition-colors" />
+                </button>
+
+                {/* Card Option */}
+                <button
+                  onClick={() => handlePaymentMethodSelect("card")}
+                  disabled={isProcessingCard}
+                  className="w-full flex items-center gap-4 p-4 bg-[var(--surface)] hover:bg-blue-500/10 border border-[var(--border)] hover:border-blue-500/50 rounded-xl transition-all group disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <div className="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center">
+                    {isProcessingCard ? (
+                      <Loader2 className="w-6 h-6 text-blue-400 animate-spin" />
+                    ) : (
+                      <CreditCard className="w-6 h-6 text-blue-400" />
+                    )}
+                  </div>
+                  <div className="flex-1 text-left">
+                    <p className="font-semibold text-[var(--foreground)] group-hover:text-blue-400 transition-colors">
+                      Pay with Card
+                    </p>
+                    <p className="text-sm text-[var(--muted)]">
+                      Visa, Mastercard, Apple Pay
+                    </p>
+                  </div>
+                  <ArrowRight className="w-5 h-5 text-[var(--muted)] group-hover:text-blue-400 transition-colors" />
+                </button>
+
+                <p className="text-xs text-center text-[var(--muted)] pt-2">
+                  No KYC required under €700
+                </p>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Crypto Payment Modal */}
       {selectedPackage && (
@@ -433,6 +624,149 @@ export default function CreditsPage() {
           metadata={{ credits: getTotalCredits(selectedPackage) }}
         />
       )}
+
+      {/* ChangeHero Instructions Modal */}
+      <AnimatePresence>
+        {showChangeHeroModal && changeHeroData && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-sm p-0 sm:p-4"
+            onClick={closeChangeHeroModal}
+          >
+            <motion.div
+              initial={{ y: "100%", opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: "100%", opacity: 0 }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full sm:max-w-md bg-[#0d0d0f] border border-white/10 rounded-t-2xl sm:rounded-2xl overflow-hidden"
+            >
+              {/* Header */}
+              <div className="p-5 border-b border-white/10">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center">
+                    <CreditCard className="w-5 h-5 text-blue-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-white">
+                      Card Payment Instructions
+                    </h3>
+                    <p className="text-sm text-gray-400">
+                      Purchase {changeHeroData.credits.toLocaleString()} credits
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Content */}
+              <div className="p-5 space-y-5">
+                {/* Step 1 */}
+                <div className="flex gap-4">
+                  <div className="flex-shrink-0 w-7 h-7 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-400 font-bold text-sm">
+                    1
+                  </div>
+                  <div>
+                    <p className="font-medium text-white">
+                      Buy crypto on ChangeHero
+                    </p>
+                    <p className="text-sm text-gray-400 mt-1">
+                      Click the button below to purchase crypto using your credit card on ChangeHero (no KYC required under €700).
+                    </p>
+                  </div>
+                </div>
+
+                {/* Step 2 */}
+                <div className="flex gap-4">
+                  <div className="flex-shrink-0 w-7 h-7 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-400 font-bold text-sm">
+                    2
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium text-white">
+                      Send to this wallet address
+                    </p>
+                    <p className="text-sm text-gray-400 mt-1 mb-2">
+                      When prompted for a destination address on ChangeHero, use:
+                    </p>
+                    <div className="bg-black/50 border border-white/10 rounded-xl p-3 flex items-center gap-2">
+                      <code className="flex-1 text-xs text-purple-400 break-all font-mono">
+                        {changeHeroData.walletAddress}
+                      </code>
+                      <button
+                        onClick={copyWalletAddress}
+                        className={cn(
+                          "flex-shrink-0 p-2 rounded-lg transition-all",
+                          walletCopied
+                            ? "bg-green-500/20 text-green-400"
+                            : "bg-white/10 text-gray-400 hover:bg-white/20"
+                        )}
+                      >
+                        {walletCopied ? (
+                          <CheckCircle className="w-4 h-4" />
+                        ) : (
+                          <Copy className="w-4 h-4" />
+                        )}
+                      </button>
+                    </div>
+                    {walletCopied && (
+                      <p className="text-xs text-green-400 mt-2 flex items-center gap-1">
+                        <CheckCircle className="w-3 h-3" />
+                        Wallet address copied to clipboard!
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Step 3 */}
+                <div className="flex gap-4">
+                  <div className="flex-shrink-0 w-7 h-7 rounded-full bg-green-500/20 flex items-center justify-center text-green-400 font-bold text-sm">
+                    3
+                  </div>
+                  <div>
+                    <p className="font-medium text-white">
+                      Credits added automatically
+                    </p>
+                    <p className="text-sm text-gray-400 mt-1">
+                      Your credits will be added to your account within minutes once we receive the payment.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Warning */}
+                <div className="bg-orange-500/10 border border-orange-500/30 rounded-xl p-4">
+                  <p className="text-sm text-orange-400">
+                    <strong>Important:</strong> Make sure to copy the wallet address correctly. Funds sent to wrong addresses cannot be recovered.
+                  </p>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="p-5 border-t border-white/10 flex gap-3">
+                <button
+                  onClick={closeChangeHeroModal}
+                  className="flex-1 px-4 py-3 rounded-xl border border-white/10 text-gray-400 hover:bg-white/5 transition-colors font-medium"
+                >
+                  Done
+                </button>
+                <button
+                  onClick={handleChangeHeroConfirm}
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-purple-500 text-white font-semibold hover:opacity-90 transition-opacity"
+                >
+                  Go to ChangeHero
+                  <ExternalLink className="w-4 h-4" />
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Dispute Form Modal */}
+      <DisputeForm
+        isOpen={showDisputeForm}
+        onClose={() => setShowDisputeForm(false)}
+      />
 
       <Footer />
     </>

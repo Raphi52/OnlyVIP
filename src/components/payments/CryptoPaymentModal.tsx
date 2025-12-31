@@ -2,18 +2,15 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Button, Badge, Card } from "@/components/ui";
 import {
   X,
   Copy,
-  Check,
+  CheckCircle,
   Loader2,
-  ArrowLeft,
-  RefreshCw,
-  QrCode,
-  Clock,
+  Bitcoin,
+  ExternalLink,
 } from "lucide-react";
-import { useCurrency } from "@/components/providers/CurrencyProvider";
+import { cn } from "@/lib/utils";
 
 interface CryptoPaymentModalProps {
   isOpen: boolean;
@@ -32,6 +29,8 @@ interface CryptoPaymentModalProps {
 const cryptoCurrencies = [
   { id: "btc", name: "Bitcoin", symbol: "BTC", color: "#F7931A" },
   { id: "eth", name: "Ethereum", symbol: "ETH", color: "#627EEA" },
+  { id: "usdttrc20", name: "USDT (TRC20)", symbol: "USDT", color: "#26A17B" },
+  { id: "ltc", name: "Litecoin", symbol: "LTC", color: "#345D9D" },
 ];
 
 export function CryptoPaymentModal({
@@ -49,24 +48,19 @@ export function CryptoPaymentModal({
 }: CryptoPaymentModalProps) {
   const [selectedCrypto, setSelectedCrypto] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const [addressCopied, setAddressCopied] = useState(false);
   const [cryptoPayment, setCryptoPayment] = useState<{
     payAddress: string;
     payAmount: number;
     payCurrency: string;
-    qrCodeUrl: string;
-    expiresAt: string;
   } | null>(null);
-  const [usdValue, setUsdValue] = useState<number | null>(null);
-  const [refreshingUsd, setRefreshingUsd] = useState(false);
-  const { formatPrice } = useCurrency();
 
   // Reset state when modal closes
   useEffect(() => {
     if (!isOpen) {
       setSelectedCrypto(null);
       setCryptoPayment(null);
-      setUsdValue(null);
+      setAddressCopied(false);
     }
   }, [isOpen]);
 
@@ -76,7 +70,7 @@ export function CryptoPaymentModal({
     setIsLoading(true);
 
     try {
-      const response = await fetch("/api/payments/crypto/qr", {
+      const response = await fetch("/api/payments/crypto/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -87,6 +81,7 @@ export function CryptoPaymentModal({
           billingInterval,
           messageId,
           amount: amount || price,
+          ...metadata,
         }),
       });
 
@@ -100,58 +95,26 @@ export function CryptoPaymentModal({
         payAddress: data.payAddress,
         payAmount: data.payAmount,
         payCurrency: data.payCurrency,
-        qrCodeUrl: data.qrCodeUrl,
-        expiresAt: data.expiresAt,
       });
     } catch (error) {
       console.error("Crypto payment error:", error);
-      alert(error instanceof Error ? error.message : "Erreur lors de la création du paiement");
+      alert(error instanceof Error ? error.message : "Error creating payment");
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Fetch USD value
-  const fetchUsdValue = async () => {
-    if (!cryptoPayment) return;
-    setRefreshingUsd(true);
-    try {
-      const symbol = cryptoPayment.payCurrency.toLowerCase();
-      let coinId = "bitcoin";
-      if (symbol.includes("eth")) coinId = "ethereum";
-      else if (symbol.includes("usdt")) coinId = "tether";
-
-      const response = await fetch(
-        `https://api.coingecko.com/api/v3/simple/price?ids=${coinId}&vs_currencies=usd`
-      );
-      const data = await response.json();
-      const coinPrice = data[coinId]?.usd;
-      if (coinPrice) {
-        setUsdValue(cryptoPayment.payAmount * coinPrice);
-      }
-    } catch (error) {
-      console.error("Failed to fetch USD value:", error);
-      setUsdValue(price);
-    } finally {
-      setRefreshingUsd(false);
+  // Copy address
+  const copyAddress = async () => {
+    if (cryptoPayment?.payAddress) {
+      await navigator.clipboard.writeText(cryptoPayment.payAddress);
+      setAddressCopied(true);
+      setTimeout(() => setAddressCopied(false), 3000);
     }
   };
 
-  // Fetch USD value when payment created
-  useEffect(() => {
-    if (cryptoPayment) {
-      fetchUsdValue();
-    }
-  }, [cryptoPayment]);
-
-  // Copy address to clipboard
-  const copyAddress = () => {
-    if (cryptoPayment) {
-      navigator.clipboard.writeText(cryptoPayment.payAddress);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
-  };
+  // Get credits from price (100 credits = $1)
+  const credits = Math.floor(price * 100);
 
   if (!isOpen) return null;
 
@@ -161,186 +124,233 @@ export function CryptoPaymentModal({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm p-4"
+        className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-sm p-0 sm:p-4"
         onClick={onClose}
       >
         <motion.div
-          initial={{ scale: 0.9, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          exit={{ scale: 0.9, opacity: 0 }}
+          initial={{ y: "100%", opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          exit={{ y: "100%", opacity: 0 }}
+          transition={{ type: "spring", damping: 25, stiffness: 300 }}
           onClick={(e) => e.stopPropagation()}
-          className="w-full max-w-md"
+          className="w-full sm:max-w-md bg-[#0d0d0f] border border-white/10 rounded-t-2xl sm:rounded-2xl overflow-hidden"
         >
-          <Card variant="luxury" className="p-6">
-            {/* Header */}
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-semibold text-[var(--foreground)]">
-                Paiement Crypto
-              </h2>
-              <button
-                onClick={onClose}
-                className="p-2 rounded-lg hover:bg-[var(--surface)] transition-colors"
-              >
-                <X className="w-5 h-5 text-[var(--muted)]" />
-              </button>
-            </div>
-
-            {/* Product info */}
-            <div className="bg-[var(--surface)] rounded-lg p-4 mb-6">
-              <p className="text-sm text-[var(--muted)]">Item</p>
-              <p className="font-medium text-[var(--foreground)]">{title}</p>
-              <p className="text-lg font-bold text-[var(--gold)]">{formatPrice(price)}</p>
-            </div>
-
-            {!cryptoPayment ? (
-              <>
-                {/* Crypto selection */}
-                <div className="mb-6">
-                  <p className="text-sm text-[var(--muted)] mb-3">
-                    Select a cryptocurrency
-                  </p>
-                  <div className="grid grid-cols-3 gap-3">
-                    {cryptoCurrencies.map((crypto) => (
-                      <button
-                        key={crypto.id}
-                        onClick={() => setSelectedCrypto(crypto.id)}
-                        className={`p-3 rounded-lg border transition-all text-center ${
-                          selectedCrypto === crypto.id
-                            ? "border-[var(--gold)] bg-[var(--gold)]/10"
-                            : "border-[var(--border)] hover:border-[var(--gold)]/50"
-                        }`}
-                      >
-                        <div
-                          className="w-10 h-10 mx-auto mb-2 rounded-full flex items-center justify-center"
-                          style={{ backgroundColor: `${crypto.color}20` }}
-                        >
-                          <span
-                            className="text-lg font-bold"
-                            style={{ color: crypto.color }}
-                          >
-                            {crypto.symbol.charAt(0)}
-                          </span>
-                        </div>
-                        <p className="text-xs font-medium text-[var(--foreground)]">
-                          {crypto.symbol}
-                        </p>
-                      </button>
-                    ))}
+          {!cryptoPayment ? (
+            /* Step 1: Select Crypto */
+            <>
+              {/* Header */}
+              <div className="p-5 border-b border-white/10">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-orange-500/20 flex items-center justify-center">
+                    <Bitcoin className="w-5 h-5 text-orange-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-white">
+                      Crypto Payment
+                    </h3>
+                    <p className="text-sm text-gray-400">
+                      Purchase {credits.toLocaleString()} credits
+                    </p>
                   </div>
                 </div>
+              </div>
 
-                {/* Generate button */}
-                <Button
-                  variant="premium"
-                  size="lg"
-                  className="w-full"
+              {/* Content */}
+              <div className="p-5 space-y-4">
+                <p className="text-sm text-gray-400">
+                  Select which cryptocurrency you want to pay with:
+                </p>
+
+                {/* Crypto selection grid */}
+                <div className="grid grid-cols-2 gap-3">
+                  {cryptoCurrencies.map((crypto) => (
+                    <button
+                      key={crypto.id}
+                      onClick={() => setSelectedCrypto(crypto.id)}
+                      className={cn(
+                        "p-3 rounded-xl border transition-all flex items-center gap-3",
+                        selectedCrypto === crypto.id
+                          ? "border-purple-500 bg-purple-500/10"
+                          : "border-white/10 hover:border-purple-500/50 bg-white/5"
+                      )}
+                    >
+                      <div
+                        className="w-8 h-8 rounded-full flex items-center justify-center"
+                        style={{ backgroundColor: `${crypto.color}20` }}
+                      >
+                        <span
+                          className="text-sm font-bold"
+                          style={{ color: crypto.color }}
+                        >
+                          {crypto.symbol.charAt(0)}
+                        </span>
+                      </div>
+                      <div className="text-left">
+                        <p className="font-medium text-white text-sm">
+                          {crypto.symbol}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {crypto.name}
+                        </p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="p-5 border-t border-white/10 flex gap-3">
+                <button
+                  onClick={onClose}
+                  className="flex-1 px-4 py-3 rounded-xl border border-white/10 text-gray-400 hover:bg-white/5 transition-colors font-medium"
+                >
+                  Cancel
+                </button>
+                <button
                   onClick={generatePayment}
                   disabled={!selectedCrypto || isLoading}
+                  className={cn(
+                    "flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-semibold transition-all",
+                    selectedCrypto && !isLoading
+                      ? "bg-gradient-to-r from-purple-600 to-purple-500 text-white hover:opacity-90"
+                      : "bg-white/10 text-gray-500 cursor-not-allowed"
+                  )}
                 >
                   {isLoading ? (
                     <>
-                      <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                      Generating...
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Loading...
                     </>
                   ) : (
-                    <>
-                      <QrCode className="w-5 h-5 mr-2" />
-                      Generate QR Code
-                    </>
+                    "Continue"
                   )}
-                </Button>
-              </>
-            ) : (
-              <>
-                {/* Back button */}
-                <button
-                  onClick={() => {
-                    setCryptoPayment(null);
-                    setSelectedCrypto(null);
-                  }}
-                  className="text-sm text-[var(--muted)] hover:text-[var(--foreground)] flex items-center gap-1 mb-4 transition-colors"
-                >
-                  <ArrowLeft className="w-4 h-4" />
-                  Change crypto
                 </button>
-
-                {/* QR Code */}
-                <div className="flex flex-col items-center">
-                  <div className="bg-white p-3 rounded-lg mb-4">
-                    <img
-                      src={cryptoPayment.qrCodeUrl}
-                      alt="Payment QR Code"
-                      className="w-48 h-48"
-                    />
+              </div>
+            </>
+          ) : (
+            /* Step 2: Payment Instructions */
+            <>
+              {/* Header */}
+              <div className="p-5 border-b border-white/10">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-orange-500/20 flex items-center justify-center">
+                    <Bitcoin className="w-5 h-5 text-orange-400" />
                   </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-white">
+                      Crypto Payment Instructions
+                    </h3>
+                    <p className="text-sm text-gray-400">
+                      Purchase {credits.toLocaleString()} credits
+                    </p>
+                  </div>
+                </div>
+              </div>
 
-                  {/* Amount */}
-                  <div className="text-center mb-4">
-                    <p className="text-sm text-[var(--muted)] mb-1">
-                      Send exactly:
+              {/* Content */}
+              <div className="p-5 space-y-5">
+                {/* Step 1 */}
+                <div className="flex gap-4">
+                  <div className="flex-shrink-0 w-7 h-7 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-400 font-bold text-sm">
+                    1
+                  </div>
+                  <div>
+                    <p className="font-medium text-white">
+                      Send exactly this amount
                     </p>
-                    <p className="text-2xl font-bold text-[var(--foreground)]">
-                      {cryptoPayment.payAmount} {cryptoPayment.payCurrency.toUpperCase()}
-                    </p>
-                    <div className="flex items-center justify-center gap-2 mt-2">
-                      <span className="text-sm text-[var(--muted)]">
-                        ≈ ${usdValue ? usdValue.toFixed(2) : "..."} USD
+                    <p className="text-sm text-gray-400 mt-1">
+                      <span className="text-orange-400 font-mono font-bold">
+                        {cryptoPayment.payAmount} {cryptoPayment.payCurrency.toUpperCase()}
                       </span>
-                      <button
-                        onClick={fetchUsdValue}
-                        disabled={refreshingUsd}
-                        className="p-1 hover:bg-[var(--surface)] rounded transition-colors"
-                        title="Refresh"
-                      >
-                        <RefreshCw
-                          className={`w-3 h-3 text-[var(--muted)] ${
-                            refreshingUsd ? "animate-spin" : ""
-                          }`}
-                        />
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Address */}
-                  <div className="w-full bg-black/50 p-3 rounded-lg border border-[var(--border)]">
-                    <p className="text-xs text-[var(--muted)] mb-2">
-                      To this address:
                     </p>
-                    <div className="flex items-center gap-2">
-                      <code className="flex-1 text-xs text-[var(--gold)] break-all">
+                  </div>
+                </div>
+
+                {/* Step 2 */}
+                <div className="flex gap-4">
+                  <div className="flex-shrink-0 w-7 h-7 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-400 font-bold text-sm">
+                    2
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium text-white">
+                      Send to this wallet address
+                    </p>
+                    <p className="text-sm text-gray-400 mt-1 mb-2">
+                      Copy and paste this address in your wallet:
+                    </p>
+                    <div className="bg-black/50 border border-white/10 rounded-xl p-3 flex items-center gap-2">
+                      <code className="flex-1 text-xs text-purple-400 break-all font-mono">
                         {cryptoPayment.payAddress}
                       </code>
                       <button
                         onClick={copyAddress}
-                        className="p-2 bg-[var(--surface)] hover:bg-[var(--surface-hover)] rounded transition-colors flex-shrink-0"
-                        title="Copy address"
+                        className={cn(
+                          "flex-shrink-0 p-2 rounded-lg transition-all",
+                          addressCopied
+                            ? "bg-green-500/20 text-green-400"
+                            : "bg-white/10 text-gray-400 hover:bg-white/20"
+                        )}
                       >
-                        {copied ? (
-                          <Check className="w-4 h-4 text-emerald-400" />
+                        {addressCopied ? (
+                          <CheckCircle className="w-4 h-4" />
                         ) : (
-                          <Copy className="w-4 h-4 text-[var(--muted)]" />
+                          <Copy className="w-4 h-4" />
                         )}
                       </button>
                     </div>
+                    {addressCopied && (
+                      <p className="text-xs text-green-400 mt-2 flex items-center gap-1">
+                        <CheckCircle className="w-3 h-3" />
+                        Address copied to clipboard!
+                      </p>
+                    )}
                   </div>
+                </div>
 
-                  {/* Timer */}
-                  <div className="mt-4 flex items-center gap-2 text-sm text-[var(--muted)]">
-                    <Clock className="w-4 h-4" />
-                    <span>Expires in 1 hour</span>
+                {/* Step 3 */}
+                <div className="flex gap-4">
+                  <div className="flex-shrink-0 w-7 h-7 rounded-full bg-green-500/20 flex items-center justify-center text-green-400 font-bold text-sm">
+                    3
                   </div>
-
-                  {/* Info */}
-                  <div className="mt-4 bg-[var(--gold)]/10 border border-[var(--gold)]/30 rounded-lg p-3 w-full">
-                    <p className="text-xs text-[var(--gold)] text-center">
-                      Your purchase will be activated automatically after payment
-                      confirmation (10-30 min)
+                  <div>
+                    <p className="font-medium text-white">
+                      Credits added automatically
+                    </p>
+                    <p className="text-sm text-gray-400 mt-1">
+                      Your credits will be added to your account within minutes once we receive the payment.
                     </p>
                   </div>
                 </div>
-              </>
-            )}
-          </Card>
+
+                {/* Warning */}
+                <div className="bg-orange-500/10 border border-orange-500/30 rounded-xl p-4">
+                  <p className="text-sm text-orange-400">
+                    <strong>Important:</strong> Make sure to copy the wallet address correctly. Funds sent to wrong addresses cannot be recovered.
+                  </p>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="p-5 border-t border-white/10 flex gap-3">
+                <button
+                  onClick={onClose}
+                  className="flex-1 px-4 py-3 rounded-xl border border-white/10 text-gray-400 hover:bg-white/5 transition-colors font-medium"
+                >
+                  Done
+                </button>
+                <button
+                  onClick={() => {
+                    // Open blockchain explorer if possible
+                    window.open(`https://blockchair.com/search?q=${cryptoPayment.payAddress}`, "_blank");
+                  }}
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-purple-500 text-white font-semibold hover:opacity-90 transition-opacity"
+                >
+                  Track Payment
+                  <ExternalLink className="w-4 h-4" />
+                </button>
+              </div>
+            </>
+          )}
         </motion.div>
       </motion.div>
     </AnimatePresence>

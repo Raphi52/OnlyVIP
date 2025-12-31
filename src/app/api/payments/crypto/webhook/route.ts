@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { verifyWebhookSignature, mapPaymentStatus } from "@/lib/nowpayments";
 import { sendToAccounting, mapCryptoCurrency, mapPaymentStatus as mapAccountingStatus } from "@/lib/crypto-accounting";
+import { addCredits } from "@/lib/credits";
 
 interface IPNPayload {
   payment_id: number;
@@ -55,6 +56,34 @@ export async function POST(request: NextRequest) {
         { error: "Payment not found" },
         { status: 404 }
       );
+    }
+
+    // Security: Verify payment hasn't already been processed
+    if (payment.status === "COMPLETED") {
+      console.log(`[WEBHOOK] Payment ${paymentId} already completed, skipping`);
+      return NextResponse.json({ received: true, alreadyProcessed: true });
+    }
+
+    // Security: Verify payment amount matches (with 1% tolerance)
+    const expectedAmount = Number(payment.amount);
+    const actualAmount = body.price_amount;
+    const tolerance = expectedAmount * 0.01;
+    if (actualAmount < expectedAmount - tolerance) {
+      console.error(`[WEBHOOK] Payment amount mismatch: expected ${expectedAmount}, got ${actualAmount}`);
+      // Still update status but don't fulfill order
+      await prisma.payment.update({
+        where: { id: payment.id },
+        data: {
+          status: "FAILED",
+          metadata: JSON.stringify({
+            ...JSON.parse(payment.metadata || "{}"),
+            error: "Amount mismatch",
+            expectedAmount,
+            actualAmount,
+          }),
+        },
+      });
+      return NextResponse.json({ error: "Amount mismatch" }, { status: 400 });
     }
 
     // Update payment status
@@ -115,7 +144,12 @@ export async function POST(request: NextRequest) {
         case "TIP":
           await handleTip(payment.userId, parsedMetadata, payment.amount);
           break;
+        case "CREDITS":
+          await handleCreditsPayment(payment.userId, parsedMetadata, payment.id);
+          break;
       }
+
+      console.log(`[WEBHOOK] Successfully processed ${payment.type} payment ${payment.id} for user ${payment.userId}`);
     }
 
     return NextResponse.json({ received: true });
@@ -370,4 +404,75 @@ async function handleTip(
       },
     });
   }
+}
+
+// Calculate bonus credits based on purchase amount
+function calculateBonusCredits(dollarAmount: number): { paidCredits: number; bonusCredits: number } {
+  const paidCredits = Math.floor(dollarAmount * 100);
+
+  let bonusPercent = 0;
+  if (dollarAmount >= 100) bonusPercent = 30;      // 3000 bonus for $100
+  else if (dollarAmount >= 50) bonusPercent = 25;  // 1250 bonus for $50
+  else if (dollarAmount >= 25) bonusPercent = 20;  // 500 bonus for $25
+  else if (dollarAmount >= 10) bonusPercent = 15;  // 150 bonus for $10
+  else if (dollarAmount >= 5) bonusPercent = 10;   // 50 bonus for $5
+
+  const bonusCredits = Math.floor(paidCredits * (bonusPercent / 100));
+
+  return { paidCredits, bonusCredits };
+}
+
+// Handle credits purchase - INSTANT attribution upon payment confirmation
+async function handleCreditsPayment(
+  userId: string,
+  metadata: Record<string, any>,
+  paymentId: string
+) {
+  const dollarAmount = metadata.dollarAmount || 0;
+
+  // Calculate paid + bonus credits
+  const { paidCredits, bonusCredits } = calculateBonusCredits(dollarAmount);
+
+  if (paidCredits <= 0) {
+    console.error(`[CREDITS] Invalid credit amount for payment ${paymentId}`);
+    return;
+  }
+
+  // Add PAID credits to user account (usable everywhere)
+  const paidResult = await addCredits(
+    userId,
+    paidCredits,
+    "PURCHASE",
+    {
+      creditType: "PAID",
+      description: `Crypto purchase - ${paidCredits} credits for $${dollarAmount}`,
+    }
+  );
+
+  let totalBalance = paidResult.newBalance;
+
+  // Add BONUS credits if any (PPV catalog only)
+  if (bonusCredits > 0) {
+    const bonusResult = await addCredits(
+      userId,
+      bonusCredits,
+      "PURCHASE_BONUS",
+      {
+        creditType: "BONUS",
+        description: `Bonus ${bonusCredits} credits (PPV catalog only)`,
+      }
+    );
+    totalBalance = bonusResult.newBalance;
+    console.log(`[CREDITS] Added ${bonusCredits} BONUS credits to user ${userId}`);
+  }
+
+  console.log(`[CREDITS] Added ${paidCredits} paid + ${bonusCredits} bonus credits to user ${userId}. Balance: ${totalBalance}`);
+
+  // Update user's credit balance in user table for quick access
+  await prisma.user.update({
+    where: { id: userId },
+    data: {
+      creditBalance: totalBalance,
+    },
+  });
 }
