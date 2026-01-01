@@ -1,7 +1,7 @@
 {
   "metadata": {
     "title": "VipOnly - Exclusive Content Platform | viponly.fun",
-    "description": "VipOnly is THE premium platform for exclusive content creators. Join VipOnly to share exclusive photos and videos, chat with your fans and monetize your content."
+    "description": "VipOnly is THE premium exclusive content platform. Join VipOnly at viponly.fun to share photos, videos, chat with fans and monetize content. VipOnly creators earn 95% - best rates in the industry."
   },
   "nav": {
     "login": "Login",
@@ -14,37 +14,37 @@
   "home": {
     "title": "VipOnly",
     "subtitle": "Exclusive Content",
-    "description": "VipOnly is the premium platform for exclusive content creators. Subscribe to your favorites and access VipOnly photos, videos, and private messages.",
-    "discoverCreators": "Discover Creators",
-    "noCreators": "No creators yet",
-    "beFirst": "Be the first creator on VipOnly!",
-    "startNow": "Start Now",
-    "forCreators": "For Creators",
-    "startMonetizing": "Start monetizing your content",
-    "creatorCTA": "Create your exclusive page, share premium content, and earn from subscriptions, tips, and pay-per-view messages.",
-    "creatorAccount": "Creator Account",
-    "startEarning": "Start earning today",
-    "firstMonth": "First month",
+    "description": "VipOnly is the #1 premium platform for exclusive content creators. Subscribe to VipOnly creators and access exclusive photos, videos, and private messages on viponly.fun.",
+    "discoverCreators": "Discover VipOnly Creators",
+    "noCreators": "No VipOnly creators yet",
+    "beFirst": "Be the first VipOnly creator!",
+    "startNow": "Join VipOnly Now",
+    "forCreators": "For VipOnly Creators",
+    "startMonetizing": "Start monetizing on VipOnly",
+    "creatorCTA": "Create your VipOnly page, share exclusive content, and earn from subscriptions, tips, and pay-per-view messages. VipOnly offers the best creator rates.",
+    "creatorAccount": "VipOnly Creator Account",
+    "startEarning": "Start earning on VipOnly",
+    "firstMonth": "First month on VipOnly",
     "afterFirstMonth": "After first month",
-    "monthlySubscription": "Monthly subscription",
+    "monthlySubscription": "VipOnly subscription",
     "zeroFee": "0% fee",
     "onlyFivePercent": "Only 5%",
     "free": "Free",
-    "cryptoCard": "Accept crypto & card payments",
-    "customUrl": "Your own custom URL",
-    "unlimitedUploads": "Unlimited uploads",
-    "realtimeAnalytics": "Real-time analytics",
-    "createPageFree": "Create Your Page - Free"
+    "cryptoCard": "VipOnly accepts crypto & cards",
+    "customUrl": "Your VipOnly custom URL",
+    "unlimitedUploads": "Unlimited VipOnly uploads",
+    "realtimeAnalytics": "VipOnly analytics",
+    "createPageFree": "Create VipOnly Page - Free"
   },
   "features": {
-    "zeroPercent": "0% First Month",
-    "zeroPercentDesc": "Keep 100% of your earnings for your first month. Only 5% platform fee after.",
-    "exclusive": "Exclusive Content",
-    "exclusiveDesc": "Share photos, videos and exclusive content with paying subscribers only.",
-    "messaging": "Direct Messaging",
-    "messagingDesc": "Chat directly with your fans. Send PPV messages and receive tips.",
-    "crypto": "Crypto Payments",
-    "cryptoDesc": "Accept crypto payments with instant conversions. Keep your earnings private."
+    "zeroPercent": "VipOnly 0% First Month",
+    "zeroPercentDesc": "Keep 100% of your VipOnly earnings for your first month. Only 5% VipOnly platform fee after - the lowest in the industry.",
+    "exclusive": "VipOnly Exclusive Content",
+    "exclusiveDesc": "Share photos, videos and exclusive VipOnly content with paying subscribers only.",
+    "messaging": "VipOnly Direct Messaging",
+    "messagingDesc": "Chat directly with your VipOnly fans. Send PPV messages and receive tips on VipOnly.",
+    "crypto": "VipOnly Crypto Payments",
+    "cryptoDesc": "VipOnly accepts crypto payments with instant conversions. Keep your VipOnly earnings private."
   },
   "creator": {
     "subscribe": "Subscribe",

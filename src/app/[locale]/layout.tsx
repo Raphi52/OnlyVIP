@@ -10,6 +10,8 @@ import { JsonLd } from "@/components/seo/JsonLd";
 import {
   generateOrganizationSchema,
   generateWebsiteSchema,
+  generateSoftwareApplicationSchema,
+  generateVipOnlyFAQSchema,
 } from "@/lib/seo";
 
 interface LocaleLayoutProps {
@@ -25,26 +27,33 @@ export async function generateMetadata({ params }: LocaleLayoutProps) {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: 'metadata' });
 
-  const isEnglish = locale === 'en';
-
   return {
     title: {
       default: t('title'),
-      template: '%s | VipOnly',
+      template: '%s | VipOnly - viponly.fun',
     },
     description: t('description'),
     keywords: [
       "VipOnly",
       "viponly",
-      "vip only",
-      isEnglish ? "exclusive content" : "contenu exclusif",
-      isEnglish ? "creator platform" : "plateforme créateur",
-      isEnglish ? "premium content" : "contenu premium",
-      isEnglish ? "OnlyFans alternative" : "alternative OnlyFans",
+      "viponly.fun",
+      "VipOnly platform",
+      "VipOnly creators",
+      "VipOnly exclusive",
+      "VipOnly content",
+      "VipOnly subscribe",
+      "exclusive content platform",
+      "creator platform",
+      "premium content",
+      "OnlyFans alternative",
+      "fan subscription platform",
     ],
     authors: [{ name: "VipOnly" }],
     creator: "VipOnly",
     publisher: "VipOnly",
+    applicationName: "VipOnly",
+    generator: "VipOnly",
+    referrer: "origin-when-cross-origin",
     openGraph: {
       title: t('title'),
       description: t('description'),
@@ -52,29 +61,42 @@ export async function generateMetadata({ params }: LocaleLayoutProps) {
       siteName: "VipOnly",
       images: [
         {
-          url: `/api/og?title=VipOnly&subtitle=${isEnglish ? 'Exclusive%20Content' : 'Contenu%20Exclusif'}`,
+          url: `/api/og?title=VipOnly&subtitle=Exclusive%20Content%20Platform`,
           width: 1200,
           height: 630,
-          alt: t('title'),
+          alt: "VipOnly - Exclusive Content Platform",
         },
       ],
-      locale: isEnglish ? 'en_US' : 'fr_FR',
+      locale: locale,
       type: "website",
     },
     twitter: {
       card: "summary_large_image",
       title: t('title'),
       description: t('description'),
-      images: [`/api/og?title=VipOnly&subtitle=${isEnglish ? 'Exclusive%20Content' : 'Contenu%20Exclusif'}`],
+      site: "@VipOnly",
+      creator: "@VipOnly",
+      images: [`/api/og?title=VipOnly&subtitle=Exclusive%20Content%20Platform`],
     },
     alternates: {
       canonical: `https://viponly.fun/${locale}`,
       languages: {
         'en': 'https://viponly.fun/en',
+        'es': 'https://viponly.fun/es',
+        'pt': 'https://viponly.fun/pt',
         'fr': 'https://viponly.fun/fr',
+        'de': 'https://viponly.fun/de',
+        'it': 'https://viponly.fun/it',
+        'zh': 'https://viponly.fun/zh',
+        'ja': 'https://viponly.fun/ja',
+        'ko': 'https://viponly.fun/ko',
+        'ar': 'https://viponly.fun/ar',
+        'ru': 'https://viponly.fun/ru',
+        'hi': 'https://viponly.fun/hi',
         'x-default': 'https://viponly.fun/en',
       },
     },
+    category: 'entertainment',
   };
 }
 
@@ -99,7 +121,12 @@ export default async function LocaleLayout({
         <AgeGate />
         <PageTracker />
         <JsonLd
-          data={[generateOrganizationSchema(), generateWebsiteSchema()]}
+          data={[
+            generateOrganizationSchema(),
+            generateWebsiteSchema(),
+            generateSoftwareApplicationSchema(),
+            generateVipOnlyFAQSchema(),
+          ]}
         />
         {children}
       </Providers>
