@@ -1,0 +1,112 @@
+{
+  "metadata": {
+    "title": "VipOnly - 限定コンテンツプラットフォーム | viponly.fun",
+    "description": "VipOnlyは限定コンテンツクリエイターのためのプレミアムプラットフォームです。VipOnlyに参加して、限定写真や動画を共有し、ファンとチャットし、コンテンツを収益化しましょう。"
+  },
+  "nav": {
+    "login": "ログイン",
+    "signup": "新規登録",
+    "dashboard": "ダッシュボード",
+    "messages": "メッセージ",
+    "logout": "ログアウト",
+    "becomeCreator": "クリエイターになる"
+  },
+  "home": {
+    "title": "VipOnly",
+    "subtitle": "限定コンテンツ",
+    "description": "VipOnlyは限定コンテンツクリエイターのためのプレミアムプラットフォームです。お気に入りを購読して、VipOnlyの写真、動画、プライベートメッセージにアクセスしましょう。",
+    "discoverCreators": "クリエイターを探す",
+    "noCreators": "まだクリエイターがいません",
+    "beFirst": "VipOnlyの最初のクリエイターになろう！",
+    "startNow": "今すぐ始める",
+    "forCreators": "クリエイター向け",
+    "startMonetizing": "コンテンツの収益化を始めよう",
+    "creatorCTA": "限定ページを作成し、プレミアムコンテンツを共有し、サブスクリプション、チップ、PPVメッセージで収益を得ましょう。",
+    "creatorAccount": "クリエイターアカウント",
+    "startEarning": "今日から稼ぎ始めよう",
+    "firstMonth": "初月",
+    "afterFirstMonth": "初月以降",
+    "monthlySubscription": "月額サブスクリプション",
+    "zeroFee": "手数料0%",
+    "onlyFivePercent": "たった5%",
+    "free": "無料",
+    "cryptoCard": "暗号通貨＆カード決済",
+    "customUrl": "あなた専用のURL",
+    "unlimitedUploads": "無制限アップロード",
+    "realtimeAnalytics": "リアルタイム分析",
+    "createPageFree": "無料でページを作成"
+  },
+  "features": {
+    "zeroPercent": "初月手数料0%",
+    "zeroPercentDesc": "初月は収益の100%をキープ。その後はプラットフォーム手数料5%のみ。",
+    "exclusive": "限定コンテンツ",
+    "exclusiveDesc": "有料購読者のみに写真、動画、限定コンテンツを共有。",
+    "messaging": "ダイレクトメッセージ",
+    "messagingDesc": "ファンと直接チャット。PPVメッセージを送信し、チップを受け取りましょう。",
+    "crypto": "暗号通貨決済",
+    "cryptoDesc": "即時変換で暗号通貨決済を受け付け。収益をプライベートに保ちましょう。"
+  },
+  "creator": {
+    "subscribe": "購読する",
+    "subscribeFor": "購読価格",
+    "subscribed": "購読中",
+    "message": "メッセージ",
+    "sendMessage": "メッセージを送る",
+    "exclusive": "限定コンテンツ",
+    "photos": "写真",
+    "videos": "動画",
+    "posts": "投稿",
+    "subscribers": "購読者",
+    "viewGallery": "ギャラリーを見る",
+    "gallery": "ギャラリー",
+    "aboutMe": "自己紹介",
+    "socialLinks": "SNS"
+  },
+  "chat": {
+    "typeMessage": "メッセージを入力...",
+    "send": "送信",
+    "unlock": "ロック解除",
+    "unlockFor": "ロック解除価格",
+    "credits": "クレジット",
+    "ppvContent": "限定コンテンツ",
+    "tip": "チップ",
+    "sendTip": "チップを送る"
+  },
+  "auth": {
+    "email": "メール",
+    "password": "パスワード",
+    "confirmPassword": "パスワード確認",
+    "name": "名前",
+    "loginTitle": "おかえりなさい",
+    "loginSubtitle": "アカウントにログイン",
+    "signupTitle": "アカウント作成",
+    "signupSubtitle": "今日VipOnlyに参加",
+    "forgotPassword": "パスワードをお忘れですか？",
+    "noAccount": "アカウントをお持ちでないですか？",
+    "hasAccount": "すでにアカウントをお持ちですか？",
+    "orContinueWith": "または",
+    "google": "Googleで続ける"
+  },
+  "footer": {
+    "rights": "全著作権所有",
+    "terms": "利用規約",
+    "privacy": "プライバシー",
+    "contact": "お問い合わせ"
+  },
+  "common": {
+    "loading": "読み込み中...",
+    "error": "エラー",
+    "success": "成功",
+    "cancel": "キャンセル",
+    "save": "保存",
+    "delete": "削除",
+    "edit": "編集",
+    "close": "閉じる",
+    "back": "戻る",
+    "next": "次へ",
+    "search": "検索",
+    "noResults": "結果なし",
+    "seeMore": "もっと見る",
+    "seeAll": "すべて見る"
+  }
+}

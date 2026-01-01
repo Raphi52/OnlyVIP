@@ -5,7 +5,7 @@ import { join } from "path";
 import crypto from "crypto";
 import prisma from "@/lib/prisma";
 
-// GET /api/admin/creators - Get creators owned by the current user
+// GET /api/admin/creators - Get creators (all for admin, own for creators)
 export async function GET(request: NextRequest) {
   try {
     const session = await auth();
@@ -13,9 +13,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Only fetch creators that belong to the current user
+    const isAdmin = (session.user as any)?.role === "ADMIN";
+
+    // Admin sees all creators, regular users only see their own
     const creators = await prisma.creator.findMany({
-      where: { userId: session.user.id },
+      where: isAdmin ? {} : { userId: session.user.id },
       orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
       include: {
         user: {
@@ -236,10 +238,12 @@ export async function PATCH(request: NextRequest) {
       const instagram = formData.get("instagram") as string;
       const twitter = formData.get("twitter") as string;
       const tiktok = formData.get("tiktok") as string;
+      const aiEnabled = formData.get("aiEnabled") as string;
 
       if (name) updateData.name = name;
       if (displayName) updateData.displayName = displayName;
       if (bio !== undefined) updateData.bio = bio || null;
+      if (aiEnabled !== null) updateData.aiEnabled = aiEnabled === "true";
 
       if (instagram !== undefined || twitter !== undefined || tiktok !== undefined) {
         updateData.socialLinks = JSON.stringify({ instagram, twitter, tiktok });
@@ -308,7 +312,8 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: "Creator not found" }, { status: 404 });
     }
 
-    if (existingCreator.userId !== session.user.id) {
+    // Admin can update any creator, regular users can only update their own
+    if (!isAdmin && existingCreator.userId !== session.user.id) {
       return NextResponse.json({ error: "You can only update your own creators" }, { status: 403 });
     }
 
@@ -346,6 +351,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const isAdmin = (session.user as any)?.role === "ADMIN";
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
     const slug = searchParams.get("slug");
@@ -367,8 +373,8 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "Creator not found" }, { status: 404 });
     }
 
-    // Verify ownership - only allow deleting creators the user owns
-    if (creator.userId !== session.user.id) {
+    // Admin can delete any creator, regular users can only delete their own
+    if (!isAdmin && creator.userId !== session.user.id) {
       return NextResponse.json({ error: "You can only delete your own creators" }, { status: 403 });
     }
 

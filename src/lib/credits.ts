@@ -6,6 +6,10 @@
  * - Spending credits (media unlock, PPV, tips)
  * - Expiration management
  * - Balance calculations
+ *
+ * CREDIT TYPES:
+ * - PAID: Credits from purchases, usable everywhere, generate creator earnings
+ * - BONUS: Free credits from bonuses, only usable for PPV catalog, NO creator earnings
  */
 
 import prisma from "./prisma";
@@ -13,7 +17,10 @@ import prisma from "./prisma";
 // Credit values
 export const CREDITS_PER_DOLLAR = 100; // $1 = 100 credits
 export const CREDITS_PER_MEDIA = 1000; // 1000 credits = 1 media unlock
-export const CREDIT_EXPIRY_DAYS = 6; // Credits expire after 6 days
+export const CREDIT_EXPIRY_DAYS = 0; // 0 = Credits never expire
+
+// Credit types
+export type CreditType = "PAID" | "BONUS";
 
 // Transaction types
 export type CreditTransactionType =
@@ -21,6 +28,7 @@ export type CreditTransactionType =
   | "SUBSCRIPTION"
   | "SUBSCRIPTION_BONUS"
   | "PURCHASE"
+  | "PURCHASE_BONUS"
   | "MEDIA_UNLOCK"
   | "TIP"
   | "PPV"
@@ -29,7 +37,26 @@ export type CreditTransactionType =
   | "RECURRING_GRANT";
 
 /**
- * Get user's current credit balance
+ * Get user's credit balances (paid and bonus separately)
+ */
+export async function getCreditBalances(userId: string): Promise<{
+  paid: number;
+  bonus: number;
+  total: number;
+}> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { paidCredits: true, bonusCredits: true, creditBalance: true },
+  });
+  return {
+    paid: user?.paidCredits ?? 0,
+    bonus: user?.bonusCredits ?? 0,
+    total: user?.creditBalance ?? 0,
+  };
+}
+
+/**
+ * Get user's current credit balance (total)
  */
 export async function getCreditBalance(userId: string): Promise<number> {
   const user = await prisma.user.findUnique({
@@ -47,6 +74,7 @@ export async function addCredits(
   amount: number,
   type: CreditTransactionType,
   options?: {
+    creditType?: CreditType; // "PAID" (default) or "BONUS"
     description?: string;
     subscriptionId?: string;
     mediaId?: string;
@@ -57,25 +85,37 @@ export async function addCredits(
     throw new Error("Amount must be positive");
   }
 
-  // Calculate expiration date (6 days from now)
-  const expiresAt = new Date();
-  expiresAt.setDate(expiresAt.getDate() + CREDIT_EXPIRY_DAYS);
+  const creditType = options?.creditType ?? "PAID";
+
+  // Calculate expiration date (null if expiry disabled)
+  const expiresAt = CREDIT_EXPIRY_DAYS > 0
+    ? new Date(Date.now() + CREDIT_EXPIRY_DAYS * 24 * 60 * 60 * 1000)
+    : null;
 
   // Use transaction to ensure atomicity
   const result = await prisma.$transaction(async (tx) => {
-    // Get current balance
+    // Get current balances
     const user = await tx.user.findUnique({
       where: { id: userId },
-      select: { creditBalance: true },
+      select: { creditBalance: true, paidCredits: true, bonusCredits: true },
     });
 
-    const currentBalance = user?.creditBalance ?? 0;
-    const newBalance = currentBalance + amount;
+    const currentTotal = user?.creditBalance ?? 0;
+    const currentPaid = user?.paidCredits ?? 0;
+    const currentBonus = user?.bonusCredits ?? 0;
 
-    // Update user balance
+    const newTotal = currentTotal + amount;
+    const newPaid = creditType === "PAID" ? currentPaid + amount : currentPaid;
+    const newBonus = creditType === "BONUS" ? currentBonus + amount : currentBonus;
+
+    // Update user balances
     await tx.user.update({
       where: { id: userId },
-      data: { creditBalance: newBalance },
+      data: {
+        creditBalance: newTotal,
+        paidCredits: newPaid,
+        bonusCredits: newBonus,
+      },
     });
 
     // Create transaction record
@@ -83,8 +123,9 @@ export async function addCredits(
       data: {
         userId,
         amount,
-        balance: newBalance,
+        balance: newTotal,
         type,
+        creditType,
         description: options?.description,
         subscriptionId: options?.subscriptionId,
         mediaId: options?.mediaId,
@@ -93,7 +134,7 @@ export async function addCredits(
       },
     });
 
-    return { newBalance, transactionId: transaction.id };
+    return { newBalance: newTotal, transactionId: transaction.id };
   });
 
   return { success: true, ...result };
@@ -101,57 +142,118 @@ export async function addCredits(
 
 /**
  * Spend credits from a user's account
+ *
+ * @param allowBonus - If true, bonus credits can be used (for PPV catalog media)
+ *                     If false, only paid credits can be used (for chat, tips, PPV messages)
  */
 export async function spendCredits(
   userId: string,
   amount: number,
   type: CreditTransactionType,
   options?: {
+    allowBonus?: boolean; // If true, can use bonus credits (bonus first, then paid)
     description?: string;
     mediaId?: string;
     messageId?: string;
   }
-): Promise<{ success: boolean; newBalance: number; transactionId: string }> {
+): Promise<{
+  success: boolean;
+  newBalance: number;
+  paidSpent: number;
+  bonusSpent: number;
+  transactionId: string;
+}> {
   if (amount <= 0) {
     throw new Error("Amount must be positive");
   }
 
+  const allowBonus = options?.allowBonus ?? false;
+
   // Use transaction to ensure atomicity
   const result = await prisma.$transaction(async (tx) => {
-    // Get current balance
+    // Get current balances
     const user = await tx.user.findUnique({
       where: { id: userId },
-      select: { creditBalance: true },
+      select: { creditBalance: true, paidCredits: true, bonusCredits: true },
     });
 
-    const currentBalance = user?.creditBalance ?? 0;
+    const currentTotal = user?.creditBalance ?? 0;
+    const currentPaid = user?.paidCredits ?? 0;
+    const currentBonus = user?.bonusCredits ?? 0;
 
-    if (currentBalance < amount) {
-      throw new Error("Insufficient credits");
+    let paidSpent = 0;
+    let bonusSpent = 0;
+
+    if (allowBonus) {
+      // PPV Catalog: Use bonus first, then paid
+      bonusSpent = Math.min(amount, currentBonus);
+      paidSpent = amount - bonusSpent;
+
+      // Check if we have enough total
+      if (currentPaid < paidSpent) {
+        throw new Error("Insufficient credits");
+      }
+    } else {
+      // Chat, Tips, PPV Messages: Paid only
+      paidSpent = amount;
+      bonusSpent = 0;
+
+      if (currentPaid < paidSpent) {
+        throw new Error("Insufficient paid credits");
+      }
     }
 
-    const newBalance = currentBalance - amount;
+    const newTotal = currentTotal - amount;
+    const newPaid = currentPaid - paidSpent;
+    const newBonus = currentBonus - bonusSpent;
 
-    // Update user balance
+    // Update user balances
     await tx.user.update({
       where: { id: userId },
-      data: { creditBalance: newBalance },
-    });
-
-    // Create transaction record (negative amount for spending)
-    const transaction = await tx.creditTransaction.create({
       data: {
-        userId,
-        amount: -amount,
-        balance: newBalance,
-        type,
-        description: options?.description,
-        mediaId: options?.mediaId,
-        messageId: options?.messageId,
+        creditBalance: newTotal,
+        paidCredits: newPaid,
+        bonusCredits: newBonus,
       },
     });
 
-    return { newBalance, transactionId: transaction.id };
+    // Create transaction record(s)
+    // If both paid and bonus were spent, create two transactions
+    let transactionId = "";
+
+    if (paidSpent > 0) {
+      const paidTx = await tx.creditTransaction.create({
+        data: {
+          userId,
+          amount: -paidSpent,
+          balance: newTotal + bonusSpent, // Balance after paid deduction
+          type,
+          creditType: "PAID",
+          description: options?.description,
+          mediaId: options?.mediaId,
+          messageId: options?.messageId,
+        },
+      });
+      transactionId = paidTx.id;
+    }
+
+    if (bonusSpent > 0) {
+      const bonusTx = await tx.creditTransaction.create({
+        data: {
+          userId,
+          amount: -bonusSpent,
+          balance: newTotal,
+          type,
+          creditType: "BONUS",
+          description: options?.description ? `${options.description} (bonus)` : "Bonus credits",
+          mediaId: options?.mediaId,
+          messageId: options?.messageId,
+        },
+      });
+      if (!transactionId) transactionId = bonusTx.id;
+    }
+
+    return { newBalance: newTotal, paidSpent, bonusSpent, transactionId };
   });
 
   return { success: true, ...result };
@@ -159,13 +261,18 @@ export async function spendCredits(
 
 /**
  * Check if user has enough credits
+ * @param paidOnly - If true, only check paid credits
  */
 export async function hasEnoughCredits(
   userId: string,
-  amount: number
+  amount: number,
+  paidOnly: boolean = false
 ): Promise<boolean> {
-  const balance = await getCreditBalance(userId);
-  return balance >= amount;
+  const balances = await getCreditBalances(userId);
+  if (paidOnly) {
+    return balances.paid >= amount;
+  }
+  return balances.total >= amount;
 }
 
 /**
@@ -190,6 +297,11 @@ export async function getCreditTransactions(
 export async function getNextExpiration(
   userId: string
 ): Promise<Date | null> {
+  // Return null if expiry is disabled
+  if (CREDIT_EXPIRY_DAYS === 0) {
+    return null;
+  }
+
   const transaction = await prisma.creditTransaction.findFirst({
     where: {
       userId,
@@ -210,18 +322,24 @@ export async function expireCredits(): Promise<{
   usersAffected: number;
   creditsExpired: number;
 }> {
+  // Skip if expiry is disabled
+  if (CREDIT_EXPIRY_DAYS === 0) {
+    return { usersAffected: 0, creditsExpired: 0 };
+  }
+
   const now = new Date();
 
-  // Find all users with expired credits
+  // Find all users with expired credits, grouped by credit type
   const expiredTransactions = await prisma.creditTransaction.findMany({
     where: {
       amount: { gt: 0 },
       expiresAt: { lte: now },
-      type: { not: "EXPIRATION" }, // Don't process already-expired transactions
+      type: { not: "EXPIRATION" },
     },
     select: {
       userId: true,
       amount: true,
+      creditType: true,
     },
   });
 
@@ -229,55 +347,87 @@ export async function expireCredits(): Promise<{
     return { usersAffected: 0, creditsExpired: 0 };
   }
 
-  // Group by user
-  const userCredits = new Map<string, number>();
+  // Group by user and credit type
+  const userCredits = new Map<string, { paid: number; bonus: number }>();
   for (const tx of expiredTransactions) {
-    const current = userCredits.get(tx.userId) ?? 0;
-    userCredits.set(tx.userId, current + tx.amount);
+    const current = userCredits.get(tx.userId) ?? { paid: 0, bonus: 0 };
+    if (tx.creditType === "BONUS") {
+      current.bonus += tx.amount;
+    } else {
+      current.paid += tx.amount;
+    }
+    userCredits.set(tx.userId, current);
   }
 
   let creditsExpired = 0;
   const usersAffected = userCredits.size;
 
   // Process each user
-  for (const [userId, amount] of userCredits) {
+  for (const [userId, amounts] of userCredits) {
     await prisma.$transaction(async (tx) => {
-      // Get current balance
+      // Get current balances
       const user = await tx.user.findUnique({
         where: { id: userId },
-        select: { creditBalance: true },
+        select: { creditBalance: true, paidCredits: true, bonusCredits: true },
       });
 
-      const currentBalance = user?.creditBalance ?? 0;
+      const currentTotal = user?.creditBalance ?? 0;
+      const currentPaid = user?.paidCredits ?? 0;
+      const currentBonus = user?.bonusCredits ?? 0;
+
       // Don't expire more than they have
-      const toExpire = Math.min(amount, currentBalance);
+      const paidToExpire = Math.min(amounts.paid, currentPaid);
+      const bonusToExpire = Math.min(amounts.bonus, currentBonus);
+      const totalToExpire = paidToExpire + bonusToExpire;
 
-      if (toExpire > 0) {
-        const newBalance = currentBalance - toExpire;
+      if (totalToExpire > 0) {
+        const newTotal = currentTotal - totalToExpire;
+        const newPaid = currentPaid - paidToExpire;
+        const newBonus = currentBonus - bonusToExpire;
 
-        // Update balance
+        // Update balances
         await tx.user.update({
           where: { id: userId },
-          data: { creditBalance: newBalance },
-        });
-
-        // Create expiration transaction
-        await tx.creditTransaction.create({
           data: {
-            userId,
-            amount: -toExpire,
-            balance: newBalance,
-            type: "EXPIRATION",
-            description: "Credits expired after 6 days",
+            creditBalance: newTotal,
+            paidCredits: newPaid,
+            bonusCredits: newBonus,
           },
         });
 
-        creditsExpired += toExpire;
+        // Create expiration transactions
+        if (paidToExpire > 0) {
+          await tx.creditTransaction.create({
+            data: {
+              userId,
+              amount: -paidToExpire,
+              balance: newTotal + bonusToExpire,
+              type: "EXPIRATION",
+              creditType: "PAID",
+              description: "Paid credits expired after 6 days",
+            },
+          });
+        }
+
+        if (bonusToExpire > 0) {
+          await tx.creditTransaction.create({
+            data: {
+              userId,
+              amount: -bonusToExpire,
+              balance: newTotal,
+              type: "EXPIRATION",
+              creditType: "BONUS",
+              description: "Bonus credits expired after 6 days",
+            },
+          });
+        }
+
+        creditsExpired += totalToExpire;
       }
     });
   }
 
-  // Mark original transactions as processed by updating their expiresAt to past
+  // Mark original transactions as processed
   await prisma.creditTransaction.updateMany({
     where: {
       amount: { gt: 0 },
@@ -285,7 +435,7 @@ export async function expireCredits(): Promise<{
       type: { not: "EXPIRATION" },
     },
     data: {
-      expiresAt: new Date(0), // Set to epoch to mark as processed
+      expiresAt: new Date(0),
     },
   });
 
@@ -329,12 +479,13 @@ export async function grantRecurringCredits(): Promise<{
 
   for (const sub of subscriptions) {
     try {
-      // Grant credits
+      // Grant credits as PAID (recurring subscription credits are paid)
       await addCredits(
         sub.userId,
         sub.plan.recurringCredits,
         "RECURRING_GRANT",
         {
+          creditType: "PAID",
           description: `Recurring VIP credits (${sub.plan.recurringCredits} credits)`,
           subscriptionId: sub.id,
         }
@@ -385,12 +536,13 @@ export async function grantSubscriptionCredits(
     return { creditsGranted: 0 };
   }
 
-  // Grant initial credits
+  // Grant initial credits as PAID
   await addCredits(
     userId,
     plan.initialCredits,
     "SUBSCRIPTION_GRANT",
     {
+      creditType: "PAID",
       description: `Subscription credits (${plan.initialCredits} credits)`,
       subscriptionId,
     }

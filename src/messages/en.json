@@ -1,0 +1,112 @@
+{
+  "metadata": {
+    "title": "VipOnly - Exclusive Content Platform | viponly.fun",
+    "description": "VipOnly is THE premium platform for exclusive content creators. Join VipOnly to share exclusive photos and videos, chat with your fans and monetize your content."
+  },
+  "nav": {
+    "login": "Login",
+    "signup": "Sign Up",
+    "dashboard": "Dashboard",
+    "messages": "Messages",
+    "logout": "Logout",
+    "becomeCreator": "Become a Creator"
+  },
+  "home": {
+    "title": "VipOnly",
+    "subtitle": "Exclusive Content",
+    "description": "VipOnly is the premium platform for exclusive content creators. Subscribe to your favorites and access VipOnly photos, videos, and private messages.",
+    "discoverCreators": "Discover Creators",
+    "noCreators": "No creators yet",
+    "beFirst": "Be the first creator on VipOnly!",
+    "startNow": "Start Now",
+    "forCreators": "For Creators",
+    "startMonetizing": "Start monetizing your content",
+    "creatorCTA": "Create your exclusive page, share premium content, and earn from subscriptions, tips, and pay-per-view messages.",
+    "creatorAccount": "Creator Account",
+    "startEarning": "Start earning today",
+    "firstMonth": "First month",
+    "afterFirstMonth": "After first month",
+    "monthlySubscription": "Monthly subscription",
+    "zeroFee": "0% fee",
+    "onlyFivePercent": "Only 5%",
+    "free": "Free",
+    "cryptoCard": "Accept crypto & card payments",
+    "customUrl": "Your own custom URL",
+    "unlimitedUploads": "Unlimited uploads",
+    "realtimeAnalytics": "Real-time analytics",
+    "createPageFree": "Create Your Page - Free"
+  },
+  "features": {
+    "zeroPercent": "0% First Month",
+    "zeroPercentDesc": "Keep 100% of your earnings for your first month. Only 5% platform fee after.",
+    "exclusive": "Exclusive Content",
+    "exclusiveDesc": "Share photos, videos and exclusive content with paying subscribers only.",
+    "messaging": "Direct Messaging",
+    "messagingDesc": "Chat directly with your fans. Send PPV messages and receive tips.",
+    "crypto": "Crypto Payments",
+    "cryptoDesc": "Accept crypto payments with instant conversions. Keep your earnings private."
+  },
+  "creator": {
+    "subscribe": "Subscribe",
+    "subscribeFor": "Subscribe for",
+    "subscribed": "Subscribed",
+    "message": "Message",
+    "sendMessage": "Send Message",
+    "exclusive": "Exclusive Content",
+    "photos": "photos",
+    "videos": "videos",
+    "posts": "posts",
+    "subscribers": "subscribers",
+    "viewGallery": "View Gallery",
+    "gallery": "Gallery",
+    "aboutMe": "About Me",
+    "socialLinks": "Social Links"
+  },
+  "chat": {
+    "typeMessage": "Type a message...",
+    "send": "Send",
+    "unlock": "Unlock",
+    "unlockFor": "Unlock for",
+    "credits": "credits",
+    "ppvContent": "Exclusive content",
+    "tip": "Tip",
+    "sendTip": "Send Tip"
+  },
+  "auth": {
+    "email": "Email",
+    "password": "Password",
+    "confirmPassword": "Confirm Password",
+    "name": "Name",
+    "loginTitle": "Welcome Back",
+    "loginSubtitle": "Sign in to your account",
+    "signupTitle": "Create Account",
+    "signupSubtitle": "Join VipOnly today",
+    "forgotPassword": "Forgot password?",
+    "noAccount": "Don't have an account?",
+    "hasAccount": "Already have an account?",
+    "orContinueWith": "Or continue with",
+    "google": "Continue with Google"
+  },
+  "footer": {
+    "rights": "All rights reserved",
+    "terms": "Terms",
+    "privacy": "Privacy",
+    "contact": "Contact"
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "close": "Close",
+    "back": "Back",
+    "next": "Next",
+    "search": "Search",
+    "noResults": "No results",
+    "seeMore": "See More",
+    "seeAll": "See All"
+  }
+}

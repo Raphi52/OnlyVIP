@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -9,6 +10,8 @@ import { User, LogOut, Crown, MessageCircle, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui";
 import { getCreator, Creator } from "@/lib/creators";
 import { CreditBalance } from "@/components/layout/CreditBalance";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { useLocale } from "next-intl";
 
 interface NavbarProps {
   creatorSlug?: string;
@@ -17,6 +20,7 @@ interface NavbarProps {
 export function Navbar({ creatorSlug = "miacosta" }: NavbarProps) {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const locale = useLocale();
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [hasVipAccess, setHasVipAccess] = useState(false);
@@ -29,7 +33,7 @@ export function Navbar({ creatorSlug = "miacosta" }: NavbarProps) {
   const isAdmin = (session?.user as any)?.role === "ADMIN";
   const isCreator = (session?.user as any)?.isCreator === true;
 
-  const basePath = `/${creatorSlug}`;
+  const basePath = `/${locale}/${creatorSlug}`;
 
   // Fetch creator data from database
   useEffect(() => {
@@ -139,14 +143,14 @@ export function Navbar({ creatorSlug = "miacosta" }: NavbarProps) {
 
       if (res.ok) {
         const data = await res.json();
-        window.location.href = `/dashboard/messages?conversation=${data.conversationId}`;
+        window.location.href = `/${locale}/dashboard/messages?conversation=${data.conversationId}`;
       } else {
         // Fallback to messages page
-        window.location.href = "/dashboard/messages";
+        window.location.href = `/${locale}/dashboard/messages`;
       }
     } catch (error) {
       console.error("Error starting conversation:", error);
-      window.location.href = "/dashboard/messages";
+      window.location.href = `/${locale}/dashboard/messages`;
     } finally {
       setIsStartingChat(false);
     }
@@ -191,11 +195,13 @@ export function Navbar({ creatorSlug = "miacosta" }: NavbarProps) {
             >
               {/* Creator avatar */}
               <div className="relative flex-shrink-0">
-                <div className="w-11 h-11 rounded-full bg-gradient-to-br from-[var(--gold)] to-yellow-600 p-[2px]">
-                  <img
+                <div className="w-11 h-11 rounded-full bg-gradient-to-br from-[var(--gold)] to-yellow-600 p-[2px] relative overflow-hidden">
+                  <Image
                     src={creator?.avatar || "/placeholder-avatar.jpg"}
-                    alt=""
-                    className="w-full h-full rounded-full object-cover"
+                    alt={creator?.displayName || "Creator"}
+                    fill
+                    sizes="44px"
+                    className="rounded-full object-cover"
                   />
                 </div>
                 {/* Online indicator */}
@@ -217,6 +223,7 @@ export function Navbar({ creatorSlug = "miacosta" }: NavbarProps) {
 
           {/* Desktop Navigation - Centered */}
           <div className="hidden md:flex items-center gap-3">
+            <LanguageSwitcher />
             {navLinks.map((link, index) => (
               <motion.div
                 key={link.href}
@@ -267,12 +274,16 @@ export function Navbar({ creatorSlug = "miacosta" }: NavbarProps) {
                   whileTap={{ scale: 0.98 }}
                 >
                   {userCreatorAvatar || session.user?.image ? (
-                    <img
-                      src={userCreatorAvatar || session.user?.image || ""}
-                      alt=""
-                      className="w-8 h-8 rounded-full border border-[var(--gold)]/50 object-cover"
-                      referrerPolicy="no-referrer"
-                    />
+                    <div className="w-8 h-8 rounded-full border border-[var(--gold)]/50 relative overflow-hidden">
+                      <Image
+                        src={userCreatorAvatar || session.user?.image || ""}
+                        alt={userCreatorName || session.user?.name || "User"}
+                        fill
+                        sizes="32px"
+                        className="object-cover"
+                        referrerPolicy="no-referrer"
+                      />
+                    </div>
                   ) : (
                     <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[var(--gold)] to-yellow-600 flex items-center justify-center">
                       <User className="w-4 h-4 text-black" />
@@ -315,8 +326,8 @@ export function Navbar({ creatorSlug = "miacosta" }: NavbarProps) {
                         </div>
                         <div className="py-2">
                           {[
-                            { href: "/dashboard", icon: Crown, label: "Dashboard", color: "text-[var(--gold)]" },
-                            { href: "/dashboard/messages", icon: MessageCircle, label: "Messages", color: "text-blue-400" },
+                            { href: `/${locale}/dashboard`, icon: Crown, label: "Dashboard", color: "text-[var(--gold)]" },
+                            { href: `/${locale}/dashboard/messages`, icon: MessageCircle, label: "Messages", color: "text-blue-400" },
                           ].map((item) => (
                             <Link
                               key={item.href}

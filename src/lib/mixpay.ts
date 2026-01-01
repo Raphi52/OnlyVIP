@@ -18,6 +18,9 @@ const SETTLEMENT_ASSET_ID = "4d8c508b-91c5-375b-92b0-ee702ed2dac5"; // USDT
 // Quote in USD
 const QUOTE_ASSET_ID = "usd";
 
+// Payment asset ID - USDT for card/crypto payments
+const PAYMENT_ASSET_ID = "4d8c508b-91c5-375b-92b0-ee702ed2dac5"; // USDT
+
 export interface MixPayConfig {
   payeeId: string; // Your MixPay account ID
 }
@@ -94,14 +97,14 @@ export async function createMixPayPayment(
     },
     body: JSON.stringify({
       payeeId: config.payeeId,
-      orderId: params.orderId,
+      orderId: params.orderId.slice(0, 36), // Max 36 chars
       settlementAssetId: SETTLEMENT_ASSET_ID,
       quoteAssetId: QUOTE_ASSET_ID,
       quoteAmount: params.amount.toString(),
+      paymentAssetId: PAYMENT_ASSET_ID,
       callbackUrl: params.callbackUrl,
       returnUrl: params.returnUrl,
       note: params.note || `Purchase ${params.amount} USD`,
-      // Don't specify paymentAssetId - let user choose
     }),
   });
 

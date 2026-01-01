@@ -1,0 +1,112 @@
+{
+  "metadata": {
+    "title": "VipOnly - 독점 콘텐츠 플랫폼 | viponly.fun",
+    "description": "VipOnly는 독점 콘텐츠 크리에이터를 위한 프리미엄 플랫폼입니다. VipOnly에 가입하여 독점 사진과 동영상을 공유하고, 팬들과 채팅하고, 콘텐츠로 수익을 창출하세요."
+  },
+  "nav": {
+    "login": "로그인",
+    "signup": "회원가입",
+    "dashboard": "대시보드",
+    "messages": "메시지",
+    "logout": "로그아웃",
+    "becomeCreator": "크리에이터 되기"
+  },
+  "home": {
+    "title": "VipOnly",
+    "subtitle": "독점 콘텐츠",
+    "description": "VipOnly는 독점 콘텐츠 크리에이터를 위한 프리미엄 플랫폼입니다. 좋아하는 크리에이터를 구독하고 VipOnly 사진, 동영상, 개인 메시지를 이용하세요.",
+    "discoverCreators": "크리에이터 찾기",
+    "noCreators": "아직 크리에이터가 없습니다",
+    "beFirst": "VipOnly의 첫 번째 크리에이터가 되세요!",
+    "startNow": "지금 시작",
+    "forCreators": "크리에이터용",
+    "startMonetizing": "콘텐츠 수익화 시작하기",
+    "creatorCTA": "독점 페이지를 만들고, 프리미엄 콘텐츠를 공유하고, 구독, 팁, PPV 메시지로 수익을 올리세요.",
+    "creatorAccount": "크리에이터 계정",
+    "startEarning": "오늘부터 수익 시작",
+    "firstMonth": "첫 달",
+    "afterFirstMonth": "첫 달 이후",
+    "monthlySubscription": "월간 구독",
+    "zeroFee": "수수료 0%",
+    "onlyFivePercent": "단 5%",
+    "free": "무료",
+    "cryptoCard": "암호화폐 & 카드 결제",
+    "customUrl": "나만의 맞춤 URL",
+    "unlimitedUploads": "무제한 업로드",
+    "realtimeAnalytics": "실시간 분석",
+    "createPageFree": "무료로 페이지 만들기"
+  },
+  "features": {
+    "zeroPercent": "첫 달 수수료 0%",
+    "zeroPercentDesc": "첫 달에는 수익의 100%를 가져가세요. 이후 플랫폼 수수료는 5%만.",
+    "exclusive": "독점 콘텐츠",
+    "exclusiveDesc": "유료 구독자에게만 사진, 동영상, 독점 콘텐츠를 공유하세요.",
+    "messaging": "다이렉트 메시지",
+    "messagingDesc": "팬들과 직접 채팅하세요. PPV 메시지를 보내고 팁을 받으세요.",
+    "crypto": "암호화폐 결제",
+    "cryptoDesc": "즉시 환전으로 암호화폐 결제를 받으세요. 수익을 비공개로 유지하세요."
+  },
+  "creator": {
+    "subscribe": "구독",
+    "subscribeFor": "구독 가격",
+    "subscribed": "구독 중",
+    "message": "메시지",
+    "sendMessage": "메시지 보내기",
+    "exclusive": "독점 콘텐츠",
+    "photos": "사진",
+    "videos": "동영상",
+    "posts": "게시물",
+    "subscribers": "구독자",
+    "viewGallery": "갤러리 보기",
+    "gallery": "갤러리",
+    "aboutMe": "소개",
+    "socialLinks": "소셜 미디어"
+  },
+  "chat": {
+    "typeMessage": "메시지 입력...",
+    "send": "보내기",
+    "unlock": "잠금 해제",
+    "unlockFor": "잠금 해제 가격",
+    "credits": "크레딧",
+    "ppvContent": "독점 콘텐츠",
+    "tip": "팁",
+    "sendTip": "팁 보내기"
+  },
+  "auth": {
+    "email": "이메일",
+    "password": "비밀번호",
+    "confirmPassword": "비밀번호 확인",
+    "name": "이름",
+    "loginTitle": "다시 오신 것을 환영합니다",
+    "loginSubtitle": "계정에 로그인하세요",
+    "signupTitle": "계정 만들기",
+    "signupSubtitle": "오늘 VipOnly에 가입하세요",
+    "forgotPassword": "비밀번호를 잊으셨나요?",
+    "noAccount": "계정이 없으신가요?",
+    "hasAccount": "이미 계정이 있으신가요?",
+    "orContinueWith": "또는",
+    "google": "Google로 계속"
+  },
+  "footer": {
+    "rights": "모든 권리 보유",
+    "terms": "이용약관",
+    "privacy": "개인정보",
+    "contact": "문의"
+  },
+  "common": {
+    "loading": "로딩 중...",
+    "error": "오류",
+    "success": "성공",
+    "cancel": "취소",
+    "save": "저장",
+    "delete": "삭제",
+    "edit": "편집",
+    "close": "닫기",
+    "back": "뒤로",
+    "next": "다음",
+    "search": "검색",
+    "noResults": "결과 없음",
+    "seeMore": "더 보기",
+    "seeAll": "전체 보기"
+  }
+}

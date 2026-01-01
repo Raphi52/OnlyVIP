@@ -142,6 +142,20 @@ export async function GET(request: NextRequest) {
 
         const lastMessage = conv.messages[0];
 
+        // Get creator slug for the other user (for "View all media" link)
+        let otherUserSlug: string | undefined = undefined;
+        if (!currentUserIsCreatorOwner && conv.creatorSlug) {
+          // If current user is a fan, use the conversation's creator slug
+          otherUserSlug = conv.creatorSlug;
+        } else if (otherUser?.id) {
+          // If current user is the creator, check if other user is also a creator
+          const otherCreator = await prisma.creator.findFirst({
+            where: { userId: otherUser.id },
+            select: { slug: true },
+          });
+          otherUserSlug = otherCreator?.slug;
+        }
+
         return {
           id: conv.id,
           otherUser: {
@@ -150,6 +164,7 @@ export async function GET(request: NextRequest) {
             email: otherUser?.email,
             image: userImage,
             isOnline: false,
+            slug: otherUserSlug,
           },
           // Keep 'user' for backward compatibility with admin pages
           user: {
@@ -158,11 +173,13 @@ export async function GET(request: NextRequest) {
             email: otherUser?.email,
             image: userImage,
             isOnline: false,
+            slug: otherUserSlug,
           },
           lastMessage: lastMessage
             ? {
                 text: lastMessage.text,
                 isPPV: lastMessage.isPPV,
+                hasMedia: lastMessage.media && lastMessage.media.length > 0,
                 createdAt: lastMessage.createdAt,
                 isRead: lastMessage.isRead,
                 senderId: lastMessage.senderId,

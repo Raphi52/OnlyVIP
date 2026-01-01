@@ -180,26 +180,33 @@ async function processCompletedPayment(payment: any, metadata: Record<string, an
           periodEnd.setMonth(periodEnd.getMonth() + 1);
         }
 
-        await prisma.subscription.upsert({
-          where: {
-            userId_planId: { userId: payment.userId, planId: plan.id },
-          },
-          update: {
-            status: "ACTIVE",
-            currentPeriodStart: now,
-            currentPeriodEnd: periodEnd,
-          },
-          create: {
-            userId: payment.userId,
-            planId: plan.id,
-            creatorSlug: creatorSlug || null,
-            status: "ACTIVE",
-            paymentProvider: "MIXPAY",
-            billingInterval: billingInterval as any,
-            currentPeriodStart: now,
-            currentPeriodEnd: periodEnd,
-          },
+        const existingSub = await prisma.subscription.findFirst({
+          where: { userId: payment.userId, planId: plan.id },
         });
+
+        if (existingSub) {
+          await prisma.subscription.update({
+            where: { id: existingSub.id },
+            data: {
+              status: "ACTIVE",
+              currentPeriodStart: now,
+              currentPeriodEnd: periodEnd,
+            },
+          });
+        } else {
+          await prisma.subscription.create({
+            data: {
+              userId: payment.userId,
+              planId: plan.id,
+              creatorSlug: creatorSlug || null,
+              status: "ACTIVE",
+              paymentProvider: "MIXPAY",
+              billingInterval: billingInterval as any,
+              currentPeriodStart: now,
+              currentPeriodEnd: periodEnd,
+            },
+          });
+        }
         console.log(`[MIXPAY STATUS] Subscription activated for user ${payment.userId}`);
       }
       break;

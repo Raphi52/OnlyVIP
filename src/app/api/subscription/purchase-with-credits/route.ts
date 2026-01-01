@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
-import { getCreditBalance, spendCredits } from "@/lib/credits";
+import { getCreditBalances, spendCredits } from "@/lib/credits";
+import { recordEarningDistribution } from "@/lib/commission";
 
 // POST /api/subscription/purchase-with-credits - Purchase VIP with credits
 export async function POST(request: NextRequest) {
@@ -38,12 +39,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get user's current credits
-    const userCredits = await getCreditBalance(userId);
+    // Get user's PAID credits - subscriptions require paid credits only
+    const balances = await getCreditBalances(userId);
 
-    if (userCredits < credits) {
+    if (balances.paid < credits) {
       return NextResponse.json(
-        { error: "Insufficient credits", required: credits, available: userCredits },
+        { error: "Insufficient paid credits", required: credits, available: balances.paid },
         { status: 400 }
       );
     }
@@ -100,15 +101,35 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Spend credits using the credits library
+    // Spend PAID credits only - subscriptions cannot use bonus credits
     const spendResult = await spendCredits(
       userId,
       credits,
       "SUBSCRIPTION",
       {
+        allowBonus: false, // Subscriptions = paid credits only
         description: `VIP subscription for ${creator.displayName}`,
       }
     );
+
+    // Record earning distribution (creator + agency, no chatter for subscriptions)
+    if (spendResult.paidSpent > 0) {
+      try {
+        await recordEarningDistribution({
+          creatorSlug,
+          userId,
+          paidCreditsSpent: spendResult.paidSpent,
+          type: "SUBSCRIPTION",
+          sourceId: subscription.id,
+          // No chatter attribution for subscriptions (per business rule)
+          chatterId: null,
+          aiPersonalityId: null,
+          attributedMessageId: null,
+        });
+      } catch (earningError) {
+        console.error("Failed to record earning distribution:", earningError);
+      }
+    }
 
     return NextResponse.json({
       success: true,

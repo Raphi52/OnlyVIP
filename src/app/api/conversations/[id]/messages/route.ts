@@ -49,6 +49,19 @@ export async function GET(
             image: true,
           },
         },
+        // Attribution: who sent this message on behalf of creator
+        chatter: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        aiPersonality: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
         reactions: {
           select: {
             emoji: true,
@@ -137,6 +150,12 @@ export async function GET(
         ppvUnlockedBy: JSON.parse(msg.ppvUnlockedBy || "[]"),
         totalTips: Number(msg.totalTips),
         isRead: msg.isRead,
+        // Attribution fields
+        isAiGenerated: msg.isAiGenerated,
+        chatterId: msg.chatterId,
+        chatterName: msg.chatter?.name || null,
+        aiPersonalityId: msg.aiPersonalityId,
+        aiPersonalityName: msg.aiPersonality?.name || null,
         media: msg.media.map((m) => {
           // For PPV content, return actual contentUrl only when unlocked
           const sourceMedia = m.media; // MediaContent if linked
@@ -240,6 +259,8 @@ export async function POST(
                 type: m.type,
                 url: m.url,
                 previewUrl: m.previewUrl || null,
+                // Link to existing MediaContent if provided (for PPV from library)
+                mediaId: m.mediaId || null,
               })),
             }
           : undefined,

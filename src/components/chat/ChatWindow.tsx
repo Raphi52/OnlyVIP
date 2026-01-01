@@ -17,6 +17,7 @@ import { EmojiPicker } from "./EmojiPicker";
 import { QuotedMessage } from "./QuotedMessage";
 import { MediaLightbox } from "./MediaLightbox";
 import { MessageSearch } from "./MessageSearch";
+import { MediaPickerModal } from "./MediaPickerModal";
 import { Button, Badge } from "@/components/ui";
 import { cn } from "@/lib/utils";
 
@@ -58,6 +59,14 @@ interface SearchResult {
   timestamp: Date;
 }
 
+interface LibraryMedia {
+  id: string;
+  type: "PHOTO" | "VIDEO" | "AUDIO";
+  url: string;
+  previewUrl?: string;
+  ppvPriceCredits?: number;
+}
+
 interface ChatWindowProps {
   conversationId: string;
   currentUserId: string;
@@ -73,7 +82,9 @@ interface ChatWindowProps {
   isSending?: boolean;
   isTyping?: boolean;
   isMuted?: boolean;
+  creatorSlug?: string; // For PPV media picker
   onSendMessage: (text: string, media?: File[], isPPV?: boolean, ppvPrice?: number, replyToId?: string) => void;
+  onSendPPVFromLibrary?: (media: LibraryMedia) => void;
   onUnlockPPV: (messageId: string) => void;
   onSendTip: (messageId: string, amount: number) => void;
   onReact?: (messageId: string, emoji: string) => void;
@@ -140,7 +151,9 @@ export function ChatWindow({
   isSending,
   isTyping,
   isMuted,
+  creatorSlug,
   onSendMessage,
+  onSendPPVFromLibrary,
   onUnlockPPV,
   onSendTip,
   onReact,
@@ -225,6 +238,7 @@ export function ChatWindow({
   const [showAttachMenu, setShowAttachMenu] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
+  const [showPPVPicker, setShowPPVPicker] = useState(false);
 
   // Refs
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -454,16 +468,16 @@ export function ChatWindow({
       <motion.div
         initial={{ y: -20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        className="relative z-20 flex items-center justify-between px-4 py-3 border-b border-white/5 bg-[#0a0a0a]/80 backdrop-blur-xl"
-        style={{ paddingTop: "max(12px, env(safe-area-inset-top))" }}
+        className="relative z-20 flex items-center justify-between px-3 sm:px-4 py-2.5 sm:py-3 border-b border-white/5 bg-[#0a0a0a]/80 backdrop-blur-xl"
+        style={{ paddingTop: "max(10px, env(safe-area-inset-top))" }}
       >
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           {/* Back button */}
           {onBack && (
             <motion.button
               whileTap={{ scale: 0.9 }}
               onClick={onBack}
-              className="p-2 -ml-2 rounded-full hover:bg-white/5 active:bg-white/10 text-white md:hidden"
+              className="p-1.5 sm:p-2 -ml-1 sm:-ml-2 rounded-full hover:bg-white/5 active:bg-white/10 text-white md:hidden"
             >
               <ArrowLeft className="w-5 h-5" />
             </motion.button>
@@ -477,13 +491,13 @@ export function ChatWindow({
                 animate={{ scale: 1, opacity: 1 }}
                 src={otherUser.image}
                 alt={otherUser.name}
-                className="w-11 h-11 rounded-full object-cover ring-2 ring-[var(--gold)]/30 shadow-lg"
+                className="w-10 h-10 sm:w-11 sm:h-11 rounded-full object-cover ring-2 ring-[var(--gold)]/30 shadow-lg"
               />
             ) : (
               <motion.div
                 initial={{ scale: 0.9, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
-                className="w-11 h-11 rounded-full bg-gradient-to-br from-[var(--gold)] via-amber-400 to-amber-600 flex items-center justify-center text-black font-bold shadow-lg"
+                className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-gradient-to-br from-[var(--gold)] via-amber-400 to-amber-600 flex items-center justify-center text-black font-bold shadow-lg text-sm sm:text-base"
               >
                 {otherUser.name.charAt(0)}
               </motion.div>
@@ -492,17 +506,17 @@ export function ChatWindow({
               <motion.span
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
-                className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-500 rounded-full border-2 border-[#0a0a0a] shadow-lg shadow-emerald-500/50"
+                className="absolute bottom-0 right-0 w-3 h-3 sm:w-3.5 sm:h-3.5 bg-emerald-500 rounded-full border-2 border-[#0a0a0a] shadow-lg shadow-emerald-500/50"
               />
             )}
           </div>
 
           {/* Info */}
           <div className="min-w-0">
-            <h3 className="font-semibold text-white flex items-center gap-2">
+            <h3 className="text-sm sm:text-base font-semibold text-white flex items-center gap-1.5 sm:gap-2">
               <span className="truncate">{otherUser.name}</span>
               {isAdmin && (
-                <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-gradient-to-r from-[var(--gold)] to-amber-600 text-black">
+                <span className="px-1.5 sm:px-2 py-0.5 text-[9px] sm:text-[10px] font-bold rounded-full bg-gradient-to-r from-[var(--gold)] to-amber-600 text-black">
                   CREATOR
                 </span>
               )}
@@ -534,19 +548,19 @@ export function ChatWindow({
         </div>
 
         {/* Action buttons */}
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-0.5 sm:gap-1">
           {/* Search button */}
           <motion.button
             whileTap={{ scale: 0.9 }}
             onClick={() => setShowSearch(!showSearch)}
             className={cn(
-              "p-2.5 rounded-full transition-all",
+              "p-2 sm:p-2.5 rounded-full transition-all",
               showSearch
                 ? "bg-[var(--gold)]/20 text-[var(--gold)]"
                 : "hover:bg-white/5 active:bg-white/10 text-white/50"
             )}
           >
-            <Search className="w-5 h-5" />
+            <Search className="w-4 h-4 sm:w-5 sm:h-5" />
           </motion.button>
 
           {/* Settings button */}
@@ -555,13 +569,13 @@ export function ChatWindow({
               whileTap={{ scale: 0.9 }}
               onClick={() => setShowSettingsMenu(!showSettingsMenu)}
               className={cn(
-                "p-2.5 rounded-full transition-all",
+                "p-2 sm:p-2.5 rounded-full transition-all",
                 showSettingsMenu
                   ? "bg-[var(--gold)]/20 text-[var(--gold)]"
                   : "hover:bg-white/5 active:bg-white/10 text-white/50"
               )}
             >
-              <MoreVertical className="w-5 h-5" />
+              <MoreVertical className="w-4 h-4 sm:w-5 sm:h-5" />
             </motion.button>
 
             {/* Settings dropdown */}
@@ -888,21 +902,21 @@ export function ChatWindow({
         className="relative z-20 p-3 md:p-4 border-t border-white/5 bg-[#0a0a0a]/80 backdrop-blur-xl"
         style={{ paddingBottom: "max(12px, env(safe-area-inset-bottom))" }}
       >
-        <div className="flex items-end gap-2 pb-[2px]">
+        <div className="flex items-end gap-1.5 sm:gap-2 pb-[2px]">
           {/* Attach button */}
-          <div className="relative mb-[7px]">
+          <div className="relative mb-[5px] sm:mb-[7px]">
             <motion.button
               whileTap={{ scale: 0.9 }}
               onClick={() => setShowAttachMenu(!showAttachMenu)}
               className={cn(
-                "w-10 h-10 flex items-center justify-center rounded-full transition-all",
+                "w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-full transition-all",
                 showAttachMenu
                   ? "bg-[var(--gold)] text-black"
                   : "bg-white/5 hover:bg-white/10 text-[var(--gold)]"
               )}
             >
               <motion.div animate={{ rotate: showAttachMenu ? 45 : 0 }}>
-                <Plus className="w-5 h-5" />
+                <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
               </motion.div>
             </motion.button>
 
@@ -925,6 +939,21 @@ export function ChatWindow({
                       </div>
                       <span className="text-xs text-white/70">Gallery</span>
                     </button>
+                    {/* PPV button - only for creators with library access */}
+                    {isAdmin && creatorSlug && onSendPPVFromLibrary && (
+                      <button
+                        onClick={() => {
+                          setShowAttachMenu(false);
+                          setShowPPVPicker(true);
+                        }}
+                        className="flex flex-col items-center gap-1.5 p-3 rounded-xl hover:bg-white/5 transition-colors"
+                      >
+                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-pink-500 to-rose-600 flex items-center justify-center">
+                          <Lock className="w-6 h-6 text-white" />
+                        </div>
+                        <span className="text-xs text-white/70">PPV</span>
+                      </button>
+                    )}
                     <button
                       onClick={() => {
                         setShowAttachMenu(false);
@@ -965,12 +994,12 @@ export function ChatWindow({
               whileTap={{ scale: 0.9 }}
               onClick={handleAISuggest}
               disabled={isLoadingAI || !getLastUserMessage()}
-              className="w-10 h-10 mb-[7px] flex items-center justify-center rounded-full bg-gradient-to-r from-violet-500 to-purple-600 disabled:opacity-40 disabled:cursor-not-allowed shadow-lg shadow-purple-500/20"
+              className="w-9 h-9 sm:w-10 sm:h-10 mb-[5px] sm:mb-[7px] flex items-center justify-center rounded-full bg-gradient-to-r from-violet-500 to-purple-600 disabled:opacity-40 disabled:cursor-not-allowed shadow-lg shadow-purple-500/20"
             >
               {isLoadingAI ? (
-                <Loader2 className="w-5 h-5 text-white animate-spin" />
+                <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 text-white animate-spin" />
               ) : (
-                <Sparkles className="w-5 h-5 text-white" />
+                <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
               )}
             </motion.button>
           )}
@@ -989,17 +1018,17 @@ export function ChatWindow({
               }}
               placeholder="Message..."
               rows={1}
-              className="w-full min-h-[44px] max-h-[120px] px-4 py-2.5 pr-12 rounded-2xl bg-white/5 border border-white/10 text-white placeholder:text-white/30 resize-none overflow-hidden focus:outline-none focus:border-[var(--gold)]/50 focus:bg-white/[0.07] transition-all text-[15px] leading-6"
+              className="w-full min-h-[40px] sm:min-h-[44px] max-h-[100px] sm:max-h-[120px] px-3 sm:px-4 py-2 sm:py-2.5 pr-10 sm:pr-12 rounded-xl sm:rounded-2xl bg-white/5 border border-white/10 text-white placeholder:text-white/30 resize-none overflow-hidden focus:outline-none focus:border-[var(--gold)]/50 focus:bg-white/[0.07] transition-all text-sm sm:text-[15px] leading-5 sm:leading-6"
             />
 
             {/* Emoji button */}
-            <div className="absolute right-3 top-1/2 -translate-y-1/2">
+            <div className="absolute right-2.5 sm:right-3 top-1/2 -translate-y-1/2">
               <motion.button
                 whileTap={{ scale: 0.9 }}
                 onClick={() => setShowEmojiPicker(!showEmojiPicker)}
                 className="text-white/40 hover:text-[var(--gold)] transition-colors"
               >
-                <Smile className="w-5 h-5" />
+                <Smile className="w-4 h-4 sm:w-5 sm:h-5" />
               </motion.button>
               <EmojiPicker
                 isOpen={showEmojiPicker}
@@ -1019,17 +1048,17 @@ export function ChatWindow({
             onClick={handleSend}
             disabled={isSending || (!newMessage.trim() && selectedFiles.length === 0)}
             className={cn(
-              "w-10 h-10 mb-[7px] flex items-center justify-center rounded-full transition-all",
+              "w-9 h-9 sm:w-10 sm:h-10 mb-[5px] sm:mb-[7px] flex items-center justify-center rounded-full transition-all",
               (newMessage.trim() || selectedFiles.length > 0)
                 ? "bg-gradient-to-r from-[var(--gold)] to-amber-600 shadow-lg shadow-[var(--gold)]/30"
                 : "bg-white/10 cursor-not-allowed"
             )}
           >
             {isSending ? (
-              <Loader2 className="w-5 h-5 text-black animate-spin" />
+              <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 text-black animate-spin" />
             ) : (
               <Send className={cn(
-                "w-5 h-5",
+                "w-4 h-4 sm:w-5 sm:h-5",
                 (newMessage.trim() || selectedFiles.length > 0) ? "text-black" : "text-white/30"
               )} />
             )}
@@ -1044,110 +1073,126 @@ export function ChatWindow({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-sm p-0 sm:p-4"
+            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
             onClick={() => setShowTipModal(null)}
           >
+            {/* Backdrop with blur */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/70 backdrop-blur-xl"
+            />
+
             <motion.div
               initial={{ y: "100%", opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: "100%", opacity: 0 }}
-              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              transition={{ type: "spring", damping: 30, stiffness: 400 }}
               onClick={(e) => e.stopPropagation()}
-              className="w-full sm:max-w-md bg-[#0d0d0f] border border-white/10 rounded-t-2xl sm:rounded-2xl overflow-hidden"
+              className="relative w-full sm:max-w-md overflow-hidden"
             >
-              {/* Header */}
-              <div className="p-5 border-b border-white/10">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-pink-500/20 flex items-center justify-center">
-                    <Heart className="w-5 h-5 text-pink-400" fill="currentColor" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-bold text-white">
-                      Send a Tip
-                    </h3>
-                    <p className="text-sm text-gray-400">
-                      Show your appreciation
-                    </p>
+              {/* Glow effect */}
+              <div className="absolute -inset-[1px] bg-gradient-to-b from-pink-500/30 via-purple-500/20 to-transparent rounded-t-3xl sm:rounded-3xl blur-sm" />
+
+              <div className="relative bg-[#0a0a0c]/95 border border-white/10 rounded-t-3xl sm:rounded-3xl overflow-hidden backdrop-blur-2xl">
+                {/* Drag indicator for mobile */}
+                <div className="sm:hidden flex justify-center pt-3">
+                  <div className="w-10 h-1 rounded-full bg-white/20" />
+                </div>
+
+                {/* Header */}
+                <div className="p-6 pb-4">
+                  <div className="flex items-center gap-4">
+                    <div className="relative">
+                      <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-pink-500 to-rose-600 flex items-center justify-center shadow-lg shadow-pink-500/25">
+                        <Heart className="w-7 h-7 text-white" fill="currentColor" />
+                      </div>
+                      <motion.div
+                        animate={{ scale: [1, 1.2, 1] }}
+                        transition={{ repeat: Infinity, duration: 1.5 }}
+                        className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-gradient-to-br from-yellow-400 to-amber-500 flex items-center justify-center"
+                      >
+                        <Sparkles className="w-3 h-3 text-white" />
+                      </motion.div>
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-white">
+                        Send a Tip
+                      </h3>
+                      <p className="text-sm text-gray-400 mt-0.5">
+                        Show your appreciation
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Content */}
-              <div className="p-5 space-y-5">
-                {/* Step 1: Select amount */}
-                <div className="flex gap-4">
-                  <div className="flex-shrink-0 w-7 h-7 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-400 font-bold text-sm">
-                    1
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-medium text-white mb-3">
-                      Select or enter an amount
-                    </p>
+                {/* Content */}
+                <div className="px-6 space-y-5">
+                  {/* Quick tip amounts */}
+                  <div>
+                    <p className="text-sm text-gray-400 mb-3">Quick amounts</p>
                     <div className="grid grid-cols-3 gap-2">
                       {tipAmounts.map((amount) => (
                         <motion.button
                           key={amount}
-                          whileTap={{ scale: 0.95 }}
+                          whileHover={{ scale: 1.03 }}
+                          whileTap={{ scale: 0.97 }}
                           onClick={() => handleTip(showTipModal, amount)}
-                          className="py-3 rounded-xl bg-white/5 hover:bg-purple-500/10 border border-white/10 hover:border-purple-500/30 text-white font-semibold transition-all flex items-center justify-center gap-1.5"
+                          className="py-3.5 rounded-2xl bg-white/5 hover:bg-gradient-to-br hover:from-pink-500/20 hover:to-purple-500/20 border-2 border-white/10 hover:border-pink-500/50 text-white font-semibold transition-all flex items-center justify-center gap-2"
                         >
-                          <Coins className="w-3.5 h-3.5 text-purple-400" />
+                          <Coins className="w-4 h-4 text-pink-400" />
                           {amount.toLocaleString()}
                         </motion.button>
                       ))}
                     </div>
                   </div>
-                </div>
 
-                {/* Step 2: Custom amount */}
-                <div className="flex gap-4">
-                  <div className="flex-shrink-0 w-7 h-7 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-400 font-bold text-sm">
-                    2
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-medium text-white mb-3">
-                      Or enter a custom amount
-                    </p>
-                    <div className="flex gap-2">
+                  {/* Custom amount */}
+                  <div>
+                    <p className="text-sm text-gray-400 mb-3">Or custom amount</p>
+                    <div className="flex gap-3">
                       <div className="relative flex-1">
-                        <Coins className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-purple-400" />
+                        <Coins className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-pink-400" />
                         <input
                           type="number"
                           value={customTip}
                           onChange={(e) => setCustomTip(e.target.value)}
-                          placeholder="Enter amount"
+                          placeholder="Min. 100"
                           min="100"
                           step="100"
-                          className="w-full pl-10 pr-4 py-3 rounded-xl bg-black/50 border border-white/10 text-white focus:outline-none focus:border-purple-500 transition-colors"
+                          className="w-full pl-12 pr-4 py-3.5 rounded-2xl bg-white/5 border-2 border-white/10 text-white placeholder:text-gray-500 focus:outline-none focus:border-pink-500 focus:bg-white/10 transition-all"
                         />
                       </div>
-                      <button
+                      <motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
                         disabled={!customTip || parseFloat(customTip) < 100}
                         onClick={() => handleTip(showTipModal, parseFloat(customTip))}
-                        className="px-5 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-purple-500 text-white font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="px-6 py-3.5 rounded-2xl bg-gradient-to-r from-pink-600 to-purple-600 text-white font-semibold shadow-lg shadow-pink-500/25 hover:shadow-pink-500/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
                       >
                         Send
-                      </button>
+                      </motion.button>
                     </div>
+                  </div>
+
+                  {/* Info */}
+                  <div className="p-4 rounded-2xl bg-pink-500/10 border border-pink-500/20">
+                    <p className="text-sm text-pink-400">
+                      Minimum tip is 100 credits. Tips are non-refundable and go directly to the creator.
+                    </p>
                   </div>
                 </div>
 
-                {/* Info */}
-                <div className="bg-purple-500/10 border border-purple-500/20 rounded-xl p-4">
-                  <p className="text-sm text-purple-400">
-                    <strong>Note:</strong> Minimum tip is 100 credits. Tips are non-refundable.
-                  </p>
+                {/* Footer */}
+                <div className="p-6 pt-4 border-t border-white/5 mt-4">
+                  <button
+                    onClick={() => setShowTipModal(null)}
+                    className="w-full px-4 py-3.5 rounded-xl border border-white/10 text-gray-400 hover:bg-white/5 transition-all font-medium"
+                  >
+                    Cancel
+                  </button>
                 </div>
-              </div>
-
-              {/* Footer */}
-              <div className="p-5 border-t border-white/10">
-                <button
-                  onClick={() => setShowTipModal(null)}
-                  className="w-full px-4 py-3 rounded-xl border border-white/10 text-gray-400 hover:bg-white/5 transition-colors font-medium"
-                >
-                  Cancel
-                </button>
               </div>
             </motion.div>
           </motion.div>
@@ -1161,6 +1206,25 @@ export function ChatWindow({
         initialIndex={lightboxIndex}
         onClose={() => setLightboxMedia(null)}
       />
+
+      {/* PPV Media Picker */}
+      {creatorSlug && onSendPPVFromLibrary && (
+        <MediaPickerModal
+          isOpen={showPPVPicker}
+          onClose={() => setShowPPVPicker(false)}
+          creatorSlug={creatorSlug}
+          onSelect={(media) => {
+            onSendPPVFromLibrary({
+              id: media.id,
+              type: media.type,
+              url: media.contentUrl,
+              previewUrl: media.previewUrl || media.thumbnailUrl || undefined,
+              ppvPriceCredits: media.ppvPriceCredits || undefined,
+            });
+            setShowPPVPicker(false);
+          }}
+        />
+      )}
     </div>
   );
 }

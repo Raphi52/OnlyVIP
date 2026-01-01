@@ -8,7 +8,13 @@ import {
   ExternalLink,
   CheckCircle,
   AlertCircle,
+  X,
+  Sparkles,
+  Shield,
+  Zap,
+  Gift,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface MixPayModalProps {
   isOpen: boolean;
@@ -70,145 +76,195 @@ export function MixPayModal({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-sm p-0 sm:p-4"
+        className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
         onClick={onClose}
       >
+        {/* Backdrop with blur */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="absolute inset-0 bg-black/70 backdrop-blur-xl"
+        />
+
         <motion.div
           initial={{ y: "100%", opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: "100%", opacity: 0 }}
-          transition={{ type: "spring", damping: 25, stiffness: 300 }}
+          transition={{ type: "spring", damping: 30, stiffness: 400 }}
           onClick={(e) => e.stopPropagation()}
-          className="w-full sm:max-w-md bg-[#0d0d0f] border border-white/10 rounded-t-2xl sm:rounded-2xl overflow-hidden"
+          className="relative w-full sm:max-w-md overflow-hidden"
         >
-          {/* Header */}
-          <div className="p-5 border-b border-white/10">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center">
-                <CreditCard className="w-5 h-5 text-blue-400" />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-white">
-                  Card Payment
-                </h3>
-                <p className="text-sm text-gray-400">
-                  Purchase {totalCredits.toLocaleString()} credits
-                </p>
-              </div>
-            </div>
-          </div>
+          {/* Glow effect */}
+          <div className="absolute -inset-[1px] bg-gradient-to-b from-blue-500/20 via-purple-500/20 to-transparent rounded-t-3xl sm:rounded-3xl blur-sm" />
 
-          {/* Content */}
-          <div className="p-5 space-y-5">
-            {/* Step 1 */}
-            <div className="flex gap-4">
-              <div className="flex-shrink-0 w-7 h-7 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-400 font-bold text-sm">
-                1
-              </div>
-              <div>
-                <p className="font-medium text-white">
-                  Pay with card via MixPay
-                </p>
-                <p className="text-sm text-gray-400 mt-1">
-                  You&apos;ll be redirected to MixPay to complete payment using Visa, Mastercard, or crypto.
-                </p>
-              </div>
+          <div className="relative bg-[#0a0a0c]/95 border border-white/10 rounded-t-3xl sm:rounded-3xl overflow-hidden backdrop-blur-2xl">
+            {/* Drag indicator for mobile */}
+            <div className="sm:hidden flex justify-center pt-3">
+              <div className="w-10 h-1 rounded-full bg-white/20" />
             </div>
 
-            {/* Step 2 */}
-            <div className="flex gap-4">
-              <div className="flex-shrink-0 w-7 h-7 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-400 font-bold text-sm">
-                2
-              </div>
-              <div>
-                <p className="font-medium text-white">
-                  Complete the payment
-                </p>
-                <p className="text-sm text-gray-400 mt-1">
-                  No KYC required for purchases under €700. Fast and secure.
-                </p>
-              </div>
-            </div>
-
-            {/* Step 3 */}
-            <div className="flex gap-4">
-              <div className="flex-shrink-0 w-7 h-7 rounded-full bg-green-500/20 flex items-center justify-center text-green-400 font-bold text-sm">
-                3
-              </div>
-              <div>
-                <p className="font-medium text-white">
-                  Credits added automatically
-                </p>
-                <p className="text-sm text-gray-400 mt-1">
-                  Your credits will be added within minutes once payment is confirmed.
-                </p>
-              </div>
-            </div>
-
-            {/* Order Summary */}
-            <div className="bg-white/5 border border-white/10 rounded-xl p-4 space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-400">Amount</span>
-                <span className="text-white font-medium">${amount}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-400">Credits</span>
-                <span className="text-white font-medium">{credits.toLocaleString()}</span>
-              </div>
-              {bonusCredits > 0 && (
-                <div className="flex justify-between text-sm">
-                  <span className="text-green-400">Bonus credits</span>
-                  <span className="text-green-400 font-medium">+{bonusCredits.toLocaleString()}</span>
+            {/* Header */}
+            <div className="p-6 pb-4">
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="relative">
+                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/25">
+                      <CreditCard className="w-7 h-7 text-white" />
+                    </div>
+                    <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center border-2 border-[#0a0a0c]">
+                      <Shield className="w-3 h-3 text-white" />
+                    </div>
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-white">
+                      Card Payment
+                    </h3>
+                    <p className="text-sm text-gray-400 mt-0.5">
+                      Secure checkout via MixPay
+                    </p>
+                  </div>
                 </div>
-              )}
-              <div className="pt-2 border-t border-white/10 flex justify-between">
-                <span className="text-white font-medium">Total credits</span>
-                <span className="text-purple-400 font-bold">{totalCredits.toLocaleString()}</span>
+                <button
+                  onClick={onClose}
+                  className="p-2 rounded-xl bg-white/5 hover:bg-white/10 transition-colors"
+                >
+                  <X className="w-5 h-5 text-gray-400" />
+                </button>
               </div>
             </div>
 
-            {/* Error */}
-            {error && (
-              <div className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm">
-                <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                {error}
-              </div>
-            )}
+            {/* Content */}
+            <div className="px-6 space-y-4">
+              {/* Order Summary */}
+              <div className="p-4 rounded-2xl bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/20">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-sm text-gray-400">Order Summary</span>
+                  <span className="text-xs px-2 py-1 rounded-full bg-emerald-500/20 text-emerald-400 font-medium">
+                    No KYC
+                  </span>
+                </div>
 
-            {/* Info */}
-            <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4">
-              <p className="text-sm text-blue-400">
-                <strong>Secure:</strong> MixPay accepts Visa, Mastercard, and 50+ cryptocurrencies with no KYC required.
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-400">Base credits</span>
+                    <span className="text-white font-medium">{credits.toLocaleString()}</span>
+                  </div>
+
+                  {bonusCredits > 0 && (
+                    <div className="flex justify-between items-center">
+                      <span className="flex items-center gap-2 text-emerald-400">
+                        <Gift className="w-4 h-4" />
+                        Bonus credits
+                      </span>
+                      <span className="text-emerald-400 font-medium">+{bonusCredits.toLocaleString()}</span>
+                    </div>
+                  )}
+
+                  <div className="pt-3 mt-3 border-t border-white/10">
+                    <div className="flex justify-between items-center">
+                      <span className="text-white font-semibold">Total credits</span>
+                      <div className="flex items-center gap-2">
+                        <Sparkles className="w-4 h-4 text-purple-400" />
+                        <span className="text-xl font-bold text-purple-400">
+                          {totalCredits.toLocaleString()}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex justify-between items-center mt-1">
+                      <span className="text-sm text-gray-500">Amount to pay</span>
+                      <span className="text-lg font-semibold text-white">${amount}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Payment Methods */}
+              <div className="flex items-center justify-center gap-4 py-2">
+                <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5">
+                  <div className="w-8 h-5 rounded bg-gradient-to-r from-blue-600 to-blue-500 flex items-center justify-center">
+                    <span className="text-[8px] font-bold text-white">VISA</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5">
+                  <div className="w-8 h-5 rounded bg-gradient-to-r from-red-500 to-orange-500 flex items-center justify-center">
+                    <div className="flex">
+                      <div className="w-2 h-2 rounded-full bg-red-300 opacity-80"></div>
+                      <div className="w-2 h-2 rounded-full bg-yellow-400 -ml-1 opacity-80"></div>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5">
+                  <div className="w-8 h-5 rounded bg-black flex items-center justify-center">
+                    <span className="text-[8px] font-bold text-white">Pay</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Features */}
+              <div className="grid grid-cols-2 gap-2">
+                <div className="flex items-center gap-2 p-3 rounded-xl bg-white/5">
+                  <Zap className="w-4 h-4 text-yellow-400" />
+                  <span className="text-xs text-gray-400">Instant credit</span>
+                </div>
+                <div className="flex items-center gap-2 p-3 rounded-xl bg-white/5">
+                  <Shield className="w-4 h-4 text-emerald-400" />
+                  <span className="text-xs text-gray-400">256-bit SSL</span>
+                </div>
+              </div>
+
+              {/* Error */}
+              {error && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="flex items-center gap-3 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl"
+                >
+                  <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0" />
+                  <p className="text-sm text-red-400">{error}</p>
+                </motion.div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="p-6 pt-4 border-t border-white/5 mt-4">
+              <div className="flex gap-3">
+                <button
+                  onClick={onClose}
+                  className="flex-1 px-4 py-3.5 rounded-xl border border-white/10 text-gray-400 hover:bg-white/5 transition-all font-medium"
+                  disabled={isLoading}
+                >
+                  Cancel
+                </button>
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={handlePayment}
+                  disabled={isLoading}
+                  className={cn(
+                    "flex-1 flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl font-semibold transition-all",
+                    !isLoading
+                      ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40"
+                      : "bg-white/10 text-gray-500"
+                  )}
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      Pay ${amount}
+                      <ExternalLink className="w-4 h-4" />
+                    </>
+                  )}
+                </motion.button>
+              </div>
+              <p className="text-xs text-center text-gray-500 mt-3">
+                You&apos;ll be redirected to MixPay secure checkout
               </p>
             </div>
-          </div>
-
-          {/* Footer */}
-          <div className="p-5 border-t border-white/10 flex gap-3">
-            <button
-              onClick={onClose}
-              className="flex-1 px-4 py-3 rounded-xl border border-white/10 text-gray-400 hover:bg-white/5 transition-colors font-medium"
-              disabled={isLoading}
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handlePayment}
-              disabled={isLoading}
-              className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-purple-500 text-white font-semibold hover:opacity-90 transition-opacity disabled:opacity-50"
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Loading...
-                </>
-              ) : (
-                <>
-                  Pay ${amount}
-                  <ExternalLink className="w-4 h-4" />
-                </>
-              )}
-            </button>
           </div>
         </motion.div>
       </motion.div>

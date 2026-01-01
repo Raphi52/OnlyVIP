@@ -34,15 +34,25 @@ export async function GET(request: NextRequest) {
         startDate.setDate(startDate.getDate() - 30);
     }
 
-    // Get payments from Payment model
+    // Get payments from Payment model (credits, crypto, paygate)
+    const paymentWhere: any = {
+      createdAt: { gte: startDate },
+    };
+    if (type !== "all") {
+      paymentWhere.type = type;
+    }
     const payments = await prisma.payment.findMany({
-      where: {
-        createdAt: { gte: startDate },
-        status: "COMPLETED",
-        ...(type !== "all" ? { type } : {}),
-      },
+      where: paymentWhere,
       orderBy: { createdAt: "desc" },
     });
+
+    // Get user info for payments
+    const paymentUserIds = [...new Set(payments.map(p => p.userId))];
+    const paymentUsers = await prisma.user.findMany({
+      where: { id: { in: paymentUserIds } },
+      select: { id: true, name: true, email: true },
+    });
+    const userMap = new Map(paymentUsers.map(u => [u.id, u]));
 
     // Get subscriptions payments
     const subscriptions = await prisma.subscription.findMany({
@@ -84,12 +94,28 @@ export async function GET(request: NextRequest) {
 
     // Transform all to unified format
     const allPayments = [
+      // Payment model (credits purchases, crypto, paygate)
+      ...payments.map((p) => {
+        const user = userMap.get(p.userId);
+        return {
+          id: p.id,
+          type: p.type as string,
+          amount: Number(p.amount),
+          currency: p.currency,
+          status: p.status,
+          provider: p.provider,
+          user: user?.name || user?.email || "Unknown",
+          description: p.type === "CREDITS" ? `${Number(p.amount) * 100} credits` : p.type,
+          createdAt: p.createdAt,
+        };
+      }),
       ...subscriptions.map((s) => ({
         id: s.id,
         type: "SUBSCRIPTION" as const,
         amount: s.plan.monthlyPrice,
         currency: "USD",
         status: s.status,
+        provider: "STRIPE",
         user: s.user.name || s.user.email,
         description: `${s.plan.name} subscription`,
         createdAt: s.createdAt,
@@ -100,6 +126,7 @@ export async function GET(request: NextRequest) {
         amount: p.amount,
         currency: p.currency,
         status: p.status,
+        provider: p.provider,
         user: p.user.name || p.user.email,
         description: p.media.title,
         createdAt: p.createdAt,
@@ -110,6 +137,7 @@ export async function GET(request: NextRequest) {
         amount: p.amount,
         currency: p.currency,
         status: p.status,
+        provider: p.provider,
         user: p.user.name || p.user.email,
         description: p.type === "TIP" ? "Tip" : "PPV Unlock",
         createdAt: p.createdAt,
@@ -122,19 +150,23 @@ export async function GET(request: NextRequest) {
         ? allPayments
         : allPayments.filter((p) => p.type === type);
 
-    // Calculate stats
-    const totalRevenue = filteredPayments.reduce((sum, p) => sum + p.amount, 0);
+    // Calculate stats (only COMPLETED payments for revenue)
+    const completedPayments = filteredPayments.filter((p) => p.status === "COMPLETED");
+    const totalRevenue = completedPayments.reduce((sum, p) => sum + p.amount, 0);
     const subscriptionRevenue = allPayments
-      .filter((p) => p.type === "SUBSCRIPTION")
+      .filter((p) => p.type === "SUBSCRIPTION" && p.status === "ACTIVE")
       .reduce((sum, p) => sum + p.amount, 0);
     const mediaRevenue = allPayments
-      .filter((p) => p.type === "MEDIA_PURCHASE")
+      .filter((p) => p.type === "MEDIA_PURCHASE" && p.status === "COMPLETED")
       .reduce((sum, p) => sum + p.amount, 0);
     const tipsRevenue = allPayments
-      .filter((p) => p.type === "TIP")
+      .filter((p) => p.type === "TIP" && p.status === "COMPLETED")
       .reduce((sum, p) => sum + p.amount, 0);
     const ppvRevenue = allPayments
-      .filter((p) => p.type === "PPV_UNLOCK")
+      .filter((p) => p.type === "PPV_UNLOCK" && p.status === "COMPLETED")
+      .reduce((sum, p) => sum + p.amount, 0);
+    const creditsRevenue = allPayments
+      .filter((p) => p.type === "CREDITS" && p.status === "COMPLETED")
       .reduce((sum, p) => sum + p.amount, 0);
 
     // Revenue by day for chart
@@ -156,6 +188,7 @@ export async function GET(request: NextRequest) {
         mediaRevenue,
         tipsRevenue,
         ppvRevenue,
+        creditsRevenue,
         totalTransactions: filteredPayments.length,
       },
       chartData,

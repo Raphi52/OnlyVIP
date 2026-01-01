@@ -43,6 +43,14 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    // Parse categories
+    let categories: string[] = [];
+    try {
+      categories = JSON.parse(creator.categories || "[]");
+    } catch {
+      categories = [];
+    }
+
     // Combine creator info with settings
     const response = {
       // From Creator model
@@ -51,6 +59,7 @@ export async function GET(request: NextRequest) {
       cardImage: creator.cardImage,
       coverImage: creator.coverImage,
       creatorBio: creator.bio,
+      categories,
       instagram: JSON.parse(creator.socialLinks || "{}").instagram || null,
       twitter: JSON.parse(creator.socialLinks || "{}").twitter || null,
       tiktok: JSON.parse(creator.socialLinks || "{}").tiktok || null,
@@ -95,6 +104,7 @@ export async function PUT(request: NextRequest) {
       cardImage,
       coverImage,
       creatorBio,
+      categories,
       instagram,
       twitter,
       tiktok,
@@ -173,6 +183,7 @@ export async function PUT(request: NextRequest) {
             cardImage: cardImage || null,
             coverImage: coverImage || null,
             bio: creatorBio || null,
+            categories: categories ? JSON.stringify(categories) : "[]",
             socialLinks,
             walletEth: walletEth || null,
             walletBtc: walletBtc || null,
@@ -211,6 +222,7 @@ export async function PUT(request: NextRequest) {
           cardImage: cardImage || null,
           coverImage: coverImage || null,
           bio: creatorBio || null,
+          categories: categories ? JSON.stringify(categories) : "[]",
           socialLinks,
           walletEth: walletEth || null,
           walletBtc: walletBtc || null,
@@ -223,6 +235,7 @@ export async function PUT(request: NextRequest) {
           cardImage: cardImage || null,
           coverImage: coverImage || null,
           bio: creatorBio || null,
+          categories: categories ? JSON.stringify(categories) : "[]",
           socialLinks,
           walletEth: walletEth || null,
           walletBtc: walletBtc || null,

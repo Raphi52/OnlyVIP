@@ -1,0 +1,112 @@
+{
+  "metadata": {
+    "title": "VipOnly - Piattaforma di Contenuti Esclusivi | viponly.fun",
+    "description": "VipOnly è LA piattaforma premium per creatori di contenuti esclusivi. Unisciti a VipOnly per condividere foto e video esclusivi, chattare con i tuoi fan e monetizzare i tuoi contenuti."
+  },
+  "nav": {
+    "login": "Accedi",
+    "signup": "Registrati",
+    "dashboard": "Dashboard",
+    "messages": "Messaggi",
+    "logout": "Esci",
+    "becomeCreator": "Diventa Creatore"
+  },
+  "home": {
+    "title": "VipOnly",
+    "subtitle": "Contenuti Esclusivi",
+    "description": "VipOnly è la piattaforma premium per creatori di contenuti esclusivi. Abbonati ai tuoi preferiti e accedi a foto, video e messaggi privati VipOnly.",
+    "discoverCreators": "Scopri i Creatori",
+    "noCreators": "Ancora nessun creatore",
+    "beFirst": "Sii il primo creatore su VipOnly!",
+    "startNow": "Inizia Ora",
+    "forCreators": "Per i Creatori",
+    "startMonetizing": "Inizia a monetizzare i tuoi contenuti",
+    "creatorCTA": "Crea la tua pagina esclusiva, condividi contenuti premium e guadagna con abbonamenti, mance e messaggi PPV.",
+    "creatorAccount": "Account Creatore",
+    "startEarning": "Inizia a guadagnare oggi",
+    "firstMonth": "Primo mese",
+    "afterFirstMonth": "Dopo il primo mese",
+    "monthlySubscription": "Abbonamento mensile",
+    "zeroFee": "0% di commissione",
+    "onlyFivePercent": "Solo 5%",
+    "free": "Gratis",
+    "cryptoCard": "Pagamenti crypto e carta",
+    "customUrl": "Il tuo URL personalizzato",
+    "unlimitedUploads": "Upload illimitati",
+    "realtimeAnalytics": "Analytics in tempo reale",
+    "createPageFree": "Crea la Tua Pagina - Gratis"
+  },
+  "features": {
+    "zeroPercent": "0% il Primo Mese",
+    "zeroPercentDesc": "Tieni il 100% dei tuoi guadagni il primo mese. Solo 5% di commissione dopo.",
+    "exclusive": "Contenuti Esclusivi",
+    "exclusiveDesc": "Condividi foto, video e contenuti esclusivi solo con abbonati paganti.",
+    "messaging": "Messaggi Diretti",
+    "messagingDesc": "Chatta direttamente con i tuoi fan. Invia messaggi PPV e ricevi mance.",
+    "crypto": "Pagamenti Crypto",
+    "cryptoDesc": "Accetta pagamenti crypto con conversione istantanea. Mantieni i tuoi guadagni privati."
+  },
+  "creator": {
+    "subscribe": "Abbonati",
+    "subscribeFor": "Abbonati per",
+    "subscribed": "Abbonato",
+    "message": "Messaggio",
+    "sendMessage": "Invia Messaggio",
+    "exclusive": "Contenuti Esclusivi",
+    "photos": "foto",
+    "videos": "video",
+    "posts": "post",
+    "subscribers": "abbonati",
+    "viewGallery": "Vedi Galleria",
+    "gallery": "Galleria",
+    "aboutMe": "Chi Sono",
+    "socialLinks": "Social Media"
+  },
+  "chat": {
+    "typeMessage": "Scrivi un messaggio...",
+    "send": "Invia",
+    "unlock": "Sblocca",
+    "unlockFor": "Sblocca per",
+    "credits": "crediti",
+    "ppvContent": "Contenuto esclusivo",
+    "tip": "Mancia",
+    "sendTip": "Invia Mancia"
+  },
+  "auth": {
+    "email": "Email",
+    "password": "Password",
+    "confirmPassword": "Conferma Password",
+    "name": "Nome",
+    "loginTitle": "Bentornato",
+    "loginSubtitle": "Accedi al tuo account",
+    "signupTitle": "Crea Account",
+    "signupSubtitle": "Unisciti a VipOnly oggi",
+    "forgotPassword": "Password dimenticata?",
+    "noAccount": "Non hai un account?",
+    "hasAccount": "Hai già un account?",
+    "orContinueWith": "Oppure continua con",
+    "google": "Continua con Google"
+  },
+  "footer": {
+    "rights": "Tutti i diritti riservati",
+    "terms": "Termini",
+    "privacy": "Privacy",
+    "contact": "Contatti"
+  },
+  "common": {
+    "loading": "Caricamento...",
+    "error": "Errore",
+    "success": "Successo",
+    "cancel": "Annulla",
+    "save": "Salva",
+    "delete": "Elimina",
+    "edit": "Modifica",
+    "close": "Chiudi",
+    "back": "Indietro",
+    "next": "Avanti",
+    "search": "Cerca",
+    "noResults": "Nessun risultato",
+    "seeMore": "Vedi Altro",
+    "seeAll": "Vedi Tutto"
+  }
+}

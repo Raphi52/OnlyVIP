@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import {
-  getCreditBalance,
+  getCreditBalances,
   getCreditTransactions,
   getNextExpiration,
   CREDITS_PER_DOLLAR,
@@ -24,9 +24,9 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get("limit") || "20");
     const offset = parseInt(searchParams.get("offset") || "0");
 
-    // Get balance, transactions, and next expiration in parallel
-    const [balance, transactions, nextExpiration] = await Promise.all([
-      getCreditBalance(userId),
+    // Get balances, transactions, and next expiration in parallel
+    const [balances, transactions, nextExpiration] = await Promise.all([
+      getCreditBalances(userId),
       getCreditTransactions(userId, limit, offset),
       getNextExpiration(userId),
     ]);
@@ -37,13 +37,17 @@ export async function GET(request: NextRequest) {
       amount: tx.amount,
       balance: tx.balance,
       type: tx.type,
+      creditType: tx.creditType, // Include credit type (PAID/BONUS)
       description: tx.description,
       createdAt: tx.createdAt,
       expiresAt: tx.expiresAt,
     }));
 
     return NextResponse.json({
-      balance,
+      // New: separate balances
+      balance: balances.total, // Total for backwards compatibility
+      paidCredits: balances.paid,
+      bonusCredits: balances.bonus,
       transactions: formattedTransactions,
       nextExpiration,
       // Useful constants for frontend

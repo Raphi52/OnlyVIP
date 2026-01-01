@@ -27,6 +27,14 @@ export interface Creator {
     subscribers: number;
   };
   isActive?: boolean;
+  aiEnabled?: boolean;
+}
+
+export interface Agency {
+  id: string;
+  name: string;
+  slug: string;
+  logo: string | null;
 }
 
 interface AdminCreatorContextType {
@@ -36,6 +44,10 @@ interface AdminCreatorContextType {
   isLoading: boolean;
   refreshCreator: () => Promise<void>;
   refreshCreators: () => Promise<void>;
+  // Agency support
+  agency: Agency | null;
+  agencyCreators: Creator[];
+  refreshAgency: () => Promise<void>;
 }
 
 const AdminCreatorContext = createContext<AdminCreatorContextType | undefined>(undefined);
@@ -47,13 +59,53 @@ export function AdminCreatorProvider({ children }: { children: ReactNode }) {
   const [selectedCreator, setSelectedCreatorState] = useState<Creator | null>(null);
   const [creators, setCreators] = useState<Creator[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [agency, setAgency] = useState<Agency | null>(null);
+  const [agencyCreators, setAgencyCreators] = useState<Creator[]>([]);
 
   const isAdmin = (session?.user as any)?.role === "ADMIN";
   const isCreator = (session?.user as any)?.isCreator === true;
+  const isAgencyOwner = (session?.user as any)?.isAgencyOwner === true;
 
-  // Fetch all creators for the user
+  // Fetch agency data for agency owners
+  const fetchAgency = useCallback(async () => {
+    if (!session?.user?.id || !isAgencyOwner) {
+      setAgency(null);
+      setAgencyCreators([]);
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/agency");
+      if (res.ok) {
+        const data = await res.json();
+        if (data.agencies && data.agencies.length > 0) {
+          const agencyData = data.agencies[0];
+          setAgency({
+            id: agencyData.id,
+            name: agencyData.name,
+            slug: agencyData.slug,
+            logo: agencyData.logo || null,
+          });
+          // Map agency creators to Creator interface
+          const agencyCreatorsList = (agencyData.creators || []).map((c: any) => ({
+            slug: c.slug,
+            name: c.name,
+            displayName: c.displayName,
+            avatar: c.avatar,
+            coverImage: null,
+          }));
+          setAgencyCreators(agencyCreatorsList);
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching agency:", error);
+    }
+  }, [session?.user?.id, isAgencyOwner]);
+
+  // Fetch creators that belong to the current user (for the selector dropdown)
+  // Admins can see all creators in admin pages, but the selector only shows their own
   const fetchCreators = useCallback(async () => {
-    if (!session?.user?.id || (!isAdmin && !isCreator)) {
+    if (!session?.user?.id || !isCreator) {
       setCreators([]);
       setSelectedCreatorState(null);
       setIsLoading(false);
@@ -61,9 +113,9 @@ export function AdminCreatorProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      // For admin, fetch all creators; for creator, fetch their profiles
-      const endpoint = isAdmin ? "/api/admin/creators" : "/api/creator/my-profiles";
-      const res = await fetch(endpoint);
+      // Always fetch only the user's own creators for the selector
+      // Admin pages use /api/admin/creators separately to show all creators
+      const res = await fetch("/api/creator/my-profiles");
 
       if (res.ok) {
         const data = await res.json();
@@ -87,20 +139,34 @@ export function AdminCreatorProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  }, [session?.user?.id, isAdmin, isCreator]);
+  }, [session?.user?.id, isCreator]);
 
   // Fetch creators when session is ready
   useEffect(() => {
     if (status === "loading") return;
 
-    if (status === "authenticated" && (isAdmin || isCreator)) {
+    if (status === "authenticated" && isCreator) {
       fetchCreators();
     } else {
       setCreators([]);
       setSelectedCreatorState(null);
       setIsLoading(false);
     }
-  }, [status, isAdmin, isCreator, fetchCreators]);
+  }, [status, isCreator, fetchCreators]);
+
+  // Fetch agency data when session is ready
+  useEffect(() => {
+    if (status === "loading") return;
+
+    if (status === "authenticated" && isAgencyOwner) {
+      fetchAgency();
+    } else if (!isAgencyOwner) {
+      // Only clear if user is definitely not an agency owner
+      setAgency(null);
+      setAgencyCreators([]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status, isAgencyOwner]);
 
   // Set selected creator and persist to localStorage
   const handleSetCreator = useCallback((newCreator: Creator) => {
@@ -134,6 +200,9 @@ export function AdminCreatorProvider({ children }: { children: ReactNode }) {
         isLoading: isLoading || status === "loading",
         refreshCreator,
         refreshCreators: fetchCreators,
+        agency,
+        agencyCreators,
+        refreshAgency: fetchAgency,
       }}
     >
       {children}

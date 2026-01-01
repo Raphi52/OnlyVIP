@@ -20,36 +20,55 @@ export async function PATCH(
     if (body.creditGrant && body.creditGrant > 0) {
       const user = await prisma.user.findUnique({
         where: { id },
-        select: { creditBalance: true },
+        select: { creditBalance: true, paidCredits: true, bonusCredits: true },
       });
 
       if (!user) {
         return NextResponse.json({ error: "User not found" }, { status: 404 });
       }
 
-      const newBalance = (user.creditBalance || 0) + body.creditGrant;
+      // Determine credit type (default to PAID)
+      const creditType = body.creditType === "BONUS" ? "BONUS" : "PAID";
+      const isPaid = creditType === "PAID";
+
+      const newTotal = (user.creditBalance || 0) + body.creditGrant;
+      const newPaid = isPaid ? (user.paidCredits || 0) + body.creditGrant : (user.paidCredits || 0);
+      const newBonus = !isPaid ? (user.bonusCredits || 0) + body.creditGrant : (user.bonusCredits || 0);
+
+      // Calculate expiration (6 days from now)
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 6);
 
       // Create transaction record
       await prisma.creditTransaction.create({
         data: {
           userId: id,
           amount: body.creditGrant,
-          balance: newBalance,
+          balance: newTotal,
           type: "ADMIN_GRANT",
-          description: body.creditDescription || "Admin credit grant",
+          creditType,
+          description: body.creditDescription || `Admin ${creditType.toLowerCase()} credit grant`,
+          expiresAt,
         },
       });
 
-      // Update user balance
+      // Update user balances
       const updatedUser = await prisma.user.update({
         where: { id },
-        data: { creditBalance: newBalance },
+        data: {
+          creditBalance: newTotal,
+          paidCredits: newPaid,
+          bonusCredits: newBonus,
+        },
       });
 
       return NextResponse.json({
         user: updatedUser,
         creditsAdded: body.creditGrant,
-        newBalance,
+        creditType,
+        newBalance: newTotal,
+        newPaidCredits: newPaid,
+        newBonusCredits: newBonus,
       });
     }
 
@@ -57,6 +76,7 @@ export async function PATCH(
     if (body.role !== undefined) updateData.role = body.role;
     if (body.isCreator !== undefined) updateData.isCreator = body.isCreator;
     if (body.isVip !== undefined) updateData.isVip = body.isVip;
+    if (body.isAgencyOwner !== undefined) updateData.isAgencyOwner = body.isAgencyOwner;
     if (body.name !== undefined) updateData.name = body.name;
     if (body.emailVerified !== undefined) {
       updateData.emailVerified = body.emailVerified ? new Date(body.emailVerified) : null;

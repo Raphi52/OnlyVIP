@@ -2,11 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import {
   spendCredits,
-  getCreditBalance,
-  hasEnoughCredits,
+  getCreditBalances,
   CreditTransactionType,
 } from "@/lib/credits";
-import { recordCreatorEarning } from "@/lib/commission";
+import { recordEarningDistribution } from "@/lib/commission";
 import prisma from "@/lib/prisma";
 
 // POST /api/credits/spend - Spend credits on media, PPV, or tips
@@ -69,13 +68,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check balance
-    const currentBalance = await getCreditBalance(userId);
-    if (currentBalance < amount) {
+    // Check balance - MEDIA_UNLOCK can use bonus credits, others cannot
+    const balances = await getCreditBalances(userId);
+    const allowBonus = type === "MEDIA_UNLOCK";
+    const availableBalance = allowBonus ? balances.total : balances.paid;
+
+    if (availableBalance < amount) {
       return NextResponse.json(
         {
-          error: "Insufficient credits",
-          balance: currentBalance,
+          error: allowBonus ? "Insufficient credits" : "Insufficient paid credits",
+          balance: availableBalance,
           required: amount,
         },
         { status: 400 }
@@ -113,20 +115,26 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Spend credits
+    // Spend credits - MEDIA_UNLOCK can use bonus credits (bonus first, then paid)
     const result = await spendCredits(userId, amount, type, {
+      allowBonus: type === "MEDIA_UNLOCK", // PPV catalog media can use bonus
       description: description || `${type}: ${amount} credits`,
       mediaId,
       messageId,
     });
 
     // Create additional records based on type
+    let mediaUrl: string | null = null;
+
     if (type === "MEDIA_UNLOCK" && mediaId) {
-      // Get media with creatorSlug for earning tracking
+      // Get media with creatorSlug and URL for earning tracking
       const mediaForEarning = await prisma.mediaContent.findUnique({
         where: { id: mediaId },
-        select: { creatorSlug: true },
+        select: { creatorSlug: true, contentUrl: true, type: true },
       });
+
+      // Set the media URL to return to client
+      mediaUrl = mediaForEarning?.contentUrl || null;
 
       await prisma.mediaPurchase.create({
         data: {
@@ -147,18 +155,22 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      // Record creator earning (commission applied)
-      if (mediaForEarning?.creatorSlug) {
+      // Record earning distribution (creator + agency, no chatter for catalog media)
+      if (mediaForEarning?.creatorSlug && result.paidSpent > 0) {
         try {
-          await recordCreatorEarning(
-            mediaForEarning.creatorSlug,
+          await recordEarningDistribution({
+            creatorSlug: mediaForEarning.creatorSlug,
             userId,
-            amount,
-            "MEDIA_UNLOCK",
-            mediaId
-          );
+            paidCreditsSpent: result.paidSpent,
+            type: "MEDIA_UNLOCK",
+            sourceId: mediaId,
+            // No chatter/AI attribution for catalog media purchases
+            chatterId: null,
+            aiPersonalityId: null,
+            attributedMessageId: null,
+          });
         } catch (earningError) {
-          console.error("Failed to record creator earning:", earningError);
+          console.error("Failed to record earning distribution:", earningError);
           // Don't fail the transaction, just log the error
         }
       }
@@ -167,8 +179,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       spent: amount,
+      paidSpent: result.paidSpent,
+      bonusSpent: result.bonusSpent,
       newBalance: result.newBalance,
       transactionId: result.transactionId,
+      mediaUrl, // URL to view the unlocked content
     });
   } catch (error: any) {
     console.error("Error spending credits:", error);

@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import { motion, useScroll, useTransform, useSpring, useInView } from "framer-motion";
 import Link from "next/link";
+import Image from "next/image";
 import { Play, Crown, Sparkles, ChevronDown, Lock, Heart, Users, Camera, Eye, Star, Instagram, Twitter } from "lucide-react";
 import { Button } from "@/components/ui";
 import { FollowButton } from "@/components/FollowButton";
@@ -93,6 +94,7 @@ export function Hero({ creator }: HeroProps) {
   const smoothScale = useSpring(imageScale, { stiffness: 100, damping: 30 });
 
   const [mounted, setMounted] = useState(false);
+
   useEffect(() => setMounted(true), []);
 
   return (
@@ -103,10 +105,13 @@ export function Hero({ creator }: HeroProps) {
         style={{ y: smoothY, scale: smoothScale }}
       >
         <div className="absolute inset-0">
-          <img
+          <Image
             src={creator?.coverImage || "/media/preview/3036738115692549406_1.jpg"}
-            alt=""
-            className="w-full h-full object-cover"
+            alt={`${creator?.displayName || "Creator"} background`}
+            fill
+            priority
+            sizes="100vw"
+            className="object-cover"
           />
         </div>
         {/* Multi-layer gradient overlay */}
@@ -335,10 +340,13 @@ export function Hero({ creator }: HeroProps) {
                 {/* Card */}
                 <div className="relative rounded-3xl overflow-hidden border-2 border-[var(--gold)]/40 shadow-2xl shadow-[var(--gold)]/20">
                   <div className="aspect-[3/4] relative">
-                    <img
+                    <Image
                       src={creator?.cardImage || creator?.avatar || "/media/preview/3039035234726006678_1.jpg"}
                       alt={creator?.displayName || "Creator"}
-                      className="w-full h-full object-cover"
+                      fill
+                      priority
+                      sizes="(max-width: 768px) 100vw, 400px"
+                      className="object-cover"
                     />
                     {/* Gradient overlay */}
                     <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
@@ -395,14 +403,14 @@ export function Hero({ creator }: HeroProps) {
                   animate={{ y: [0, 5, 0] }}
                   transition={{ duration: 2.5, repeat: Infinity, delay: 0.5 }}
                 >
-                  500+ Exclusive
+                  Premium Content
                 </motion.div>
               </div>
             </motion.div>
           </div>
         </div>
 
-        {/* Stats section */}
+        {/* Trust badges section */}
         <motion.div
           initial={{ opacity: 0, y: 50 }}
           animate={{ opacity: 1, y: 0 }}
@@ -412,22 +420,19 @@ export function Hero({ creator }: HeroProps) {
           <div className="max-w-4xl mx-auto">
             <div className="grid grid-cols-3 gap-2 sm:gap-4 lg:gap-8">
               {[
-                { icon: Camera, value: 450, suffix: "+", label: "Photos" },
-                { icon: Play, value: 25, suffix: "+", label: "Videos" },
-                { icon: Users, value: 2500, suffix: "+", label: "Members" },
-              ].map((stat, index) => (
+                { icon: Lock, label: "100% Private" },
+                { icon: Heart, label: "Direct Chat" },
+                { icon: Sparkles, label: "Instant Access" },
+              ].map((badge, index) => (
                 <motion.div
-                  key={stat.label}
+                  key={badge.label}
                   initial={{ opacity: 0, y: 30 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 1.2 + index * 0.15 }}
                   className="text-center p-3 sm:p-4 lg:p-6 rounded-xl sm:rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10 hover:border-[var(--gold)]/30 transition-all group hover:bg-white/10 min-w-0"
                 >
-                  <stat.icon className="w-5 h-5 sm:w-6 sm:h-6 lg:w-8 lg:h-8 text-[var(--gold)] mx-auto mb-1 sm:mb-2 lg:mb-3 group-hover:scale-110 transition-transform" />
-                  <p className="text-xl sm:text-2xl lg:text-4xl font-bold gradient-gold-text mb-0.5 sm:mb-1">
-                    <AnimatedCounter value={stat.value} suffix={stat.suffix} />
-                  </p>
-                  <p className="text-[10px] sm:text-xs lg:text-sm text-gray-500 truncate">{stat.label}</p>
+                  <badge.icon className="w-5 h-5 sm:w-6 sm:h-6 lg:w-8 lg:h-8 text-[var(--gold)] mx-auto mb-1 sm:mb-2 lg:mb-3 group-hover:scale-110 transition-transform" />
+                  <p className="text-xs sm:text-sm lg:text-base font-semibold text-white truncate">{badge.label}</p>
                 </motion.div>
               ))}
             </div>

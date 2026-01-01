@@ -3,6 +3,7 @@
 import { useRef, useState, useEffect } from "react";
 import { motion, useScroll, useTransform, useSpring } from "framer-motion";
 import Link from "next/link";
+import Image from "next/image";
 import { Lock, Play, Crown, Sparkles, Eye, Star, Coins } from "lucide-react";
 import { Button } from "@/components/ui";
 
@@ -81,10 +82,12 @@ function ParallaxImage({
       <Link href={`${basePath}/gallery`}>
         <div className={`relative ${size} rounded-2xl overflow-hidden border border-white/10 hover:border-[var(--gold)]/50 transition-all duration-500 cursor-pointer`}>
           {/* Image - no blur for FREE content */}
-          <img
+          <Image
             src={media.thumbnailUrl}
             alt={media.title}
-            className={`w-full h-full object-cover transition-all duration-500 scale-110 group-hover:scale-105 ${
+            fill
+            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+            className={`object-cover transition-all duration-500 scale-110 group-hover:scale-105 ${
               shouldBlur ? "blur-xl group-hover:blur-lg" : ""
             }`}
           />

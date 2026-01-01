@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
-import { spendCredits, getCreditBalance } from "@/lib/credits";
-import { recordCreatorEarning } from "@/lib/commission";
+import { spendCredits, getCreditBalances } from "@/lib/credits";
+import { recordEarningDistribution } from "@/lib/commission";
 
 // POST /api/messages/[id]/tip - Send a tip on a message using credits
 export async function POST(
@@ -28,7 +28,7 @@ export async function POST(
       );
     }
 
-    // Get the message
+    // Get the message with attribution info
     const message = await prisma.message.findUnique({
       where: { id: messageId },
       include: {
@@ -61,17 +61,18 @@ export async function POST(
       );
     }
 
-    // Check credit balance
-    const balance = await getCreditBalance(userId);
-    if (balance < amount) {
+    // Check PAID credit balance - Tips require paid credits only
+    const balances = await getCreditBalances(userId);
+    if (balances.paid < amount) {
       return NextResponse.json(
-        { error: "Insufficient credits", balance, required: amount },
+        { error: "Insufficient paid credits", balance: balances.paid, required: amount },
         { status: 400 }
       );
     }
 
-    // Spend credits
+    // Spend PAID credits only - Tips cannot use bonus credits
     const creditResult = await spendCredits(userId, amount, "TIP", {
+      allowBonus: false, // Tips = paid credits only
       messageId,
       description: `Tip for message`,
     });
@@ -95,18 +96,22 @@ export async function POST(
       }),
     ]);
 
-    // Record creator earning (commission applied)
-    if (message.conversation.creatorSlug) {
+    // Record earning distribution (creator, agency, chatter)
+    // Attribution: the message being tipped has the chatter/AI info
+    if (message.conversation.creatorSlug && creditResult.paidSpent > 0) {
       try {
-        await recordCreatorEarning(
-          message.conversation.creatorSlug,
+        await recordEarningDistribution({
+          creatorSlug: message.conversation.creatorSlug,
           userId,
-          amount,
-          "TIP",
-          messageId
-        );
+          paidCreditsSpent: creditResult.paidSpent,
+          type: "TIP",
+          sourceId: messageId,
+          chatterId: message.chatterId,
+          aiPersonalityId: message.aiPersonalityId,
+          attributedMessageId: messageId,
+        });
       } catch (earningError) {
-        console.error("Failed to record creator earning:", earningError);
+        console.error("Failed to record earning distribution:", earningError);
       }
     }
 

@@ -19,11 +19,13 @@ export async function GET() {
       recentTransactions,
       unreadMessages,
     ] = await Promise.all([
-      // Get user with credit balance
+      // Get user with credit balances (paid and bonus)
       prisma.user.findUnique({
         where: { id: userId },
         select: {
           creditBalance: true,
+          paidCredits: true,
+          bonusCredits: true,
           name: true,
         },
       }),
@@ -51,6 +53,7 @@ export async function GET() {
           id: true,
           amount: true,
           type: true,
+          creditType: true,
           description: true,
           createdAt: true,
         },
@@ -94,12 +97,15 @@ export async function GET() {
 
     return NextResponse.json({
       creditBalance: user?.creditBalance || 0,
+      paidCredits: user?.paidCredits || 0,
+      bonusCredits: user?.bonusCredits || 0,
       userName: user?.name || "User",
       subscriptions: subscriptionsWithCreators,
       recentTransactions: recentTransactions.map((tx) => ({
         id: tx.id,
         amount: tx.amount,
         type: tx.type,
+        creditType: tx.creditType,
         description: tx.description,
         createdAt: tx.createdAt,
       })),

@@ -35,6 +35,15 @@ export async function GET(
           videos: dbCreator.videoCount,
           subscribers: dbCreator.subscriberCount,
         },
+        // AI Settings (for authenticated creators)
+        aiEnabled: dbCreator.aiEnabled,
+        aiResponseDelay: dbCreator.aiResponseDelay,
+        aiPersonality: dbCreator.aiPersonality,
+        // AI Media Settings
+        aiMediaEnabled: dbCreator.aiMediaEnabled,
+        aiMediaFrequency: dbCreator.aiMediaFrequency,
+        aiPPVRatio: dbCreator.aiPPVRatio,
+        aiTeasingEnabled: dbCreator.aiTeasingEnabled,
       });
     }
 

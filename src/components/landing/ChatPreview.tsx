@@ -85,13 +85,13 @@ export function ChatPreview({ creator }: ChatPreviewProps) {
   // Handle start chat click
   const handleStartChat = async () => {
     if (!session) {
-      router.push("/auth/login");
+      router.push(`/${creatorSlug}/auth/login`);
       return;
     }
 
     if (!canMessage) {
-      // Show VIP purchase modal instead of redirecting
-      setShowVipModal(true);
+      // Redirect to membership page to get VIP access
+      router.push(`/${creatorSlug}/membership`);
       return;
     }
 
@@ -108,11 +108,12 @@ export function ChatPreview({ creator }: ChatPreviewProps) {
       } else {
         const error = await res.json();
         console.error("Error:", error);
-        setShowVipModal(true);
+        // Redirect to membership if conversation fails
+        router.push(`/${creatorSlug}/membership`);
       }
     } catch (error) {
       console.error("Error starting conversation:", error);
-      setShowVipModal(true);
+      router.push(`/${creatorSlug}/membership`);
     } finally {
       setIsLoading(false);
     }
@@ -262,7 +263,7 @@ export function ChatPreview({ creator }: ChatPreviewProps) {
               ) : (
                 <MessageCircle className="w-5 h-5" />
               )}
-              {canMessage ? "Start Chatting" : "Get VIP Access"}
+              {canMessage ? "Chat with me" : "Get VIP Access"}
             </Button>
           </motion.div>
 

@@ -1,0 +1,112 @@
+{
+  "metadata": {
+    "title": "VipOnly - एक्सक्लूसिव कंटेंट प्लेटफॉर्म | viponly.fun",
+    "description": "VipOnly एक्सक्लूसिव कंटेंट क्रिएटर्स के लिए प्रीमियम प्लेटफॉर्म है। VipOnly से जुड़ें और एक्सक्लूसिव फोटो और वीडियो शेयर करें, अपने फैंस से चैट करें और अपने कंटेंट से कमाई करें।"
+  },
+  "nav": {
+    "login": "लॉगिन",
+    "signup": "साइन अप",
+    "dashboard": "डैशबोर्ड",
+    "messages": "मैसेज",
+    "logout": "लॉगआउट",
+    "becomeCreator": "क्रिएटर बनें"
+  },
+  "home": {
+    "title": "VipOnly",
+    "subtitle": "एक्सक्लूसिव कंटेंट",
+    "description": "VipOnly एक्सक्लूसिव कंटेंट क्रिएटर्स के लिए प्रीमियम प्लेटफॉर्म है। अपने पसंदीदा क्रिएटर्स को सब्सक्राइब करें और VipOnly फोटो, वीडियो और प्राइवेट मैसेज का एक्सेस पाएं।",
+    "discoverCreators": "क्रिएटर्स खोजें",
+    "noCreators": "अभी कोई क्रिएटर नहीं",
+    "beFirst": "VipOnly पर पहले क्रिएटर बनें!",
+    "startNow": "अभी शुरू करें",
+    "forCreators": "क्रिएटर्स के लिए",
+    "startMonetizing": "अपने कंटेंट से कमाई शुरू करें",
+    "creatorCTA": "अपना एक्सक्लूसिव पेज बनाएं, प्रीमियम कंटेंट शेयर करें और सब्सक्रिप्शन, टिप्स और PPV मैसेज से कमाई करें।",
+    "creatorAccount": "क्रिएटर अकाउंट",
+    "startEarning": "आज से कमाई शुरू करें",
+    "firstMonth": "पहला महीना",
+    "afterFirstMonth": "पहले महीने के बाद",
+    "monthlySubscription": "मासिक सब्सक्रिप्शन",
+    "zeroFee": "0% फीस",
+    "onlyFivePercent": "सिर्फ 5%",
+    "free": "फ्री",
+    "cryptoCard": "क्रिप्टो और कार्ड पेमेंट",
+    "customUrl": "आपका अपना कस्टम URL",
+    "unlimitedUploads": "अनलिमिटेड अपलोड",
+    "realtimeAnalytics": "रियल-टाइम एनालिटिक्स",
+    "createPageFree": "अपना पेज बनाएं - फ्री"
+  },
+  "features": {
+    "zeroPercent": "पहले महीने 0%",
+    "zeroPercentDesc": "पहले महीने अपनी 100% कमाई रखें। उसके बाद सिर्फ 5% प्लेटफॉर्म फीस।",
+    "exclusive": "एक्सक्लूसिव कंटेंट",
+    "exclusiveDesc": "फोटो, वीडियो और एक्सक्लूसिव कंटेंट सिर्फ पेड सब्सक्राइबर्स के साथ शेयर करें।",
+    "messaging": "डायरेक्ट मैसेजिंग",
+    "messagingDesc": "अपने फैंस से सीधे चैट करें। PPV मैसेज भेजें और टिप्स पाएं।",
+    "crypto": "क्रिप्टो पेमेंट्स",
+    "cryptoDesc": "इंस्टेंट कन्वर्जन के साथ क्रिप्टो पेमेंट्स स्वीकार करें। अपनी कमाई प्राइवेट रखें।"
+  },
+  "creator": {
+    "subscribe": "सब्सक्राइब",
+    "subscribeFor": "सब्सक्राइब करें",
+    "subscribed": "सब्सक्राइब्ड",
+    "message": "मैसेज",
+    "sendMessage": "मैसेज भेजें",
+    "exclusive": "एक्सक्लूसिव कंटेंट",
+    "photos": "फोटो",
+    "videos": "वीडियो",
+    "posts": "पोस्ट्स",
+    "subscribers": "सब्सक्राइबर्स",
+    "viewGallery": "गैलरी देखें",
+    "gallery": "गैलरी",
+    "aboutMe": "मेरे बारे में",
+    "socialLinks": "सोशल लिंक्स"
+  },
+  "chat": {
+    "typeMessage": "मैसेज टाइप करें...",
+    "send": "भेजें",
+    "unlock": "अनलॉक",
+    "unlockFor": "अनलॉक करें",
+    "credits": "क्रेडिट्स",
+    "ppvContent": "एक्सक्लूसिव कंटेंट",
+    "tip": "टिप",
+    "sendTip": "टिप भेजें"
+  },
+  "auth": {
+    "email": "ईमेल",
+    "password": "पासवर्ड",
+    "confirmPassword": "पासवर्ड कन्फर्म करें",
+    "name": "नाम",
+    "loginTitle": "वापसी पर स्वागत है",
+    "loginSubtitle": "अपने अकाउंट में लॉगिन करें",
+    "signupTitle": "अकाउंट बनाएं",
+    "signupSubtitle": "आज ही VipOnly से जुड़ें",
+    "forgotPassword": "पासवर्ड भूल गए?",
+    "noAccount": "अकाउंट नहीं है?",
+    "hasAccount": "पहले से अकाउंट है?",
+    "orContinueWith": "या जारी रखें",
+    "google": "Google से जारी रखें"
+  },
+  "footer": {
+    "rights": "सर्वाधिकार सुरक्षित",
+    "terms": "नियम",
+    "privacy": "गोपनीयता",
+    "contact": "संपर्क"
+  },
+  "common": {
+    "loading": "लोड हो रहा है...",
+    "error": "त्रुटि",
+    "success": "सफल",
+    "cancel": "रद्द करें",
+    "save": "सेव करें",
+    "delete": "डिलीट करें",
+    "edit": "एडिट करें",
+    "close": "बंद करें",
+    "back": "वापस",
+    "next": "अगला",
+    "search": "खोजें",
+    "noResults": "कोई परिणाम नहीं",
+    "seeMore": "और देखें",
+    "seeAll": "सभी देखें"
+  }
+}

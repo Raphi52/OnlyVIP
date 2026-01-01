@@ -128,6 +128,7 @@ export async function PATCH(
 }
 
 // DELETE /api/admin/creators/[id] - Delete a specific creator (supports both ID and slug)
+// Admin can delete any creator - cleans up ALL related data
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -139,8 +140,6 @@ export async function DELETE(
     }
 
     const { id } = await params;
-    const { searchParams } = new URL(request.url);
-    const deleteMedia = searchParams.get("deleteMedia") === "true";
 
     // Find the creator by id or slug
     const creator = isCuid(id)
@@ -151,22 +150,82 @@ export async function DELETE(
       return NextResponse.json({ error: "Creator not found" }, { status: 404 });
     }
 
-    // Verify ownership
-    if (creator.userId !== session.user.id) {
-      return NextResponse.json({ error: "You can only delete your own creators" }, { status: 403 });
+    // Delete all associated data in proper order (respecting foreign keys)
+    console.log(`[Admin] Deleting creator ${creator.slug} (${creator.id})`);
+
+    try {
+      // Use sequential transaction to ensure proper order
+      await prisma.$transaction(async (tx) => {
+        // 1. Delete earnings attributions first (they reference CreatorEarning)
+        await tx.chatterEarning.deleteMany({
+          where: { creatorEarning: { creatorSlug: creator.slug } }
+        });
+        await tx.aiPersonalityEarning.deleteMany({
+          where: { creatorEarning: { creatorSlug: creator.slug } }
+        });
+
+        // 2. Delete creator earnings
+        await tx.creatorEarning.deleteMany({ where: { creatorSlug: creator.slug } });
+
+        // 3. Delete AI response queue
+        await tx.aiResponseQueue.deleteMany({ where: { creatorSlug: creator.slug } });
+
+        // 4. Delete agency-related assignments and AI personalities
+        await tx.chatterCreatorAssignment.deleteMany({ where: { creatorSlug: creator.slug } });
+        await tx.agencyAiPersonality.deleteMany({ where: { creatorSlug: creator.slug } });
+        await tx.script.deleteMany({ where: { creatorSlug: creator.slug } });
+
+        // 5. Delete model listing (AgencyApplication will cascade)
+        await tx.modelListing.deleteMany({ where: { creatorId: creator.id } });
+
+        // 6. Delete member management
+        await tx.creatorMember.deleteMany({ where: { creatorSlug: creator.slug } });
+
+        // 7. Delete site settings
+        await tx.siteSettings.deleteMany({ where: { creatorSlug: creator.slug } });
+
+        // 8. Delete conversations (messages, media, reactions will cascade)
+        await tx.conversation.deleteMany({ where: { creatorSlug: creator.slug } });
+
+        // 9. Delete payments
+        await tx.payment.deleteMany({ where: { creatorSlug: creator.slug } });
+
+        // 10. Delete subscriptions
+        await tx.subscription.deleteMany({ where: { creatorSlug: creator.slug } });
+
+        // 11. Delete media content (purchases will cascade)
+        await tx.mediaContent.deleteMany({ where: { creatorSlug: creator.slug } });
+
+        // 12. Finally delete the creator
+        await tx.creator.delete({ where: { id: creator.id } });
+      }, {
+        timeout: 30000, // 30 second timeout for large deletions
+      });
+
+      console.log(`[Admin] Successfully deleted creator ${creator.slug}`);
+    } catch (txError: any) {
+      console.error(`[Admin] Transaction error deleting creator:`, txError);
+      // Log more details about the error
+      if (txError.code) {
+        console.error(`[Admin] Error code: ${txError.code}`);
+      }
+      if (txError.meta) {
+        console.error(`[Admin] Error meta:`, txError.meta);
+      }
+      throw txError;
     }
 
-    if (deleteMedia) {
-      // Delete all associated data
-      await prisma.$transaction([
-        prisma.mediaContent.deleteMany({ where: { creatorSlug: creator.slug } }),
-        prisma.conversation.deleteMany({ where: { creatorSlug: creator.slug } }),
-        prisma.payment.deleteMany({ where: { creatorSlug: creator.slug } }),
-        prisma.subscription.deleteMany({ where: { creatorSlug: creator.slug } }),
-        prisma.creator.delete({ where: { id: creator.id } }),
-      ]);
-    } else {
-      await prisma.creator.delete({ where: { id: creator.id } });
+    // Check if user has no more creator profiles, update isCreator flag
+    if (creator.userId) {
+      const remainingProfiles = await prisma.creator.count({
+        where: { userId: creator.userId }
+      });
+      if (remainingProfiles === 0) {
+        await prisma.user.update({
+          where: { id: creator.userId },
+          data: { isCreator: false }
+        });
+      }
     }
 
     return NextResponse.json({ success: true });

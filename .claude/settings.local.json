@@ -2,7 +2,14 @@
   "permissions": {
     "allow": [
       "Bash(docker compose build:*)",
-      "Bash(docker compose:*)"
+      "Bash(docker compose:*)",
+      "Bash(npx prisma generate)",
+      "Bash(npm run build:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(cat:*)",
+      "Bash(vercel --version:*)"
     ]
   }
 }

@@ -18,7 +18,7 @@ export async function GET() {
       where: {
         conversation: {
           participants: {
-            some: { id: userId },
+            some: { userId: userId },
           },
         },
         senderId: { not: userId }, // Only messages from others

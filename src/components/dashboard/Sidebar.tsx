@@ -25,14 +25,17 @@ import {
   Globe,
   Shield,
   ChevronDown,
-  Plus,
-  Trash2,
-  ExternalLink,
   Check,
   Wallet,
+  Bot,
+  Building2,
+  FileText,
+  Search,
+  Inbox,
+  Eye,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useAdminCreator, Creator } from "@/components/providers/AdminCreatorContext";
+import { useAdminCreator, Creator, Agency } from "@/components/providers/AdminCreatorContext";
 
 // Navigation pour les utilisateurs normaux
 const userLinks = [
@@ -40,6 +43,7 @@ const userLinks = [
   { href: "/dashboard", icon: Home, label: "Dashboard" },
   { href: "/dashboard/library", icon: Image, label: "My Library" },
   { href: "/dashboard/billing", icon: CreditCard, label: "Billing" },
+  { href: "/dashboard/settings", icon: Settings, label: "Account Settings" },
 ];
 
 // Navigation pour les créateurs (en plus des liens user)
@@ -49,18 +53,33 @@ const creatorLinks = [
   { href: "/dashboard/creator/members", icon: Users, label: "Members" },
   { href: "/dashboard/creator/earnings", icon: DollarSign, label: "Earnings" },
   { href: "/dashboard/creator/analytics", icon: BarChart3, label: "Analytics" },
+  { href: "/dashboard/find-agency", icon: Search, label: "Find Agency" },
   { href: "/dashboard/creator/settings", icon: Settings, label: "Creator Settings" },
 ];
 
 // Navigation pour l'admin (site-wide)
 const adminLinks = [
   { href: "/dashboard/admin", icon: Shield, label: "Admin Overview" },
+  { href: "/dashboard/admin/agencies", icon: Building2, label: "All Agencies" },
   { href: "/dashboard/admin/creators", icon: Crown, label: "All Creators" },
   { href: "/dashboard/admin/users", icon: Users, label: "All Users" },
   { href: "/dashboard/admin/payments", icon: DollarSign, label: "All Payments" },
   { href: "/dashboard/admin/payouts", icon: Wallet, label: "Creator Payouts" },
   { href: "/dashboard/admin/analytics", icon: BarChart3, label: "Site Analytics" },
   { href: "/dashboard/admin/settings", icon: Globe, label: "Site Settings" },
+];
+
+// Navigation pour les agences
+const agencyLinks = [
+  { href: "/dashboard/agency", icon: Building2, label: "Agency Overview" },
+  { href: "/dashboard/agency/creators", icon: Crown, label: "My Creators" },
+  { href: "/dashboard/agency/chatters", icon: MessageCircle, label: "Chatters" },
+  { href: "/dashboard/agency/ai-personas", icon: Bot, label: "AI Personalities" },
+  { href: "/dashboard/agency/scripts", icon: FileText, label: "Scripts Library" },
+  { href: "/dashboard/agency/earnings", icon: DollarSign, label: "Earnings" },
+  { href: "/dashboard/agency/performance", icon: BarChart3, label: "Performance" },
+  { href: "/dashboard/find-creator", icon: Search, label: "Find Creator" },
+  { href: "/dashboard/agency/settings", icon: Settings, label: "Agency Settings" },
 ];
 
 export function Sidebar() {
@@ -73,9 +92,13 @@ export function Sidebar() {
 
   const isAdmin = (session?.user as any)?.role === "ADMIN";
   const isCreatorUser = (session?.user as any)?.isCreator === true;
+  const isAgencyOwner = (session?.user as any)?.isAgencyOwner === true;
 
   // Use creator context for multi-creator support
-  const { selectedCreator, setSelectedCreator, creators, isLoading: creatorsLoading } = useAdminCreator();
+  const { selectedCreator, setSelectedCreator, creators, isLoading: creatorsLoading, agency, agencyCreators } = useAdminCreator();
+
+  // For agency owners, use agency creators in the dropdown
+  const displayCreators = isAgencyOwner && agencyCreators.length > 0 ? agencyCreators : creators;
 
   // Get avatar and name from selected creator
   const creatorAvatar = selectedCreator?.avatar || null;
@@ -129,7 +152,7 @@ export function Sidebar() {
     const isChildMatch = pathname.startsWith(href + "/");
 
     // These routes should only match exactly, not their children
-    const exactMatchOnly = href === "/dashboard" || href === "/dashboard/creator" || href === "/dashboard/admin";
+    const exactMatchOnly = href === "/dashboard" || href === "/dashboard/creator" || href === "/dashboard/admin" || href === "/dashboard/agency";
     const isActive = exactMatchOnly ? isExactMatch : (isExactMatch || isChildMatch);
 
     return (
@@ -208,7 +231,7 @@ export function Sidebar() {
       {/* User info with Creator Switcher */}
       <div className="p-5 border-b border-white/10">
         {/* User email - above creator card */}
-        <div className="flex items-center justify-between mb-3 px-1">
+        <div className="flex items-center justify-between mb-2 px-1">
           <p className="text-xs text-gray-500 truncate">
             {session?.user?.email}
           </p>
@@ -226,13 +249,59 @@ export function Sidebar() {
           </div>
         </div>
 
+        {/* Agency Card - below email */}
+        {isAgencyOwner && agency && (
+          <Link
+            href="/dashboard/agency"
+            className="block mb-3 group"
+          >
+            <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-purple-500/20 via-purple-500/10 to-transparent border border-purple-500/30 hover:border-purple-400/50 transition-all duration-300">
+              {/* Background glow effect */}
+              <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
+              <div className="relative p-3 flex items-center gap-3">
+                {/* Agency Logo */}
+                {agency.logo ? (
+                  <div className="relative">
+                    <img
+                      src={agency.logo}
+                      alt={agency.name}
+                      className="w-12 h-12 rounded-lg object-cover border-2 border-purple-500/50 group-hover:border-purple-400 transition-colors"
+                    />
+                    <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-purple-500 flex items-center justify-center">
+                      <Building2 className="w-3 h-3 text-white" />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-purple-500 to-purple-700 flex items-center justify-center border-2 border-purple-500/50">
+                    <Building2 className="w-6 h-6 text-white" />
+                  </div>
+                )}
+
+                {/* Agency Info */}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-white truncate group-hover:text-purple-200 transition-colors">
+                    {agency.name}
+                  </p>
+                  <p className="text-xs text-purple-400">
+                    Agency Dashboard
+                  </p>
+                </div>
+
+                {/* Arrow indicator */}
+                <ChevronDown className="w-4 h-4 text-purple-400 -rotate-90 group-hover:translate-x-1 transition-transform" />
+              </div>
+            </div>
+          </Link>
+        )}
+
         {/* Creator card */}
         <div className="relative">
           <button
-            onClick={() => (isAdmin || isCreatorUser) && creators.length > 0 && setIsCreatorDropdownOpen(!isCreatorDropdownOpen)}
+            onClick={() => (isAdmin || isCreatorUser || isAgencyOwner) && displayCreators.length > 0 && setIsCreatorDropdownOpen(!isCreatorDropdownOpen)}
             className={cn(
               "w-full flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/10 transition-all",
-              (isAdmin || isCreatorUser) && creators.length > 0 && "hover:border-[var(--gold)]/30 cursor-pointer"
+              (isAdmin || isCreatorUser || isAgencyOwner) && displayCreators.length > 0 && "hover:border-[var(--gold)]/30 cursor-pointer"
             )}
           >
             {creatorAvatar || session?.user?.image ? (
@@ -259,7 +328,7 @@ export function Sidebar() {
                 </p>
               )}
             </div>
-            {(isAdmin || isCreatorUser) && creators.length > 0 && (
+            {(isAdmin || isCreatorUser || isAgencyOwner) && displayCreators.length > 0 && (
               <ChevronDown className={cn(
                 "w-4 h-4 text-gray-400 transition-transform flex-shrink-0",
                 isCreatorDropdownOpen && "rotate-180"
@@ -289,10 +358,10 @@ export function Sidebar() {
 
                   <div className="p-2 max-h-64 overflow-y-auto">
                     <p className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                      Switch Creator
+                      {isAgencyOwner && agencyCreators.length > 0 ? "Agency Creators" : "Switch Creator"}
                     </p>
 
-                    {creators.map((creator) => (
+                    {displayCreators.map((creator) => (
                       <button
                         key={creator.slug}
                         onClick={() => {
@@ -329,38 +398,6 @@ export function Sidebar() {
                     ))}
                   </div>
 
-                  {/* Actions */}
-                  <div className="border-t border-white/10 p-2">
-                    <Link
-                      href="/dashboard/admin/creators"
-                      onClick={() => setIsCreatorDropdownOpen(false)}
-                      className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-300 hover:bg-white/5 hover:text-white transition-colors"
-                    >
-                      <Settings className="w-4 h-4" />
-                      <span className="text-sm">Manage Creators</span>
-                    </Link>
-                    {isAdmin && (
-                      <Link
-                        href="/dashboard/admin/creators?new=true"
-                        onClick={() => setIsCreatorDropdownOpen(false)}
-                        className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-[var(--gold)] hover:bg-[var(--gold)]/10 transition-colors"
-                      >
-                        <Plus className="w-4 h-4" />
-                        <span className="text-sm font-medium">Add Creator</span>
-                      </Link>
-                    )}
-                    {selectedCreator && (
-                      <Link
-                        href={`/${selectedCreator.slug}`}
-                        target="_blank"
-                        onClick={() => setIsCreatorDropdownOpen(false)}
-                        className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-300 hover:bg-white/5 hover:text-white transition-colors"
-                      >
-                        <ExternalLink className="w-4 h-4" />
-                        <span className="text-sm">View Public Page</span>
-                      </Link>
-                    )}
-                  </div>
                 </motion.div>
               </>
             )}
@@ -384,6 +421,24 @@ export function Sidebar() {
           </>
         )}
 
+        {/* Agency Section */}
+        {isAgencyOwner && (
+          <>
+            <p className="px-4 py-2 text-xs font-semibold text-purple-400 uppercase tracking-wider flex items-center gap-2">
+              <Building2 className="w-3 h-3" />
+              Agency
+            </p>
+            {agencyLinks.map((link, index) => (
+              <NavLink
+                key={link.href}
+                {...link}
+                index={index + (isAdmin ? adminLinks.length : 0)}
+              />
+            ))}
+            <div className="h-4" />
+          </>
+        )}
+
         {/* Creator Section */}
         {isCreatorUser && (
           <>
@@ -395,10 +450,20 @@ export function Sidebar() {
               <NavLink
                 key={link.href}
                 {...link}
-                index={index + (isAdmin ? adminLinks.length : 0)}
+                index={index + (isAdmin ? adminLinks.length : 0) + (isAgencyOwner ? agencyLinks.length : 0)}
                 badge={undefined}
               />
             ))}
+            {/* AI Girlfriend - only show if enabled for this creator */}
+            {selectedCreator?.aiEnabled && (
+              <NavLink
+                href="/dashboard/creator/ai"
+                icon={Bot}
+                label="AI Girlfriend"
+                index={creatorLinks.length + (isAdmin ? adminLinks.length : 0) + (isAgencyOwner ? agencyLinks.length : 0)}
+                badge={undefined}
+              />
+            )}
             <div className="h-4" />
           </>
         )}
@@ -411,7 +476,7 @@ export function Sidebar() {
           <NavLink
             key={link.href}
             {...link}
-            index={index + (isAdmin ? adminLinks.length : 0) + (isCreatorUser ? creatorLinks.length : 0)}
+            index={index + (isAdmin ? adminLinks.length : 0) + (isAgencyOwner ? agencyLinks.length : 0) + (isCreatorUser ? creatorLinks.length : 0)}
             badge={link.href === "/dashboard/messages" ? unreadCount : undefined}
           />
         ))}
@@ -434,10 +499,30 @@ export function Sidebar() {
             </Link>
           </motion.div>
         )}
+
+        {/* Become Agency CTA - Only for creators who are not agency owners */}
+        {isCreatorUser && !isAgencyOwner && (
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.25 }}
+            className="mt-4"
+          >
+            <Link
+              href="/dashboard/become-agency"
+              onClick={() => setIsMobileOpen(false)}
+              className="flex items-center gap-3 px-4 py-3 rounded-xl bg-gradient-to-r from-purple-500/20 to-purple-500/5 text-purple-400 border border-purple-500/30 hover:border-purple-500/50 transition-all duration-300"
+            >
+              <Building2 className="w-5 h-5" />
+              <span className="font-medium">Become an Agency</span>
+            </Link>
+          </motion.div>
+        )}
       </nav>
 
-      {/* Logout */}
-      <div className="p-4 border-t border-white/10">
+      {/* Bottom Actions */}
+      <div className="p-4 border-t border-white/10 space-y-2">
+        {/* Logout */}
         <motion.button
           onClick={() => signOut({ callbackUrl: "/" })}
           className="flex items-center gap-3 px-4 py-3 rounded-xl w-full text-red-400 hover:text-red-300 hover:bg-red-500/10 border border-transparent hover:border-red-500/20 transition-all duration-300"
@@ -471,18 +556,19 @@ export function Sidebar() {
         </Link>
         <motion.button
           onClick={() => setIsMobileOpen(!isMobileOpen)}
-          className="p-3 rounded-xl bg-white/5 border border-white/10 hover:border-[var(--gold)]/30 transition-colors"
+          className="p-3 rounded-xl bg-[var(--gold)]/20 border-2 border-[var(--gold)]/50 hover:bg-[var(--gold)]/30 active:bg-[var(--gold)]/40 transition-all"
           whileTap={{ scale: 0.95 }}
+          aria-label="Open menu"
         >
           {isMobileOpen ? (
-            <X className="w-5 h-5 text-[var(--gold)]" />
+            <X className="w-6 h-6 text-[var(--gold)]" />
           ) : (
-            <Menu className="w-5 h-5 text-gray-300" />
+            <Menu className="w-6 h-6 text-[var(--gold)]" />
           )}
         </motion.button>
       </div>
 
-      {/* Mobile Sidebar */}
+      {/* Mobile Sidebar - slides from right */}
       <AnimatePresence>
         {isMobileOpen && (
           <>
@@ -494,11 +580,11 @@ export function Sidebar() {
               onClick={() => setIsMobileOpen(false)}
             />
             <motion.aside
-              initial={{ x: "-100%" }}
+              initial={{ x: "100%" }}
               animate={{ x: 0 }}
-              exit={{ x: "-100%" }}
+              exit={{ x: "100%" }}
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className="lg:hidden fixed inset-y-0 left-0 w-[280px] border-r border-[var(--gold)]/10 bg-black z-50 shadow-2xl shadow-black/50"
+              className="lg:hidden fixed inset-y-0 right-0 w-[280px] border-l border-[var(--gold)]/10 bg-black z-50 shadow-2xl shadow-black/50"
             >
               <SidebarContent />
             </motion.aside>

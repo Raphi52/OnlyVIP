@@ -5,7 +5,7 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
-import { Check, Star, Crown, Coins, Sparkles, ArrowRight, Gift, Zap, Lock, MessageCircle, X, Loader2, AlertCircle } from "lucide-react";
+import { Check, Star, Crown, Coins, Sparkles, ArrowRight, Gift, Zap, Lock, MessageCircle, X, Loader2, AlertCircle, AlertTriangle, ShoppingCart } from "lucide-react";
 import { Button, Badge } from "@/components/ui";
 import { cn } from "@/lib/utils";
 
@@ -580,112 +580,139 @@ export function Pricing({ creatorSlug = "miacosta" }: PricingProps) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-sm p-0 sm:p-4"
+            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
             onClick={() => setShowInsufficientModal(false)}
           >
+            {/* Backdrop with blur */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/70 backdrop-blur-xl"
+            />
+
             <motion.div
               initial={{ y: "100%", opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: "100%", opacity: 0 }}
-              transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className="w-full sm:max-w-md bg-[#0d0d0f] border border-white/10 rounded-t-2xl sm:rounded-2xl overflow-hidden"
+              transition={{ type: "spring", damping: 30, stiffness: 400 }}
+              className="relative w-full sm:max-w-md overflow-hidden"
               onClick={(e) => e.stopPropagation()}
             >
-              {/* Header */}
-              <div className="p-5 border-b border-white/10">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-red-500/20 flex items-center justify-center">
-                    <AlertCircle className="w-5 h-5 text-red-400" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-bold text-white">
-                      Not Enough Credits
-                    </h3>
-                    <p className="text-sm text-gray-400">
-                      You need more credits to continue
-                    </p>
-                  </div>
-                </div>
-              </div>
+              {/* Glow effect */}
+              <div className="absolute -inset-[1px] bg-gradient-to-b from-orange-500/30 via-red-500/20 to-transparent rounded-t-3xl sm:rounded-3xl blur-sm" />
 
-              {/* Content */}
-              <div className="p-5 space-y-5">
-                {/* Step 1: Required */}
-                <div className="flex gap-4">
-                  <div className="flex-shrink-0 w-7 h-7 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-400 font-bold text-sm">
-                    1
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-medium text-white">
-                      Required amount
-                    </p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <Coins className="w-4 h-4 text-purple-400" />
-                      <span className="text-purple-400 font-bold">
-                        {requiredCredits.toLocaleString()} credits
-                      </span>
+              <div className="relative bg-[#0a0a0c]/95 border border-white/10 rounded-t-3xl sm:rounded-3xl overflow-hidden backdrop-blur-2xl">
+                {/* Drag indicator for mobile */}
+                <div className="sm:hidden flex justify-center pt-3">
+                  <div className="w-10 h-1 rounded-full bg-white/20" />
+                </div>
+
+                {/* Header */}
+                <div className="p-6 pb-4">
+                  <div className="flex items-center gap-4">
+                    <div className="relative">
+                      <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center shadow-lg shadow-orange-500/25">
+                        <AlertCircle className="w-7 h-7 text-white" />
+                      </div>
+                      <motion.div
+                        animate={{ scale: [1, 1.2, 1] }}
+                        transition={{ repeat: Infinity, duration: 2 }}
+                        className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-red-500 flex items-center justify-center border-2 border-[#0a0a0c]"
+                      >
+                        <span className="text-white text-xs font-bold">!</span>
+                      </motion.div>
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-white">
+                        Insufficient Credits
+                      </h3>
+                      <p className="text-sm text-gray-400 mt-0.5">
+                        Top up to continue
+                      </p>
                     </div>
                   </div>
                 </div>
 
-                {/* Step 2: Your balance */}
-                <div className="flex gap-4">
-                  <div className="flex-shrink-0 w-7 h-7 rounded-full bg-red-500/20 flex items-center justify-center text-red-400 font-bold text-sm">
-                    2
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-medium text-white">
-                      Your balance
-                    </p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <Coins className="w-4 h-4 text-red-400" />
-                      <span className="text-red-400 font-bold">
-                        {userBalance.toLocaleString()} credits
-                      </span>
+                {/* Content */}
+                <div className="px-6 space-y-4">
+                  {/* Credits comparison */}
+                  <div className="grid grid-cols-2 gap-3">
+                    {/* Required */}
+                    <div className="p-4 rounded-2xl bg-purple-500/10 border border-purple-500/20">
+                      <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">
+                        Required
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <Coins className="w-5 h-5 text-purple-400" />
+                        <span className="text-xl font-bold text-white">
+                          {requiredCredits.toLocaleString()}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Your balance */}
+                    <div className="p-4 rounded-2xl bg-red-500/10 border border-red-500/20">
+                      <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">
+                        Your Balance
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <Coins className="w-5 h-5 text-red-400" />
+                        <span className="text-xl font-bold text-red-400">
+                          {userBalance.toLocaleString()}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Step 3: Missing */}
-                <div className="flex gap-4">
-                  <div className="flex-shrink-0 w-7 h-7 rounded-full bg-orange-500/20 flex items-center justify-center text-orange-400 font-bold text-sm">
-                    3
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-medium text-white">
-                      Missing credits
-                    </p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <Coins className="w-4 h-4 text-orange-400" />
-                      <span className="text-orange-400 font-bold">
-                        {(requiredCredits - userBalance).toLocaleString()} credits needed
-                      </span>
+                  {/* Missing amount - highlighted */}
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="p-4 rounded-2xl bg-gradient-to-r from-orange-500/10 to-red-500/10 border border-orange-500/20"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-orange-500/20 flex items-center justify-center">
+                          <AlertTriangle className="w-5 h-5 text-orange-400" />
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-400">You need</p>
+                          <p className="font-bold text-white">
+                            {(requiredCredits - userBalance).toLocaleString()} more credits
+                          </p>
+                        </div>
+                      </div>
                     </div>
+                  </motion.div>
+
+                  {/* Tip */}
+                  <div className="p-4 rounded-2xl bg-purple-500/10 border border-purple-500/20">
+                    <p className="text-sm text-purple-400">
+                      <strong>Pro tip:</strong> Bigger packages include bonus credits for better value!
+                    </p>
                   </div>
                 </div>
 
-                {/* Info box */}
-                <div className="bg-purple-500/10 border border-purple-500/20 rounded-xl p-4">
-                  <p className="text-sm text-purple-400">
-                    <strong>Tip:</strong> Buy a credit package to get bonus credits and save more!
-                  </p>
-                </div>
-              </div>
-
-              {/* Footer */}
-              <div className="p-5 border-t border-white/10 flex gap-3">
-                <button
-                  onClick={() => setShowInsufficientModal(false)}
-                  className="flex-1 px-4 py-3 rounded-xl border border-white/10 text-gray-400 hover:bg-white/5 transition-colors font-medium"
-                >
-                  Cancel
-                </button>
-                <Link href="/credits" className="flex-1">
-                  <button className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-purple-500 text-white font-semibold hover:opacity-90 transition-opacity">
-                    <Coins className="w-4 h-4" />
-                    Buy Credits
+                {/* Footer */}
+                <div className="p-6 pt-4 border-t border-white/5 mt-4 flex gap-3">
+                  <button
+                    onClick={() => setShowInsufficientModal(false)}
+                    className="flex-1 px-4 py-3.5 rounded-xl border border-white/10 text-gray-400 hover:bg-white/5 transition-all font-medium"
+                  >
+                    Cancel
                   </button>
-                </Link>
+                  <Link href="/credits" className="flex-1">
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40 transition-all"
+                    >
+                      <ShoppingCart className="w-4 h-4" />
+                      Buy Credits
+                    </motion.button>
+                  </Link>
+                </div>
               </div>
             </motion.div>
           </motion.div>

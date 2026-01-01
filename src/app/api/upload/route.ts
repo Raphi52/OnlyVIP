@@ -20,12 +20,12 @@ async function canUpload(): Promise<boolean> {
   const adminToken = cookieStore.get("admin_token");
   if (adminToken?.value) return true;
 
-  // Check NextAuth session (creators and admins)
+  // Check NextAuth session (creators, admins, and agency owners)
   const session = await auth();
   if (session?.user) {
-    // Allow if user is admin or creator
-    const user = session.user as { role?: string; isCreator?: boolean };
-    if (user.role === "ADMIN" || user.isCreator) {
+    // Allow if user is admin, creator, or agency owner
+    const user = session.user as { role?: string; isCreator?: boolean; isAgencyOwner?: boolean };
+    if (user.role === "ADMIN" || user.isCreator || user.isAgencyOwner) {
       return true;
     }
   }

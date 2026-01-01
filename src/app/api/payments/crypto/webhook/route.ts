@@ -5,6 +5,11 @@ import { verifyWebhookSignature, mapPaymentStatus } from "@/lib/nowpayments";
 import { sendToAccounting, mapCryptoCurrency, mapPaymentStatus as mapAccountingStatus } from "@/lib/crypto-accounting";
 import { addCredits } from "@/lib/credits";
 
+// GET handler for webhook URL validation (NOWPayments tests the URL)
+export async function GET() {
+  return NextResponse.json({ status: "ok", message: "NOWPayments webhook active" });
+}
+
 interface IPNPayload {
   payment_id: number;
   payment_status: string;

@@ -8,19 +8,29 @@ import {
 import prisma from "@/lib/prisma";
 
 // Credit packages available for purchase
+// paidCredits = usable everywhere, generate creator earnings
+// bonusCredits = PPV catalog only, NO creator earnings
 const CREDIT_PACKAGES = [
-  { id: "100", credits: 100, price: 1 },
-  { id: "500", credits: 500, price: 5 },
-  { id: "1000", credits: 1000, price: 10 },
-  { id: "2500", credits: 2500, price: 25 },
-  { id: "5000", credits: 5000, price: 50 },
-  { id: "10000", credits: 10000, price: 100 },
+  { id: "100", paidCredits: 100, bonusCredits: 0, price: 1 },
+  { id: "500", paidCredits: 500, bonusCredits: 50, price: 5 },
+  { id: "1000", paidCredits: 1000, bonusCredits: 150, price: 10 },
+  { id: "2500", paidCredits: 2500, bonusCredits: 500, price: 25 },
+  { id: "5000", paidCredits: 5000, bonusCredits: 1250, price: 50 },
+  { id: "10000", paidCredits: 10000, bonusCredits: 3000, price: 100 },
 ];
 
 // GET /api/credits/purchase - Get available credit packages
 export async function GET() {
+  // Return packages with total for display
+  const packagesWithTotal = CREDIT_PACKAGES.map((pkg) => ({
+    ...pkg,
+    totalCredits: pkg.paidCredits + pkg.bonusCredits,
+    // For backwards compatibility
+    credits: pkg.paidCredits + pkg.bonusCredits,
+  }));
+
   return NextResponse.json({
-    packages: CREDIT_PACKAGES,
+    packages: packagesWithTotal,
     rate: CREDITS_PER_DOLLAR,
   });
 }
@@ -40,7 +50,8 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { packageId, customAmount, paymentProvider, paymentTxId } = body;
 
-    let creditsToPurchase: number;
+    let paidCredits: number;
+    let bonusCredits: number;
     let dollarAmount: number;
 
     if (packageId) {
@@ -52,12 +63,14 @@ export async function POST(request: NextRequest) {
           { status: 400 }
         );
       }
-      creditsToPurchase = pkg.credits;
+      paidCredits = pkg.paidCredits;
+      bonusCredits = pkg.bonusCredits;
       dollarAmount = pkg.price;
     } else if (customAmount && customAmount > 0) {
-      // Custom amount ($1 = 100 credits)
+      // Custom amount ($1 = 100 credits) - no bonus for custom amounts
       dollarAmount = customAmount;
-      creditsToPurchase = dollarsToCredits(dollarAmount);
+      paidCredits = dollarsToCredits(dollarAmount);
+      bonusCredits = 0;
     } else {
       return NextResponse.json(
         { error: "Package or amount required" },
@@ -85,6 +98,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const totalCredits = paidCredits + bonusCredits;
+
     // Create payment record
     const payment = await prisma.payment.create({
       data: {
@@ -97,20 +112,35 @@ export async function POST(request: NextRequest) {
         providerTxId: paymentTxId,
         status: "COMPLETED",
         type: "MEDIA_PURCHASE",
-        description: `Purchased ${creditsToPurchase} credits`,
+        description: `Purchased ${paidCredits} credits${bonusCredits > 0 ? ` + ${bonusCredits} bonus` : ""}`,
       },
     });
 
-    // Add credits to user
-    const result = await addCredits(userId, creditsToPurchase, "PURCHASE", {
-      description: `Purchased ${creditsToPurchase} credits for $${dollarAmount}`,
+    // Add PAID credits to user
+    const paidResult = await addCredits(userId, paidCredits, "PURCHASE", {
+      creditType: "PAID",
+      description: `Purchased ${paidCredits} credits for $${dollarAmount}`,
     });
+
+    let bonusTransactionId: string | undefined;
+
+    // Add BONUS credits if any
+    if (bonusCredits > 0) {
+      const bonusResult = await addCredits(userId, bonusCredits, "PURCHASE_BONUS", {
+        creditType: "BONUS",
+        description: `Bonus ${bonusCredits} credits (PPV catalog only)`,
+      });
+      bonusTransactionId = bonusResult.transactionId;
+    }
 
     return NextResponse.json({
       success: true,
-      credits: creditsToPurchase,
-      newBalance: result.newBalance,
-      transactionId: result.transactionId,
+      paidCredits,
+      bonusCredits,
+      totalCredits,
+      newBalance: paidResult.newBalance + (bonusCredits > 0 ? bonusCredits : 0),
+      transactionId: paidResult.transactionId,
+      bonusTransactionId,
       paymentId: payment.id,
     });
   } catch (error) {

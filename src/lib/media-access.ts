@@ -79,13 +79,7 @@ export async function canAccessMedia(
       },
     });
 
-    // Also check if user is manually marked as VIP
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { isVip: true },
-    });
-
-    const isVIP = !!vipSubscription || user?.isVip === true;
+    const isVIP = !!vipSubscription;
 
     if (!isVIP) {
       // If also PPV, they can still unlock with credits
@@ -168,12 +162,7 @@ export async function unlockMediaWithCredits(
       },
     });
 
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { isVip: true },
-    });
-
-    if (!vipSubscription && !user?.isVip) {
+    if (!vipSubscription) {
       return { success: false, error: "VIP subscription required" };
     }
   }
@@ -268,12 +257,7 @@ export async function getMediaAccessBatch(
     },
   });
 
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { isVip: true },
-  });
-
-  const isVIP = subscription?.plan?.accessTier === "VIP" || user?.isVip === true;
+  const isVIP = subscription?.plan?.accessTier === "VIP";
   const hasSubscription = !!subscription;
 
   for (const media of mediaItems) {

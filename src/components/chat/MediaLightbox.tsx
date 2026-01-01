@@ -2,7 +2,7 @@
 
 import { useEffect, useCallback, useState, useRef } from "react";
 import { motion, AnimatePresence, PanInfo } from "framer-motion";
-import { X, ChevronLeft, ChevronRight, Download, ZoomIn, ZoomOut } from "lucide-react";
+import { X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut } from "lucide-react";
 
 interface MediaItem {
   id: string;
@@ -108,25 +108,6 @@ export function MediaLightbox({
       onClose();
     }
   }, [zoom, onClose]);
-
-  const handleDownload = async () => {
-    if (!currentMedia) return;
-
-    try {
-      const response = await fetch(currentMedia.url);
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `media-${currentMedia.id}.${currentMedia.type === "VIDEO" ? "mp4" : "jpg"}`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error("Download failed:", error);
-    }
-  };
 
   // Keyboard navigation
   useEffect(() => {
@@ -243,12 +224,6 @@ export function MediaLightbox({
                   </button>
                 </>
               )}
-              <button
-                onClick={handleDownload}
-                className="p-2 rounded-full hover:bg-white/10 active:bg-white/10 text-white transition-colors touch-manipulation"
-              >
-                <Download className="w-5 h-5" />
-              </button>
             </div>
           </motion.div>
 
@@ -314,15 +289,30 @@ export function MediaLightbox({
                       controls
                       autoPlay
                       playsInline
+                      controlsList="nodownload noplaybackrate"
+                      disablePictureInPicture
+                      onContextMenu={(e) => e.preventDefault()}
                       className="max-w-full max-h-[70vh] md:max-h-[80vh] rounded-lg"
                     />
                   ) : (
-                    <img
-                      src={currentMedia.url}
-                      alt=""
-                      className="max-w-full max-h-[70vh] md:max-h-[80vh] object-contain rounded-lg select-none"
-                      draggable={false}
-                    />
+                    <div
+                      className="relative select-none"
+                      onContextMenu={(e) => e.preventDefault()}
+                    >
+                      <img
+                        src={currentMedia.url}
+                        alt=""
+                        className="max-w-full max-h-[70vh] md:max-h-[80vh] object-contain rounded-lg select-none pointer-events-none"
+                        draggable={false}
+                        onContextMenu={(e) => e.preventDefault()}
+                        style={{ WebkitUserDrag: 'none' } as React.CSSProperties}
+                      />
+                      {/* Protection overlay */}
+                      <div
+                        className="absolute inset-0 z-10"
+                        onContextMenu={(e) => e.preventDefault()}
+                      />
+                    </div>
                   )}
                 </motion.div>
               </motion.div>

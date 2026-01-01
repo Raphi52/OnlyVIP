@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
-import { spendCredits, getCreditBalance } from "@/lib/credits";
-import { recordCreatorEarning } from "@/lib/commission";
+import { spendCredits, getCreditBalances } from "@/lib/credits";
+import { recordEarningDistribution } from "@/lib/commission";
 
 // POST /api/messages/[id]/unlock - Unlock PPV message content using credits
 export async function POST(
@@ -88,17 +88,18 @@ export async function POST(
     // ppvPrice is now in credits
     const priceInCredits = message.ppvPrice;
 
-    // Check credit balance
-    const balance = await getCreditBalance(userId);
-    if (balance < priceInCredits) {
+    // Check PAID credit balance - PPV messages require paid credits only
+    const balances = await getCreditBalances(userId);
+    if (balances.paid < priceInCredits) {
       return NextResponse.json(
-        { error: "Insufficient credits", balance, required: priceInCredits },
+        { error: "Insufficient paid credits", balance: balances.paid, required: priceInCredits },
         { status: 400 }
       );
     }
 
-    // Spend credits
+    // Spend PAID credits only - PPV messages cannot use bonus credits
     const creditResult = await spendCredits(userId, priceInCredits, "PPV", {
+      allowBonus: false, // Chat PPV messages = paid credits only
       messageId,
       description: `PPV unlock for message`,
     });
@@ -130,18 +131,22 @@ export async function POST(
       }),
     ]);
 
-    // Record creator earning (commission applied)
-    if (message.conversation.creatorSlug) {
+    // Record earning distribution (creator, agency, chatter)
+    // Attribution: the PPV message itself has the chatter/AI info
+    if (message.conversation.creatorSlug && creditResult.paidSpent > 0) {
       try {
-        await recordCreatorEarning(
-          message.conversation.creatorSlug,
+        await recordEarningDistribution({
+          creatorSlug: message.conversation.creatorSlug,
           userId,
-          priceInCredits,
-          "PPV",
-          messageId
-        );
+          paidCreditsSpent: creditResult.paidSpent,
+          type: "PPV",
+          sourceId: messageId,
+          chatterId: message.chatterId,
+          aiPersonalityId: message.aiPersonalityId,
+          attributedMessageId: messageId,
+        });
       } catch (earningError) {
-        console.error("Failed to record creator earning:", earningError);
+        console.error("Failed to record earning distribution:", earningError);
       }
     }
 

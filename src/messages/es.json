@@ -1,0 +1,112 @@
+{
+  "metadata": {
+    "title": "VipOnly - Plataforma de Contenido Exclusivo | viponly.fun",
+    "description": "VipOnly es LA plataforma premium para creadores de contenido exclusivo. Únete a VipOnly para compartir fotos y videos exclusivos, chatear con tus fans y monetizar tu contenido."
+  },
+  "nav": {
+    "login": "Iniciar Sesión",
+    "signup": "Registrarse",
+    "dashboard": "Panel",
+    "messages": "Mensajes",
+    "logout": "Cerrar Sesión",
+    "becomeCreator": "Ser Creador"
+  },
+  "home": {
+    "title": "VipOnly",
+    "subtitle": "Contenido Exclusivo",
+    "description": "VipOnly es la plataforma premium para creadores de contenido exclusivo. Suscríbete a tus favoritos y accede a fotos, videos y mensajes privados de VipOnly.",
+    "discoverCreators": "Descubrir Creadores",
+    "noCreators": "Aún no hay creadores",
+    "beFirst": "¡Sé el primer creador en VipOnly!",
+    "startNow": "Comenzar Ahora",
+    "forCreators": "Para Creadores",
+    "startMonetizing": "Empieza a monetizar tu contenido",
+    "creatorCTA": "Crea tu página exclusiva, comparte contenido premium y gana con suscripciones, propinas y mensajes PPV.",
+    "creatorAccount": "Cuenta de Creador",
+    "startEarning": "Empieza a ganar hoy",
+    "firstMonth": "Primer mes",
+    "afterFirstMonth": "Después del primer mes",
+    "monthlySubscription": "Suscripción mensual",
+    "zeroFee": "0% de comisión",
+    "onlyFivePercent": "Solo 5%",
+    "free": "Gratis",
+    "cryptoCard": "Pagos crypto y tarjeta",
+    "customUrl": "Tu propia URL personalizada",
+    "unlimitedUploads": "Subidas ilimitadas",
+    "realtimeAnalytics": "Analíticas en tiempo real",
+    "createPageFree": "Crear Tu Página - Gratis"
+  },
+  "features": {
+    "zeroPercent": "0% el Primer Mes",
+    "zeroPercentDesc": "Quédate con el 100% de tus ganancias el primer mes. Solo 5% de comisión después.",
+    "exclusive": "Contenido Exclusivo",
+    "exclusiveDesc": "Comparte fotos, videos y contenido exclusivo solo con suscriptores de pago.",
+    "messaging": "Mensajes Directos",
+    "messagingDesc": "Chatea directamente con tus fans. Envía mensajes PPV y recibe propinas.",
+    "crypto": "Pagos Crypto",
+    "cryptoDesc": "Acepta pagos crypto con conversión instantánea. Mantén tus ganancias privadas."
+  },
+  "creator": {
+    "subscribe": "Suscribirse",
+    "subscribeFor": "Suscribirse por",
+    "subscribed": "Suscrito",
+    "message": "Mensaje",
+    "sendMessage": "Enviar Mensaje",
+    "exclusive": "Contenido Exclusivo",
+    "photos": "fotos",
+    "videos": "videos",
+    "posts": "publicaciones",
+    "subscribers": "suscriptores",
+    "viewGallery": "Ver Galería",
+    "gallery": "Galería",
+    "aboutMe": "Sobre Mí",
+    "socialLinks": "Redes Sociales"
+  },
+  "chat": {
+    "typeMessage": "Escribe un mensaje...",
+    "send": "Enviar",
+    "unlock": "Desbloquear",
+    "unlockFor": "Desbloquear por",
+    "credits": "créditos",
+    "ppvContent": "Contenido exclusivo",
+    "tip": "Propina",
+    "sendTip": "Enviar Propina"
+  },
+  "auth": {
+    "email": "Email",
+    "password": "Contraseña",
+    "confirmPassword": "Confirmar Contraseña",
+    "name": "Nombre",
+    "loginTitle": "Bienvenido de Nuevo",
+    "loginSubtitle": "Inicia sesión en tu cuenta",
+    "signupTitle": "Crear Cuenta",
+    "signupSubtitle": "Únete a VipOnly hoy",
+    "forgotPassword": "¿Olvidaste tu contraseña?",
+    "noAccount": "¿No tienes cuenta?",
+    "hasAccount": "¿Ya tienes cuenta?",
+    "orContinueWith": "O continuar con",
+    "google": "Continuar con Google"
+  },
+  "footer": {
+    "rights": "Todos los derechos reservados",
+    "terms": "Términos",
+    "privacy": "Privacidad",
+    "contact": "Contacto"
+  },
+  "common": {
+    "loading": "Cargando...",
+    "error": "Error",
+    "success": "Éxito",
+    "cancel": "Cancelar",
+    "save": "Guardar",
+    "delete": "Eliminar",
+    "edit": "Editar",
+    "close": "Cerrar",
+    "back": "Volver",
+    "next": "Siguiente",
+    "search": "Buscar",
+    "noResults": "Sin resultados",
+    "seeMore": "Ver Más",
+    "seeAll": "Ver Todo"
+  }
+}

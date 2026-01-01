@@ -1,0 +1,112 @@
+{
+  "metadata": {
+    "title": "VipOnly - منصة المحتوى الحصري | viponly.fun",
+    "description": "VipOnly هي المنصة المميزة لصانعي المحتوى الحصري. انضم إلى VipOnly لمشاركة الصور والفيديوهات الحصرية، والدردشة مع معجبيك، وتحقيق الدخل من محتواك."
+  },
+  "nav": {
+    "login": "تسجيل الدخول",
+    "signup": "إنشاء حساب",
+    "dashboard": "لوحة التحكم",
+    "messages": "الرسائل",
+    "logout": "تسجيل الخروج",
+    "becomeCreator": "كن صانع محتوى"
+  },
+  "home": {
+    "title": "VipOnly",
+    "subtitle": "محتوى حصري",
+    "description": "VipOnly هي المنصة المميزة لصانعي المحتوى الحصري. اشترك في صانعي المحتوى المفضلين لديك واحصل على صور وفيديوهات ورسائل VipOnly الخاصة.",
+    "discoverCreators": "اكتشف صانعي المحتوى",
+    "noCreators": "لا يوجد صانعي محتوى حتى الآن",
+    "beFirst": "كن أول صانع محتوى على VipOnly!",
+    "startNow": "ابدأ الآن",
+    "forCreators": "لصانعي المحتوى",
+    "startMonetizing": "ابدأ تحقيق الدخل من محتواك",
+    "creatorCTA": "أنشئ صفحتك الحصرية، وشارك المحتوى المميز، واربح من الاشتراكات والإكراميات ورسائل PPV.",
+    "creatorAccount": "حساب صانع المحتوى",
+    "startEarning": "ابدأ الربح اليوم",
+    "firstMonth": "الشهر الأول",
+    "afterFirstMonth": "بعد الشهر الأول",
+    "monthlySubscription": "الاشتراك الشهري",
+    "zeroFee": "0% رسوم",
+    "onlyFivePercent": "فقط 5%",
+    "free": "مجاني",
+    "cryptoCard": "دفع بالعملات الرقمية والبطاقات",
+    "customUrl": "رابط URL خاص بك",
+    "unlimitedUploads": "رفع غير محدود",
+    "realtimeAnalytics": "تحليلات فورية",
+    "createPageFree": "أنشئ صفحتك - مجاناً"
+  },
+  "features": {
+    "zeroPercent": "0% في الشهر الأول",
+    "zeroPercentDesc": "احتفظ بـ 100% من أرباحك في الشهر الأول. فقط 5% رسوم منصة بعد ذلك.",
+    "exclusive": "محتوى حصري",
+    "exclusiveDesc": "شارك الصور والفيديوهات والمحتوى الحصري مع المشتركين المدفوعين فقط.",
+    "messaging": "رسائل مباشرة",
+    "messagingDesc": "تحدث مباشرة مع معجبيك. أرسل رسائل PPV واستقبل الإكراميات.",
+    "crypto": "مدفوعات العملات الرقمية",
+    "cryptoDesc": "اقبل مدفوعات العملات الرقمية مع تحويل فوري. حافظ على خصوصية أرباحك."
+  },
+  "creator": {
+    "subscribe": "اشترك",
+    "subscribeFor": "اشترك بـ",
+    "subscribed": "مشترك",
+    "message": "رسالة",
+    "sendMessage": "إرسال رسالة",
+    "exclusive": "محتوى حصري",
+    "photos": "صور",
+    "videos": "فيديوهات",
+    "posts": "منشورات",
+    "subscribers": "مشتركين",
+    "viewGallery": "عرض المعرض",
+    "gallery": "المعرض",
+    "aboutMe": "عني",
+    "socialLinks": "روابط التواصل"
+  },
+  "chat": {
+    "typeMessage": "اكتب رسالة...",
+    "send": "إرسال",
+    "unlock": "فتح القفل",
+    "unlockFor": "فتح بـ",
+    "credits": "رصيد",
+    "ppvContent": "محتوى حصري",
+    "tip": "إكرامية",
+    "sendTip": "إرسال إكرامية"
+  },
+  "auth": {
+    "email": "البريد الإلكتروني",
+    "password": "كلمة المرور",
+    "confirmPassword": "تأكيد كلمة المرور",
+    "name": "الاسم",
+    "loginTitle": "مرحباً بعودتك",
+    "loginSubtitle": "سجل دخول إلى حسابك",
+    "signupTitle": "إنشاء حساب",
+    "signupSubtitle": "انضم إلى VipOnly اليوم",
+    "forgotPassword": "نسيت كلمة المرور؟",
+    "noAccount": "ليس لديك حساب؟",
+    "hasAccount": "لديك حساب بالفعل؟",
+    "orContinueWith": "أو المتابعة بـ",
+    "google": "المتابعة مع Google"
+  },
+  "footer": {
+    "rights": "جميع الحقوق محفوظة",
+    "terms": "الشروط",
+    "privacy": "الخصوصية",
+    "contact": "اتصل بنا"
+  },
+  "common": {
+    "loading": "جاري التحميل...",
+    "error": "خطأ",
+    "success": "نجاح",
+    "cancel": "إلغاء",
+    "save": "حفظ",
+    "delete": "حذف",
+    "edit": "تعديل",
+    "close": "إغلاق",
+    "back": "رجوع",
+    "next": "التالي",
+    "search": "بحث",
+    "noResults": "لا توجد نتائج",
+    "seeMore": "عرض المزيد",
+    "seeAll": "عرض الكل"
+  }
+}

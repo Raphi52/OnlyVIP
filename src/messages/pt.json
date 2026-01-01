@@ -1,0 +1,112 @@
+{
+  "metadata": {
+    "title": "VipOnly - Plataforma de Conteúdo Exclusivo | viponly.fun",
+    "description": "VipOnly é A plataforma premium para criadores de conteúdo exclusivo. Junte-se ao VipOnly para compartilhar fotos e vídeos exclusivos, conversar com seus fãs e monetizar seu conteúdo."
+  },
+  "nav": {
+    "login": "Entrar",
+    "signup": "Cadastrar",
+    "dashboard": "Painel",
+    "messages": "Mensagens",
+    "logout": "Sair",
+    "becomeCreator": "Ser Criador"
+  },
+  "home": {
+    "title": "VipOnly",
+    "subtitle": "Conteúdo Exclusivo",
+    "description": "VipOnly é a plataforma premium para criadores de conteúdo exclusivo. Assine seus favoritos e acesse fotos, vídeos e mensagens privadas do VipOnly.",
+    "discoverCreators": "Descobrir Criadores",
+    "noCreators": "Ainda não há criadores",
+    "beFirst": "Seja o primeiro criador no VipOnly!",
+    "startNow": "Começar Agora",
+    "forCreators": "Para Criadores",
+    "startMonetizing": "Comece a monetizar seu conteúdo",
+    "creatorCTA": "Crie sua página exclusiva, compartilhe conteúdo premium e ganhe com assinaturas, gorjetas e mensagens PPV.",
+    "creatorAccount": "Conta de Criador",
+    "startEarning": "Comece a ganhar hoje",
+    "firstMonth": "Primeiro mês",
+    "afterFirstMonth": "Após o primeiro mês",
+    "monthlySubscription": "Assinatura mensal",
+    "zeroFee": "0% de taxa",
+    "onlyFivePercent": "Apenas 5%",
+    "free": "Grátis",
+    "cryptoCard": "Pagamentos crypto e cartão",
+    "customUrl": "Sua própria URL personalizada",
+    "unlimitedUploads": "Uploads ilimitados",
+    "realtimeAnalytics": "Analytics em tempo real",
+    "createPageFree": "Criar Sua Página - Grátis"
+  },
+  "features": {
+    "zeroPercent": "0% no Primeiro Mês",
+    "zeroPercentDesc": "Fique com 100% dos seus ganhos no primeiro mês. Apenas 5% de taxa depois.",
+    "exclusive": "Conteúdo Exclusivo",
+    "exclusiveDesc": "Compartilhe fotos, vídeos e conteúdo exclusivo apenas com assinantes pagantes.",
+    "messaging": "Mensagens Diretas",
+    "messagingDesc": "Converse diretamente com seus fãs. Envie mensagens PPV e receba gorjetas.",
+    "crypto": "Pagamentos Crypto",
+    "cryptoDesc": "Aceite pagamentos crypto com conversão instantânea. Mantenha seus ganhos privados."
+  },
+  "creator": {
+    "subscribe": "Assinar",
+    "subscribeFor": "Assinar por",
+    "subscribed": "Assinado",
+    "message": "Mensagem",
+    "sendMessage": "Enviar Mensagem",
+    "exclusive": "Conteúdo Exclusivo",
+    "photos": "fotos",
+    "videos": "vídeos",
+    "posts": "posts",
+    "subscribers": "assinantes",
+    "viewGallery": "Ver Galeria",
+    "gallery": "Galeria",
+    "aboutMe": "Sobre Mim",
+    "socialLinks": "Redes Sociais"
+  },
+  "chat": {
+    "typeMessage": "Digite uma mensagem...",
+    "send": "Enviar",
+    "unlock": "Desbloquear",
+    "unlockFor": "Desbloquear por",
+    "credits": "créditos",
+    "ppvContent": "Conteúdo exclusivo",
+    "tip": "Gorjeta",
+    "sendTip": "Enviar Gorjeta"
+  },
+  "auth": {
+    "email": "Email",
+    "password": "Senha",
+    "confirmPassword": "Confirmar Senha",
+    "name": "Nome",
+    "loginTitle": "Bem-vindo de Volta",
+    "loginSubtitle": "Entre na sua conta",
+    "signupTitle": "Criar Conta",
+    "signupSubtitle": "Junte-se ao VipOnly hoje",
+    "forgotPassword": "Esqueceu a senha?",
+    "noAccount": "Não tem uma conta?",
+    "hasAccount": "Já tem uma conta?",
+    "orContinueWith": "Ou continuar com",
+    "google": "Continuar com Google"
+  },
+  "footer": {
+    "rights": "Todos os direitos reservados",
+    "terms": "Termos",
+    "privacy": "Privacidade",
+    "contact": "Contato"
+  },
+  "common": {
+    "loading": "Carregando...",
+    "error": "Erro",
+    "success": "Sucesso",
+    "cancel": "Cancelar",
+    "save": "Salvar",
+    "delete": "Excluir",
+    "edit": "Editar",
+    "close": "Fechar",
+    "back": "Voltar",
+    "next": "Próximo",
+    "search": "Buscar",
+    "noResults": "Sem resultados",
+    "seeMore": "Ver Mais",
+    "seeAll": "Ver Tudo"
+  }
+}

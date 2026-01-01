@@ -158,26 +158,33 @@ export async function GET(request: NextRequest) {
               periodEnd.setMonth(periodEnd.getMonth() + 1);
             }
 
-            await prisma.subscription.upsert({
-              where: {
-                userId_planId: { userId: session.user.id, planId: plan.id },
-              },
-              update: {
-                status: "ACTIVE",
-                currentPeriodStart: now,
-                currentPeriodEnd: periodEnd,
-              },
-              create: {
-                userId: session.user.id,
-                planId: plan.id,
-                creatorSlug: creatorSlug || null,
-                status: "ACTIVE",
-                paymentProvider: "NOWPAYMENTS",
-                billingInterval: billingInterval as any,
-                currentPeriodStart: now,
-                currentPeriodEnd: periodEnd,
-              },
+            const existingSub = await prisma.subscription.findFirst({
+              where: { userId: session.user.id, planId: plan.id },
             });
+
+            if (existingSub) {
+              await prisma.subscription.update({
+                where: { id: existingSub.id },
+                data: {
+                  status: "ACTIVE",
+                  currentPeriodStart: now,
+                  currentPeriodEnd: periodEnd,
+                },
+              });
+            } else {
+              await prisma.subscription.create({
+                data: {
+                  userId: session.user.id,
+                  planId: plan.id,
+                  creatorSlug: creatorSlug || null,
+                  status: "ACTIVE",
+                  paymentProvider: "NOWPAYMENTS",
+                  billingInterval: billingInterval as any,
+                  currentPeriodStart: now,
+                  currentPeriodEnd: periodEnd,
+                },
+              });
+            }
           }
           break;
 

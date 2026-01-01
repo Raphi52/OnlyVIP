@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import {
+  selectPersonalityForConversation,
+  switchPersonality,
+} from "@/lib/ai-personality-selector";
 
 // POST /api/conversations/start - Start or get existing conversation with a creator
 export async function POST(request: NextRequest) {
@@ -29,12 +33,6 @@ export async function POST(request: NextRequest) {
     const isAdmin = (session.user as any).role === "ADMIN";
 
     if (!isAdmin) {
-      // Check if user has VIP flag set by admin
-      const user = await prisma.user.findUnique({
-        where: { id: userId },
-        select: { isVip: true },
-      });
-
       // Check user's subscription allows messaging
       const subscription = await prisma.subscription.findFirst({
         where: {
@@ -46,9 +44,8 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      // VIP users (admin-granted) or subscribers can message
-      const canMessage = user?.isVip ||
-                         subscription?.plan?.canMessage ||
+      // Subscribers with message access can message
+      const canMessage = subscription?.plan?.canMessage ||
                          ["BASIC", "VIP"].includes(subscription?.plan?.accessTier || "");
 
       if (!canMessage) {
@@ -101,18 +98,33 @@ export async function POST(request: NextRequest) {
       ? [{ userId }]
       : [{ userId: creatorUserId }, { userId }];
 
+    // Select personality for this conversation (A/B testing via trafficShare)
+    const aiPersonalityId = await selectPersonalityForConversation(creatorSlug);
+    console.log("[conversations/start] Selected AI personality:", aiPersonalityId || "NONE (AI disabled)");
+
     const conversation = await prisma.conversation.create({
       data: {
         creatorSlug,
+        aiPersonalityId,
         participants: {
           create: participants,
         },
       },
     });
 
+    // Log the initial personality assignment if one was selected
+    if (aiPersonalityId) {
+      await switchPersonality(
+        conversation.id,
+        aiPersonalityId,
+        "initial_assignment"
+      );
+    }
+
     return NextResponse.json({
       conversationId: conversation.id,
-      isNew: true
+      isNew: true,
+      aiPersonalityId: aiPersonalityId || null,
     });
   } catch (error) {
     console.error("Error starting conversation:", error);

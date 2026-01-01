@@ -38,8 +38,6 @@ model Agency {
 
   // Settings (controlled by Admin)
   aiEnabled   Boolean @default(false) // AI disabled by default
-  maxCreators Int     @default(10)
-  maxChatters Int     @default(20)
   platformFee Float   @default(0.10) // 10% platform commission
 
   // Status

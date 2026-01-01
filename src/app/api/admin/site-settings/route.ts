@@ -2,6 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 
+// Get wallet addresses from environment variables (secure)
+function getSecureWallets() {
+  return {
+    platformWalletEth: process.env.PAYGATE_WALLET_ADDRESS || null,
+    platformWalletBtc: process.env.PLATFORM_WALLET_BTC || null,
+  };
+}
+
 // GET /api/admin/site-settings - Get site settings
 export async function GET(request: NextRequest) {
   try {
@@ -21,8 +29,16 @@ export async function GET(request: NextRequest) {
       settings = await prisma.siteSettings.findFirst();
     }
 
+    // Get wallets from env vars (secure)
+    const wallets = getSecureWallets();
+
     if (settings) {
-      return NextResponse.json(settings);
+      return NextResponse.json({
+        ...settings,
+        // Override with secure wallet addresses from env
+        platformWalletEth: wallets.platformWalletEth,
+        platformWalletBtc: wallets.platformWalletBtc,
+      });
     }
 
     // Return defaults if no settings exist
@@ -40,9 +56,9 @@ export async function GET(request: NextRequest) {
       registrationEnabled: true,
       emailNotifications: true,
       pushNotifications: false,
-      // Platform commission settings
-      platformWalletEth: null,
-      platformWalletBtc: null,
+      // Platform commission settings - wallets from env vars
+      platformWalletEth: wallets.platformWalletEth,
+      platformWalletBtc: wallets.platformWalletBtc,
       platformCommission: 0.05,
       firstMonthFreeCommission: true,
     });
@@ -65,53 +81,64 @@ export async function PUT(request: NextRequest) {
 
     const body = await request.json();
 
-    // Upsert site settings
+    // SECURITY: Wallet addresses are NOT accepted from the request body
+    // They are read from environment variables only to prevent unauthorized changes
+    // Explicitly remove any wallet addresses from the body
+    const { platformWalletEth, platformWalletBtc, ...safeBody } = body;
+
+    if (platformWalletEth || platformWalletBtc) {
+      console.warn("[SECURITY] Attempted to modify wallet addresses via API - blocked");
+    }
+
+    // Upsert site settings (without wallet addresses)
     const settings = await prisma.siteSettings.upsert({
       where: { id: "default" },
       update: {
-        siteName: body.siteName,
-        siteDescription: body.siteDescription,
-        siteUrl: body.siteUrl,
-        logo: body.logo,
-        favicon: body.favicon,
-        primaryColor: body.primaryColor,
-        accentColor: body.accentColor,
-        stripeEnabled: body.stripeEnabled,
-        cryptoEnabled: body.cryptoEnabled,
-        maintenanceMode: body.maintenanceMode,
-        registrationEnabled: body.registrationEnabled,
-        emailNotifications: body.emailNotifications,
-        pushNotifications: body.pushNotifications,
-        // Platform commission settings
-        platformWalletEth: body.platformWalletEth,
-        platformWalletBtc: body.platformWalletBtc,
-        platformCommission: body.platformCommission,
-        firstMonthFreeCommission: body.firstMonthFreeCommission,
+        siteName: safeBody.siteName,
+        siteDescription: safeBody.siteDescription,
+        siteUrl: safeBody.siteUrl,
+        logo: safeBody.logo,
+        favicon: safeBody.favicon,
+        primaryColor: safeBody.primaryColor,
+        accentColor: safeBody.accentColor,
+        stripeEnabled: safeBody.stripeEnabled,
+        cryptoEnabled: safeBody.cryptoEnabled,
+        maintenanceMode: safeBody.maintenanceMode,
+        registrationEnabled: safeBody.registrationEnabled,
+        emailNotifications: safeBody.emailNotifications,
+        pushNotifications: safeBody.pushNotifications,
+        // Platform commission settings (no wallets - those come from env)
+        platformCommission: safeBody.platformCommission,
+        firstMonthFreeCommission: safeBody.firstMonthFreeCommission,
       },
       create: {
         id: "default",
-        siteName: body.siteName || "ExclusiveHub",
-        siteDescription: body.siteDescription || "",
-        siteUrl: body.siteUrl || "",
-        logo: body.logo,
-        favicon: body.favicon,
-        primaryColor: body.primaryColor || "#D4AF37",
-        accentColor: body.accentColor || "#B8860B",
-        stripeEnabled: body.stripeEnabled ?? true,
-        cryptoEnabled: body.cryptoEnabled ?? false,
-        maintenanceMode: body.maintenanceMode ?? false,
-        registrationEnabled: body.registrationEnabled ?? true,
-        emailNotifications: body.emailNotifications ?? true,
-        pushNotifications: body.pushNotifications ?? false,
-        // Platform commission settings
-        platformWalletEth: body.platformWalletEth || null,
-        platformWalletBtc: body.platformWalletBtc || null,
-        platformCommission: body.platformCommission ?? 0.05,
-        firstMonthFreeCommission: body.firstMonthFreeCommission ?? true,
+        siteName: safeBody.siteName || "ExclusiveHub",
+        siteDescription: safeBody.siteDescription || "",
+        siteUrl: safeBody.siteUrl || "",
+        logo: safeBody.logo,
+        favicon: safeBody.favicon,
+        primaryColor: safeBody.primaryColor || "#D4AF37",
+        accentColor: safeBody.accentColor || "#B8860B",
+        stripeEnabled: safeBody.stripeEnabled ?? true,
+        cryptoEnabled: safeBody.cryptoEnabled ?? false,
+        maintenanceMode: safeBody.maintenanceMode ?? false,
+        registrationEnabled: safeBody.registrationEnabled ?? true,
+        emailNotifications: safeBody.emailNotifications ?? true,
+        pushNotifications: safeBody.pushNotifications ?? false,
+        // Platform commission settings (no wallets - those come from env)
+        platformCommission: safeBody.platformCommission ?? 0.05,
+        firstMonthFreeCommission: safeBody.firstMonthFreeCommission ?? true,
       },
     });
 
-    return NextResponse.json(settings);
+    // Return settings with secure wallet addresses from env
+    const wallets = getSecureWallets();
+    return NextResponse.json({
+      ...settings,
+      platformWalletEth: wallets.platformWalletEth,
+      platformWalletBtc: wallets.platformWalletBtc,
+    });
   } catch (error) {
     console.error("Error updating site settings:", error);
     return NextResponse.json(

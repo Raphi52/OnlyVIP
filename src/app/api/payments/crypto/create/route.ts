@@ -231,7 +231,7 @@ export async function POST(request: NextRequest) {
     const paymentRecord = await prisma.payment.create({
       data: {
         userId: session.user.id,
-        creatorSlug: creatorSlug || null,
+        ...(creatorSlug ? { creatorSlug } : {}),
         amount: priceAmount,
         currency: "USD",
         status: "PENDING",
@@ -251,12 +251,24 @@ export async function POST(request: NextRequest) {
 
     console.log(`[CRYPTO] Created payment ${paymentRecord.id} for user ${session.user.id}: ${orderDescription}`);
 
+    // Generate QR code URL
+    let qrData: string;
+    if (currency === "btc") {
+      qrData = `bitcoin:${payment.pay_address}?amount=${payment.pay_amount}`;
+    } else if (currency === "eth") {
+      qrData = `ethereum:${payment.pay_address}?value=${payment.pay_amount}`;
+    } else {
+      qrData = payment.pay_address;
+    }
+    const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&bgcolor=0a0a0c&color=a855f7&data=${encodeURIComponent(qrData)}`;
+
     return NextResponse.json({
       paymentId: payment.payment_id,
       internalId: paymentRecord.id,
       payAddress: payment.pay_address,
       payAmount: payment.pay_amount,
       payCurrency: payment.pay_currency,
+      qrCodeUrl,
       expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(), // 1 hour
       rateLimitRemaining: rateLimit.remaining - 1,
     });

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { spendCredits, getCreditBalance } from "@/lib/credits";
+import { spendCredits, getCreditBalances, addCredits } from "@/lib/credits";
 import { recordCreatorEarning } from "@/lib/commission";
 import prisma from "@/lib/prisma";
 
@@ -47,9 +47,10 @@ export async function POST(request: NextRequest) {
     });
 
     // Default pricing in credits
+    // bonusCredits are BONUS type - only usable for PPV catalog media
     const defaultPricing = {
       basic: { monthlyCredits: 999, annualCredits: 9588, bonusCredits: 500 },
-      vip: { monthlyCredits: 2999, annualCredits: 28788, bonusCredits: 2000 },
+      vip: { monthlyCredits: 2999, annualCredits: 28788, bonusCredits: 1000 }, // 1000 bonus, not 2000
     };
 
     let pricing = defaultPricing;
@@ -88,13 +89,13 @@ export async function POST(request: NextRequest) {
       : selectedPlan.monthlyCredits;
     const bonusCredits = selectedPlan.bonusCredits;
 
-    // Check if user has enough credits
-    const currentBalance = await getCreditBalance(userId);
-    if (currentBalance < creditsRequired) {
+    // Check if user has enough PAID credits - subscriptions require paid credits only
+    const balances = await getCreditBalances(userId);
+    if (balances.paid < creditsRequired) {
       return NextResponse.json(
         {
-          error: "Insufficient credits",
-          balance: currentBalance,
+          error: "Insufficient paid credits",
+          balance: balances.paid,
           required: creditsRequired,
         },
         { status: 400 }
@@ -134,8 +135,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Spend credits
+    // Spend PAID credits only - subscriptions cannot use bonus credits
     const spendResult = await spendCredits(userId, creditsRequired, "SUBSCRIPTION", {
+      allowBonus: false, // Subscriptions = paid credits only
       description: `${planId.toUpperCase()} subscription (${interval}) for ${creatorSlug}`,
     });
 
@@ -163,42 +165,27 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Add bonus credits to user
+    // Add bonus credits to user as BONUS type (only usable for PPV catalog media)
     if (bonusCredits > 0) {
-      // Get current balance for transaction record
-      const newBalance = spendResult.newBalance + bonusCredits;
-
-      await prisma.creditTransaction.create({
-        data: {
-          userId,
-          amount: bonusCredits,
-          balance: newBalance,
-          type: "SUBSCRIPTION_BONUS",
-          description: `Bonus credits for ${planId.toUpperCase()} subscription`,
-          subscriptionId: subscription.id,
-          expiresAt: endDate, // Bonus expires with subscription
-        },
-      });
-
-      // Update user credit balance
-      await prisma.user.update({
-        where: { id: userId },
-        data: {
-          creditBalance: newBalance,
-        },
+      await addCredits(userId, bonusCredits, "SUBSCRIPTION_BONUS", {
+        creditType: "BONUS", // Subscription bonus = BONUS credits (PPV catalog only)
+        description: `Bonus credits for ${planId.toUpperCase()} subscription (PPV catalog only)`,
+        subscriptionId: subscription.id,
       });
     }
 
-    // Record creator earning
-    try {
-      await recordCreatorEarning(
-        creatorSlug,
-        userId,
-        creditsRequired,
-        "SUBSCRIPTION"
-      );
-    } catch (earningError) {
-      console.error("Failed to record creator earning:", earningError);
+    // Record creator earning - all spent credits are paid since allowBonus=false
+    if (spendResult.paidSpent > 0) {
+      try {
+        await recordCreatorEarning(
+          creatorSlug,
+          userId,
+          spendResult.paidSpent, // Always equals creditsRequired since allowBonus=false
+          "SUBSCRIPTION"
+        );
+      } catch (earningError) {
+        console.error("Failed to record creator earning:", earningError);
+      }
     }
 
     return NextResponse.json({

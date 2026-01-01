@@ -80,11 +80,16 @@ export function calculateCommission(
 /**
  * Record a creator earning when credits are spent
  * This should be called after spendCredits() succeeds
+ *
+ * IMPORTANT: Only pass PAID credits spent, NOT bonus credits!
+ * Bonus credits do not generate creator earnings.
+ *
+ * @param paidCreditsSpent - Only the PAID credits portion that was spent
  */
 export async function recordCreatorEarning(
   creatorSlug: string,
   userId: string,
-  creditsSpent: number,
+  paidCreditsSpent: number,
   type: EarningType,
   sourceId?: string
 ): Promise<{
@@ -112,8 +117,20 @@ export async function recordCreatorEarning(
     throw new Error(`Creator not found: ${creatorSlug}`);
   }
 
-  // Calculate commission
-  const grossAmountEur = creditsToEur(creditsSpent);
+  // Skip if no paid credits were spent (only bonus used)
+  if (paidCreditsSpent <= 0) {
+    console.log(`[Commission] No paid credits spent for ${creatorSlug}, skipping earning record`);
+    return {
+      earningId: "",
+      grossAmount: 0,
+      commissionRate: 0,
+      commissionAmount: 0,
+      netAmount: 0,
+    };
+  }
+
+  // Calculate commission based on PAID credits only
+  const grossAmountEur = creditsToEur(paidCreditsSpent);
   const commission = calculateCommission(grossAmountEur, creator.createdAt, {
     firstMonthFree: settings?.firstMonthFreeCommission ?? FIRST_MONTH_FREE,
     commissionRate: settings?.platformCommission ?? DEFAULT_COMMISSION_RATE,
@@ -159,6 +176,266 @@ export async function recordCreatorEarning(
     commissionRate: commission.commissionRate,
     commissionAmount: commission.commissionAmount,
     netAmount: commission.netAmount,
+  };
+}
+
+// ============= EARNING DISTRIBUTION =============
+
+export interface EarningDistributionParams {
+  creatorSlug: string;
+  userId: string;
+  paidCreditsSpent: number;
+  type: EarningType;
+  sourceId?: string;
+  chatterId?: string | null;
+  aiPersonalityId?: string | null;
+  attributedMessageId?: string | null;
+}
+
+export interface EarningDistributionResult {
+  creatorEarningId: string;
+  platformAmount: number;
+  creatorAmount: number;
+  agencyAmount: number;
+  chatterAmount: number;
+  agencyEarningId?: string;
+  chatterEarningId?: string;
+}
+
+/**
+ * Record earnings with full distribution to creator, agency, and chatter
+ *
+ * Flow:
+ * 1. Platform takes 5% commission
+ * 2. If creator has agency: split based on ModelListing.revenueShare (default 70/30)
+ * 3. If chatter attributed (non-subscription): chatter takes commission from agency's share
+ *
+ * @param params - Distribution parameters
+ */
+export async function recordEarningDistribution(
+  params: EarningDistributionParams
+): Promise<EarningDistributionResult> {
+  const {
+    creatorSlug,
+    userId,
+    paidCreditsSpent,
+    type,
+    sourceId,
+    chatterId,
+    aiPersonalityId,
+    attributedMessageId,
+  } = params;
+
+  // Skip if no paid credits were spent
+  if (paidCreditsSpent <= 0) {
+    console.log(`[Commission] No paid credits spent for ${creatorSlug}, skipping earning record`);
+    return {
+      creatorEarningId: "",
+      platformAmount: 0,
+      creatorAmount: 0,
+      agencyAmount: 0,
+      chatterAmount: 0,
+    };
+  }
+
+  // Convert credits to EUR
+  const grossAmountEur = creditsToEur(paidCreditsSpent);
+
+  // Get creator with agency and model listing
+  const [creator, settings, chatter] = await Promise.all([
+    prisma.creator.findUnique({
+      where: { slug: creatorSlug },
+      include: {
+        agency: true,
+        modelListing: true,
+      },
+    }),
+    prisma.siteSettings.findFirst({
+      select: {
+        platformCommission: true,
+        firstMonthFreeCommission: true,
+      },
+    }),
+    chatterId ? prisma.chatter.findUnique({
+      where: { id: chatterId },
+      select: {
+        id: true,
+        commissionEnabled: true,
+        commissionRate: true,
+      },
+    }) : null,
+  ]);
+
+  if (!creator) {
+    throw new Error(`Creator not found: ${creatorSlug}`);
+  }
+
+  // Calculate platform commission (may be 0% first month)
+  const inFirstMonth = isFirstMonth(creator.createdAt);
+  const firstMonthFree = settings?.firstMonthFreeCommission ?? FIRST_MONTH_FREE;
+  const platformRate = (firstMonthFree && inFirstMonth) ? 0 : (settings?.platformCommission ?? DEFAULT_COMMISSION_RATE);
+  const platformAmount = grossAmountEur * platformRate;
+  const afterPlatform = grossAmountEur - platformAmount;
+
+  // Initialize distribution
+  let creatorAmount = afterPlatform;
+  let agencyAmount = 0;
+  let chatterAmount = 0;
+  let agencyShare = 0;
+
+  // Calculate agency split if creator has agency
+  if (creator.agencyId && creator.agency) {
+    // Get revenue share from model listing or default to 70%
+    const creatorShare = (creator.modelListing?.revenueShare ?? 70) / 100;
+    agencyShare = 1 - creatorShare;
+
+    creatorAmount = afterPlatform * creatorShare;
+    let agencyGross = afterPlatform * agencyShare;
+
+    // Calculate chatter commission if applicable
+    // Chatter commission only for non-subscription types
+    if (chatter && chatter.commissionEnabled && type !== "SUBSCRIPTION") {
+      chatterAmount = agencyGross * chatter.commissionRate;
+      agencyAmount = agencyGross - chatterAmount;
+    } else {
+      agencyAmount = agencyGross;
+    }
+  }
+
+  // Create all records in a transaction
+  const result = await prisma.$transaction(async (tx) => {
+    // 1. Create CreatorEarning
+    const creatorEarning = await tx.creatorEarning.create({
+      data: {
+        creatorSlug,
+        userId,
+        type,
+        sourceId,
+        grossAmount: grossAmountEur,
+        commissionRate: platformRate,
+        commissionAmount: platformAmount,
+        netAmount: creatorAmount,
+        status: "PENDING",
+        chatterId: chatterId || null,
+        aiPersonalityId: aiPersonalityId || null,
+        attributedMessageId: attributedMessageId || null,
+      },
+    });
+
+    // 2. Update creator balance
+    await tx.creator.update({
+      where: { slug: creatorSlug },
+      data: {
+        pendingBalance: { increment: creatorAmount },
+        totalEarned: { increment: creatorAmount },
+      },
+    });
+
+    let agencyEarningId: string | undefined;
+    let chatterEarningId: string | undefined;
+
+    // 3. Create AgencyEarning if applicable
+    if (creator.agencyId && agencyAmount > 0) {
+      const agencyEarning = await tx.agencyEarning.create({
+        data: {
+          agencyId: creator.agencyId,
+          creatorEarningId: creatorEarning.id,
+          grossAmount: afterPlatform,
+          agencyShare,
+          agencyGross: afterPlatform * agencyShare,
+          chatterAmount,
+          netAmount: agencyAmount,
+          type,
+          status: "PENDING",
+        },
+      });
+      agencyEarningId = agencyEarning.id;
+
+      // Update agency balance
+      await tx.agency.update({
+        where: { id: creator.agencyId },
+        data: {
+          pendingBalance: { increment: agencyAmount },
+          totalEarned: { increment: agencyAmount },
+          totalRevenue: { increment: afterPlatform * agencyShare },
+        },
+      });
+    }
+
+    // 4. Create ChatterEarning if applicable
+    if (chatter && chatterAmount > 0) {
+      const chatterEarning = await tx.chatterEarning.create({
+        data: {
+          chatterId: chatter.id,
+          creatorEarningId: creatorEarning.id,
+          grossAmount: afterPlatform * agencyShare,
+          commissionRate: chatter.commissionRate,
+          commissionAmount: chatterAmount,
+          type,
+          attributedMessageId: attributedMessageId || null,
+          status: "PENDING",
+        },
+      });
+      chatterEarningId = chatterEarning.id;
+
+      // Update chatter balance and stats
+      await tx.chatter.update({
+        where: { id: chatter.id },
+        data: {
+          pendingBalance: { increment: chatterAmount },
+          totalEarnings: { increment: chatterAmount },
+          totalSales: { increment: 1 },
+        },
+      });
+    }
+
+    // 5. Create AiPersonalityEarning if applicable (stats tracking only)
+    if (aiPersonalityId) {
+      await tx.aiPersonalityEarning.create({
+        data: {
+          aiPersonalityId,
+          creatorEarningId: creatorEarning.id,
+          grossAmount: grossAmountEur,
+          type,
+          attributedMessageId: attributedMessageId || null,
+        },
+      });
+
+      // Update AI personality stats
+      await tx.agencyAiPersonality.update({
+        where: { id: aiPersonalityId },
+        data: {
+          totalEarnings: { increment: grossAmountEur },
+          totalSales: { increment: 1 },
+        },
+      });
+    }
+
+    return {
+      creatorEarningId: creatorEarning.id,
+      agencyEarningId,
+      chatterEarningId,
+    };
+  });
+
+  // Log distribution
+  console.log(
+    `[Commission] Distribution for ${creatorSlug}: ` +
+    `Gross €${grossAmountEur.toFixed(2)} → ` +
+    `Platform €${platformAmount.toFixed(2)} (${(platformRate * 100).toFixed(0)}%), ` +
+    `Creator €${creatorAmount.toFixed(2)}, ` +
+    `Agency €${agencyAmount.toFixed(2)}, ` +
+    `Chatter €${chatterAmount.toFixed(2)}`
+  );
+
+  return {
+    creatorEarningId: result.creatorEarningId,
+    platformAmount,
+    creatorAmount,
+    agencyAmount,
+    chatterAmount,
+    agencyEarningId: result.agencyEarningId,
+    chatterEarningId: result.chatterEarningId,
   };
 }
 
