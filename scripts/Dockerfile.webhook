@@ -8,4 +8,4 @@ COPY webhook-server.js .
 COPY deploy.sh .
 RUN chmod +x deploy.sh
 
-CMD ["node", "webhook-server.js"]
+CMD ["node", "/app/webhook-server.js"]
