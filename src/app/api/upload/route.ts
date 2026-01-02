@@ -8,10 +8,69 @@ import { auth } from "@/lib/auth";
 // In production, use S3, Cloudinary, or another cloud storage
 // This is a simple local file upload for development
 
-async function isAdmin(): Promise<boolean> {
-  const cookieStore = await cookies();
-  const token = cookieStore.get("admin_token");
-  return !!token?.value;
+// Magic bytes signatures for file type validation
+const MAGIC_BYTES: Record<string, { bytes: number[]; offset?: number }[]> = {
+  "image/jpeg": [{ bytes: [0xFF, 0xD8, 0xFF] }],
+  "image/png": [{ bytes: [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A] }],
+  "image/webp": [{ bytes: [0x52, 0x49, 0x46, 0x46], offset: 0 }, { bytes: [0x57, 0x45, 0x42, 0x50], offset: 8 }],
+  "image/gif": [{ bytes: [0x47, 0x49, 0x46, 0x38] }],
+  "video/mp4": [{ bytes: [0x66, 0x74, 0x79, 0x70], offset: 4 }], // ftyp at offset 4
+  "video/webm": [{ bytes: [0x1A, 0x45, 0xDF, 0xA3] }],
+  "audio/mpeg": [{ bytes: [0xFF, 0xFB] }, { bytes: [0xFF, 0xFA] }, { bytes: [0x49, 0x44, 0x33] }], // MP3 or ID3
+  "audio/wav": [{ bytes: [0x52, 0x49, 0x46, 0x46] }], // RIFF
+};
+
+// Safe extensions for each MIME type (we force these, ignore client extension)
+const SAFE_EXTENSIONS: Record<string, string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+  "image/gif": "gif",
+  "video/mp4": "mp4",
+  "video/webm": "webm",
+  "audio/mpeg": "mp3",
+  "audio/wav": "wav",
+};
+
+// Validate file content by checking magic bytes
+function validateMagicBytes(buffer: Buffer, mimeType: string): boolean {
+  const signatures = MAGIC_BYTES[mimeType];
+  if (!signatures) return false;
+
+  for (const sig of signatures) {
+    const offset = sig.offset || 0;
+    if (buffer.length < offset + sig.bytes.length) continue;
+
+    let matches = true;
+    for (let i = 0; i < sig.bytes.length; i++) {
+      if (buffer[offset + i] !== sig.bytes[i]) {
+        matches = false;
+        break;
+      }
+    }
+    if (matches) return true;
+  }
+  return false;
+}
+
+// Detect actual MIME type from buffer
+function detectMimeType(buffer: Buffer): string | null {
+  for (const [mimeType, signatures] of Object.entries(MAGIC_BYTES)) {
+    for (const sig of signatures) {
+      const offset = sig.offset || 0;
+      if (buffer.length < offset + sig.bytes.length) continue;
+
+      let matches = true;
+      for (let i = 0; i < sig.bytes.length; i++) {
+        if (buffer[offset + i] !== sig.bytes[i]) {
+          matches = false;
+          break;
+        }
+      }
+      if (matches) return mimeType;
+    }
+  }
+  return null;
 }
 
 async function canUpload(): Promise<boolean> {
@@ -87,32 +146,44 @@ export async function POST(request: NextRequest) {
     await mkdir(uploadDir, { recursive: true });
 
     for (const file of filesToUpload) {
-      if (!allowed.includes(file.type)) {
-        continue; // Skip invalid file types
-      }
-
       if (file.size > maxSize) {
         continue; // Skip files that are too large
       }
 
-      // Generate unique filename
-      const ext = file.name.split(".").pop();
-      const hash = crypto.randomBytes(16).toString("hex");
-      const filename = `${hash}.${ext}`;
-
-      // Save file
+      // Read file content first
       const bytes = await file.arrayBuffer();
       const buffer = Buffer.from(bytes);
+
+      // Detect actual MIME type from file content (magic bytes)
+      const detectedMime = detectMimeType(buffer);
+
+      // Reject if we can't detect the type or it's not in allowed list
+      if (!detectedMime || !allowed.includes(detectedMime)) {
+        console.warn(`Upload rejected: detected=${detectedMime}, claimed=${file.type}, name=${file.name}`);
+        continue;
+      }
+
+      // Force safe extension based on detected type (ignore client extension)
+      const safeExt = SAFE_EXTENSIONS[detectedMime];
+      if (!safeExt) {
+        continue; // Unknown type, skip
+      }
+
+      // Generate unique filename with safe extension
+      const hash = crypto.randomBytes(16).toString("hex");
+      const filename = `${hash}.${safeExt}`;
+
+      // Save file
       const filePath = join(uploadDir, filename);
       await writeFile(filePath, buffer);
 
       const url = `/uploads/${uploadType}/${filename}`;
 
-      // Determine media type for database
+      // Determine media type for database (use detected MIME, not client-provided)
       let mediaType: "PHOTO" | "VIDEO" | "AUDIO" = "PHOTO";
-      if (file.type.startsWith("video/")) {
+      if (detectedMime.startsWith("video/")) {
         mediaType = "VIDEO";
-      } else if (file.type.startsWith("audio/")) {
+      } else if (detectedMime.startsWith("audio/")) {
         mediaType = "AUDIO";
       }
 
@@ -121,7 +192,7 @@ export async function POST(request: NextRequest) {
         thumbnailUrl: url,
         previewUrl: url,
         filename,
-        mimeType: file.type,
+        mimeType: detectedMime, // Use detected type, not client-provided
         size: file.size,
         type: mediaType,
       });
