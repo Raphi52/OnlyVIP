@@ -1,0 +1,11 @@
+FROM node:20-alpine
+
+RUN apk add --no-cache docker-cli docker-compose git bash
+
+WORKDIR /app
+
+COPY webhook-server.js .
+COPY deploy.sh .
+RUN chmod +x deploy.sh
+
+CMD ["node", "webhook-server.js"]
