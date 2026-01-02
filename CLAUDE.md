@@ -128,6 +128,49 @@ PUSHER_SECRET=
 RESEND_API_KEY=
 ```
 
+## Déploiement
+
+- **Hosting**: VPS avec Docker
+- **Workflow**: `git push` → rebuild Docker sur le serveur
+- Ne PAS utiliser Vercel
+
+### Conteneurs Docker
+
+- `viponly-app` - Application Next.js
+- `viponly-nginx` - Reverse proxy
+- `viponly-db` - PostgreSQL
+- `viponly-ai-cron` - Cron jobs AI
+- `viponly-backup` - Backups (dump toutes les heures)
+
+### Commandes de déploiement (sur le VPS)
+
+```bash
+# Pull les derniers changements
+git pull
+
+# Rebuild et redémarrer l'app
+docker compose build app --no-cache && docker compose up -d app
+
+# Ou rebuild tout
+docker compose build --no-cache && docker compose up -d
+
+# Voir les logs
+docker compose logs -f app
+
+# Redémarrer sans rebuild
+docker compose restart app
+```
+
+### Accès BDD (sur le VPS)
+
+```bash
+# Exécuter une requête SQL
+docker exec -i viponly-db psql -U viponly -d viponly -c "SELECT * FROM ..."
+
+# Shell interactif
+docker exec -it viponly-db psql -U viponly -d viponly
+```
+
 ## Points d'Attention
 
 - Les routes API ne sont PAS sous `[locale]/`

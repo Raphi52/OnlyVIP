@@ -32,76 +32,107 @@ export async function GET(request: NextRequest) {
       },
     });
 
+    // Safe JSON parse helper
+    const safeJsonParse = (str: string | null, fallback: any) => {
+      if (!str) return fallback;
+      try {
+        return JSON.parse(str);
+      } catch {
+        return fallback;
+      }
+    };
+
     // Get stats for each agency
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
     const agenciesWithStats = await Promise.all(
       agencies.map(async (agency) => {
-        const creatorSlugs = agency.creators.map((c) => c.slug);
+        try {
+          const creatorSlugs = agency.creators.map((c) => c.slug);
 
-        // Total revenue
-        const totalRevenue = await prisma.creatorEarning.aggregate({
-          where: { creatorSlug: { in: creatorSlugs } },
-          _sum: { grossAmount: true },
-        });
+          // Default values for revenue stats
+          let totalRevenueAmount = 0;
+          let revenue30dAmount = 0;
 
-        // Revenue last 30 days
-        const revenue30d = await prisma.creatorEarning.aggregate({
-          where: {
-            creatorSlug: { in: creatorSlugs },
-            createdAt: { gte: thirtyDaysAgo },
-          },
-          _sum: { grossAmount: true },
-        });
+          if (creatorSlugs.length > 0) {
+            // Total revenue
+            const totalRevenue = await prisma.creatorEarning.aggregate({
+              where: { creatorSlug: { in: creatorSlugs } },
+              _sum: { grossAmount: true },
+            });
+            totalRevenueAmount = totalRevenue._sum.grossAmount || 0;
 
-        // Chatter revenue (attributed)
-        const chatterRevenue = await prisma.chatterEarning.aggregate({
-          where: {
-            chatter: { agencyId: agency.id },
-            createdAt: { gte: thirtyDaysAgo },
-          },
-          _sum: { grossAmount: true },
-        });
-
-        // AI revenue (attributed)
-        const aiRevenue = await prisma.aiPersonalityEarning.aggregate({
-          where: {
-            aiPersonality: { agencyId: agency.id },
-            createdAt: { gte: thirtyDaysAgo },
-          },
-          _sum: { grossAmount: true },
-        });
-
-        // Safe JSON parse helper
-        const safeJsonParse = (str: string | null, fallback: any) => {
-          if (!str) return fallback;
-          try {
-            return JSON.parse(str);
-          } catch {
-            return fallback;
+            // Revenue last 30 days
+            const revenue30d = await prisma.creatorEarning.aggregate({
+              where: {
+                creatorSlug: { in: creatorSlugs },
+                createdAt: { gte: thirtyDaysAgo },
+              },
+              _sum: { grossAmount: true },
+            });
+            revenue30dAmount = revenue30d._sum.grossAmount || 0;
           }
-        };
 
-        return {
-          ...agency,
-          // Parse JSON fields safely
-          services: safeJsonParse(agency.services, []),
-          specialties: safeJsonParse(agency.specialties, []),
-          socialLinks: safeJsonParse(agency.socialLinks, {}),
-          portfolioImages: safeJsonParse(agency.portfolioImages, []),
-          languages: safeJsonParse(agency.languages, []),
-          stats: {
-            totalRevenue: totalRevenue._sum.grossAmount || 0,
-            revenue30d: revenue30d._sum.grossAmount || 0,
-            chatterRevenue30d: chatterRevenue._sum.grossAmount || 0,
-            aiRevenue30d: aiRevenue._sum.grossAmount || 0,
-            creatorsCount: agency._count.creators,
-            chattersCount: agency._count.chatters,
-            aiPersonalitiesCount: agency._count.aiPersonalities,
-            scriptsCount: agency._count.scripts,
-          },
-        };
+          // Chatter revenue (attributed)
+          const chatterRevenue = await prisma.chatterEarning.aggregate({
+            where: {
+              chatter: { agencyId: agency.id },
+              createdAt: { gte: thirtyDaysAgo },
+            },
+            _sum: { grossAmount: true },
+          });
+
+          // AI revenue (attributed)
+          const aiRevenue = await prisma.aiPersonalityEarning.aggregate({
+            where: {
+              aiPersonality: { agencyId: agency.id },
+              createdAt: { gte: thirtyDaysAgo },
+            },
+            _sum: { grossAmount: true },
+          });
+
+          return {
+            ...agency,
+            // Parse JSON fields safely
+            services: safeJsonParse(agency.services, []),
+            specialties: safeJsonParse(agency.specialties, []),
+            socialLinks: safeJsonParse(agency.socialLinks, {}),
+            portfolioImages: safeJsonParse(agency.portfolioImages, []),
+            languages: safeJsonParse(agency.languages, []),
+            stats: {
+              totalRevenue: totalRevenueAmount,
+              revenue30d: revenue30dAmount,
+              chatterRevenue30d: chatterRevenue._sum.grossAmount || 0,
+              aiRevenue30d: aiRevenue._sum.grossAmount || 0,
+              creatorsCount: agency._count.creators,
+              chattersCount: agency._count.chatters,
+              aiPersonalitiesCount: agency._count.aiPersonalities,
+              scriptsCount: agency._count.scripts,
+            },
+          };
+        } catch (agencyError: any) {
+          console.error(`Error processing agency ${agency.id}:`, agencyError?.message);
+          // Return agency with default stats on error
+          return {
+            ...agency,
+            services: safeJsonParse(agency.services, []),
+            specialties: safeJsonParse(agency.specialties, []),
+            socialLinks: safeJsonParse(agency.socialLinks, {}),
+            portfolioImages: safeJsonParse(agency.portfolioImages, []),
+            languages: safeJsonParse(agency.languages, []),
+            stats: {
+              totalRevenue: 0,
+              revenue30d: 0,
+              chatterRevenue30d: 0,
+              aiRevenue30d: 0,
+              creatorsCount: agency._count.creators,
+              chattersCount: agency._count.chatters,
+              aiPersonalitiesCount: agency._count.aiPersonalities,
+              scriptsCount: agency._count.scripts,
+            },
+          };
+        }
       })
     );
 
