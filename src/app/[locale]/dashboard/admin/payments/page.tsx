@@ -158,7 +158,7 @@ export default function AdminPaymentsPage() {
             <ArrowUpRight className="hidden sm:block w-4 h-4 text-emerald-400" />
           </div>
           <p className="text-lg sm:text-2xl font-bold text-[var(--foreground)] text-center sm:text-left">
-            ${stats.totalRevenue.toLocaleString()}
+            ${(stats.totalRevenue / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </p>
           <p className="text-xs sm:text-sm text-[var(--muted)] text-center sm:text-left">Revenue</p>
         </Card>
@@ -170,7 +170,7 @@ export default function AdminPaymentsPage() {
             <ArrowUpRight className="hidden sm:block w-4 h-4 text-blue-400" />
           </div>
           <p className="text-lg sm:text-2xl font-bold text-[var(--foreground)] text-center sm:text-left">
-            ${stats.subscriptionRevenue.toLocaleString()}
+            ${(stats.subscriptionRevenue / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </p>
           <p className="text-xs sm:text-sm text-[var(--muted)] text-center sm:text-left">Subs</p>
         </Card>
@@ -181,7 +181,7 @@ export default function AdminPaymentsPage() {
             </div>
           </div>
           <p className="text-lg sm:text-2xl font-bold text-[var(--foreground)] text-center sm:text-left">
-            ${(stats.tipsRevenue + stats.ppvRevenue).toLocaleString()}
+            ${((stats.tipsRevenue + stats.ppvRevenue) / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </p>
           <p className="text-xs sm:text-sm text-[var(--muted)] text-center sm:text-left">Tips/PPV</p>
         </Card>
@@ -262,10 +262,10 @@ export default function AdminPaymentsPage() {
                     </div>
                     <div>
                       <p className="font-semibold text-[var(--foreground)]">
-                        ${payment.amount.toFixed(2)}
+                        ${(payment.amount / 100).toFixed(2)}
                       </p>
                       <p className="text-[10px] text-[var(--muted)]">
-                        {payment.currency || "USD"}
+                        {payment.amount.toLocaleString()} credits
                       </p>
                     </div>
                   </div>
@@ -350,10 +350,10 @@ export default function AdminPaymentsPage() {
                       </td>
                       <td className="py-4 px-4">
                         <p className="font-semibold text-[var(--foreground)]">
-                          ${payment.amount.toFixed(2)}
+                          ${(payment.amount / 100).toFixed(2)}
                         </p>
                         <p className="text-xs text-[var(--muted)]">
-                          {payment.currency || "USD"}
+                          {payment.amount.toLocaleString()} credits
                         </p>
                       </td>
                       <td className="py-4 px-4">

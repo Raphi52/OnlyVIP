@@ -2,6 +2,8 @@
 
 Plateforme de contenu exclusif pour créateurs (alternative OnlyFans).
 
+**Note**: Cette session Claude est sur le VPS de production.
+
 ## Stack Technique
 
 - **Framework**: Next.js 16 (App Router, Turbopack)
@@ -81,7 +83,7 @@ Schema Prisma dans `prisma/schema.prisma`. Tables principales:
 
 ## Système de Crédits
 
-- Les utilisateurs achètent des crédits (€1 = 1 crédit)
+- Les utilisateurs achètent des crédits (100 crédits = $1)
 - Crédits utilisés pour: abonnements, PPV, tips
 - Créateurs reçoivent 95% (5% commission plateforme)
 - Premier mois: 0% commission pour nouveaux créateurs
