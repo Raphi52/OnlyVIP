@@ -569,34 +569,29 @@ export default function ChattersPage() {
   }
 
   return (
-    <div className="p-4 pt-20 sm:p-4 sm:pt-20 lg:p-8 lg:pt-8 space-y-3 sm:space-y-4 lg:space-y-6 overflow-x-hidden max-w-full w-full pb-28">
-      {/* Header - Compact on mobile */}
+    <div className="p-4 pt-20 sm:p-6 sm:pt-20 lg:p-8 lg:pt-8 space-y-4 overflow-hidden max-w-[100vw] pb-28">
+      {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex items-center justify-between gap-3"
+        className="flex items-center justify-between gap-3 min-w-0"
       >
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-purple-500 to-purple-700 flex items-center justify-center shadow-lg shadow-purple-500/25">
-            <Users className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-purple-700 flex items-center justify-center flex-shrink-0">
+            <Users className="w-5 h-5 text-white" />
           </div>
-          <div>
-            <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-white">
-              Chatters
-            </h1>
-            <p className="text-[10px] sm:text-xs text-gray-400">
-              {aggregateStats.activeChatters}/{aggregateStats.totalChatters} actifs
-            </p>
+          <div className="min-w-0">
+            <h1 className="text-lg sm:text-2xl font-bold text-white truncate">Chatters</h1>
+            <p className="text-xs text-gray-400">{aggregateStats.activeChatters}/{aggregateStats.totalChatters} actifs</p>
           </div>
         </div>
         <Button
           variant="premium"
           onClick={openCreateModal}
-          className="gap-1.5 text-xs sm:text-sm px-3 py-2 sm:px-4 sm:py-2.5"
+          className="gap-1.5 text-sm px-4 py-2.5 flex-shrink-0"
         >
           <Plus className="w-4 h-4" />
-          <span className="hidden sm:inline">Add Chatter</span>
-          <span className="sm:hidden">Add</span>
+          <span className="hidden sm:inline">Add</span>
         </Button>
       </motion.div>
 
@@ -673,13 +668,14 @@ export default function ChattersPage() {
       </motion.div>
 
       {/* Tab Content */}
+      <div className="overflow-hidden min-w-0">
       <AnimatePresence mode="wait">
         {activeTab === "all" && (
           <motion.div
             key="all"
-            initial={{ opacity: 0, x: 10 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -10 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
             className="space-y-4"
           >
             {/* Search */}
@@ -1681,6 +1677,7 @@ export default function ChattersPage() {
           </motion.div>
         )}
       </AnimatePresence>
+      </div>
 
       {/* Detail Modal - Bottom sheet on mobile */}
       <AnimatePresence>
