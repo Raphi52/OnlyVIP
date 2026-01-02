@@ -103,18 +103,25 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Revenue share must be between 5% and 95%" }, { status: 400 });
     }
 
-    const listing = await prisma.modelListing.create({
-      data: {
-        creatorId: creator.id,
-        bio: bio || null,
-        photos: photos || [],
-        socialLinks: JSON.stringify(socialLinks || {}),
-        tags: tags || [],
-        revenueShare: share,
-        chattingEnabled: chattingEnabled !== false,
-        isActive: true,
-      },
-    });
+    // Create listing and update creator visibility in a transaction
+    const [listing] = await prisma.$transaction([
+      prisma.modelListing.create({
+        data: {
+          creatorId: creator.id,
+          bio: bio || null,
+          photos: photos || [],
+          socialLinks: JSON.stringify(socialLinks || {}),
+          tags: tags || [],
+          revenueShare: share,
+          chattingEnabled: chattingEnabled !== false,
+          isActive: true,
+        },
+      }),
+      prisma.creator.update({
+        where: { id: creator.id },
+        data: { isListed: true, lookingForAgency: true },
+      }),
+    ]);
 
     return NextResponse.json({ listing }, { status: 201 });
   } catch (error) {
@@ -231,9 +238,16 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "No listing found for this creator" }, { status: 404 });
     }
 
-    await prisma.modelListing.delete({
-      where: { id: creator.modelListing.id },
-    });
+    // Delete listing and update creator visibility
+    await prisma.$transaction([
+      prisma.modelListing.delete({
+        where: { id: creator.modelListing.id },
+      }),
+      prisma.creator.update({
+        where: { id: creator.id },
+        data: { isListed: false, lookingForAgency: false },
+      }),
+    ]);
 
     return NextResponse.json({ success: true });
   } catch (error) {

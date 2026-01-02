@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict N4U4zHa4raIZDCBBIjF9OAKDZXYhRAgIVM7dxVkspVuxDuTvgdtMZyqfIgaxrqe
+\restrict Fh8aBJBNdnJA5nhITUhNf1SqUsRbSOokk02xiNsqlUdXNLF24ah7kTwTKOuE2zf
 
 -- Dumped from database version 16.11
 -- Dumped by pg_dump version 16.11
@@ -113,7 +113,12 @@ CREATE TABLE public."Agency" (
     "yearsInBusiness" integer,
     "pendingBalance" double precision DEFAULT 0 NOT NULL,
     "totalEarned" double precision DEFAULT 0 NOT NULL,
-    "totalPaid" double precision DEFAULT 0 NOT NULL
+    "totalPaid" double precision DEFAULT 0 NOT NULL,
+    "aiProvider" text DEFAULT 'anthropic'::text,
+    "aiModel" text DEFAULT 'claude-haiku-4-5-20241022'::text,
+    "aiApiKey" text,
+    "aiApiKeyHash" text,
+    "aiUseCustomKey" boolean DEFAULT false
 );
 
 
@@ -478,7 +483,14 @@ CREATE TABLE public."Creator" (
     "aiMediaEnabled" boolean DEFAULT true NOT NULL,
     "aiMediaFrequency" integer DEFAULT 4 NOT NULL,
     "aiPPVRatio" integer DEFAULT 30 NOT NULL,
-    "aiTeasingEnabled" boolean DEFAULT true NOT NULL
+    "aiTeasingEnabled" boolean DEFAULT true NOT NULL,
+    "aiProvider" text DEFAULT 'anthropic'::text,
+    "aiModel" text DEFAULT 'claude-haiku-4-5-20241022'::text,
+    "aiApiKey" text,
+    "aiApiKeyHash" text,
+    "aiUseCustomKey" boolean DEFAULT false,
+    "isListed" boolean DEFAULT false,
+    "lookingForAgency" boolean DEFAULT false
 );
 
 
@@ -762,7 +774,7 @@ CREATE TABLE public."ModelListing" (
     "reviewCount" integer DEFAULT 0 NOT NULL,
     "isActive" boolean DEFAULT true NOT NULL,
     "createdAt" timestamp(3) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    "updatedAt" timestamp(3) without time zone NOT NULL
+    "updatedAt" timestamp(3) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
 
@@ -1149,10 +1161,10 @@ COPY public."AccountingQueue" (id, payload, status, attempts, "maxAttempts", "la
 -- Data for Name: Agency; Type: TABLE DATA; Schema: public; Owner: viponly
 --
 
-COPY public."Agency" (id, name, slug, "ownerId", "aiEnabled", "platformFee", status, "totalRevenue", "createdAt", "updatedAt", logo, description, "publicVisible", "averageRating", "reviewCount", website, tagline, services, specialties, "minRevenueShare", "maxRevenueShare", "socialLinks", "portfolioImages", location, languages, "yearsInBusiness", "pendingBalance", "totalEarned", "totalPaid") FROM stdin;
-cmjrkebo40007vdmsh4a4hc7u	LVM	lvm	cmjojjvac001iuzc2514iyrs8	f	0.1	ACTIVE	0	2025-12-29 19:42:01.877	2025-12-29 19:42:01.877	\N	\N	t	0	0	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	0	0	0
-cmjr8o7yl0018i3mmy7gwlcub	jeff agency	jeff-agency	cmjr8d46c0009i3mmu90d6k3a	f	0.1	ACTIVE	0	2025-12-29 14:13:48.237	2025-12-29 23:10:58.042	\N	\N	t	0	0	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	0	0	0
-cmjr5g2e70001j3u415qpk7o2	Viral Studio Agency	viral-studio-agency	cmjoj4cpm000quzc2ow1u2d57	t	0.1	ACTIVE	29.918931	2025-12-29 12:43:28.927	2026-01-01 15:41:04.257	/uploads/avatar/bdbc6aaaf00b8595362108431aac67ca.jpg	\N	t	0	0	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	29.918931	29.918931	0
+COPY public."Agency" (id, name, slug, "ownerId", "aiEnabled", "platformFee", status, "totalRevenue", "createdAt", "updatedAt", logo, description, "publicVisible", "averageRating", "reviewCount", website, tagline, services, specialties, "minRevenueShare", "maxRevenueShare", "socialLinks", "portfolioImages", location, languages, "yearsInBusiness", "pendingBalance", "totalEarned", "totalPaid", "aiProvider", "aiModel", "aiApiKey", "aiApiKeyHash", "aiUseCustomKey") FROM stdin;
+cmjrkebo40007vdmsh4a4hc7u	LVM	lvm	cmjojjvac001iuzc2514iyrs8	f	0.1	ACTIVE	0	2025-12-29 19:42:01.877	2025-12-29 19:42:01.877	\N	\N	t	0	0	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	0	0	0	anthropic	claude-haiku-4-5-20241022	\N	\N	f
+cmjr8o7yl0018i3mmy7gwlcub	jeff agency	jeff-agency	cmjr8d46c0009i3mmu90d6k3a	f	0.1	ACTIVE	0	2025-12-29 14:13:48.237	2025-12-29 23:10:58.042	\N	\N	t	0	0	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	0	0	0	anthropic	claude-haiku-4-5-20241022	\N	\N	f
+cmjr5g2e70001j3u415qpk7o2	Viral Studio Agency	viral-studio-agency	cmjoj4cpm000quzc2ow1u2d57	t	0.1	ACTIVE	29.918931	2025-12-29 12:43:28.927	2026-01-01 15:41:04.257	/uploads/avatar/bdbc6aaaf00b8595362108431aac67ca.jpg	\N	t	0	0	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	29.918931	29.918931	0	anthropic	claude-haiku-4-5-20241022	\N	\N	f
 \.
 
 
@@ -1313,8 +1325,8 @@ cmjonqoky000f3wixtqaj136i	cmjonqoky000d3wixhoki89w3	cmjoj4cpm000quzc2ow1u2d57	20
 -- Data for Name: Creator; Type: TABLE DATA; Schema: public; Owner: viponly
 --
 
-COPY public."Creator" (id, slug, name, "displayName", avatar, "cardImage", "coverImage", bio, "userId", "socialLinks", theme, "walletEth", "walletBtc", "photoCount", "videoCount", "subscriberCount", "isActive", "sortOrder", "aiEnabled", "aiPersonality", "aiResponseDelay", "aiLastActive", "createdAt", "updatedAt", "pendingBalance", "totalEarned", "totalPaid", categories, "agencyId", "aiMediaEnabled", "aiMediaFrequency", "aiPPVRatio", "aiTeasingEnabled") FROM stdin;
-creator1	miacosta	Mia Costa	Mia Costa	/uploads/avatar/1ada6c0dbec69879472ab2eab3d35b9d.jpg	/uploads/media/e4fc30ad5a727a3bb34917c75876c7ad.jpg	/uploads/media/18041315e666de6f50028a06ce904f9b.jpg	Welcome to my exclusive content. Join my VIP for the full experience.	cmjoj4cpm000quzc2ow1u2d57	{"instagram":"https://instagram.com/miacosta","twitter":null,"tiktok":null}	{}	0x08675E75D3AA250cEC863D59bF2b708Ad8a3cDcE	bc1qf9lrv05g6y9saz2y7ptepkt7zr7gwkruz87te4	450	25	2500	t	0	f	{"name":"Mia Costa","age":24,"traits":["flirty","playful","teasing","caring","bold","romantic"],"interests":["fitness","travel","cooking","yoga","dancing","nature","reading"],"style":"casual_sexy","language":"en","customPrompt":"Avoid Perfect AI like sentences, make sure you look human and unperfect","mediaKeywords":{"sexy":["hot","nude","naked","explicit","naughty","spicy","pics","photos","show me","see you","uncensored","wild","dirty","horny"],"fitness":["workout","gym","sport","exercise","fit","body","abs","muscles","training","sweat","yoga","stretching"],"lingerie":["lingerie","underwear","bra","panties","sexy outfit","lace","thong","corset","stockings","garter"],"beach":["beach","bikini","pool","swim","tan","summer","vacation","tropical","sun","water"],"casual":["selfie","daily","lifestyle","chill","relax","cute","morning","night","bed","cozy"],"cosplay":["cosplay","costume","anime","character","roleplay","fantasy","dress up","halloween"],"outdoor":["outdoor","nature","forest","park","hiking","adventure","outside","garden"],"shower":["shower","bath","wet","water","soap","bubbles","bathroom","towel","steam"],"mirror":["mirror","reflection","selfie","bathroom","dressing room","fitting room"],"feet":["feet","toes","foot","soles","pedicure","barefoot","heels","shoes"],"ass":["ass","booty","butt","behind","back","twerk","booty pics"],"boobs":["boobs","tits","chest","cleavage","topless","braless","breasts"],"face":["face","smile","eyes","lips","kiss","tongue","wink","expression"],"video":["video","clip","watch","motion","moving","action","live"],"exclusive":["exclusive","special","private","vip","premium","rare","limited"]}}	30	2025-12-28 19:25:32.791	2025-12-27 15:54:48.557	2026-01-01 15:41:04.243	31.180968999999997	31.180968999999997	0	["curvy", "latina"]	cmjr5g2e70001j3u415qpk7o2	t	4	30	t
+COPY public."Creator" (id, slug, name, "displayName", avatar, "cardImage", "coverImage", bio, "userId", "socialLinks", theme, "walletEth", "walletBtc", "photoCount", "videoCount", "subscriberCount", "isActive", "sortOrder", "aiEnabled", "aiPersonality", "aiResponseDelay", "aiLastActive", "createdAt", "updatedAt", "pendingBalance", "totalEarned", "totalPaid", categories, "agencyId", "aiMediaEnabled", "aiMediaFrequency", "aiPPVRatio", "aiTeasingEnabled", "aiProvider", "aiModel", "aiApiKey", "aiApiKeyHash", "aiUseCustomKey", "isListed", "lookingForAgency") FROM stdin;
+creator1	miacosta	Mia Costa	Mia Costa	/uploads/avatar/1ada6c0dbec69879472ab2eab3d35b9d.jpg	/uploads/media/e4fc30ad5a727a3bb34917c75876c7ad.jpg	/uploads/media/18041315e666de6f50028a06ce904f9b.jpg	Welcome to my exclusive content. Join my VIP for the full experience.	cmjoj4cpm000quzc2ow1u2d57	{"instagram":"https://instagram.com/miacosta","twitter":null,"tiktok":null}	{}	0x08675E75D3AA250cEC863D59bF2b708Ad8a3cDcE	bc1qf9lrv05g6y9saz2y7ptepkt7zr7gwkruz87te4	450	25	2500	t	0	f	{"name":"Mia Costa","age":24,"traits":["flirty","playful","teasing","caring","bold","romantic"],"interests":["fitness","travel","cooking","yoga","dancing","nature","reading"],"style":"casual_sexy","language":"en","customPrompt":"Avoid Perfect AI like sentences, make sure you look human and unperfect","mediaKeywords":{"sexy":["hot","nude","naked","explicit","naughty","spicy","pics","photos","show me","see you","uncensored","wild","dirty","horny"],"fitness":["workout","gym","sport","exercise","fit","body","abs","muscles","training","sweat","yoga","stretching"],"lingerie":["lingerie","underwear","bra","panties","sexy outfit","lace","thong","corset","stockings","garter"],"beach":["beach","bikini","pool","swim","tan","summer","vacation","tropical","sun","water"],"casual":["selfie","daily","lifestyle","chill","relax","cute","morning","night","bed","cozy"],"cosplay":["cosplay","costume","anime","character","roleplay","fantasy","dress up","halloween"],"outdoor":["outdoor","nature","forest","park","hiking","adventure","outside","garden"],"shower":["shower","bath","wet","water","soap","bubbles","bathroom","towel","steam"],"mirror":["mirror","reflection","selfie","bathroom","dressing room","fitting room"],"feet":["feet","toes","foot","soles","pedicure","barefoot","heels","shoes"],"ass":["ass","booty","butt","behind","back","twerk","booty pics"],"boobs":["boobs","tits","chest","cleavage","topless","braless","breasts"],"face":["face","smile","eyes","lips","kiss","tongue","wink","expression"],"video":["video","clip","watch","motion","moving","action","live"],"exclusive":["exclusive","special","private","vip","premium","rare","limited"]}}	30	2025-12-28 19:25:32.791	2025-12-27 15:54:48.557	2026-01-01 15:41:04.243	31.180968999999997	31.180968999999997	0	["curvy", "latina"]	cmjr5g2e70001j3u415qpk7o2	t	4	30	t	anthropic	claude-haiku-4-5-20241022	\N	\N	f	f	f
 \.
 
 
@@ -4038,6 +4050,36 @@ cmjwo9jyi000c13jt2aka4ylf	/fr/dashboard/find-creator	\N	v_1766804038091_cp6wd3qh
 cmjwo9m15000d13jthw3gv2n0	/fr	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767345519645_15y0cvwkbjw	2026-01-02 09:29:11.369
 cmjwo9qq3000e13jto26whxju	/fr/blog	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767345519645_15y0cvwkbjw	2026-01-02 09:29:17.45
 cmjwo9vtu000f13jtnobm6l5a	/fr	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767345519645_15y0cvwkbjw	2026-01-02 09:29:24.066
+cmjwoxtf8000011v8aoxsdqjw	/fr	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767345519645_15y0cvwkbjw	2026-01-02 09:48:00.692
+cmjwpaxs2000111v8jaqel1eh	/fr	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767347892857_qddbwwxhi3	2026-01-02 09:58:12.867
+cmjwpbjmz000211v8dfmf3re2	/fr/dashboard/find-creator	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767347892857_qddbwwxhi3	2026-01-02 09:58:41.177
+cmjwpc1fx000311v8v69ffhld	/fr	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767347892857_qddbwwxhi3	2026-01-02 09:59:04.269
+cmjwpdi6z000411v8lmlvsl9i	/fr/dashboard/find-agency	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767347892857_qddbwwxhi3	2026-01-02 10:00:12.635
+cmjwpdki5000511v8xlzf5zdb	/fr/dashboard/find-agency/my-listing	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767347892857_qddbwwxhi3	2026-01-02 10:00:15.629
+cmjwpe3kc000611v8jn99n4wy	/fr/dashboard/find-creator	https://viponly.fun/dashboard	v_1766804955115_r25kzpvto1	cmjojjvac001iuzc2514iyrs8	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767348039593_cmzabvn6mal	2026-01-02 10:00:40.332
+cmjwpe7s4000711v8rjz2ssd9	/fr/dashboard/find-agency	https://viponly.fun/dashboard	v_1766804955115_r25kzpvto1	cmjojjvac001iuzc2514iyrs8	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767348039593_cmzabvn6mal	2026-01-02 10:00:45.796
+cmjwpeeqm000811v8lbqoti44	/fr/dashboard/find-agency/my-listing	https://viponly.fun/dashboard	v_1766804955115_r25kzpvto1	cmjojjvac001iuzc2514iyrs8	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767348039593_cmzabvn6mal	2026-01-02 10:00:54.814
+cmjwpehmy000911v8amwpj0q6	/fr/dashboard/find-agency	https://viponly.fun/dashboard	v_1766804955115_r25kzpvto1	cmjojjvac001iuzc2514iyrs8	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767348039593_cmzabvn6mal	2026-01-02 10:00:58.57
+cmjwpejyf000a11v8ytd84k7h	/fr/dashboard/agency/creators	https://viponly.fun/dashboard	v_1766804955115_r25kzpvto1	cmjojjvac001iuzc2514iyrs8	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767348039593_cmzabvn6mal	2026-01-02 10:01:01.575
+cmjwpmz6o000b11v869225gfs	/fr	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767347892857_qddbwwxhi3	2026-01-02 10:07:34.56
+cmjwpn4by000c11v8wliu4qma	/zh	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767347892857_qddbwwxhi3	2026-01-02 10:07:41.23
+cmjwpx5aa0000jvyn029sdy5j	/fr	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767347892857_qddbwwxhi3	2026-01-02 10:15:29.026
+cmjwpx9om0001jvyn04owur3m	/fr/dashboard/become-agency	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767347892857_qddbwwxhi3	2026-01-02 10:15:34.726
+cmjwpx9yw0002jvynmf3nw0xy	/fr/dashboard/agency	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767347892857_qddbwwxhi3	2026-01-02 10:15:35.097
+cmjwpxdmv0003jvyn6w8opoqp	/fr/dashboard/become-agency	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767347892857_qddbwwxhi3	2026-01-02 10:15:39.847
+cmjwpxdqf0004jvynbcu11od4	/fr/dashboard/agency	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767347892857_qddbwwxhi3	2026-01-02 10:15:39.976
+cmjwpxr1t0005jvyn9x51xw8h	/fr/dashboard/find-agency	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767347892857_qddbwwxhi3	2026-01-02 10:15:57.234
+cmjwpxsan0006jvyn2zrkmwx5	/fr/dashboard/find-agency/my-listing	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767347892857_qddbwwxhi3	2026-01-02 10:15:58.847
+cmjwqx60t0007jvynb59w5baq	/fr/dashboard/admin/creators	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767350609588_89nlgxhbwgf	2026-01-02 10:43:29.597
+cmjwqxhgy0008jvynyuxaanp4	/fr	https://viponly.fun/fr/dashboard/agency/creators	v_1766804955115_r25kzpvto1	cmjojjvac001iuzc2514iyrs8	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767350624041_6j9qcsme82q	2026-01-02 10:43:44.435
+cmjwqxqwm0009jvynp492ixv5	/fr/dashboard/become-agency	https://viponly.fun/fr/dashboard/agency/creators	v_1766804955115_r25kzpvto1	cmjojjvac001iuzc2514iyrs8	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767350624041_6j9qcsme82q	2026-01-02 10:43:56.662
+cmjwqxrca000ajvyn4f6tzent	/fr/dashboard/agency	https://viponly.fun/fr/dashboard/agency/creators	v_1766804955115_r25kzpvto1	cmjojjvac001iuzc2514iyrs8	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767350624041_6j9qcsme82q	2026-01-02 10:43:57.226
+cmjwqy2y2000bjvynpl5tules	/fr/dashboard/become-agency	https://viponly.fun/fr/dashboard/agency/creators	v_1766804955115_r25kzpvto1	cmjojjvac001iuzc2514iyrs8	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767350624041_6j9qcsme82q	2026-01-02 10:44:12.266
+cmjwqy31h000cjvyn1vhgrpt6	/fr/dashboard/agency	https://viponly.fun/fr/dashboard/agency/creators	v_1766804955115_r25kzpvto1	cmjojjvac001iuzc2514iyrs8	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767350624041_6j9qcsme82q	2026-01-02 10:44:12.39
+cmjwqy57u000djvyn8rgixps4	/fr/dashboard/find-creator	https://viponly.fun/fr/dashboard/agency/creators	v_1766804955115_r25kzpvto1	cmjojjvac001iuzc2514iyrs8	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767350624041_6j9qcsme82q	2026-01-02 10:44:15.21
+cmjwqy7uk000ejvyn6g559jzj	/fr/dashboard/find-agency	https://viponly.fun/fr/dashboard/agency/creators	v_1766804955115_r25kzpvto1	cmjojjvac001iuzc2514iyrs8	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767350624041_6j9qcsme82q	2026-01-02 10:44:18.62
+cmjwqyaoc000fjvyn1fl1cz02	/fr/dashboard/find-creator	https://viponly.fun/fr/dashboard/agency/creators	v_1766804955115_r25kzpvto1	cmjojjvac001iuzc2514iyrs8	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767350624041_6j9qcsme82q	2026-01-02 10:44:22.284
+cmjwqybrg000gjvynd1q6rm5p	/fr/dashboard/find-creator	https://viponly.fun/fr/dashboard/agency/creators	v_1766804955115_r25kzpvto1	cmjojjvac001iuzc2514iyrs8	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767350624041_6j9qcsme82q	2026-01-02 10:44:23.692
 \.
 
 
@@ -5866,5 +5908,5 @@ REVOKE USAGE ON SCHEMA public FROM PUBLIC;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict N4U4zHa4raIZDCBBIjF9OAKDZXYhRAgIVM7dxVkspVuxDuTvgdtMZyqfIgaxrqe
+\unrestrict Fh8aBJBNdnJA5nhITUhNf1SqUsRbSOokk02xiNsqlUdXNLF24ah7kTwTKOuE2zf
 
