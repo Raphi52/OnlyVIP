@@ -103,7 +103,7 @@ export default function PerformancePage() {
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-US", {
       style: "currency",
-      currency: "EUR",
+      currency: "USD",
       minimumFractionDigits: 0,
     }).format(amount);
   };
