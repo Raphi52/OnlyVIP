@@ -71,7 +71,7 @@ export default function AgencyCreatorsPage() {
 
   useEffect(() => {
     if (status === "authenticated" && !isAgencyOwner) {
-      router.push("/dashboard/become-agency");
+      router.push("/dashboard/agency");
     }
   }, [status, isAgencyOwner, router]);
 

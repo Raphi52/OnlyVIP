@@ -220,7 +220,7 @@ export default function AgencyMyListingPage() {
         <Card variant="luxury" className="p-8 text-center max-w-md">
           <h2 className="text-xl font-bold text-[var(--foreground)] mb-2">No Agency Found</h2>
           <p className="text-[var(--muted)]">You need to create an agency first.</p>
-          <Link href="/dashboard/become-agency">
+          <Link href="/dashboard/agency">
             <Button variant="premium" className="mt-4">Create Agency</Button>
           </Link>
         </Card>

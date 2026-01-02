@@ -509,7 +509,7 @@ export function Sidebar() {
             className="mt-4"
           >
             <Link
-              href="/dashboard/become-agency"
+              href="/dashboard/agency"
               onClick={() => setIsMobileOpen(false)}
               className="flex items-center gap-3 px-4 py-3 rounded-xl bg-gradient-to-r from-purple-500/20 to-purple-500/5 text-purple-400 border border-purple-500/30 hover:border-purple-500/50 transition-all duration-300"
             >

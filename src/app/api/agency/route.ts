@@ -167,10 +167,34 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json({ agency }, { status: 201 });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error creating agency:", error);
+
+    // Handle Prisma unique constraint errors
+    if (error?.code === "P2002") {
+      const field = error?.meta?.target?.[0] || "field";
+      if (field === "slug") {
+        return NextResponse.json(
+          { error: "An agency with this name already exists" },
+          { status: 400 }
+        );
+      }
+      return NextResponse.json(
+        { error: `A unique constraint was violated on: ${field}` },
+        { status: 400 }
+      );
+    }
+
+    // Handle other Prisma errors
+    if (error?.code?.startsWith("P")) {
+      return NextResponse.json(
+        { error: `Database error: ${error.message || "Unknown error"}` },
+        { status: 500 }
+      );
+    }
+
     return NextResponse.json(
-      { error: "Failed to create agency" },
+      { error: error?.message || "Failed to create agency" },
       { status: 500 }
     );
   }

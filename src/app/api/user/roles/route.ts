@@ -134,7 +134,7 @@ export async function PATCH(request: NextRequest) {
         return NextResponse.json({
           success: true,
           message: "Agency mode enabled",
-          redirectTo: "/dashboard/become-agency"
+          redirectTo: "/dashboard/agency"
         });
       }
 

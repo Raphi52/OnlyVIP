@@ -456,7 +456,7 @@ export function Footer({ creatorSlug = "miacosta", creatorName, showPlatformLink
     ],
     forAgencies: [
       { href: `/${locale}/for-agencies`, label: t.agencyPlatform },
-      { href: `/${locale}/dashboard/become-agency`, label: t.agencyDashboard },
+      { href: `/${locale}/dashboard/agency`, label: t.agencyDashboard },
       { href: `/${locale}/dashboard/agency`, label: t.agencyAnalytics },
     ],
     connect: [

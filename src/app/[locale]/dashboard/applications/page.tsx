@@ -795,7 +795,7 @@ export default function ApplicationsPage() {
                   <p className="text-sm text-gray-400 mb-3">
                     Create an agency to browse and contact creators
                   </p>
-                  <Link href="/dashboard/become-agency">
+                  <Link href="/dashboard/agency">
                     <Button
                       variant="outline"
                       size="sm"

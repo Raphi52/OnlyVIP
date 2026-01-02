@@ -586,7 +586,7 @@ export default function HomePage() {
                     ))}
                   </div>
 
-                  <Link href={`/${locale}/dashboard/become-agency`} className="block">
+                  <Link href={`/${locale}/dashboard/agency`} className="block">
                     <Button variant="default" size="lg" className="w-full gap-2 bg-purple-500 hover:bg-purple-600">
                       {t("home.joinAsAgency")}
                       <ArrowRight className="w-5 h-5" />

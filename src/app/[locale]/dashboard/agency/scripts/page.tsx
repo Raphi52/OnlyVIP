@@ -474,63 +474,46 @@ export default function ScriptsPage() {
   }
 
   return (
-    <div className="p-3 pt-20 sm:p-6 sm:pt-20 lg:p-8 lg:pt-8 pb-24 pb-safe overflow-x-hidden max-w-full">
-      {/* Header */}
+    <div className="p-4 pt-20 sm:p-6 sm:pt-20 lg:p-8 lg:pt-8 pb-28 pb-safe overflow-x-hidden max-w-full">
+      {/* Header - Mobile Optimized */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col gap-4 mb-6"
+        className="flex flex-col gap-4 mb-5"
       >
-        <div className="flex items-start justify-between">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center">
-                <FileText className="w-4 h-4 text-white" />
-              </div>
-              <h1 className="text-xl sm:text-2xl font-bold text-white">
-                Scripts Library
-              </h1>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center flex-shrink-0">
+              <FileText className="w-5 h-5 text-white" />
             </div>
-            <p className="text-sm text-gray-400">
-              {scripts.length} scripts • {folders.length} folders
-            </p>
+            <div>
+              <h1 className="text-lg sm:text-2xl font-bold text-white">
+                Scripts
+              </h1>
+              <p className="text-xs sm:text-sm text-gray-400">
+                {scripts.length} scripts
+              </p>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => {
-                setEditingFolder(null);
-                setFolderName("");
-                setFolderColor("#8b5cf6");
-                setFolderIcon("📁");
-                setShowFolderModal(true);
-              }}
-              className="hidden sm:flex w-10 h-10 rounded-xl bg-white/5 border border-white/10 text-gray-400 items-center justify-center hover:bg-white/10 transition-colors"
-            >
-              <FolderPlus className="w-5 h-5" />
-            </motion.button>
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={openCreateModal}
-              className="w-11 h-11 sm:w-auto sm:h-auto sm:px-4 sm:py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 text-white font-medium shadow-lg shadow-purple-500/25 flex items-center justify-center gap-2 touch-manipulation active:shadow-none"
-            >
-              <Plus className="w-5 h-5" />
-              <span className="hidden sm:inline">Add Script</span>
-            </motion.button>
-          </div>
+          <motion.button
+            whileTap={{ scale: 0.95 }}
+            onClick={openCreateModal}
+            className="h-11 px-4 sm:px-5 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 text-white font-medium shadow-lg shadow-purple-500/25 flex items-center justify-center gap-2 touch-manipulation active:scale-95"
+          >
+            <Plus className="w-5 h-5" />
+            <span className="hidden xs:inline">Add</span>
+          </motion.button>
         </div>
 
-        {/* Tabs */}
-        <div className="flex gap-2 border-b border-white/10 -mx-3 px-3 sm:mx-0 sm:px-0 overflow-x-auto scrollbar-hide">
+        {/* Tabs - Mobile Optimized */}
+        <div className="flex gap-1 -mx-4 px-4 sm:mx-0 sm:px-0 overflow-x-auto scrollbar-hide">
           <button
             onClick={() => setActiveTab("all")}
             className={cn(
-              "px-3 sm:px-4 py-2.5 text-sm font-medium border-b-2 transition-all -mb-[1px] whitespace-nowrap flex-shrink-0",
+              "px-4 py-2.5 text-sm font-medium rounded-full transition-all whitespace-nowrap flex-shrink-0 touch-manipulation",
               activeTab === "all"
-                ? "border-purple-500 text-white"
-                : "border-transparent text-gray-400 hover:text-gray-300"
+                ? "bg-purple-500/20 text-purple-400"
+                : "text-gray-400 hover:text-gray-300 active:bg-white/5"
             )}
           >
             All
@@ -538,16 +521,15 @@ export default function ScriptsPage() {
           <button
             onClick={() => setActiveTab("pending")}
             className={cn(
-              "px-3 sm:px-4 py-2.5 text-sm font-medium border-b-2 transition-all -mb-[1px] flex items-center gap-1.5 sm:gap-2 whitespace-nowrap flex-shrink-0",
+              "px-4 py-2.5 text-sm font-medium rounded-full transition-all flex items-center gap-1.5 whitespace-nowrap flex-shrink-0 touch-manipulation",
               activeTab === "pending"
-                ? "border-yellow-500 text-white"
-                : "border-transparent text-gray-400 hover:text-gray-300"
+                ? "bg-yellow-500/20 text-yellow-400"
+                : "text-gray-400 hover:text-gray-300 active:bg-white/5"
             )}
           >
-            <span className="hidden sm:inline">Pending</span>
-            <span className="sm:hidden">Review</span>
+            Review
             {pendingCount > 0 && (
-              <span className="px-1.5 py-0.5 rounded-full text-xs bg-yellow-500/20 text-yellow-400">
+              <span className="px-1.5 py-0.5 rounded-full text-xs bg-yellow-500/30 text-yellow-400">
                 {pendingCount}
               </span>
             )}
@@ -555,14 +537,14 @@ export default function ScriptsPage() {
           <button
             onClick={() => setActiveTab("favorites")}
             className={cn(
-              "px-3 sm:px-4 py-2.5 text-sm font-medium border-b-2 transition-all -mb-[1px] flex items-center gap-1.5 whitespace-nowrap flex-shrink-0",
+              "px-4 py-2.5 text-sm font-medium rounded-full transition-all flex items-center gap-1.5 whitespace-nowrap flex-shrink-0 touch-manipulation",
               activeTab === "favorites"
-                ? "border-pink-500 text-white"
-                : "border-transparent text-gray-400 hover:text-gray-300"
+                ? "bg-pink-500/20 text-pink-400"
+                : "text-gray-400 hover:text-gray-300 active:bg-white/5"
             )}
           >
-            <Star className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Favorites</span>
+            <Star className="w-4 h-4" />
+            Favs
           </button>
         </div>
 
@@ -573,23 +555,22 @@ export default function ScriptsPage() {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search scripts..."
-            className="w-full pl-10 pr-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder:text-gray-500 focus:outline-none focus:border-purple-500/50 focus:bg-white/10 transition-all"
+            placeholder="Search..."
+            className="w-full pl-10 pr-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder:text-gray-500 focus:outline-none focus:border-purple-500/50 focus:bg-white/10 transition-all text-base"
           />
         </div>
 
-        {/* Category Pills */}
-        <div className="flex gap-2 overflow-x-auto pb-2 -mx-3 px-3 sm:mx-0 sm:px-0 scrollbar-hide snap-x snap-mandatory touch-pan-x">
+        {/* Category Pills - Mobile Optimized */}
+        <div className="flex gap-2 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-hide snap-x">
           <button
             onClick={() => setFilterCategory(null)}
             className={cn(
-              "px-3.5 py-2.5 rounded-full text-sm font-medium transition-all whitespace-nowrap flex-shrink-0 flex items-center gap-1.5 snap-start touch-manipulation",
+              "h-9 px-3 rounded-full text-sm font-medium transition-all whitespace-nowrap flex-shrink-0 flex items-center gap-1.5 snap-start touch-manipulation active:scale-95",
               !filterCategory
-                ? "bg-white text-black shadow-lg"
-                : "bg-white/5 text-gray-400 hover:bg-white/10 active:bg-white/15"
+                ? "bg-white text-black"
+                : "bg-white/5 text-gray-400 active:bg-white/10"
             )}
           >
-            <Sparkles className="w-3.5 h-3.5" />
             All
           </button>
           {CATEGORIES.map((cat) => (
@@ -597,14 +578,14 @@ export default function ScriptsPage() {
               key={cat.value}
               onClick={() => setFilterCategory(cat.value)}
               className={cn(
-                "px-3.5 py-2.5 rounded-full text-sm font-medium transition-all whitespace-nowrap flex-shrink-0 flex items-center gap-1.5 snap-start touch-manipulation",
+                "h-9 px-3 rounded-full text-sm font-medium transition-all whitespace-nowrap flex-shrink-0 flex items-center gap-1 snap-start touch-manipulation active:scale-95",
                 filterCategory === cat.value
-                  ? `${cat.bg} ${cat.color} ${cat.border} border`
-                  : "bg-white/5 text-gray-400 hover:bg-white/10 active:bg-white/15"
+                  ? `${cat.bg} ${cat.color}`
+                  : "bg-white/5 text-gray-400 active:bg-white/10"
               )}
             >
               <span>{cat.icon}</span>
-              {cat.label}
+              <span className="hidden sm:inline">{cat.label}</span>
             </button>
           ))}
         </div>
@@ -735,7 +716,7 @@ export default function ScriptsPage() {
               )}
             </motion.div>
           ) : (
-            <div className="space-y-3 overflow-hidden">
+            <div className="space-y-3">
               {scripts.map((script, index) => {
                 const catInfo = getCategoryInfo(script.category);
                 const isCopied = copiedId === script.id;
@@ -745,100 +726,74 @@ export default function ScriptsPage() {
                 return (
                   <motion.div
                     key={script.id}
-                    initial={{ opacity: 0, y: 20 }}
+                    initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.03 }}
-                    className="group"
+                    transition={{ delay: index * 0.02 }}
                   >
                     <div className={cn(
-                      "relative bg-white/5 backdrop-blur-sm border rounded-2xl p-3 sm:p-4 hover:bg-white/[0.07] transition-all overflow-hidden",
-                      script.status === "PENDING" ? "border-yellow-500/30" : "border-white/10 hover:border-white/20"
+                      "relative bg-white/5 border rounded-2xl p-4 active:bg-white/[0.07] transition-all",
+                      script.status === "PENDING" ? "border-yellow-500/30" : "border-white/10"
                     )}>
-                      {/* Header */}
-                      <div className="flex items-start justify-between gap-2 sm:gap-3 mb-3">
+                      {/* Mobile-first Header */}
+                      <div className="flex items-start justify-between gap-3 mb-2">
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap mb-1.5">
-                            <span className={cn(
-                              "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium",
-                              catInfo.bg, catInfo.color
-                            )}>
-                              <span>{catInfo.icon}</span>
-                              <span className="hidden sm:inline">{catInfo.label}</span>
-                            </span>
-                            {script.status !== "APPROVED" && (
-                              <span className={cn(
-                                "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium",
-                                statusStyle.bg, statusStyle.color
-                              )}>
-                                <StatusIcon className="w-3 h-3" />
-                                <span className="hidden sm:inline">{script.status}</span>
-                              </span>
-                            )}
-                            {script.folder && (
-                              <span className="hidden sm:flex px-2 py-0.5 rounded-full text-xs bg-white/10 text-gray-400 items-center gap-1">
-                                <span>{script.folder.icon || "📁"}</span>
-                                {script.folder.name}
-                              </span>
-                            )}
-                            {script.creatorSlug && (
-                              <span className="hidden sm:inline px-2 py-0.5 rounded-full text-xs bg-white/10 text-gray-400">
-                                @{script.creatorSlug}
-                              </span>
-                            )}
-                            {script.hasVariables && (
-                              <span className="px-2 py-0.5 rounded-full text-xs bg-blue-500/20 text-blue-400 flex items-center gap-1">
-                                <Code className="w-3 h-3" />
-                                <span className="hidden sm:inline">Variables</span>
-                              </span>
-                            )}
-                            {script.mediaItems.length > 0 && (
-                              <span className="px-2 py-0.5 rounded-full text-xs bg-pink-500/20 text-pink-400 flex items-center gap-1">
-                                <Image className="w-3 h-3" />
-                                {script.mediaItems.length}
-                              </span>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <h3 className="font-semibold text-white truncate text-sm sm:text-base">
+                          {/* Title with favorite star */}
+                          <div className="flex items-center gap-2 mb-2">
+                            <h3 className="font-semibold text-white truncate text-base">
                               {script.name}
                             </h3>
                             {script.isFavorite && (
                               <Star className="w-4 h-4 text-yellow-400 fill-yellow-400 flex-shrink-0" />
                             )}
                           </div>
+                          {/* Tags row */}
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className={cn(
+                              "inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium",
+                              catInfo.bg, catInfo.color
+                            )}>
+                              <span>{catInfo.icon}</span>
+                            </span>
+                            {script.status !== "APPROVED" && (
+                              <span className={cn(
+                                "inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium",
+                                statusStyle.bg, statusStyle.color
+                              )}>
+                                <StatusIcon className="w-3 h-3" />
+                              </span>
+                            )}
+                            {script.hasVariables && (
+                              <span className="px-2 py-1 rounded-full text-xs bg-blue-500/20 text-blue-400">
+                                <Code className="w-3 h-3" />
+                              </span>
+                            )}
+                            {script.mediaItems.length > 0 && (
+                              <span className="px-2 py-1 rounded-full text-xs bg-pink-500/20 text-pink-400 flex items-center gap-1">
+                                <Image className="w-3 h-3" />
+                                {script.mediaItems.length}
+                              </span>
+                            )}
+                          </div>
                         </div>
 
-                        {/* Actions */}
+                        {/* Quick actions - Always visible on mobile */}
                         <div className="flex items-center gap-1 flex-shrink-0">
                           <button
                             onClick={() => toggleFavorite(script)}
                             className={cn(
-                              "p-2 rounded-lg transition-colors",
+                              "w-10 h-10 rounded-xl flex items-center justify-center transition-colors touch-manipulation",
                               script.isFavorite
-                                ? "text-yellow-400 hover:bg-yellow-500/10"
-                                : "text-gray-400 hover:text-yellow-400 hover:bg-white/10"
+                                ? "text-yellow-400 bg-yellow-500/10"
+                                : "text-gray-400 bg-white/5 active:bg-white/10"
                             )}
                           >
-                            <Star className={cn("w-4 h-4", script.isFavorite && "fill-current")} />
+                            <Star className={cn("w-5 h-5", script.isFavorite && "fill-current")} />
                           </button>
                           <button
                             onClick={() => openEditModal(script)}
-                            className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
+                            className="w-10 h-10 rounded-xl bg-white/5 text-gray-400 flex items-center justify-center active:bg-white/10 transition-colors touch-manipulation"
                           >
-                            <Settings className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => duplicateScript(script)}
-                            className="hidden sm:block p-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
-                            title="Duplicate"
-                          >
-                            <Copy className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => deleteScript(script)}
-                            className="hidden sm:block p-2 rounded-lg text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-colors"
-                          >
-                            <Trash2 className="w-4 h-4" />
+                            <Settings className="w-5 h-5" />
                           </button>
                         </div>
                       </div>
@@ -852,92 +807,68 @@ export default function ScriptsPage() {
                       {script.status === "REJECTED" && script.rejectionReason && (
                         <div className="mb-3 p-2 rounded-lg bg-red-500/10 border border-red-500/20">
                           <p className="text-xs text-red-400">
-                            <span className="font-medium">Rejection reason:</span> {script.rejectionReason}
+                            <span className="font-medium">Reason:</span> {script.rejectionReason}
                           </p>
                         </div>
                       )}
 
-                      {/* Footer */}
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                        {/* Stats */}
-                        <div className="flex items-center gap-2 sm:gap-3 text-xs text-gray-500 overflow-x-auto scrollbar-hide">
-                          <span className="flex items-center gap-1 flex-shrink-0" title="Usage count">
+                      {/* Footer - Mobile Optimized */}
+                      <div className="flex items-center justify-between gap-3">
+                        {/* Stats - Simplified for mobile */}
+                        <div className="flex items-center gap-3 text-xs text-gray-500">
+                          <span className="flex items-center gap-1">
                             <MessageSquare className="w-3.5 h-3.5" />
-                            <span className="text-gray-400">{script.usageCount}</span>
-                          </span>
-                          <span className="flex items-center gap-1 flex-shrink-0" title="Sales generated">
-                            <DollarSign className="w-3.5 h-3.5" />
-                            <span className="text-gray-400">{script.salesGenerated}</span>
+                            {script.usageCount}
                           </span>
                           {script.revenueGenerated > 0 && (
-                            <span className="flex items-center gap-1 text-emerald-400 flex-shrink-0" title="Revenue">
+                            <span className="text-emerald-400 font-medium">
                               ${script.revenueGenerated.toFixed(0)}
-                            </span>
-                          )}
-                          {script.conversionRate > 0 && (
-                            <span className="hidden sm:flex items-center gap-1 flex-shrink-0" title="Conversion rate">
-                              <TrendingUp className="w-3.5 h-3.5" />
-                              <span className="text-gray-400">{script.conversionRate.toFixed(1)}%</span>
-                            </span>
-                          )}
-                          {script.author && (
-                            <span className="hidden sm:inline text-gray-500 flex-shrink-0">
-                              by {script.author.name || "Unknown"}
                             </span>
                           )}
                         </div>
 
-                        {/* Actions */}
-                        <div className="flex items-center gap-2 flex-shrink-0">
-                          {/* Pending actions */}
+                        {/* Action button */}
+                        <div className="flex items-center gap-2">
                           {script.status === "PENDING" && (
                             <>
-                              <motion.button
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
-                                onClick={() => handleApproveReject(script, "reject", prompt("Rejection reason (optional):")!)}
-                                className="flex items-center gap-1.5 px-2.5 sm:px-3 py-2 rounded-xl text-sm font-medium bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-all"
+                              <button
+                                onClick={() => handleApproveReject(script, "reject", prompt("Reason?") || undefined)}
+                                className="h-10 px-3 rounded-xl text-sm font-medium bg-red-500/20 text-red-400 active:bg-red-500/30 transition-all touch-manipulation flex items-center gap-1.5"
                               >
                                 <XCircle className="w-4 h-4" />
-                                <span className="hidden sm:inline">Reject</span>
-                              </motion.button>
-                              <motion.button
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
+                              </button>
+                              <button
                                 onClick={() => handleApproveReject(script, "approve")}
-                                className="flex items-center gap-1.5 px-2.5 sm:px-3 py-2 rounded-xl text-sm font-medium bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 transition-all"
+                                className="h-10 px-4 rounded-xl text-sm font-medium bg-emerald-500/20 text-emerald-400 active:bg-emerald-500/30 transition-all touch-manipulation flex items-center gap-1.5"
                               >
                                 <CheckCircle2 className="w-4 h-4" />
-                                <span className="hidden sm:inline">Approve</span>
-                              </motion.button>
+                                <span>OK</span>
+                              </button>
                             </>
                           )}
 
-                          {/* Copy button */}
                           {script.status === "APPROVED" && (
-                            <motion.button
-                              whileHover={{ scale: 1.05 }}
-                              whileTap={{ scale: 0.95 }}
+                            <button
                               onClick={() => copyToClipboard(script)}
                               className={cn(
-                                "flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium transition-all touch-manipulation",
+                                "h-10 px-4 rounded-xl text-sm font-medium transition-all touch-manipulation flex items-center gap-1.5",
                                 isCopied
                                   ? "bg-emerald-500/20 text-emerald-400"
-                                  : "bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 active:bg-purple-500/40"
+                                  : "bg-purple-500/20 text-purple-400 active:bg-purple-500/30"
                               )}
                             >
                               {isCopied ? (
                                 <>
                                   <Check className="w-4 h-4" />
-                                  <span className="hidden sm:inline">Copied!</span>
+                                  <span>Copied</span>
                                 </>
                               ) : (
                                 <>
                                   <Copy className="w-4 h-4" />
-                                  <span className="hidden sm:inline">Copy</span>
+                                  <span>Copy</span>
                                 </>
                               )}
-                            </motion.button>
+                            </button>
                           )}
                         </div>
                       </div>
