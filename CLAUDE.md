@@ -131,7 +131,8 @@ RESEND_API_KEY=
 ## Déploiement
 
 - **Hosting**: VPS avec Docker
-- **Workflow**: `git push` → rebuild Docker sur le serveur
+- **Workflow**: `git push` → deploy automatique via script on-push
+- **IMPORTANT**: Toujours push via SSH (pas HTTPS) pour déclencher le deploy automatique
 - Ne PAS utiliser Vercel
 
 ### Conteneurs Docker

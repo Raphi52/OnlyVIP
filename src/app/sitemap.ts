@@ -63,6 +63,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       alternates: {
         languages: generateAlternates(route.path),
       },
+      images: [`${baseUrl}/api/og?title=VipOnly&subtitle=Exclusive%20Content%20Platform`],
     });
   }
 
@@ -76,11 +77,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       alternates: {
         languages: generateAlternates(`/blog/${slug}`),
       },
+      images: [`${baseUrl}/api/og?title=VIP%20Only%20Blog&subtitle=Creator%20Tips%20%26%20Guides`],
     });
   }
 
   // Category pages with hreflang
   for (const category of categoryPages) {
+    const categoryTitle = category.charAt(0).toUpperCase() + category.slice(1);
     sitemapEntries.push({
       url: `${baseUrl}/en/creators/${category}`,
       lastModified: new Date(),
@@ -89,6 +92,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       alternates: {
         languages: generateAlternates(`/creators/${category}`),
       },
+      images: [`${baseUrl}/api/og?title=${encodeURIComponent(categoryTitle + ' Creators')}&subtitle=Exclusive%20Content%20Platform`],
     });
   }
 
@@ -96,11 +100,29 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   try {
     const creators = await prisma.creator.findMany({
       where: { isActive: true },
-      select: { slug: true, updatedAt: true },
+      select: { slug: true, updatedAt: true, avatar: true, cardImage: true, displayName: true },
       orderBy: { updatedAt: "desc" },
     });
 
     for (const creator of creators) {
+      // Collect all available images for this creator
+      const creatorImages: string[] = [];
+
+      // Add card image (main profile image)
+      if (creator.cardImage) {
+        creatorImages.push(creator.cardImage.startsWith('http') ? creator.cardImage : `${baseUrl}${creator.cardImage}`);
+      }
+
+      // Add avatar
+      if (creator.avatar && creator.avatar !== creator.cardImage) {
+        creatorImages.push(creator.avatar.startsWith('http') ? creator.avatar : `${baseUrl}${creator.avatar}`);
+      }
+
+      // Add OG image as fallback
+      if (creatorImages.length === 0) {
+        creatorImages.push(`${baseUrl}/api/og?type=creator&title=${encodeURIComponent(creator.displayName || creator.slug)}&subtitle=Exclusive%20Content`);
+      }
+
       sitemapEntries.push({
         url: `${baseUrl}/en/${creator.slug}`,
         lastModified: creator.updatedAt,
@@ -109,6 +131,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         alternates: {
           languages: generateAlternates(`/${creator.slug}`),
         },
+        images: creatorImages,
       });
     }
   } catch (error) {
