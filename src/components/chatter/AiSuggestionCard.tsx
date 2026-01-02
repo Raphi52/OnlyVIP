@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Bot, Send, Edit3, RefreshCw, X, Clock, Image, DollarSign } from "lucide-react";
+import NextImage from "next/image";
+import { Bot, Send, Edit3, RefreshCw, X, Clock, Image as ImageIcon, DollarSign } from "lucide-react";
 
 interface AiSuggestion {
   id: string;
@@ -126,9 +127,11 @@ export default function AiSuggestionCard({
       <div className="px-4 py-2 border-b border-gray-700/50">
         <div className="flex items-center gap-2">
           {suggestion.conversation.fan?.image ? (
-            <img
+            <NextImage
               src={suggestion.conversation.fan.image}
               alt=""
+              width={24}
+              height={24}
               className="w-6 h-6 rounded-full"
             />
           ) : (
@@ -206,7 +209,7 @@ export default function AiSuggestionCard({
               {suggestion.mediaDecision === "PPV" ? (
                 <DollarSign className="w-3 h-3" />
               ) : (
-                <Image className="w-3 h-3" />
+                <ImageIcon className="w-3 h-3" />
               )}
               {mediaTypeLabel} Media
             </div>

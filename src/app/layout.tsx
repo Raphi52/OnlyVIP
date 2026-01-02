@@ -15,13 +15,15 @@ const playfair = Playfair_Display({
 export const metadata: Metadata = {
   metadataBase: new URL("https://viponly.fun"),
   title: {
-    default: "VIP Only - Exclusive Creator Platform",
-    template: "%s | VIP Only",
+    default: "VIPOnly - Exclusive Creator Platform",
+    template: "%s | VIPOnly",
   },
   description:
-    "VIP Only - The premium platform for exclusive creators. Share VIP content, connect with fans, and earn from subscriptions. Join the best creator platform.",
+    "VIPOnly - The premium platform for exclusive creators. Share VIP content, connect with fans, and earn from subscriptions. Join the best creator platform.",
   keywords: [
-    "VIP only",
+    "VIPOnly",
+    "viponly",
+    "viponly.fun",
     "exclusive content",
     "creator platform",
     "premium content",
@@ -30,24 +32,24 @@ export const metadata: Metadata = {
     "exclusive photos",
     "exclusive videos",
   ],
-  authors: [{ name: "VIP Only" }],
-  creator: "VIP Only",
-  publisher: "VIP Only",
+  authors: [{ name: "VIPOnly" }],
+  creator: "VIPOnly",
+  publisher: "VIPOnly",
   openGraph: {
     type: "website",
     locale: "en_US",
     url: "https://viponly.fun",
-    siteName: "VIP Only",
-    title: "VIP Only - Exclusive Creator Platform",
+    siteName: "VIPOnly",
+    title: "VIPOnly - Exclusive Creator Platform",
     description:
       "The premium platform for exclusive creators. Share VIP content, connect with fans, and earn from subscriptions.",
   },
   twitter: {
     card: "summary_large_image",
-    title: "VIP Only - Exclusive Creator Platform",
+    title: "VIPOnly - Exclusive Creator Platform",
     description:
       "The premium platform for exclusive creators. Share VIP content, connect with fans, and earn from subscriptions.",
-    creator: "@viponly",
+    creator: "@VIPOnly",
   },
   robots: {
     index: true,

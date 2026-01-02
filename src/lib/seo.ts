@@ -4,7 +4,7 @@
 import type { Creator } from "@/lib/creators";
 
 const BASE_URL = "https://viponly.fun";
-const BRAND_NAME = "VipOnly";
+const BRAND_NAME = "VIPOnly";
 
 // Organization schema for the homepage
 export function generateOrganizationSchema() {
@@ -13,7 +13,7 @@ export function generateOrganizationSchema() {
     "@type": "Organization",
     "@id": `${BASE_URL}/#organization`,
     name: BRAND_NAME,
-    alternateName: ["VipOnly", "viponly", "Vip Only", "viponly.fun"],
+    alternateName: ["VIPOnly", "viponly", "Vip Only", "viponly.fun"],
     url: BASE_URL,
     logo: {
       "@type": "ImageObject",
@@ -21,12 +21,12 @@ export function generateOrganizationSchema() {
       width: 512,
       height: 512,
     },
-    description: "VipOnly is the premium exclusive content platform where creators share photos, videos, and VIP content with subscribers. Join VipOnly today - the best creator subscription platform.",
+    description: "VIPOnly is the premium exclusive content platform where creators share photos, videos, and VIP content with subscribers. Join VIPOnly today - the best creator subscription platform.",
     foundingDate: "2024",
-    slogan: "VipOnly - Exclusive Content Platform",
+    slogan: "VIPOnly - Exclusive Content Platform",
     sameAs: [
-      "https://twitter.com/VipOnly",
-      "https://instagram.com/VipOnly",
+      "https://twitter.com/VIPOnly",
+      "https://instagram.com/VIPOnly",
     ],
     contactPoint: {
       "@type": "ContactPoint",
@@ -44,9 +44,9 @@ export function generateWebsiteSchema() {
     "@type": "WebSite",
     "@id": `${BASE_URL}/#website`,
     name: BRAND_NAME,
-    alternateName: ["VipOnly", "viponly", "viponly.fun", "Vip Only"],
+    alternateName: ["VIPOnly", "viponly", "viponly.fun", "Vip Only"],
     url: BASE_URL,
-    description: "VipOnly - The premium exclusive content platform for creators and fans. Subscribe to your favorite VipOnly creators and access exclusive photos, videos, and messages on viponly.fun",
+    description: "VIPOnly - The premium exclusive content platform for creators and fans. Subscribe to your favorite VIPOnly creators and access exclusive photos, videos, and messages on viponly.fun",
     publisher: {
       "@id": `${BASE_URL}/#organization`,
     },
@@ -75,8 +75,8 @@ export function generateHomePageSchema(locale: string = 'en') {
     "@type": "WebPage",
     "@id": `${BASE_URL}/${locale}/#webpage`,
     url: `${BASE_URL}/${locale}`,
-    name: `VipOnly - Exclusive Content Platform | viponly.fun`,
-    description: "VipOnly is THE premium platform for exclusive content creators. Join VipOnly to share exclusive photos and videos, chat with your fans and monetize your content on viponly.fun",
+    name: `VIPOnly - Exclusive Content Platform | viponly.fun`,
+    description: "VIPOnly is THE premium platform for exclusive content creators. Join VIPOnly to share exclusive photos and videos, chat with your fans and monetize your content on viponly.fun",
     isPartOf: {
       "@id": `${BASE_URL}/#website`,
     },
@@ -85,7 +85,7 @@ export function generateHomePageSchema(locale: string = 'en') {
     },
     primaryImageOfPage: {
       "@type": "ImageObject",
-      url: `${BASE_URL}/api/og?title=VipOnly`,
+      url: `${BASE_URL}/api/og?title=VIPOnly`,
     },
     breadcrumb: {
       "@type": "BreadcrumbList",
@@ -93,7 +93,7 @@ export function generateHomePageSchema(locale: string = 'en') {
         {
           "@type": "ListItem",
           position: 1,
-          name: "VipOnly Home",
+          name: "VIPOnly Home",
           item: `${BASE_URL}/${locale}`,
         },
       ],
@@ -105,7 +105,7 @@ export function generateHomePageSchema(locale: string = 'en') {
   };
 }
 
-// SoftwareApplication schema for VipOnly as a platform
+// SoftwareApplication schema for VIPOnly as a platform
 export function generateSoftwareApplicationSchema() {
   return {
     "@context": "https://schema.org",
@@ -115,12 +115,12 @@ export function generateSoftwareApplicationSchema() {
     applicationCategory: "SocialNetworkingApplication",
     operatingSystem: "Web",
     url: BASE_URL,
-    description: "VipOnly is a premium content subscription platform where creators share exclusive photos, videos and content with their VipOnly subscribers.",
+    description: "VIPOnly is a premium content subscription platform where creators share exclusive photos, videos and content with their VIPOnly subscribers.",
     offers: {
       "@type": "Offer",
       price: "0",
       priceCurrency: "USD",
-      description: "Free to join VipOnly. VipOnly creators set their own subscription prices.",
+      description: "Free to join VIPOnly. VIPOnly creators set their own subscription prices.",
     },
     aggregateRating: {
       "@type": "AggregateRating",
@@ -142,7 +142,7 @@ export function generateCreatorSchema(creator: Creator) {
     alternateName: creator.name,
     url: `${BASE_URL}/${creator.slug}`,
     image: creator.avatar || creator.cardImage,
-    description: creator.bio || `${creator.displayName} on VipOnly - Exclusive content creator`,
+    description: creator.bio || `${creator.displayName} on VIPOnly - Exclusive content creator`,
     sameAs: [
       creator.socialLinks?.instagram,
       creator.socialLinks?.twitter,
@@ -167,9 +167,9 @@ export function generateProfilePageSchema(creator: Creator, locale: string = 'en
     "@context": "https://schema.org",
     "@type": "ProfilePage",
     "@id": `${BASE_URL}/${locale}/${creator.slug}/#profilepage`,
-    name: `${creator.displayName} on VipOnly | Exclusive Content`,
+    name: `${creator.displayName} on VIPOnly | Exclusive Content`,
     url: `${BASE_URL}/${locale}/${creator.slug}`,
-    description: creator.bio || `Subscribe to ${creator.displayName} on VipOnly for exclusive photos, videos and content`,
+    description: creator.bio || `Subscribe to ${creator.displayName} on VIPOnly for exclusive photos, videos and content`,
     mainEntity: {
       "@id": `${BASE_URL}/${creator.slug}/#person`,
     },
@@ -182,7 +182,7 @@ export function generateProfilePageSchema(creator: Creator, locale: string = 'en
         {
           "@type": "ListItem",
           position: 1,
-          name: "VipOnly",
+          name: "VIPOnly",
           item: `${BASE_URL}/${locale}`,
         },
         {
@@ -215,8 +215,8 @@ export function generateSubscriptionOfferSchema(
   return {
     "@context": "https://schema.org",
     "@type": "Offer",
-    name: `${pricing.name} - ${creator.displayName} VipOnly Subscription`,
-    description: pricing.description || `Subscribe to ${creator.displayName}'s exclusive VipOnly content`,
+    name: `${pricing.name} - ${creator.displayName} VIPOnly Subscription`,
+    description: pricing.description || `Subscribe to ${creator.displayName}'s exclusive VIPOnly content`,
     price: pricing.price,
     priceCurrency: pricing.currency || "USD",
     availability: "https://schema.org/InStock",
@@ -227,8 +227,8 @@ export function generateSubscriptionOfferSchema(
     },
     itemOffered: {
       "@type": "Service",
-      name: `${creator.displayName} VipOnly Subscription`,
-      description: `Access to exclusive photos, videos, and VIP content from ${creator.displayName} on VipOnly`,
+      name: `${creator.displayName} VIPOnly Subscription`,
+      description: `Access to exclusive photos, videos, and VIP content from ${creator.displayName} on VIPOnly`,
       provider: {
         "@id": `${BASE_URL}/#organization`,
       },
@@ -246,8 +246,8 @@ export function generateImageGallerySchema(
   return {
     "@context": "https://schema.org",
     "@type": "ImageGallery",
-    name: `${creator.displayName}'s VipOnly Gallery`,
-    description: `Exclusive photo and video gallery featuring ${imageCount} photos and ${videoCount} videos from ${creator.displayName} on VipOnly`,
+    name: `${creator.displayName}'s VIPOnly Gallery`,
+    description: `Exclusive photo and video gallery featuring ${imageCount} photos and ${videoCount} videos from ${creator.displayName} on VIPOnly`,
     url: `${BASE_URL}/${locale}/${creator.slug}/gallery`,
     author: {
       "@id": `${BASE_URL}/${creator.slug}/#person`,
@@ -265,8 +265,8 @@ export function generateCreditsProductSchema(credits: number, price: number) {
   return {
     "@context": "https://schema.org",
     "@type": "Product",
-    name: `${credits.toLocaleString()} VipOnly Credits`,
-    description: `Purchase ${credits.toLocaleString()} VipOnly credits to unlock exclusive content and send tips on viponly.fun`,
+    name: `${credits.toLocaleString()} VIPOnly Credits`,
+    description: `Purchase ${credits.toLocaleString()} VIPOnly credits to unlock exclusive content and send tips on viponly.fun`,
     brand: {
       "@type": "Brand",
       name: BRAND_NAME,
@@ -301,28 +301,28 @@ export function generateFAQSchema(
   };
 }
 
-// VipOnly specific FAQ schema
-export function generateVipOnlyFAQSchema() {
+// VIPOnly specific FAQ schema
+export function generateVIPOnlyFAQSchema() {
   return generateFAQSchema([
     {
-      question: "What is VipOnly?",
-      answer: "VipOnly is a premium exclusive content platform where creators share photos, videos, and VIP content with their subscribers. VipOnly allows creators to monetize their content through subscriptions, tips, and pay-per-view messages.",
+      question: "What is VIPOnly?",
+      answer: "VIPOnly is a premium exclusive content platform where creators share photos, videos, and VIP content with their subscribers. VIPOnly allows creators to monetize their content through subscriptions, tips, and pay-per-view messages.",
     },
     {
-      question: "How do I join VipOnly?",
-      answer: "You can join VipOnly for free by creating an account at viponly.fun. Once registered, you can subscribe to your favorite VipOnly creators and access their exclusive content.",
+      question: "How do I join VIPOnly?",
+      answer: "You can join VIPOnly for free by creating an account at viponly.fun. Once registered, you can subscribe to your favorite VIPOnly creators and access their exclusive content.",
     },
     {
-      question: "How much does VipOnly cost?",
-      answer: "VipOnly is free to join. Each VipOnly creator sets their own subscription price. You can also purchase VipOnly credits to unlock pay-per-view content and send tips.",
+      question: "How much does VIPOnly cost?",
+      answer: "VIPOnly is free to join. Each VIPOnly creator sets their own subscription price. You can also purchase VIPOnly credits to unlock pay-per-view content and send tips.",
     },
     {
-      question: "What payment methods does VipOnly accept?",
-      answer: "VipOnly accepts credit cards, debit cards, and cryptocurrency payments. VipOnly supports multiple payment processors for your convenience.",
+      question: "What payment methods does VIPOnly accept?",
+      answer: "VIPOnly accepts credit cards, debit cards, and cryptocurrency payments. VIPOnly supports multiple payment processors for your convenience.",
     },
     {
-      question: "How do VipOnly creators get paid?",
-      answer: "VipOnly creators receive 95% of their earnings (only 5% platform fee). New VipOnly creators get 100% of earnings for their first month with 0% fees.",
+      question: "How do VIPOnly creators get paid?",
+      answer: "VIPOnly creators receive 95% of their earnings (only 5% platform fee). New VIPOnly creators get 100% of earnings for their first month with 0% fees.",
     },
   ]);
 }
@@ -353,7 +353,7 @@ export function generateCategoryCollectionSchema(
     "@context": "https://schema.org",
     "@type": "CollectionPage",
     name: `Best ${category.label} OnlyFans Models & Creators`,
-    description: `Discover the best ${category.label.toLowerCase()} content creators on VipOnly - the #1 OnlyFans alternative with crypto payments and lower fees.`,
+    description: `Discover the best ${category.label.toLowerCase()} content creators on VIPOnly - the #1 OnlyFans alternative with crypto payments and lower fees.`,
     url: `${BASE_URL}/${locale}/creators/${category.id}`,
     isPartOf: {
       "@id": `${BASE_URL}/#website`,
@@ -364,7 +364,7 @@ export function generateCategoryCollectionSchema(
     },
     mainEntity: {
       "@type": "ItemList",
-      name: `${category.label} Models on VipOnly`,
+      name: `${category.label} Models on VIPOnly`,
       numberOfItems: creators.length,
       itemListElement: creators.slice(0, 10).map((creator, index) => ({
         "@type": "ListItem",
@@ -386,14 +386,14 @@ export function generateTopCreatorsSchema(
     "@context": "https://schema.org",
     "@type": "CollectionPage",
     name: "Best OnlyFans Models & Top Creators 2025",
-    description: "Discover the best models and top content creators on VipOnly - the #1 OnlyFans alternative with crypto payments and lower fees.",
+    description: "Discover the best models and top content creators on VIPOnly - the #1 OnlyFans alternative with crypto payments and lower fees.",
     url: `${BASE_URL}/${locale}/top-creators`,
     isPartOf: {
       "@id": `${BASE_URL}/#website`,
     },
     mainEntity: {
       "@type": "ItemList",
-      name: "Top Creators on VipOnly",
+      name: "Top Creators on VIPOnly",
       numberOfItems: creators.length,
       itemListElement: creators.slice(0, 10).map((creator, index) => ({
         "@type": "ListItem",
@@ -411,8 +411,8 @@ export function generateCreatorsListSchema(creators: Creator[], locale: string =
   return {
     "@context": "https://schema.org",
     "@type": "ItemList",
-    name: "VipOnly Creators",
-    description: "Browse all VipOnly creators and subscribe to exclusive content",
+    name: "VIPOnly Creators",
+    description: "Browse all VIPOnly creators and subscribe to exclusive content",
     url: `${BASE_URL}/${locale}/creators`,
     numberOfItems: creators.length,
     itemListElement: creators.slice(0, 10).map((creator, index) => ({

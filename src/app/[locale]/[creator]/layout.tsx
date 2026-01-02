@@ -11,16 +11,19 @@ const BASE_URL = "https://viponly.fun";
 
 interface LayoutProps {
   children: React.ReactNode;
-  params: Promise<{ creator: string }>;
+  params: Promise<{ locale: string; creator: string }>;
 }
+
+// All supported locales for hreflang
+const allLocales = ["en", "es", "pt", "fr", "de", "it", "zh", "ja", "ko", "ar", "ru", "hi"];
 
 // Generate dynamic metadata for creator pages
 export async function generateMetadata({
   params,
 }: {
-  params: Promise<{ creator: string }>;
+  params: Promise<{ locale: string; creator: string }>;
 }): Promise<Metadata> {
-  const { creator: creatorSlug } = await params;
+  const { locale, creator: creatorSlug } = await params;
   const creator = await getCreatorFromDB(creatorSlug);
 
   if (!creator) {
@@ -72,7 +75,7 @@ export async function generateMetadata({
           alt: `${creator.displayName} on VipOnly`,
         },
       ],
-      locale: "en_US",
+      locale: locale,
     },
     twitter: {
       card: "summary_large_image",
@@ -84,7 +87,11 @@ export async function generateMetadata({
         : "@VipOnly",
     },
     alternates: {
-      canonical: canonicalUrl,
+      canonical: `${BASE_URL}/${locale}/${creator.slug}`,
+      languages: Object.fromEntries([
+        ...allLocales.map(loc => [loc, `${BASE_URL}/${loc}/${creator.slug}`]),
+        ['x-default', `${BASE_URL}/en/${creator.slug}`],
+      ]),
     },
     robots: {
       index: true,

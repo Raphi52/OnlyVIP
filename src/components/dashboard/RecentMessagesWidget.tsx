@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { motion } from "framer-motion";
 import { MessageCircle, ArrowRight, Loader2 } from "lucide-react";
 import { Card, Button } from "@/components/ui";
@@ -116,9 +117,11 @@ export function RecentMessagesWidget() {
             >
               {/* Avatar */}
               {msg.senderAvatar ? (
-                <img
+                <Image
                   src={msg.senderAvatar}
                   alt={msg.senderName}
+                  width={40}
+                  height={40}
                   className="w-10 h-10 rounded-full object-cover flex-shrink-0"
                 />
               ) : (

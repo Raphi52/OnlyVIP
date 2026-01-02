@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Coins,
@@ -209,13 +210,14 @@ export function MediaUnlockModal({
                     className="relative aspect-video rounded-2xl overflow-hidden select-none"
                     onContextMenu={(e) => e.preventDefault()}
                   >
-                    <img
+                    <Image
                       src={media.thumbnailUrl}
                       alt={media.title}
-                      className="w-full h-full object-cover blur-xl scale-110 pointer-events-none select-none"
+                      fill
+                      sizes="(max-width: 768px) 90vw, 500px"
+                      className="object-cover blur-xl scale-110 pointer-events-none select-none"
                       draggable={false}
                       onContextMenu={(e) => e.preventDefault()}
-                      style={{ WebkitUserDrag: 'none' } as React.CSSProperties}
                     />
                     <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
                       <motion.div

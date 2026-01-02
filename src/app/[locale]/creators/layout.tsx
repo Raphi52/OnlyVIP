@@ -4,18 +4,18 @@ import { JsonLd } from "@/components/seo/JsonLd";
 const BASE_URL = "https://viponly.fun";
 
 export const metadata: Metadata = {
-  title: "Discover VIP Creators — Exclusive Content Platform | VIP Only",
+  title: "Discover VIPOnly Creators — Exclusive Content Platform | VIPOnly",
   description:
-    "Browse and discover the best exclusive content creators on VIP Only. Subscribe to VIP creators and access premium photos, videos, and exclusive content. The best OnlyFans alternative in 2026.",
+    "Browse and discover the best exclusive content creators on VIPOnly. Subscribe to VIPOnly creators and access premium photos, videos, and exclusive content. The best OnlyFans alternative in 2026.",
   keywords: [
-    "VIP only",
-    "VIP Only",
+    "VIPOnly",
+    "viponly",
+    "viponly.fun",
     "discover creators",
     "exclusive content creators",
-    "VIP creators",
+    "VIPOnly creators",
     "premium creators",
     "content subscription",
-    "VipOnly",
     "creator platform",
     "exclusive photos",
     "exclusive videos",
@@ -24,27 +24,27 @@ export const metadata: Metadata = {
   ],
   openGraph: {
     type: "website",
-    title: "Discover VIP Creators — Exclusive Content | VIP Only",
+    title: "Discover VIPOnly Creators — Exclusive Content | VIPOnly",
     description:
-      "Browse the best exclusive content creators on VIP Only. Subscribe for VIP only photos, videos, and premium content.",
+      "Browse the best exclusive content creators on VIPOnly. Subscribe for VIPOnly photos, videos, and premium content.",
     url: `${BASE_URL}/creators`,
-    siteName: "VIP Only",
+    siteName: "VIPOnly",
     images: [
       {
-        url: `${BASE_URL}/api/og?title=Discover%20VIP%20Creators&subtitle=Exclusive%20Content%20Platform`,
+        url: `${BASE_URL}/api/og?title=Discover%20VIPOnly%20Creators&subtitle=Exclusive%20Content%20Platform`,
         width: 1200,
         height: 630,
-        alt: "Discover VIP Creators on VipOnly",
+        alt: "Discover VIPOnly Creators",
       },
     ],
     locale: "en_US",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Discover VIP Creators | VIP Only",
+    title: "Discover VIPOnly Creators | VIPOnly",
     description:
-      "Browse and discover exclusive content creators on VipOnly — the best OnlyFans alternative.",
-    images: [`${BASE_URL}/api/og?title=Discover%20VIP%20Creators&subtitle=Exclusive%20Content%20Platform`],
+      "Browse and discover exclusive content creators on VIPOnly — the best OnlyFans alternative.",
+    images: [`${BASE_URL}/api/og?title=Discover%20VIPOnly%20Creators&subtitle=Exclusive%20Content%20Platform`],
   },
   alternates: {
     canonical: `${BASE_URL}/creators`,
@@ -55,12 +55,12 @@ function generateCollectionPageSchema() {
   return {
     "@context": "https://schema.org",
     "@type": "CollectionPage",
-    name: "Discover VIP Creators",
-    description: "Browse and discover the best exclusive content creators on VIP Only.",
+    name: "Discover VIPOnly Creators",
+    description: "Browse and discover the best exclusive content creators on VIPOnly.",
     url: `${BASE_URL}/creators`,
     isPartOf: {
       "@type": "WebSite",
-      name: "VIP Only",
+      name: "VIPOnly",
       url: BASE_URL,
     },
     mainEntity: {

@@ -89,11 +89,11 @@ export async function GET(request: NextRequest) {
     // Get unique creator slugs with their totals
     let creatorStats: any[] = [];
     try {
-      creatorStats = await prisma.$queryRaw`
+      const rawStats = await prisma.$queryRaw`
         SELECT
           ce."creatorSlug",
-          SUM(ae."netAmount") as total,
-          COUNT(ae.id) as count
+          SUM(ae."netAmount")::float as total,
+          COUNT(ae.id)::int as count
         FROM "AgencyEarning" ae
         JOIN "CreatorEarning" ce ON ae."creatorEarningId" = ce.id
         WHERE ae."agencyId" = ${agency.id}
@@ -101,6 +101,12 @@ export async function GET(request: NextRequest) {
         ORDER BY total DESC
         LIMIT 10
       ` as any[];
+      // Convert BigInt to Number for JSON serialization
+      creatorStats = rawStats.map((s: any) => ({
+        creatorSlug: s.creatorSlug,
+        total: Number(s.total) || 0,
+        count: Number(s.count) || 0,
+      }));
     } catch (queryError) {
       console.error("Error fetching creator stats:", queryError);
     }

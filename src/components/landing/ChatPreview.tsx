@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { MessageCircle, Heart, DollarSign, Lock, Send, Sparkles, Check, Zap, Loader2, Crown, X, Coins } from "lucide-react";
 import { Button, Badge } from "@/components/ui";
@@ -282,12 +283,14 @@ export function ChatPreview({ creator }: ChatPreviewProps) {
               {/* Chat header */}
               <div className="flex items-center gap-4 pb-5 border-b border-white/10">
                 <div className="relative">
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[var(--gold)] to-[var(--gold-dark)] overflow-hidden">
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[var(--gold)] to-[var(--gold-dark)] overflow-hidden relative">
                     {creator?.avatar ? (
-                      <img
+                      <Image
                         src={creator.avatar}
                         alt={creatorName}
-                        className="w-full h-full object-cover"
+                        fill
+                        sizes="48px"
+                        className="object-cover"
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-black font-bold text-lg">
@@ -339,12 +342,14 @@ export function ChatPreview({ creator }: ChatPreviewProps) {
                   viewport={{ once: true }}
                   transition={{ delay: 0.5 }}
                 >
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[var(--gold)] to-[var(--gold-dark)] flex-shrink-0 overflow-hidden">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[var(--gold)] to-[var(--gold-dark)] flex-shrink-0 overflow-hidden relative">
                     {creator?.avatar ? (
-                      <img
+                      <Image
                         src={creator.avatar}
                         alt={creatorName}
-                        className="w-full h-full object-cover"
+                        fill
+                        sizes="32px"
+                        className="object-cover"
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-black font-bold text-sm">
@@ -368,12 +373,14 @@ export function ChatPreview({ creator }: ChatPreviewProps) {
                   viewport={{ once: true }}
                   transition={{ delay: 0.7 }}
                 >
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[var(--gold)] to-[var(--gold-dark)] flex-shrink-0 overflow-hidden">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[var(--gold)] to-[var(--gold-dark)] flex-shrink-0 overflow-hidden relative">
                     {creator?.avatar ? (
-                      <img
+                      <Image
                         src={creator.avatar}
                         alt={creatorName}
-                        className="w-full h-full object-cover"
+                        fill
+                        sizes="32px"
+                        className="object-cover"
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-black font-bold text-sm">

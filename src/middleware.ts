@@ -20,8 +20,9 @@ export const config = {
   // - API routes (/api/...)
   // - Static files (/_next/static/..., /_next/image/..., /favicon.ico, etc.)
   // - Public files with extensions (.svg, .png, .jpg, etc.)
+  // - Generated files (icon, apple-icon, opengraph-image, etc.)
   matcher: [
     // Match all pathnames except those starting with:
-    '/((?!api|_next|_vercel|.*\\..*).*)',
+    '/((?!api|_next|_vercel|icon|apple-icon|opengraph-image|sitemap|robots|.*\\..*).*)',
   ],
 };

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import NextImage from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -262,9 +263,11 @@ export function Sidebar() {
                 {/* Agency Logo */}
                 {agency.logo ? (
                   <div className="relative">
-                    <img
+                    <NextImage
                       src={agency.logo}
                       alt={agency.name}
+                      width={48}
+                      height={48}
                       className="w-12 h-12 rounded-lg object-cover border-2 border-purple-500/50 group-hover:border-purple-400 transition-colors"
                     />
                     <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-purple-500 flex items-center justify-center">
@@ -304,9 +307,11 @@ export function Sidebar() {
             )}
           >
             {creatorAvatar || session?.user?.image ? (
-              <img
+              <NextImage
                 src={creatorAvatar || session?.user?.image || ""}
                 alt=""
+                width={44}
+                height={44}
                 className="w-11 h-11 rounded-full object-cover border-2 border-[var(--gold)]/50 flex-shrink-0"
                 referrerPolicy="no-referrer"
               />
@@ -375,9 +380,11 @@ export function Sidebar() {
                         )}
                       >
                         {creator.avatar ? (
-                          <img
+                          <NextImage
                             src={creator.avatar}
                             alt=""
+                            width={32}
+                            height={32}
                             className="w-8 h-8 rounded-full object-cover border border-[var(--gold)]/30"
                           />
                         ) : (

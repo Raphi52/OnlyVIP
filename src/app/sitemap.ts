@@ -63,7 +63,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       alternates: {
         languages: generateAlternates(route.path),
       },
-      images: [`${baseUrl}/api/og?title=VipOnly&subtitle=Exclusive%20Content%20Platform`],
+      images: [`${baseUrl}/api/og?title=VIPOnly`],
     });
   }
 
@@ -77,7 +77,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       alternates: {
         languages: generateAlternates(`/blog/${slug}`),
       },
-      images: [`${baseUrl}/api/og?title=VIP%20Only%20Blog&subtitle=Creator%20Tips%20%26%20Guides`],
+      images: [`${baseUrl}/api/og?title=VIP%20Only%20Blog`],
     });
   }
 
@@ -92,7 +92,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       alternates: {
         languages: generateAlternates(`/creators/${category}`),
       },
-      images: [`${baseUrl}/api/og?title=${encodeURIComponent(categoryTitle + ' Creators')}&subtitle=Exclusive%20Content%20Platform`],
+      images: [`${baseUrl}/api/og?title=${encodeURIComponent(categoryTitle + ' Creators')}`],
     });
   }
 
@@ -120,7 +120,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
       // Add OG image as fallback
       if (creatorImages.length === 0) {
-        creatorImages.push(`${baseUrl}/api/og?type=creator&title=${encodeURIComponent(creator.displayName || creator.slug)}&subtitle=Exclusive%20Content`);
+        creatorImages.push(`${baseUrl}/api/og?title=${encodeURIComponent(creator.displayName || creator.slug)}`);
       }
 
       sitemapEntries.push({

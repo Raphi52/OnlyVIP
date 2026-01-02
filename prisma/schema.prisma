@@ -2378,3 +2378,31 @@ model CreatorVerification {
 // VerificationDocumentType: "PASSPORT" | "ID_CARD" | "DRIVERS_LICENSE"
 // VerificationStatus: "PENDING" | "APPROVED" | "REJECTED" | "EXPIRED"
 
+// ============= PAYOUT REQUESTS =============
+
+model PayoutRequest {
+  id          String   @id @default(cuid())
+  creatorSlug String
+
+  // Amount requested (creator's pending balance at time of request)
+  amount      Float
+
+  // Wallet info
+  walletType    String  // "ETH" | "BTC"
+  walletAddress String
+
+  // Status
+  status      String    @default("PENDING") // "PENDING" | "PAID"
+  paidAt      DateTime?
+  paidBy      String?   // Admin user ID who processed the payout
+  txHash      String?   // Blockchain transaction hash (optional)
+
+  createdAt   DateTime @default(now())
+
+  @@index([creatorSlug])
+  @@index([status])
+  @@index([createdAt])
+}
+
+// PayoutStatus: "PENDING" | "PAID"
+

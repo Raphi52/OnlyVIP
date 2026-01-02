@@ -1,7 +1,7 @@
 {
   "metadata": {
-    "title": "VipOnly - 限定コンテンツプラットフォーム | viponly.fun",
-    "description": "VipOnlyは限定コンテンツクリエイターのためのプレミアムプラットフォームです。写真や動画を共有し、ファンとチャットし、コンテンツを収益化しましょう。クリエイターは95%を獲得。"
+    "title": "VIPOnly - 限定コンテンツプラットフォーム | VIPOnly.fun",
+    "description": "VIPOnlyは限定コンテンツクリエイターのためのプレミアムプラットフォームです。写真や動画を共有し、ファンとチャットし、コンテンツを収益化しましょう。クリエイターは95%を獲得。"
   },
   "nav": {
     "login": "ログイン",
@@ -27,9 +27,9 @@
     "gallery": "ギャラリー"
   },
   "home": {
-    "title": "VipOnly",
+    "title": "VIPOnly",
     "subtitle": "限定コンテンツ",
-    "description": "VipOnlyは限定コンテンツクリエイターのための#1プラットフォームです。購読して限定写真、動画、プライベートメッセージにアクセス。",
+    "description": "VIPOnlyは限定コンテンツクリエイターのための#1プラットフォームです。購読して限定写真、動画、プライベートメッセージにアクセス。",
     "discoverCreators": "クリエイターを探す",
     "noCreators": "まだクリエイターがいません",
     "beFirst": "最初のクリエイターになろう！",
@@ -123,7 +123,7 @@
     "loginTitle": "おかえりなさい",
     "loginSubtitle": "ログインして限定コンテンツにアクセス",
     "signupTitle": "アカウント作成",
-    "signupSubtitle": "今日VipOnlyに参加",
+    "signupSubtitle": "今日VIPOnlyに参加",
     "forgotPassword": "パスワードをお忘れですか？",
     "noAccount": "アカウントをお持ちでないですか？",
     "hasAccount": "すでにアカウントをお持ちですか？",

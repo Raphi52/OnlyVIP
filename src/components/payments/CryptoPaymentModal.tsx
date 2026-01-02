@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   X,
@@ -365,9 +366,11 @@ export function CryptoPaymentModal({
                   {cryptoPayment.qrCodeUrl && (
                     <div className="flex justify-center">
                       <div className="p-4 bg-white rounded-2xl">
-                        <img
+                        <Image
                           src={cryptoPayment.qrCodeUrl}
                           alt="Payment QR Code"
+                          width={192}
+                          height={192}
                           className="w-48 h-48"
                         />
                       </div>

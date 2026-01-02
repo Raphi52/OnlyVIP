@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import Link from "next/link";
+import NextImage from "next/image";
 import { Play, Lock, Image as ImageIcon, Crown, Sparkles, ArrowRight, Flame } from "lucide-react";
 import { Button, Badge } from "@/components/ui";
 
@@ -127,10 +128,12 @@ export function FeaturedContent({ creatorSlug = "miacosta" }: FeaturedContentPro
             >
               <div className="relative aspect-[4/5] rounded-2xl overflow-hidden bg-[#111] border border-white/10 hover:border-[var(--gold)]/30 transition-all duration-300 shadow-xl hover:shadow-2xl hover:shadow-[var(--gold)]/10 cursor-pointer">
                 {/* Image */}
-                <img
+                <NextImage
                   src={item.thumbnail}
                   alt={item.title}
-                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                  fill
+                  sizes="(max-width: 768px) 50vw, 33vw"
+                  className="object-cover transition-transform duration-700 group-hover:scale-110"
                 />
 
                 {/* Gradient overlays */}

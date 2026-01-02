@@ -1,7 +1,7 @@
 {
   "metadata": {
-    "title": "VipOnly - Plateforme de Contenu Exclusif pour Créateurs & Modèles | viponly.fun",
-    "description": "VipOnly est LA plateforme premium de contenu exclusif pour créateurs et modèles. Rejoignez VipOnly sur viponly.fun pour partager photos, vidéos, chatter avec vos fans et monétiser votre contenu. Les créateurs VipOnly gagnent 95%."
+    "title": "VIPOnly - Plateforme de Contenu Exclusif pour Créateurs & Modèles | VIPOnly.fun",
+    "description": "VIPOnly est LA plateforme premium de contenu exclusif pour créateurs et modèles. Rejoignez VIPOnly sur VIPOnly.fun pour partager photos, vidéos, chatter avec vos fans et monétiser votre contenu. Les créateurs VIPOnly gagnent 95%."
   },
   "nav": {
     "login": "Connexion",
@@ -27,9 +27,9 @@
     "gallery": "Galerie"
   },
   "home": {
-    "title": "VipOnly",
+    "title": "VIPOnly",
     "subtitle": "Contenu Exclusif",
-    "description": "VipOnly est la plateforme #1 pour les créateurs de contenu exclusif. Abonnez-vous aux créateurs VipOnly et accédez à des photos, vidéos et messages privés exclusifs.",
+    "description": "VIPOnly est la plateforme #1 pour les créateurs de contenu exclusif. Abonnez-vous aux créateurs VIPOnly et accédez à des photos, vidéos et messages privés exclusifs.",
     "discoverCreators": "Découvrir les Créateurs",
     "noCreators": "Pas encore de créateurs",
     "beFirst": "Soyez le premier créateur !",
@@ -123,7 +123,7 @@
     "loginTitle": "Bon Retour",
     "loginSubtitle": "Connectez-vous pour accéder à votre contenu exclusif",
     "signupTitle": "Créer un Compte",
-    "signupSubtitle": "Rejoignez VipOnly aujourd'hui",
+    "signupSubtitle": "Rejoignez VIPOnly aujourd'hui",
     "forgotPassword": "Mot de passe oublié ?",
     "noAccount": "Pas encore de compte ?",
     "hasAccount": "Déjà un compte ?",

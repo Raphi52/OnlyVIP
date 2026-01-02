@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams, useParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
+import Image from "next/image";
 import { Button, Card } from "@/components/ui";
 import { useCurrency } from "@/components/providers/CurrencyProvider";
 import {
@@ -395,9 +396,11 @@ function CheckoutContent() {
                   {/* QR Code */}
                   {cryptoPayment.qrCodeUrl && (
                     <div className="bg-white p-3 rounded-lg mb-4">
-                      <img
+                      <Image
                         src={cryptoPayment.qrCodeUrl}
                         alt="Payment QR Code"
+                        width={192}
+                        height={192}
                         className="w-48 h-48"
                       />
                     </div>

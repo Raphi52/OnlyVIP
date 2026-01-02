@@ -107,7 +107,7 @@ export default function CreatorSettingsPage() {
 
     setIsLoading(true);
     try {
-      const res = await fetch(`/api/admin/settings?creator=${selectedCreator.slug}`);
+      const res = await fetch(`/api/creator/settings?creator=${selectedCreator.slug}`);
       if (res.ok) {
         const data = await res.json();
         setCreatorSlug(selectedCreator.slug);
@@ -309,7 +309,7 @@ export default function CreatorSettingsPage() {
     setSlugError(null);
 
     try {
-      const res = await fetch("/api/admin/settings", {
+      const res = await fetch("/api/creator/settings", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

@@ -13,6 +13,12 @@ import {
   Download,
   Check,
   FileSpreadsheet,
+  Clock,
+  AlertCircle,
+  Eye,
+  CheckCircle,
+  X,
+  FileText,
 } from "lucide-react";
 import { Button, Card } from "@/components/ui";
 import { cn } from "@/lib/utils";
@@ -44,11 +50,42 @@ interface Totals {
   paid: { gross: number; commission: number; net: number };
 }
 
+interface PayoutRequest {
+  id: string;
+  creatorSlug: string;
+  amount: number;
+  walletType: string;
+  walletAddress: string;
+  status: string;
+  createdAt: string;
+  paidAt: string | null;
+  creator: {
+    displayName: string;
+    avatar: string | null;
+    pendingBalance: number;
+  } | null;
+  verification: {
+    documentType: string;
+    documentFrontUrl: string;
+    documentBackUrl: string | null;
+    selfieUrl: string;
+    fullName: string | null;
+    status: string;
+  } | null;
+}
+
 export default function AdminPayoutsPage() {
   const [creators, setCreators] = useState<Creator[]>([]);
   const [totals, setTotals] = useState<Totals | null>(null);
   const [loading, setLoading] = useState(true);
   const [copiedWallet, setCopiedWallet] = useState<string | null>(null);
+
+  // Payout requests state
+  const [payoutRequests, setPayoutRequests] = useState<PayoutRequest[]>([]);
+  const [requestsTotals, setRequestsTotals] = useState<{ pendingCount: number; pendingAmount: number } | null>(null);
+  const [loadingRequests, setLoadingRequests] = useState(true);
+  const [processingId, setProcessingId] = useState<string | null>(null);
+  const [viewingDoc, setViewingDoc] = useState<PayoutRequest | null>(null);
 
   const fetchData = async () => {
     setLoading(true);
@@ -66,8 +103,54 @@ export default function AdminPayoutsPage() {
     }
   };
 
+  const fetchPayoutRequests = async () => {
+    setLoadingRequests(true);
+    try {
+      const res = await fetch("/api/admin/payout-requests");
+      if (res.ok) {
+        const data = await res.json();
+        setPayoutRequests(data.requests || []);
+        setRequestsTotals(data.totals || null);
+      }
+    } catch (err) {
+      console.error("Error fetching payout requests:", err);
+    } finally {
+      setLoadingRequests(false);
+    }
+  };
+
+  const handleMarkAsPaid = async (requestId: string) => {
+    if (!confirm("Are you sure you want to mark this payout as paid? This will deduct from the creator's balance.")) {
+      return;
+    }
+
+    setProcessingId(requestId);
+    try {
+      const res = await fetch(`/api/admin/payout-requests/${requestId}/pay`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+
+      if (res.ok) {
+        // Refresh both data sets
+        fetchPayoutRequests();
+        fetchData();
+      } else {
+        const error = await res.json();
+        alert(error.error || "Failed to process payout");
+      }
+    } catch (err) {
+      console.error("Error processing payout:", err);
+      alert("Failed to process payout");
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
   useEffect(() => {
     fetchData();
+    fetchPayoutRequests();
   }, []);
 
   const copyToClipboard = (text: string, id: string) => {
@@ -210,6 +293,203 @@ export default function AdminPayoutsPage() {
               </div>
             </div>
           </Card>
+        </div>
+      )}
+
+      {/* Payout Requests Section */}
+      <Card>
+        <div className="p-3 sm:p-4 border-b border-white/10 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <h2 className="text-base sm:text-lg font-semibold text-white">Payout Requests</h2>
+            {requestsTotals && requestsTotals.pendingCount > 0 && (
+              <span className="px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-500 text-xs font-medium">
+                {requestsTotals.pendingCount} pending
+              </span>
+            )}
+          </div>
+          {requestsTotals && requestsTotals.pendingAmount > 0 && (
+            <span className="text-sm font-bold text-yellow-500">
+              {requestsTotals.pendingAmount.toFixed(0)}€ total
+            </span>
+          )}
+        </div>
+
+        {loadingRequests ? (
+          <div className="p-10 flex items-center justify-center">
+            <Loader2 className="w-8 h-8 animate-spin text-[var(--gold)]" />
+          </div>
+        ) : payoutRequests.filter(r => r.status === "PENDING").length === 0 ? (
+          <div className="p-10 text-center text-white/50 text-sm sm:text-base">
+            No pending payout requests
+          </div>
+        ) : (
+          <div className="divide-y divide-white/5">
+            {payoutRequests
+              .filter(r => r.status === "PENDING")
+              .map((request) => (
+                <div key={request.id} className="p-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                    {/* Creator info */}
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      {request.creator?.avatar ? (
+                        <img
+                          src={request.creator.avatar}
+                          alt={request.creator.displayName}
+                          className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+                        />
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[var(--gold)] to-amber-600 flex items-center justify-center text-black font-bold flex-shrink-0">
+                          {request.creator?.displayName?.charAt(0) || "?"}
+                        </div>
+                      )}
+                      <div className="min-w-0">
+                        <p className="font-medium text-white truncate">
+                          {request.creator?.displayName || request.creatorSlug}
+                        </p>
+                        <p className="text-xs text-white/50">
+                          {new Date(request.createdAt).toLocaleDateString()} • {request.walletType}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Amount */}
+                    <div className="flex items-center gap-4">
+                      <div className="text-right">
+                        <p className="text-lg font-bold text-yellow-500">{request.amount.toFixed(2)}€</p>
+                        <button
+                          onClick={() => copyToClipboard(request.walletAddress, `req-${request.id}`)}
+                          className="flex items-center gap-1 text-xs text-white/50 hover:text-white/70"
+                        >
+                          {request.walletAddress.slice(0, 8)}...{request.walletAddress.slice(-6)}
+                          {copiedWallet === `req-${request.id}` ? (
+                            <Check className="w-3 h-3 text-green-500" />
+                          ) : (
+                            <Copy className="w-3 h-3" />
+                          )}
+                        </button>
+                      </div>
+
+                      {/* Actions */}
+                      <div className="flex items-center gap-2">
+                        {/* View ID button */}
+                        {request.verification && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setViewingDoc(request)}
+                            className="gap-1.5"
+                          >
+                            <Eye className="w-4 h-4" />
+                            <span className="hidden sm:inline">View ID</span>
+                          </Button>
+                        )}
+
+                        {/* Mark as paid button */}
+                        <Button
+                          size="sm"
+                          onClick={() => handleMarkAsPaid(request.id)}
+                          disabled={processingId === request.id}
+                          className="gap-1.5 bg-green-600 hover:bg-green-700"
+                        >
+                          {processingId === request.id ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <CheckCircle className="w-4 h-4" />
+                          )}
+                          <span className="hidden sm:inline">Mark Paid</span>
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Verification status warning */}
+                  {!request.verification && (
+                    <div className="mt-3 flex items-center gap-2 text-xs text-yellow-500/70">
+                      <AlertCircle className="w-4 h-4" />
+                      No ID verification on file
+                    </div>
+                  )}
+                </div>
+              ))}
+          </div>
+        )}
+      </Card>
+
+      {/* ID Document Modal */}
+      {viewingDoc && viewingDoc.verification && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80">
+          <div className="bg-[var(--surface)] rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-4 border-b border-white/10 flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold text-white">
+                  ID Verification - {viewingDoc.creator?.displayName}
+                </h3>
+                <p className="text-sm text-white/50">
+                  {viewingDoc.verification.documentType} • {viewingDoc.verification.fullName || "Name not extracted"}
+                </p>
+              </div>
+              <button
+                onClick={() => setViewingDoc(null)}
+                className="p-2 rounded-lg hover:bg-white/10"
+              >
+                <X className="w-5 h-5 text-white/50" />
+              </button>
+            </div>
+            <div className="p-4 space-y-4">
+              {/* Document Front */}
+              <div>
+                <p className="text-sm text-white/50 mb-2">Document Front</p>
+                <img
+                  src={viewingDoc.verification.documentFrontUrl}
+                  alt="Document front"
+                  className="w-full rounded-lg border border-white/10"
+                />
+              </div>
+
+              {/* Document Back */}
+              {viewingDoc.verification.documentBackUrl && (
+                <div>
+                  <p className="text-sm text-white/50 mb-2">Document Back</p>
+                  <img
+                    src={viewingDoc.verification.documentBackUrl}
+                    alt="Document back"
+                    className="w-full rounded-lg border border-white/10"
+                  />
+                </div>
+              )}
+
+              {/* Selfie */}
+              <div>
+                <p className="text-sm text-white/50 mb-2">Selfie with Document</p>
+                <img
+                  src={viewingDoc.verification.selfieUrl}
+                  alt="Selfie"
+                  className="w-full rounded-lg border border-white/10"
+                />
+              </div>
+
+              {/* Verification Status */}
+              <div className={cn(
+                "p-3 rounded-lg flex items-center gap-2",
+                viewingDoc.verification.status === "APPROVED"
+                  ? "bg-green-500/10 text-green-400"
+                  : viewingDoc.verification.status === "REJECTED"
+                  ? "bg-red-500/10 text-red-400"
+                  : "bg-yellow-500/10 text-yellow-400"
+              )}>
+                {viewingDoc.verification.status === "APPROVED" ? (
+                  <CheckCircle className="w-5 h-5" />
+                ) : viewingDoc.verification.status === "REJECTED" ? (
+                  <X className="w-5 h-5" />
+                ) : (
+                  <Clock className="w-5 h-5" />
+                )}
+                <span className="font-medium">
+                  Verification Status: {viewingDoc.verification.status}
+                </span>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 

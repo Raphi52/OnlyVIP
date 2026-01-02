@@ -4,11 +4,12 @@ import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence, useScroll, useTransform } from "framer-motion";
 import {
   Send, Plus, Sparkles, Loader2, Play, X, Lock, Coins,
-  Search, Smile, ArrowLeft, ChevronDown, Mic, Image,
+  Search, Smile, ArrowLeft, ChevronDown, Mic, Image as ImageIcon,
   Gift, Heart, Paperclip, StopCircle, MoreVertical,
   Bell, BellOff, Trash2, Images
 } from "lucide-react";
 import Link from "next/link";
+import NextImage from "next/image";
 import { useInView } from "react-intersection-observer";
 import { MessageBubble } from "./MessageBubble";
 import { DateSeparator } from "./DateSeparator";
@@ -757,7 +758,7 @@ export function ChatWindow({
                 transition={{ repeat: Infinity, duration: 1.5 }}
                 className="w-24 h-24 rounded-full bg-gradient-to-br from-[var(--gold)]/30 to-amber-600/30 flex items-center justify-center mx-auto mb-6 border border-[var(--gold)]/30"
               >
-                <Image className="w-10 h-10 text-[var(--gold)]" />
+                <ImageIcon className="w-10 h-10 text-[var(--gold)]" />
               </motion.div>
               <p className="text-white text-xl font-semibold">Drop to upload</p>
               <p className="text-white/50 text-sm mt-1">Images & videos</p>
@@ -935,7 +936,7 @@ export function ChatWindow({
                       className="flex flex-col items-center gap-1.5 p-3 rounded-xl hover:bg-white/5 transition-colors"
                     >
                       <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-purple-700 flex items-center justify-center">
-                        <Image className="w-6 h-6 text-white" />
+                        <ImageIcon className="w-6 h-6 text-white" />
                       </div>
                       <span className="text-xs text-white/70">Gallery</span>
                     </button>

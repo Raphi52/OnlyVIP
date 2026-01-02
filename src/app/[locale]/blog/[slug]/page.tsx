@@ -501,13 +501,16 @@ const blogPosts: Record<
 };
 
 interface PageProps {
-  params: Promise<{ slug: string }>;
+  params: Promise<{ locale: string; slug: string }>;
 }
+
+// All supported locales for hreflang
+const allLocales = ["en", "es", "pt", "fr", "de", "it", "zh", "ja", "ko", "ar", "ru", "hi"];
 
 export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
-  const { slug } = await params;
+  const { locale, slug } = await params;
   const post = blogPosts[slug];
 
   if (!post) {
@@ -533,7 +536,7 @@ export async function generateMetadata({
       type: "article",
       title: post.title,
       description: post.excerpt,
-      url: `${BASE_URL}/blog/${slug}`,
+      url: `${BASE_URL}/${locale}/blog/${slug}`,
       siteName: "VIP Only",
       publishedTime: post.date,
       authors: [post.author],
@@ -545,7 +548,7 @@ export async function generateMetadata({
           alt: post.title,
         },
       ],
-      locale: "en_US",
+      locale: locale,
     },
     twitter: {
       card: "summary_large_image",
@@ -556,7 +559,11 @@ export async function generateMetadata({
       ],
     },
     alternates: {
-      canonical: `${BASE_URL}/blog/${slug}`,
+      canonical: `${BASE_URL}/${locale}/blog/${slug}`,
+      languages: Object.fromEntries([
+        ...allLocales.map(loc => [loc, `${BASE_URL}/${loc}/blog/${slug}`]),
+        ['x-default', `${BASE_URL}/en/blog/${slug}`],
+      ]),
     },
   };
 }

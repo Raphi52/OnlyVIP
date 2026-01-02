@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { Crown, Check, CheckCheck, Pin, BellOff, Bell, Trash2, MoreVertical } from "lucide-react";
 import { Badge } from "@/components/ui";
@@ -94,9 +95,11 @@ export function ConversationList({
               {/* Avatar */}
               <div className="relative flex-shrink-0">
                 {conversation.user.image ? (
-                  <img
+                  <Image
                     src={conversation.user.image}
                     alt={conversation.user.name}
+                    width={48}
+                    height={48}
                     className="w-12 h-12 rounded-full object-cover"
                   />
                 ) : (

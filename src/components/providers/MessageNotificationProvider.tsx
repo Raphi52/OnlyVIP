@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useSession } from "next-auth/react";
+import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { MessageCircle, Crown, X, Heart } from "lucide-react";
 import { usePusherNotifications, isPusherAvailable } from "@/hooks/usePusher";
@@ -84,11 +85,13 @@ export function MessageNotificationProvider({ children }: MessageNotificationPro
               <div className="flex items-center gap-3 p-4 rounded-xl bg-black/90 backdrop-blur-xl border border-[var(--gold)]/30 shadow-lg shadow-[var(--gold)]/10">
                 {/* Avatar */}
                 <div className="relative flex-shrink-0">
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[var(--gold)] to-yellow-600 p-0.5">
-                    <img
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[var(--gold)] to-yellow-600 p-0.5 relative">
+                    <Image
                       src={notification.senderAvatar}
                       alt={notification.senderName}
-                      className="w-full h-full rounded-full object-cover"
+                      fill
+                      sizes="48px"
+                      className="rounded-full object-cover"
                     />
                   </div>
                   <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-[var(--gold)] flex items-center justify-center">

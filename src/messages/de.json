@@ -1,7 +1,7 @@
 {
   "metadata": {
-    "title": "VipOnly - Exklusive Content-Plattform | viponly.fun",
-    "description": "VipOnly ist DIE Premium-Plattform für exklusive Content-Creator. Teilen Sie Fotos, Videos, chatten Sie mit Fans und monetarisieren Sie Ihren Content. Creator verdienen 95%."
+    "title": "VIPOnly - Exklusive Content-Plattform | VIPOnly.fun",
+    "description": "VIPOnly ist DIE Premium-Plattform für exklusive Content-Creator. Teilen Sie Fotos, Videos, chatten Sie mit Fans und monetarisieren Sie Ihren Content. Creator verdienen 95%."
   },
   "nav": {
     "login": "Anmelden",
@@ -27,9 +27,9 @@
     "gallery": "Galerie"
   },
   "home": {
-    "title": "VipOnly",
+    "title": "VIPOnly",
     "subtitle": "Exklusiver Content",
-    "description": "VipOnly ist die #1 Plattform für exklusive Content-Creator. Abonnieren Sie und erhalten Sie Zugang zu exklusiven Fotos, Videos und privaten Nachrichten.",
+    "description": "VIPOnly ist die #1 Plattform für exklusive Content-Creator. Abonnieren Sie und erhalten Sie Zugang zu exklusiven Fotos, Videos und privaten Nachrichten.",
     "discoverCreators": "Creator entdecken",
     "noCreators": "Noch keine Creator",
     "beFirst": "Werden Sie der erste Creator!",
@@ -123,7 +123,7 @@
     "loginTitle": "Willkommen zurück",
     "loginSubtitle": "Melden Sie sich an, um auf Ihren exklusiven Content zuzugreifen",
     "signupTitle": "Konto erstellen",
-    "signupSubtitle": "Treten Sie VipOnly heute bei",
+    "signupSubtitle": "Treten Sie VIPOnly heute bei",
     "forgotPassword": "Passwort vergessen?",
     "noAccount": "Noch kein Konto?",
     "hasAccount": "Bereits ein Konto?",

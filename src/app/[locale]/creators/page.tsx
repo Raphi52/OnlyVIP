@@ -196,9 +196,11 @@ function CreatorsPageContent() {
                   </Link>
                   {session.user?.image ? (
                     <Link href="/dashboard">
-                      <img
+                      <Image
                         src={session.user.image}
                         alt={session.user.name || "Profile"}
+                        width={36}
+                        height={36}
                         className="w-9 h-9 rounded-full object-cover ring-2 ring-[var(--gold)]/30"
                       />
                     </Link>

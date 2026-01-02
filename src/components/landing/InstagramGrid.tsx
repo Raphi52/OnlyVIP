@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import Link from "next/link";
+import Image from "next/image";
 import { Play, Lock, Heart, Eye, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui";
 
@@ -69,10 +70,12 @@ export function InstagramGrid({ creatorSlug = "miacosta" }: InstagramGridProps) 
               className="group relative aspect-square rounded-xl overflow-hidden cursor-pointer"
             >
               {/* Image */}
-              <img
+              <Image
                 src={image.src}
                 alt=""
-                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                fill
+                sizes="(max-width: 768px) 50vw, 25vw"
+                className="object-cover transition-transform duration-500 group-hover:scale-110"
               />
 
               {/* Gradient overlay */}

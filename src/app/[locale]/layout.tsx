@@ -12,7 +12,7 @@ import {
   generateOrganizationSchema,
   generateWebsiteSchema,
   generateSoftwareApplicationSchema,
-  generateVipOnlyFAQSchema,
+  generateVIPOnlyFAQSchema,
 } from "@/lib/seo";
 
 interface LocaleLayoutProps {
@@ -31,41 +31,41 @@ export async function generateMetadata({ params }: LocaleLayoutProps) {
   return {
     title: {
       default: t('title'),
-      template: '%s | VipOnly - viponly.fun',
+      template: '%s | VIPOnly - viponly.fun',
     },
     description: t('description'),
     keywords: [
-      "VipOnly",
+      "VIPOnly",
       "viponly",
       "viponly.fun",
-      "VipOnly platform",
-      "VipOnly creators",
-      "VipOnly exclusive",
-      "VipOnly content",
-      "VipOnly subscribe",
+      "VIPOnly platform",
+      "VIPOnly creators",
+      "VIPOnly exclusive",
+      "VIPOnly content",
+      "VIPOnly subscribe",
       "exclusive content platform",
       "creator platform",
       "premium content",
       "OnlyFans alternative",
       "fan subscription platform",
     ],
-    authors: [{ name: "VipOnly" }],
-    creator: "VipOnly",
-    publisher: "VipOnly",
-    applicationName: "VipOnly",
-    generator: "VipOnly",
+    authors: [{ name: "VIPOnly" }],
+    creator: "VIPOnly",
+    publisher: "VIPOnly",
+    applicationName: "VIPOnly",
+    generator: "VIPOnly",
     referrer: "origin-when-cross-origin",
     openGraph: {
       title: t('title'),
       description: t('description'),
       url: `https://viponly.fun/${locale}`,
-      siteName: "VipOnly",
+      siteName: "VIPOnly",
       images: [
         {
-          url: `/api/og?title=VipOnly&subtitle=Exclusive%20Content%20Platform`,
+          url: `/api/og?title=VIPOnly`,
           width: 1200,
           height: 630,
-          alt: "VipOnly - Exclusive Content Platform",
+          alt: "VIPOnly - Exclusive Content Platform",
         },
       ],
       locale: locale,
@@ -75,9 +75,9 @@ export async function generateMetadata({ params }: LocaleLayoutProps) {
       card: "summary_large_image",
       title: t('title'),
       description: t('description'),
-      site: "@VipOnly",
-      creator: "@VipOnly",
-      images: [`/api/og?title=VipOnly&subtitle=Exclusive%20Content%20Platform`],
+      site: "@VIPOnly",
+      creator: "@VIPOnly",
+      images: [`/api/og?title=VIPOnly`],
     },
     alternates: {
       canonical: `https://viponly.fun/${locale}`,
@@ -127,7 +127,7 @@ export default async function LocaleLayout({
             generateOrganizationSchema(),
             generateWebsiteSchema(),
             generateSoftwareApplicationSchema(),
-            generateVipOnlyFAQSchema(),
+            generateVIPOnlyFAQSchema(),
           ]}
         />
         {children}

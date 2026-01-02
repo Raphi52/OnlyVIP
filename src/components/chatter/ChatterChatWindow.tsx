@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Bot, User, Settings, Send, Paperclip, Image, Sparkles } from "lucide-react";
+import NextImage from "next/image";
+import { Bot, User, Settings, Send, Paperclip, Image as ImageIcon, Sparkles } from "lucide-react";
 import AiSuggestionCard from "./AiSuggestionCard";
 
 interface Message {
@@ -175,9 +176,11 @@ export default function ChatterChatWindow({
       <div className="flex items-center justify-between px-4 py-3 bg-gray-800 border-b border-gray-700">
         <div className="flex items-center gap-3">
           {conversation.fan.image ? (
-            <img
+            <NextImage
               src={conversation.fan.image}
               alt=""
+              width={40}
+              height={40}
               className="w-10 h-10 rounded-full"
             />
           ) : (
@@ -311,13 +314,15 @@ export default function ChatterChatWindow({
                     {message.media.map((m) => (
                       <div key={m.id} className="relative">
                         {message.isPPV && (
-                          <div className="absolute top-2 left-2 px-2 py-0.5 bg-yellow-500 text-black text-xs font-bold rounded">
+                          <div className="absolute top-2 left-2 px-2 py-0.5 bg-yellow-500 text-black text-xs font-bold rounded z-10">
                             PPV ${message.ppvPrice}
                           </div>
                         )}
-                        <img
+                        <NextImage
                           src={m.previewUrl || m.url}
                           alt=""
+                          width={300}
+                          height={200}
                           className={`rounded-lg max-w-full ${message.isPPV ? "blur-xl" : ""}`}
                         />
                       </div>
@@ -346,7 +351,7 @@ export default function ChatterChatWindow({
             <Paperclip className="w-5 h-5" />
           </button>
           <button className="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg transition-colors">
-            <Image className="w-5 h-5" />
+            <ImageIcon className="w-5 h-5" />
           </button>
           <input
             type="text"

@@ -1,7 +1,7 @@
 {
   "metadata": {
-    "title": "VipOnly - 专属内容平台 | viponly.fun",
-    "description": "VipOnly是专属内容创作者的高端平台。分享照片、视频，与粉丝聊天，实现内容变现。创作者获得95%收入。"
+    "title": "VIPOnly - 专属内容平台 | VIPOnly.fun",
+    "description": "VIPOnly是专属内容创作者的高端平台。分享照片、视频，与粉丝聊天，实现内容变现。创作者获得95%收入。"
   },
   "nav": {
     "login": "登录",
@@ -27,9 +27,9 @@
     "gallery": "相册"
   },
   "home": {
-    "title": "VipOnly",
+    "title": "VIPOnly",
     "subtitle": "专属内容",
-    "description": "VipOnly是专属内容创作者的第一平台。订阅并获取独家照片、视频和私信。",
+    "description": "VIPOnly是专属内容创作者的第一平台。订阅并获取独家照片、视频和私信。",
     "discoverCreators": "发现创作者",
     "noCreators": "暂无创作者",
     "beFirst": "成为第一位创作者！",
@@ -123,7 +123,7 @@
     "loginTitle": "欢迎回来",
     "loginSubtitle": "登录以访问您的专属内容",
     "signupTitle": "创建账户",
-    "signupSubtitle": "今天加入VipOnly",
+    "signupSubtitle": "今天加入VIPOnly",
     "forgotPassword": "忘记密码？",
     "noAccount": "没有账户？",
     "hasAccount": "已有账户？",

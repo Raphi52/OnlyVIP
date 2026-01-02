@@ -198,13 +198,21 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       description: seo.description,
     },
     alternates: {
-      canonical: `https://viponly.fun/creators/${category}`,
+      canonical: `https://viponly.fun/${locale}/creators/${category}`,
       languages: {
         en: `https://viponly.fun/en/creators/${category}`,
         es: `https://viponly.fun/es/creators/${category}`,
-        fr: `https://viponly.fun/fr/creators/${category}`,
         pt: `https://viponly.fun/pt/creators/${category}`,
+        fr: `https://viponly.fun/fr/creators/${category}`,
         de: `https://viponly.fun/de/creators/${category}`,
+        it: `https://viponly.fun/it/creators/${category}`,
+        zh: `https://viponly.fun/zh/creators/${category}`,
+        ja: `https://viponly.fun/ja/creators/${category}`,
+        ko: `https://viponly.fun/ko/creators/${category}`,
+        ar: `https://viponly.fun/ar/creators/${category}`,
+        ru: `https://viponly.fun/ru/creators/${category}`,
+        hi: `https://viponly.fun/hi/creators/${category}`,
+        'x-default': `https://viponly.fun/en/creators/${category}`,
       },
     },
   };

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import Image from "next/image";
 import { Play, Lock, Eye } from "lucide-react";
 
 interface ProtectedMediaProps {
@@ -101,10 +102,12 @@ export default function ProtectedMedia({
         {/* Blurred preview */}
         <div className="absolute inset-0 blur-xl scale-110">
           {type === "image" ? (
-            <img
+            <Image
               src={src}
               alt=""
-              className="w-full h-full object-cover"
+              fill
+              sizes="100vw"
+              className="object-cover"
               draggable={false}
             />
           ) : (
@@ -155,19 +158,17 @@ export default function ProtectedMedia({
     >
       {type === "image" ? (
         <>
-          <img
+          <Image
             src={src}
-            alt={alt}
-            className={`w-full h-full object-cover pointer-events-none ${
+            alt={alt || ""}
+            fill
+            sizes="(max-width: 768px) 100vw, 50vw"
+            className={`object-cover pointer-events-none ${
               isBlurred ? "blur-lg" : ""
             }`}
             draggable={false}
             onContextMenu={handleContextMenu}
             onDragStart={handleDragStart}
-            style={{
-              WebkitUserDrag: 'none',
-              userSelect: 'none',
-            } as React.CSSProperties}
           />
           {/* Transparent overlay to prevent direct access */}
           <div

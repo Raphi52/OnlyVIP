@@ -3,6 +3,7 @@
 import { useRef, useState, useEffect } from "react";
 import { motion, useScroll, useTransform, useSpring } from "framer-motion";
 import Link from "next/link";
+import Image from "next/image";
 import { Lock, Play, Crown, Sparkles, ArrowRight, Eye, Coins } from "lucide-react";
 import { Button } from "@/components/ui";
 
@@ -76,15 +77,19 @@ function PreviewCard({
       <Link href={`${basePath}/gallery`}>
         <div className="relative aspect-[16/9] lg:aspect-[21/9] rounded-3xl overflow-hidden border-2 border-white/10 hover:border-[var(--gold)]/50 transition-all duration-500 cursor-pointer">
           {/* Background image - no blur for FREE content */}
-          <div className="absolute inset-0">
-            <img
+          <div
+            className="absolute inset-0 transition-all duration-700"
+            style={{
+              filter: shouldBlur ? (isHovered ? "blur(15px)" : "blur(25px)") : "none",
+              transform: isHovered ? "scale(1.05)" : "scale(1.1)",
+            }}
+          >
+            <Image
               src={item.thumbnailUrl}
               alt={item.title}
-              className="w-full h-full object-cover transition-all duration-700"
-              style={{
-                filter: shouldBlur ? (isHovered ? "blur(15px)" : "blur(25px)") : "none",
-                transform: isHovered ? "scale(1.05)" : "scale(1.1)",
-              }}
+              fill
+              sizes="100vw"
+              className="object-cover"
             />
           </div>
 

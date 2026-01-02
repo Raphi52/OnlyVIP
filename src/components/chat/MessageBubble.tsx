@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect, memo } from "react";
+import Image from "next/image";
 import { motion, AnimatePresence, PanInfo, useMotionValue, useTransform } from "framer-motion";
 import {
   Lock, Play, Pause, Coins, Check, CheckCheck,
@@ -294,10 +295,12 @@ export const MessageBubble = memo(function MessageBubble({
                   <div className="absolute inset-0 overflow-hidden">
                     {/* Blurred preview background */}
                     {item.previewUrl ? (
-                      <img
+                      <Image
                         src={item.previewUrl}
                         alt=""
-                        className="absolute inset-0 w-full h-full object-cover blur-xl scale-125 opacity-70"
+                        fill
+                        sizes="300px"
+                        className="object-cover blur-xl scale-125 opacity-70"
                       />
                     ) : (
                       <div className="absolute inset-0 bg-gradient-to-br from-pink-900/50 via-purple-900/50 to-rose-900/50" />
@@ -539,14 +542,14 @@ export const MessageBubble = memo(function MessageBubble({
                 ) : (
                   /* Photo */
                   <>
-                    <img
+                    <Image
                       src={item.url}
                       alt=""
-                      className="w-full h-full object-cover transition-transform duration-300 hover:scale-105 pointer-events-none select-none"
-                      loading="lazy"
+                      fill
+                      sizes="(max-width: 768px) 80vw, 300px"
+                      className="object-cover transition-transform duration-300 hover:scale-105 pointer-events-none select-none"
                       draggable={false}
                       onContextMenu={(e) => e.preventDefault()}
-                      style={{ WebkitUserDrag: 'none' } as React.CSSProperties}
                     />
                     {/* Protection overlay */}
                     <div

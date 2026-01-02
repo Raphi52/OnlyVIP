@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
+import NextImage from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
@@ -469,13 +470,14 @@ export default function GalleryPage() {
                       )}>
                         {/* Image */}
                         {item.thumbnailUrl ? (
-                          <img
+                          <NextImage
                             src={item.thumbnailUrl}
                             alt={item.title}
-                            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 pointer-events-none select-none"
+                            fill
+                            sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                            className="object-cover transition-transform duration-700 group-hover:scale-110 pointer-events-none select-none"
                             draggable={false}
                             onContextMenu={(e) => e.preventDefault()}
-                            style={{ WebkitUserDrag: 'none' } as React.CSSProperties}
                           />
                         ) : (
                           <div className="w-full h-full bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center">
@@ -680,16 +682,17 @@ export default function GalleryPage() {
                       onContextMenu={(e) => e.preventDefault()}
                     >
                       {item.thumbnailUrl ? (
-                        <img
+                        <NextImage
                           src={item.thumbnailUrl}
                           alt={item.title}
+                          fill
+                          sizes="(max-width: 1024px) 100vw, 80vw"
                           className={cn(
-                            "w-full h-full object-cover pointer-events-none select-none",
+                            "object-cover pointer-events-none select-none",
                             !canAccess && "blur-2xl scale-110"
                           )}
                           draggable={false}
                           onContextMenu={(e) => e.preventDefault()}
-                          style={{ WebkitUserDrag: 'none' } as React.CSSProperties}
                         />
                       ) : (
                         <div className="w-full h-full bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center">

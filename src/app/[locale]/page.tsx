@@ -126,9 +126,11 @@ export default function HomePage() {
                     whileTap={{ scale: 0.98 }}
                   >
                     {session.user?.image ? (
-                      <img
+                      <Image
                         src={session.user.image}
                         alt={session.user.name || "Profile"}
+                        width={32}
+                        height={32}
                         className="w-8 h-8 rounded-full object-cover border border-[var(--gold)]/50"
                         referrerPolicy="no-referrer"
                       />
@@ -267,10 +269,12 @@ export default function HomePage() {
                       {/* Image */}
                       <div className="aspect-[3/4] relative overflow-hidden">
                         {creator.cardImage || creator.avatar ? (
-                          <img
+                          <Image
                             src={creator.cardImage || creator.avatar || ""}
                             alt={creator.displayName}
-                            className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                            fill
+                            sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                            className="object-cover group-hover:scale-105 transition-transform duration-500"
                           />
                         ) : (
                           <div className="w-full h-full bg-gradient-to-br from-[var(--gold)]/20 to-purple-500/20 flex items-center justify-center">

@@ -1,11 +1,11 @@
 import { Metadata } from "next";
 import { JsonLd } from "@/components/seo/JsonLd";
-import { generateOrganizationSchema, generateVipOnlyFAQSchema } from "@/lib/seo";
+import { generateOrganizationSchema, generateVIPOnlyFAQSchema } from "@/lib/seo";
 
 export const metadata: Metadata = {
-  title: "Best OnlyFans Alternative 2025 | VipOnly - Lower Fees, Crypto Payments",
+  title: "Best OnlyFans Alternative 2025 | VIPOnly - Lower Fees, Crypto Payments",
   description:
-    "VipOnly is the best OnlyFans alternative with only 5% fees (vs 20% on OnlyFans). Accept crypto payments, AI chat features, and agency tools. Creators keep 95% of earnings.",
+    "VIPOnly is the best OnlyFans alternative with only 5% fees (vs 20% on OnlyFans). Accept crypto payments, AI chat features, and agency tools. Creators keep 95% of earnings.",
   keywords: [
     "onlyfans alternative",
     "best onlyfans alternative",
@@ -21,9 +21,9 @@ export const metadata: Metadata = {
     "creator platform",
   ],
   openGraph: {
-    title: "Best OnlyFans Alternative 2025 | VipOnly - 5% Fees vs 20%",
+    title: "Best OnlyFans Alternative 2025 | VIPOnly - 5% Fees vs 20%",
     description:
-      "VipOnly is the best OnlyFans alternative. Only 5% platform fee, crypto payments, AI chat, and agency tools. Creators keep 95% of earnings.",
+      "VIPOnly is the best OnlyFans alternative. Only 5% platform fee, crypto payments, AI chat, and agency tools. Creators keep 95% of earnings.",
     url: "https://viponly.fun/onlyfans-alternative",
     type: "website",
     images: [
@@ -31,15 +31,15 @@ export const metadata: Metadata = {
         url: "https://viponly.fun/api/og?title=Best%20OnlyFans%20Alternative&subtitle=5%25%20Fees%20vs%2020%25%20-%20Keep%20More%20Earnings",
         width: 1200,
         height: 630,
-        alt: "VipOnly - Best OnlyFans Alternative",
+        alt: "VIPOnly - Best OnlyFans Alternative",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Best OnlyFans Alternative 2025 | VipOnly",
+    title: "Best OnlyFans Alternative 2025 | VIPOnly",
     description:
-      "VipOnly: 5% fees vs OnlyFans 20%. Crypto payments. AI chat. Keep 95% of your earnings.",
+      "VIPOnly: 5% fees vs OnlyFans 20%. Crypto payments. AI chat. Keep 95% of your earnings.",
   },
   alternates: {
     canonical: "https://viponly.fun/onlyfans-alternative",
@@ -61,14 +61,14 @@ export default function OnlyFansAlternativeLayout({
   return (
     <>
       <JsonLd data={generateOrganizationSchema()} />
-      <JsonLd data={generateVipOnlyFAQSchema()} />
+      <JsonLd data={generateVIPOnlyFAQSchema()} />
       <JsonLd
         data={{
           "@context": "https://schema.org",
           "@type": "WebPage",
-          name: "Best OnlyFans Alternative - VipOnly",
+          name: "Best OnlyFans Alternative - VIPOnly",
           description:
-            "Compare VipOnly vs OnlyFans. Lower fees, crypto payments, and AI features.",
+            "Compare VIPOnly vs OnlyFans. Lower fees, crypto payments, and AI features.",
           url: "https://viponly.fun/onlyfans-alternative",
           isPartOf: {
             "@id": "https://viponly.fun/#website",
@@ -82,9 +82,9 @@ export default function OnlyFansAlternativeLayout({
                 position: 1,
                 item: {
                   "@type": "Product",
-                  name: "VipOnly",
+                  name: "VIPOnly",
                   description: "Best OnlyFans alternative with 5% fees and crypto payments",
-                  brand: { "@type": "Brand", name: "VipOnly" },
+                  brand: { "@type": "Brand", name: "VIPOnly" },
                   offers: {
                     "@type": "Offer",
                     price: "0",

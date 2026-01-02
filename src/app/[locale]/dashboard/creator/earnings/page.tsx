@@ -17,6 +17,9 @@ import {
   ChevronLeft,
   ChevronRight,
   Sparkles,
+  Wallet,
+  Send,
+  AlertCircle,
 } from "lucide-react";
 import { Button, Card } from "@/components/ui";
 
@@ -65,6 +68,25 @@ const typeLabels: Record<string, { label: string; icon: typeof DollarSign; color
   SUBSCRIPTION: { label: "Subscription", icon: CreditCard, color: "text-green-400" },
 };
 
+interface PayoutRequestData {
+  pendingBalance: number;
+  minimumPayout: number;
+  walletEth: string | null;
+  walletBtc: string | null;
+  latestRequest: {
+    id: string;
+    amount: number;
+    walletType: string;
+    walletAddress: string;
+    status: string;
+    createdAt: string;
+    paidAt: string | null;
+  } | null;
+  canRequest: boolean;
+  cooldownPassed: boolean;
+  hasEnoughBalance: boolean;
+}
+
 export default function CreatorEarningsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -73,6 +95,14 @@ export default function CreatorEarningsPage() {
   const [page, setPage] = useState(1);
   const [typeFilter, setTypeFilter] = useState<string>("");
 
+  // Payout request state
+  const [payoutData, setPayoutData] = useState<PayoutRequestData | null>(null);
+  const [walletType, setWalletType] = useState<"ETH" | "BTC">("ETH");
+  const [walletAddress, setWalletAddress] = useState("");
+  const [isRequestingPayout, setIsRequestingPayout] = useState(false);
+  const [payoutError, setPayoutError] = useState<string | null>(null);
+  const [payoutSuccess, setPayoutSuccess] = useState(false);
+
   useEffect(() => {
     if (status === "loading") return;
     if (!session) {
@@ -80,7 +110,62 @@ export default function CreatorEarningsPage() {
       return;
     }
     fetchEarnings();
+    fetchPayoutData();
   }, [session, status, page, typeFilter]);
+
+  const fetchPayoutData = async () => {
+    try {
+      const res = await fetch("/api/creator/payout-request");
+      if (res.ok) {
+        const result = await res.json();
+        setPayoutData(result);
+        // Pre-fill wallet address if available
+        if (result.walletEth) {
+          setWalletType("ETH");
+          setWalletAddress(result.walletEth);
+        } else if (result.walletBtc) {
+          setWalletType("BTC");
+          setWalletAddress(result.walletBtc);
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching payout data:", error);
+    }
+  };
+
+  const handleRequestPayout = async () => {
+    if (!walletAddress.trim()) {
+      setPayoutError("Please enter your wallet address");
+      return;
+    }
+
+    setIsRequestingPayout(true);
+    setPayoutError(null);
+    setPayoutSuccess(false);
+
+    try {
+      const res = await fetch("/api/creator/payout-request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ walletType, walletAddress: walletAddress.trim() }),
+      });
+
+      const result = await res.json();
+
+      if (!res.ok) {
+        setPayoutError(result.error || "Failed to request payout");
+        return;
+      }
+
+      setPayoutSuccess(true);
+      fetchPayoutData(); // Refresh data
+    } catch (error) {
+      console.error("Error requesting payout:", error);
+      setPayoutError("Failed to request payout");
+    } finally {
+      setIsRequestingPayout(false);
+    }
+  };
 
   const fetchEarnings = async () => {
     setIsLoading(true);
@@ -245,6 +330,159 @@ export default function CreatorEarningsPage() {
                 </p>
               </div>
             </div>
+          </Card>
+        </motion.div>
+
+        {/* Payout Request Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.12 }}
+          className="mb-4 sm:mb-8"
+        >
+          <Card variant="luxury" className="p-4 sm:p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 sm:p-3 rounded-lg sm:rounded-xl bg-[var(--gold)]/20 flex-shrink-0">
+                <Wallet className="w-5 h-5 sm:w-6 sm:h-6 text-[var(--gold)]" />
+              </div>
+              <div>
+                <h3 className="text-base sm:text-lg font-semibold text-[var(--foreground)]">
+                  Request Payout
+                </h3>
+                <p className="text-xs sm:text-sm text-[var(--muted)]">
+                  Minimum {formatEuro(payoutData?.minimumPayout || 100)} • 1 request per day
+                </p>
+              </div>
+            </div>
+
+            {/* Latest Request Status */}
+            {payoutData?.latestRequest && (
+              <div className={`mb-4 p-3 rounded-lg ${
+                payoutData.latestRequest.status === "PAID"
+                  ? "bg-green-500/10 border border-green-500/20"
+                  : "bg-yellow-500/10 border border-yellow-500/20"
+              }`}>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    {payoutData.latestRequest.status === "PAID" ? (
+                      <CheckCircle className="w-4 h-4 text-green-400" />
+                    ) : (
+                      <Clock className="w-4 h-4 text-yellow-400" />
+                    )}
+                    <span className={`text-sm font-medium ${
+                      payoutData.latestRequest.status === "PAID" ? "text-green-400" : "text-yellow-400"
+                    }`}>
+                      {payoutData.latestRequest.status === "PAID" ? "Last payout completed" : "Payout request pending"}
+                    </span>
+                  </div>
+                  <span className="text-sm font-bold text-[var(--foreground)]">
+                    {formatEuro(payoutData.latestRequest.amount)}
+                  </span>
+                </div>
+                <p className="text-xs text-[var(--muted)] mt-1">
+                  {payoutData.latestRequest.walletType}: {payoutData.latestRequest.walletAddress.slice(0, 10)}...{payoutData.latestRequest.walletAddress.slice(-6)}
+                  {" • "}
+                  {new Date(payoutData.latestRequest.createdAt).toLocaleDateString()}
+                </p>
+              </div>
+            )}
+
+            {/* Success Message */}
+            {payoutSuccess && (
+              <div className="mb-4 p-3 rounded-lg bg-green-500/10 border border-green-500/20">
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4 text-green-400" />
+                  <span className="text-sm text-green-400">Payout request submitted successfully!</span>
+                </div>
+              </div>
+            )}
+
+            {/* Error Message */}
+            {payoutError && (
+              <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20">
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-red-400" />
+                  <span className="text-sm text-red-400">{payoutError}</span>
+                </div>
+              </div>
+            )}
+
+            {/* Request Form */}
+            {(!payoutData?.latestRequest || payoutData.latestRequest.status === "PAID") && (
+              <div className="space-y-4">
+                {/* Wallet Type Selection */}
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      setWalletType("ETH");
+                      setWalletAddress(payoutData?.walletEth || "");
+                    }}
+                    className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors ${
+                      walletType === "ETH"
+                        ? "bg-[var(--gold)] text-black"
+                        : "bg-[var(--surface)] text-[var(--muted)] hover:text-[var(--foreground)]"
+                    }`}
+                  >
+                    ETH (Ethereum)
+                  </button>
+                  <button
+                    onClick={() => {
+                      setWalletType("BTC");
+                      setWalletAddress(payoutData?.walletBtc || "");
+                    }}
+                    className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors ${
+                      walletType === "BTC"
+                        ? "bg-[var(--gold)] text-black"
+                        : "bg-[var(--surface)] text-[var(--muted)] hover:text-[var(--foreground)]"
+                    }`}
+                  >
+                    BTC (Bitcoin)
+                  </button>
+                </div>
+
+                {/* Wallet Address Input */}
+                <input
+                  type="text"
+                  value={walletAddress}
+                  onChange={(e) => setWalletAddress(e.target.value)}
+                  placeholder={walletType === "ETH" ? "0x..." : "bc1... or 1... or 3..."}
+                  className="w-full px-4 py-3 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-[var(--foreground)] placeholder:text-[var(--muted)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--gold)]/50"
+                />
+
+                {/* Request Button */}
+                <Button
+                  onClick={handleRequestPayout}
+                  disabled={
+                    isRequestingPayout ||
+                    !payoutData?.canRequest ||
+                    !walletAddress.trim()
+                  }
+                  className="w-full"
+                >
+                  {isRequestingPayout ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Requesting...
+                    </>
+                  ) : !payoutData?.hasEnoughBalance ? (
+                    <>
+                      <AlertCircle className="w-4 h-4 mr-2" />
+                      Minimum {formatEuro(payoutData?.minimumPayout || 100)} required
+                    </>
+                  ) : !payoutData?.cooldownPassed ? (
+                    <>
+                      <Clock className="w-4 h-4 mr-2" />
+                      Wait 24h between requests
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-4 h-4 mr-2" />
+                      Request Payout ({formatEuro(payoutData?.pendingBalance || 0)})
+                    </>
+                  )}
+                </Button>
+              </div>
+            )}
           </Card>
         </motion.div>
 

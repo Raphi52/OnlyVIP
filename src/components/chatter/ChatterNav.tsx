@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
 import { Crown, MessageSquare, DollarSign, FileText, LogOut, User, ChevronDown } from "lucide-react";
@@ -59,9 +60,11 @@ export function ChatterNav() {
           >
             <div className="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center">
               {session?.user?.image ? (
-                <img
+                <Image
                   src={session.user.image}
                   alt=""
+                  width={32}
+                  height={32}
                   className="w-8 h-8 rounded-full object-cover"
                 />
               ) : (

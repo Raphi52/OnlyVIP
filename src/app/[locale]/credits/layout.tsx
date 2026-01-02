@@ -3,15 +3,15 @@ import { Metadata } from "next";
 const BASE_URL = "https://viponly.fun";
 
 export const metadata: Metadata = {
-  title: "Buy VIP Only Credits | VIP Only",
+  title: "Buy VIPOnly Credits | VIPOnly",
   description:
-    "Purchase VIP only credits to unlock exclusive content, send tips to your favorite creators, and access VIP only photos and videos. Secure payment with crypto or card.",
+    "Purchase VIPOnly credits to unlock exclusive content, send tips to your favorite creators, and access VIPOnly photos and videos. Secure payment with crypto or card.",
   keywords: [
-    "VIP only",
-    "VIP Only",
+    "VIPOnly",
+    "viponly",
+    "viponly.fun",
     "buy credits",
     "credits",
-    "VipOnly",
     "unlock content",
     "tips",
     "crypto payment",
@@ -20,25 +20,25 @@ export const metadata: Metadata = {
   ],
   openGraph: {
     type: "website",
-    title: "Buy VIP Only Credits | VIP Only",
+    title: "Buy VIPOnly Credits | VIPOnly",
     description:
-      "Purchase VIP only credits to unlock exclusive content and support your favorite creators.",
+      "Purchase VIPOnly credits to unlock exclusive content and support your favorite creators.",
     url: `${BASE_URL}/credits`,
-    siteName: "VIP Only",
+    siteName: "VIPOnly",
     images: [
       {
         url: `${BASE_URL}/og-image.png`,
         width: 1200,
         height: 630,
-        alt: "Buy Credits on VipOnly",
+        alt: "Buy Credits on VIPOnly",
       },
     ],
     locale: "en_US",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Buy Credits | VipOnly",
-    description: "Purchase credits to unlock exclusive content on VipOnly.",
+    title: "Buy Credits | VIPOnly",
+    description: "Purchase credits to unlock exclusive content on VIPOnly.",
     images: [`${BASE_URL}/og-image.png`],
   },
   alternates: {

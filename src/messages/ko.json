@@ -1,7 +1,7 @@
 {
   "metadata": {
-    "title": "VipOnly - 독점 콘텐츠 플랫폼 | viponly.fun",
-    "description": "VipOnly는 독점 콘텐츠 크리에이터를 위한 프리미엄 플랫폼입니다. 사진, 동영상을 공유하고, 팬들과 채팅하고, 콘텐츠로 수익을 창출하세요. 크리에이터는 95%를 받습니다."
+    "title": "VIPOnly - 독점 콘텐츠 플랫폼 | VIPOnly.fun",
+    "description": "VIPOnly는 독점 콘텐츠 크리에이터를 위한 프리미엄 플랫폼입니다. 사진, 동영상을 공유하고, 팬들과 채팅하고, 콘텐츠로 수익을 창출하세요. 크리에이터는 95%를 받습니다."
   },
   "nav": {
     "login": "로그인",
@@ -27,9 +27,9 @@
     "gallery": "갤러리"
   },
   "home": {
-    "title": "VipOnly",
+    "title": "VIPOnly",
     "subtitle": "독점 콘텐츠",
-    "description": "VipOnly는 독점 콘텐츠 크리에이터를 위한 #1 플랫폼입니다. 구독하고 독점 사진, 동영상, 개인 메시지에 접근하세요.",
+    "description": "VIPOnly는 독점 콘텐츠 크리에이터를 위한 #1 플랫폼입니다. 구독하고 독점 사진, 동영상, 개인 메시지에 접근하세요.",
     "discoverCreators": "크리에이터 찾기",
     "noCreators": "아직 크리에이터가 없습니다",
     "beFirst": "첫 번째 크리에이터가 되세요!",
@@ -123,7 +123,7 @@
     "loginTitle": "다시 오신 것을 환영합니다",
     "loginSubtitle": "로그인하여 독점 콘텐츠에 접근하세요",
     "signupTitle": "계정 만들기",
-    "signupSubtitle": "오늘 VipOnly에 가입하세요",
+    "signupSubtitle": "오늘 VIPOnly에 가입하세요",
     "forgotPassword": "비밀번호를 잊으셨나요?",
     "noAccount": "계정이 없으신가요?",
     "hasAccount": "이미 계정이 있으신가요?",
