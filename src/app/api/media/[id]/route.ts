@@ -170,7 +170,6 @@ export async function PATCH(
 
     const media = await prisma.mediaContent.findUnique({
       where: { id },
-      include: { creator: { select: { userId: true } } },
     });
 
     if (!media) {
@@ -183,7 +182,13 @@ export async function PATCH(
     // Check authorization: must be admin or media owner
     const user = session.user as { role?: string };
     const isAdmin = user.role === "ADMIN";
-    const isOwner = media.creator?.userId === session.user.id;
+
+    // Find creator by slug to check ownership
+    const creator = await prisma.creator.findUnique({
+      where: { slug: media.creatorSlug },
+      select: { userId: true },
+    });
+    const isOwner = creator?.userId === session.user.id;
 
     if (!isAdmin && !isOwner) {
       return NextResponse.json(
@@ -270,7 +275,6 @@ export async function DELETE(
 
     const media = await prisma.mediaContent.findUnique({
       where: { id },
-      include: { creator: { select: { userId: true } } },
     });
 
     if (!media) {
@@ -283,7 +287,13 @@ export async function DELETE(
     // Check authorization: must be admin or media owner
     const user = session.user as { role?: string };
     const isAdmin = user.role === "ADMIN";
-    const isOwner = media.creator?.userId === session.user.id;
+
+    // Find creator by slug to check ownership
+    const creator = await prisma.creator.findUnique({
+      where: { slug: media.creatorSlug },
+      select: { userId: true },
+    });
+    const isOwner = creator?.userId === session.user.id;
 
     if (!isAdmin && !isOwner) {
       return NextResponse.json(
