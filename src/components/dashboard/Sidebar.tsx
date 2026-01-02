@@ -22,7 +22,6 @@ import {
   Sparkles,
   Users,
   DollarSign,
-  Globe,
   Shield,
   ChevronDown,
   Check,
@@ -49,6 +48,7 @@ const userLinks = [
 // Navigation pour les créateurs (en plus des liens user)
 const creatorLinks = [
   { href: "/dashboard/creator", icon: Crown, label: "Creator Dashboard" },
+  { href: "/dashboard/creator/verification", icon: Shield, label: "Verification" },
   { href: "/dashboard/creator/media", icon: Upload, label: "Media Library" },
   { href: "/dashboard/creator/members", icon: Users, label: "Members" },
   { href: "/dashboard/creator/earnings", icon: DollarSign, label: "Earnings" },
@@ -66,7 +66,6 @@ const adminLinks = [
   { href: "/dashboard/admin/payments", icon: DollarSign, label: "All Payments" },
   { href: "/dashboard/admin/payouts", icon: Wallet, label: "Creator Payouts" },
   { href: "/dashboard/admin/analytics", icon: BarChart3, label: "Site Analytics" },
-  { href: "/dashboard/admin/settings", icon: Globe, label: "Site Settings" },
 ];
 
 // Navigation pour les agences

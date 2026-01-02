@@ -70,132 +70,158 @@ export async function GET(request: NextRequest) {
     // Transform data for frontend
     const transformedConversations = await Promise.all(
       validConversations.map(async (conv) => {
-        // Get the other user (not current user)
-        const otherParticipant = conv.participants.find(
-          (p) => p.userId !== userId
-        );
-        const otherUser = otherParticipant?.user;
+        try {
+          // Get the other user (not current user)
+          const otherParticipant = conv.participants.find(
+            (p) => p.userId !== userId
+          );
+          const otherUser = otherParticipant?.user;
 
-        // Determine display name/image based on who is viewing:
-        // - If current user is the CREATOR owner -> show FAN's info
-        // - If current user is a FAN -> show CREATOR's profile info
-        let userImage = otherUser?.image;
-        let userName = otherUser?.name || otherUser?.email?.split("@")[0] || "User";
+          // Determine display name/image based on who is viewing:
+          // - If current user is the CREATOR owner -> show FAN's info
+          // - If current user is a FAN -> show CREATOR's profile info
+          let userImage = otherUser?.image;
+          let userName = otherUser?.name || otherUser?.email?.split("@")[0] || "User";
 
-        // Check if current user owns the creator profile for this conversation
-        let currentUserIsCreatorOwner = false;
-        if (conv.creatorSlug) {
-          const creatorProfile = await prisma.creator.findUnique({
-            where: { slug: conv.creatorSlug },
-            select: { userId: true, avatar: true, displayName: true },
-          });
+          // Check if current user owns the creator profile for this conversation
+          let currentUserIsCreatorOwner = false;
+          if (conv.creatorSlug) {
+            try {
+              const creatorProfile = await prisma.creator.findUnique({
+                where: { slug: conv.creatorSlug },
+                select: { userId: true, avatar: true, displayName: true },
+              });
 
-          if (creatorProfile) {
-            currentUserIsCreatorOwner = creatorProfile.userId === userId;
+              if (creatorProfile) {
+                currentUserIsCreatorOwner = creatorProfile.userId === userId;
 
-            // Only show creator profile info if current user is NOT the creator owner (i.e., is a fan)
-            if (!currentUserIsCreatorOwner) {
-              userImage = creatorProfile.avatar || userImage;
-              userName = creatorProfile.displayName || userName;
-            }
-            // If current user IS the creator owner, keep showing the fan's info (otherUser)
-          }
-        } else if (otherUser?.id && !currentUserIsCreatorOwner) {
-          // Fallback: find any creator profile for the other user (when no creatorSlug)
-          const creator = await prisma.creator.findFirst({
-            where: { userId: otherUser.id },
-            select: { avatar: true, displayName: true },
-          });
-          if (creator) {
-            userImage = creator.avatar || userImage;
-            userName = creator.displayName || userName;
-          }
-        }
-
-        // Count unread messages for current user (exclude self-messages)
-        const unreadCount = await prisma.message.count({
-          where: {
-            conversationId: conv.id,
-            receiverId: userId,
-            senderId: { not: userId }, // Don't count messages from self
-            isRead: false,
-          },
-        });
-
-        // Get current user's participant settings (pin/mute)
-        const currentParticipant = conv.participants.find(p => p.userId === userId);
-
-        // Get other user's subscription (for admin/creator view)
-        let subscriptionName = null;
-        if (isAdmin || isCreator) {
-          const subscription = await prisma.subscription.findFirst({
-            where: {
-              userId: otherUser?.id,
-              status: "ACTIVE",
-            },
-            include: {
-              plan: true,
-            },
-          });
-          subscriptionName = subscription?.plan?.name || "Free";
-        }
-
-        const lastMessage = conv.messages[0];
-
-        // Get creator slug for the other user (for "View all media" link)
-        let otherUserSlug: string | undefined = undefined;
-        if (!currentUserIsCreatorOwner && conv.creatorSlug) {
-          // If current user is a fan, use the conversation's creator slug
-          otherUserSlug = conv.creatorSlug;
-        } else if (otherUser?.id) {
-          // If current user is the creator, check if other user is also a creator
-          const otherCreator = await prisma.creator.findFirst({
-            where: { userId: otherUser.id },
-            select: { slug: true },
-          });
-          otherUserSlug = otherCreator?.slug;
-        }
-
-        return {
-          id: conv.id,
-          otherUser: {
-            id: otherUser?.id || "",
-            name: userName,
-            email: otherUser?.email,
-            image: userImage,
-            isOnline: false,
-            slug: otherUserSlug,
-          },
-          // Keep 'user' for backward compatibility with admin pages
-          user: {
-            id: otherUser?.id || "",
-            name: userName,
-            email: otherUser?.email,
-            image: userImage,
-            isOnline: false,
-            slug: otherUserSlug,
-          },
-          lastMessage: lastMessage
-            ? {
-                text: lastMessage.text,
-                isPPV: lastMessage.isPPV,
-                hasMedia: lastMessage.media && lastMessage.media.length > 0,
-                createdAt: lastMessage.createdAt,
-                isRead: lastMessage.isRead,
-                senderId: lastMessage.senderId,
+                // Only show creator profile info if current user is NOT the creator owner (i.e., is a fan)
+                if (!currentUserIsCreatorOwner) {
+                  userImage = creatorProfile.avatar || userImage;
+                  userName = creatorProfile.displayName || userName;
+                }
               }
-            : null,
-          unreadCount,
-          subscription: subscriptionName,
-          isPinned: currentParticipant?.isPinned || false,
-          isMuted: currentParticipant?.isMuted || false,
-          createdAt: conv.createdAt,
-          updatedAt: conv.updatedAt,
-        };
+            } catch (e) {
+              console.error("Error fetching creator profile:", e);
+            }
+          } else if (otherUser?.id && !currentUserIsCreatorOwner) {
+            // Fallback: find any creator profile for the other user (when no creatorSlug)
+            try {
+              const creator = await prisma.creator.findFirst({
+                where: { userId: otherUser.id },
+                select: { avatar: true, displayName: true },
+              });
+              if (creator) {
+                userImage = creator.avatar || userImage;
+                userName = creator.displayName || userName;
+              }
+            } catch (e) {
+              console.error("Error fetching creator:", e);
+            }
+          }
+
+          // Count unread messages for current user (exclude self-messages)
+          let unreadCount = 0;
+          try {
+            unreadCount = await prisma.message.count({
+              where: {
+                conversationId: conv.id,
+                receiverId: userId,
+                senderId: { not: userId },
+                isRead: false,
+              },
+            });
+          } catch (e) {
+            console.error("Error counting unread messages:", e);
+          }
+
+          // Get current user's participant settings (pin/mute)
+          const currentParticipant = conv.participants.find(p => p.userId === userId);
+
+          // Get other user's subscription (for admin/creator view)
+          let subscriptionName = null;
+          if ((isAdmin || isCreator) && otherUser?.id) {
+            try {
+              const subscription = await prisma.subscription.findFirst({
+                where: {
+                  userId: otherUser.id,
+                  status: "ACTIVE",
+                },
+                include: {
+                  plan: true,
+                },
+              });
+              subscriptionName = subscription?.plan?.name || "Free";
+            } catch (e) {
+              console.error("Error fetching subscription:", e);
+              subscriptionName = "Free";
+            }
+          }
+
+          const lastMessage = conv.messages[0];
+
+          // Get creator slug for the other user (for "View all media" link)
+          let otherUserSlug: string | undefined = undefined;
+          if (!currentUserIsCreatorOwner && conv.creatorSlug) {
+            otherUserSlug = conv.creatorSlug;
+          } else if (otherUser?.id) {
+            try {
+              const otherCreator = await prisma.creator.findFirst({
+                where: { userId: otherUser.id },
+                select: { slug: true },
+              });
+              otherUserSlug = otherCreator?.slug;
+            } catch (e) {
+              console.error("Error fetching other creator:", e);
+            }
+          }
+
+          return {
+            id: conv.id,
+            otherUser: {
+              id: otherUser?.id || "",
+              name: userName,
+              email: otherUser?.email,
+              image: userImage,
+              isOnline: false,
+              slug: otherUserSlug,
+            },
+            user: {
+              id: otherUser?.id || "",
+              name: userName,
+              email: otherUser?.email,
+              image: userImage,
+              isOnline: false,
+              slug: otherUserSlug,
+            },
+            lastMessage: lastMessage
+              ? {
+                  text: lastMessage.text,
+                  isPPV: lastMessage.isPPV,
+                  hasMedia: lastMessage.media && lastMessage.media.length > 0,
+                  createdAt: lastMessage.createdAt,
+                  isRead: lastMessage.isRead,
+                  senderId: lastMessage.senderId,
+                }
+              : null,
+            unreadCount,
+            subscription: subscriptionName,
+            isPinned: currentParticipant?.isPinned || false,
+            isMuted: currentParticipant?.isMuted || false,
+            createdAt: conv.createdAt,
+            updatedAt: conv.updatedAt,
+          };
+        } catch (convError) {
+          console.error("Error processing conversation:", conv.id, convError);
+          return null;
+        }
       })
     );
 
-    return NextResponse.json({ conversations: transformedConversations });
+    // Filter out any null results from failed processing
+    const filteredConversations = transformedConversations.filter(c => c !== null);
+
+    return NextResponse.json({ conversations: filteredConversations });
   } catch (error) {
     console.error("Error fetching conversations:", error);
     return NextResponse.json(

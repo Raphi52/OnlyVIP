@@ -5,6 +5,7 @@ import { locales, type Locale } from '@/i18n/config';
 import { Providers } from "@/components/Providers";
 import { PageTracker } from "@/components/analytics/PageTracker";
 import { AgeGate } from "@/components/AgeGate";
+import { CookieConsent } from "@/components/CookieConsent";
 import { MediaProtection } from "@/components/MediaProtection";
 import { JsonLd } from "@/components/seo/JsonLd";
 import {
@@ -119,6 +120,7 @@ export default async function LocaleLayout({
       <Providers>
         <MediaProtection />
         <AgeGate />
+        <CookieConsent />
         <PageTracker />
         <JsonLd
           data={[

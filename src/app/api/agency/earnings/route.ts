@@ -87,18 +87,23 @@ export async function GET(request: NextRequest) {
     });
 
     // Get unique creator slugs with their totals
-    const creatorStats = await prisma.$queryRaw`
-      SELECT
-        ce."creatorSlug",
-        SUM(ae."netAmount") as total,
-        COUNT(ae.id) as count
-      FROM "AgencyEarning" ae
-      JOIN "CreatorEarning" ce ON ae."creatorEarningId" = ce.id
-      WHERE ae."agencyId" = ${agency.id}
-      GROUP BY ce."creatorSlug"
-      ORDER BY total DESC
-      LIMIT 10
-    ` as any[];
+    let creatorStats: any[] = [];
+    try {
+      creatorStats = await prisma.$queryRaw`
+        SELECT
+          ce."creatorSlug",
+          SUM(ae."netAmount") as total,
+          COUNT(ae.id) as count
+        FROM "AgencyEarning" ae
+        JOIN "CreatorEarning" ce ON ae."creatorEarningId" = ce.id
+        WHERE ae."agencyId" = ${agency.id}
+        GROUP BY ce."creatorSlug"
+        ORDER BY total DESC
+        LIMIT 10
+      ` as any[];
+    } catch (queryError) {
+      console.error("Error fetching creator stats:", queryError);
+    }
 
     // Transform earnings for response
     const transformedEarnings = earnings.map((e) => ({
@@ -112,8 +117,8 @@ export async function GET(request: NextRequest) {
       status: e.status,
       createdAt: e.createdAt,
       paidAt: e.paidAt,
-      creatorSlug: e.creatorEarning.creatorSlug,
-      user: e.creatorEarning.user,
+      creatorSlug: e.creatorEarning?.creatorSlug || "unknown",
+      user: e.creatorEarning?.user || null,
     }));
 
     return NextResponse.json({

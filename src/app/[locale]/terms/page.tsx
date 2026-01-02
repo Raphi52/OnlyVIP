@@ -200,11 +200,17 @@ export default function TermsPage() {
             </section>
 
             <section>
-              <h2 className="text-2xl font-semibold text-white mb-4">14. Governing Law</h2>
+              <h2 className="text-2xl font-semibold text-white mb-4">14. Governing Law and Jurisdiction</h2>
               <p>
-                These Terms shall be governed by and construed in accordance with applicable laws, without
-                regard to conflict of law principles. Any disputes arising from these Terms shall be resolved
-                through binding arbitration or in the courts of competent jurisdiction.
+                These Terms shall be governed by and construed in accordance with the laws of the State of Delaware,
+                United States, without regard to its conflict of law principles. Any disputes arising from or relating
+                to these Terms or the Service shall be subject to the exclusive jurisdiction of the state and federal
+                courts located in Delaware, USA.
+              </p>
+              <p className="mt-4">
+                For users located in the European Union, nothing in these Terms affects your rights under mandatory
+                consumer protection laws in your country of residence. EU residents may also bring proceedings in
+                their local courts.
               </p>
             </section>
 

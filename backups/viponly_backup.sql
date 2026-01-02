@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict XjVZQiVDSV1CX8Ltqc2vSF9KarWfs7hNhSr933zVQv0JnVVW0WqFXUxFJoN1OAP
+\restrict hMHGq4zc94DkdbYlm0mboPWJe6OPAA2r1yFx3ff8HvKGV9o9KqAoZnyVPFtLtW7
 
 -- Dumped from database version 16.11
 -- Dumped by pg_dump version 16.11
@@ -118,7 +118,9 @@ CREATE TABLE public."Agency" (
     "aiModel" text DEFAULT 'claude-haiku-4-5-20241022'::text,
     "aiApiKey" text,
     "aiApiKeyHash" text,
-    "aiUseCustomKey" boolean DEFAULT false
+    "aiUseCustomKey" boolean DEFAULT false,
+    "isListed" boolean DEFAULT false,
+    "listingPriority" integer DEFAULT 0
 );
 
 
@@ -147,7 +149,11 @@ CREATE TABLE public."AgencyAiPersonality" (
     "aiMediaEnabled" boolean DEFAULT true NOT NULL,
     "aiMediaFrequency" integer DEFAULT 4 NOT NULL,
     "aiPPVRatio" integer DEFAULT 30 NOT NULL,
-    "aiTeasingEnabled" boolean DEFAULT true NOT NULL
+    "aiTeasingEnabled" boolean DEFAULT true NOT NULL,
+    "autoHandoffEnabled" boolean DEFAULT true,
+    "handoffSpendThreshold" double precision DEFAULT 40,
+    "handoffOnHighIntent" boolean DEFAULT true,
+    "handoffKeywords" text
 );
 
 
@@ -223,6 +229,40 @@ CREATE TABLE public."AgencyListing" (
 
 
 ALTER TABLE public."AgencyListing" OWNER TO viponly;
+
+--
+-- Name: AgencyPublicStats; Type: TABLE; Schema: public; Owner: viponly
+--
+
+CREATE TABLE public."AgencyPublicStats" (
+    id text NOT NULL,
+    "agencyId" text NOT NULL,
+    "calculatedAt" timestamp(3) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    "activeCreators" integer DEFAULT 0 NOT NULL,
+    "totalCreatorsEver" integer DEFAULT 0 NOT NULL,
+    "totalRevenueLast30d" double precision DEFAULT 0 NOT NULL,
+    "avgRevenuePerCreator" double precision DEFAULT 0 NOT NULL,
+    "revenueGrowth3m" double precision DEFAULT 0 NOT NULL,
+    "payoutSuccessRate" double precision DEFAULT 100 NOT NULL,
+    "avgPayoutDelayDays" double precision DEFAULT 0 NOT NULL,
+    "avgCommissionRate" double precision DEFAULT 0 NOT NULL,
+    "minCommissionRate" double precision DEFAULT 0 NOT NULL,
+    "maxCommissionRate" double precision DEFAULT 0 NOT NULL,
+    "avgCollaborationMonths" double precision DEFAULT 0 NOT NULL,
+    retention6m double precision DEFAULT 0 NOT NULL,
+    retention12m double precision DEFAULT 0 NOT NULL,
+    "avgResponseTimeHours" double precision DEFAULT 0 NOT NULL,
+    "monthlyHistory" text,
+    badges text DEFAULT '[]'::text NOT NULL,
+    "avgRating" double precision DEFAULT 0 NOT NULL,
+    "totalReviews" integer DEFAULT 0 NOT NULL,
+    "isPublic" boolean DEFAULT true NOT NULL,
+    "createdAt" timestamp(3) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    "updatedAt" timestamp(3) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+
+ALTER TABLE public."AgencyPublicStats" OWNER TO viponly;
 
 --
 -- Name: AgencyReview; Type: TABLE; Schema: public; Owner: viponly
@@ -541,6 +581,52 @@ CREATE TABLE public."CreatorMember" (
 ALTER TABLE public."CreatorMember" OWNER TO viponly;
 
 --
+-- Name: CreatorPublicStats; Type: TABLE; Schema: public; Owner: viponly
+--
+
+CREATE TABLE public."CreatorPublicStats" (
+    id text NOT NULL,
+    "creatorId" text NOT NULL,
+    "calculatedAt" timestamp(3) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    "revenueLast30d" double precision DEFAULT 0 NOT NULL,
+    "revenueAvg3m" double precision DEFAULT 0 NOT NULL,
+    "revenueTrend" double precision DEFAULT 0 NOT NULL,
+    "totalRevenueAllTime" double precision DEFAULT 0 NOT NULL,
+    "revenueFromSubs" double precision DEFAULT 0 NOT NULL,
+    "revenueFromPPV" double precision DEFAULT 0 NOT NULL,
+    "revenueFromTips" double precision DEFAULT 0 NOT NULL,
+    "revenueFromMessages" double precision DEFAULT 0 NOT NULL,
+    "activeSubscribers" integer DEFAULT 0 NOT NULL,
+    "subscriberRetention" double precision DEFAULT 0 NOT NULL,
+    "avgSubscriptionMonths" double precision DEFAULT 0 NOT NULL,
+    "subscriberGrowth30d" double precision DEFAULT 0 NOT NULL,
+    "activityRate" double precision DEFAULT 0 NOT NULL,
+    "avgResponseMinutes" double precision DEFAULT 0 NOT NULL,
+    "lastActiveAt" timestamp(3) without time zone,
+    "messageToSaleRate" double precision DEFAULT 0 NOT NULL,
+    "ppvUnlockRate" double precision DEFAULT 0 NOT NULL,
+    "totalPosts" integer DEFAULT 0 NOT NULL,
+    "postsLast30d" integer DEFAULT 0 NOT NULL,
+    "avgPostsPerWeek" double precision DEFAULT 0 NOT NULL,
+    "totalMedia" integer DEFAULT 0 NOT NULL,
+    "avgLikesPerPost" double precision DEFAULT 0 NOT NULL,
+    "avgCommentsPerPost" double precision DEFAULT 0 NOT NULL,
+    "monthlyHistory" text,
+    badges text DEFAULT '[]'::text NOT NULL,
+    "isPublic" boolean DEFAULT true NOT NULL,
+    "createdAt" timestamp(3) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    "updatedAt" timestamp(3) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    "avgRating" double precision DEFAULT 0 NOT NULL,
+    "totalReviews" integer DEFAULT 0 NOT NULL,
+    "showRevenue" boolean DEFAULT true NOT NULL,
+    "showSubscribers" boolean DEFAULT true NOT NULL,
+    "showActivity" boolean DEFAULT true NOT NULL
+);
+
+
+ALTER TABLE public."CreatorPublicStats" OWNER TO viponly;
+
+--
 -- Name: CreditTransaction; Type: TABLE; Schema: public; Owner: viponly
 --
 
@@ -699,7 +785,8 @@ CREATE TABLE public."Message" (
     "isAiGenerated" boolean DEFAULT false NOT NULL,
     "resultedInSale" boolean DEFAULT false NOT NULL,
     "saleAmount" double precision,
-    "scriptModified" boolean DEFAULT false NOT NULL
+    "scriptModified" boolean DEFAULT false NOT NULL,
+    "responseTimeSeconds" integer
 );
 
 
@@ -1161,10 +1248,10 @@ COPY public."AccountingQueue" (id, payload, status, attempts, "maxAttempts", "la
 -- Data for Name: Agency; Type: TABLE DATA; Schema: public; Owner: viponly
 --
 
-COPY public."Agency" (id, name, slug, "ownerId", "aiEnabled", "platformFee", status, "totalRevenue", "createdAt", "updatedAt", logo, description, "publicVisible", "averageRating", "reviewCount", website, tagline, services, specialties, "minRevenueShare", "maxRevenueShare", "socialLinks", "portfolioImages", location, languages, "yearsInBusiness", "pendingBalance", "totalEarned", "totalPaid", "aiProvider", "aiModel", "aiApiKey", "aiApiKeyHash", "aiUseCustomKey") FROM stdin;
-cmjrkebo40007vdmsh4a4hc7u	LVM	lvm	cmjojjvac001iuzc2514iyrs8	f	0.1	ACTIVE	0	2025-12-29 19:42:01.877	2025-12-29 19:42:01.877	\N	\N	t	0	0	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	0	0	0	anthropic	claude-haiku-4-5-20241022	\N	\N	f
-cmjr8o7yl0018i3mmy7gwlcub	jeff agency	jeff-agency	cmjr8d46c0009i3mmu90d6k3a	f	0.1	ACTIVE	0	2025-12-29 14:13:48.237	2025-12-29 23:10:58.042	\N	\N	t	0	0	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	0	0	0	anthropic	claude-haiku-4-5-20241022	\N	\N	f
-cmjr5g2e70001j3u415qpk7o2	Viral Studio Agency	viral-studio-agency	cmjoj4cpm000quzc2ow1u2d57	t	0.1	ACTIVE	29.918931	2025-12-29 12:43:28.927	2026-01-01 15:41:04.257	/uploads/avatar/bdbc6aaaf00b8595362108431aac67ca.jpg	\N	t	0	0	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	29.918931	29.918931	0	anthropic	claude-haiku-4-5-20241022	\N	\N	f
+COPY public."Agency" (id, name, slug, "ownerId", "aiEnabled", "platformFee", status, "totalRevenue", "createdAt", "updatedAt", logo, description, "publicVisible", "averageRating", "reviewCount", website, tagline, services, specialties, "minRevenueShare", "maxRevenueShare", "socialLinks", "portfolioImages", location, languages, "yearsInBusiness", "pendingBalance", "totalEarned", "totalPaid", "aiProvider", "aiModel", "aiApiKey", "aiApiKeyHash", "aiUseCustomKey", "isListed", "listingPriority") FROM stdin;
+cmjrkebo40007vdmsh4a4hc7u	LVM	lvm	cmjojjvac001iuzc2514iyrs8	f	0.1	ACTIVE	0	2025-12-29 19:42:01.877	2025-12-29 19:42:01.877	\N	\N	t	0	0	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	0	0	0	anthropic	claude-haiku-4-5-20241022	\N	\N	f	f	0
+cmjr8o7yl0018i3mmy7gwlcub	jeff agency	jeff-agency	cmjr8d46c0009i3mmu90d6k3a	f	0.1	ACTIVE	0	2025-12-29 14:13:48.237	2025-12-29 23:10:58.042	\N	\N	t	0	0	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	0	0	0	anthropic	claude-haiku-4-5-20241022	\N	\N	f	f	0
+cmjr5g2e70001j3u415qpk7o2	Viral Studio Agency	viral-studio-agency	cmjoj4cpm000quzc2ow1u2d57	t	0.1	ACTIVE	29.918931	2025-12-29 12:43:28.927	2026-01-01 15:41:04.257	/uploads/avatar/bdbc6aaaf00b8595362108431aac67ca.jpg	\N	t	0	0	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	29.918931	29.918931	0	anthropic	claude-haiku-4-5-20241022	\N	\N	f	f	0
 \.
 
 
@@ -1172,8 +1259,8 @@ cmjr5g2e70001j3u415qpk7o2	Viral Studio Agency	viral-studio-agency	cmjoj4cpm000qu
 -- Data for Name: AgencyAiPersonality; Type: TABLE DATA; Schema: public; Owner: viponly
 --
 
-COPY public."AgencyAiPersonality" (id, name, "agencyId", "creatorSlug", personality, "trafficShare", "isActive", "totalEarnings", "totalMessages", "totalSales", "conversionRate", "createdAt", "updatedAt", "primaryTone", "toneKeywords", "aiMediaEnabled", "aiMediaFrequency", "aiPPVRatio", "aiTeasingEnabled") FROM stdin;
-cmjr8szxz000710sqxir9f5ss	Direct Flirty	cmjr5g2e70001j3u415qpk7o2	miacosta	{"tone":"flirty","style":"direct"}	100	t	0	0	0	0	2025-12-29 14:17:31.128	2025-12-29 14:19:22.931	\N	\N	t	4	30	t
+COPY public."AgencyAiPersonality" (id, name, "agencyId", "creatorSlug", personality, "trafficShare", "isActive", "totalEarnings", "totalMessages", "totalSales", "conversionRate", "createdAt", "updatedAt", "primaryTone", "toneKeywords", "aiMediaEnabled", "aiMediaFrequency", "aiPPVRatio", "aiTeasingEnabled", "autoHandoffEnabled", "handoffSpendThreshold", "handoffOnHighIntent", "handoffKeywords") FROM stdin;
+cmjx52fqk00081xb1dwl5lhoz	aze	cmjr5g2e70001j3u415qpk7o2	miacosta	{"tone":"flirty","style":"casual"}	100	t	0	0	0	0	2026-01-02 17:19:30.093	2026-01-02 17:19:30.093	\N	\N	t	4	30	t	t	40	t	\N
 \.
 
 
@@ -1202,6 +1289,14 @@ cmjvm403f000ol0biorq7k9d1	cmjr5g2e70001j3u415qpk7o2	cmjvm4033000ml0bisr7vf70w	15
 
 COPY public."AgencyListing" (id, "agencyId", headline, description, "lookingFor", "contentTypes", requirements, "minRevenueShare", "maxRevenueShare", "providesContent", "providesChatting", "providesMarketing", location, "acceptsRemote", "averageRating", "reviewCount", "isActive", "createdAt", "updatedAt") FROM stdin;
 cmjsjicny0006cm82sej5qwcx	cmjr5g2e70001j3u415qpk7o2		We are money hungry	["female"]	["solo","brunette","live","latina","asian","ebony","european","anal","feet","submissive","dominant","fetish","bigtits","bigass","smalltits","mature","teen"]	42 followers et 8 likes	30	50	t	t	t	Los Santos	t	0	0	t	2025-12-30 12:04:56.35	2025-12-30 13:07:51.21
+\.
+
+
+--
+-- Data for Name: AgencyPublicStats; Type: TABLE DATA; Schema: public; Owner: viponly
+--
+
+COPY public."AgencyPublicStats" (id, "agencyId", "calculatedAt", "activeCreators", "totalCreatorsEver", "totalRevenueLast30d", "avgRevenuePerCreator", "revenueGrowth3m", "payoutSuccessRate", "avgPayoutDelayDays", "avgCommissionRate", "minCommissionRate", "maxCommissionRate", "avgCollaborationMonths", retention6m, retention12m, "avgResponseTimeHours", "monthlyHistory", badges, "avgRating", "totalReviews", "isPublic", "createdAt", "updatedAt") FROM stdin;
 \.
 
 
@@ -1275,6 +1370,7 @@ COPY public."Category" (id, name, slug, description, "coverImage", "sortOrder", 
 --
 
 COPY public."Chatter" (id, email, "passwordHash", name, avatar, "agencyId", "commissionEnabled", "commissionRate", "totalEarnings", "totalMessages", "totalSales", "isActive", "lastActiveAt", "createdAt", "updatedAt", schedule, "pendingBalance", "totalPaid", "messagesOutsideShift") FROM stdin;
+cmjx5ajfr000b1xb1h49b9ij8	meader@gmail.com	$2b$12$5JFPZwXsZcVdkaSQbVMzDOKsBrt1WUkKl7ufDuTK1h8SBOHEsl7oy	leader	\N	cmjr5g2e70001j3u415qpk7o2	f	0.1	0	0	0	t	\N	2026-01-02 17:25:48.135	2026-01-02 17:27:27.549	{"monday":[],"tuesday":[],"wednesday":[],"thursday":[],"friday":[],"saturday":[],"sunday":[]}	0	0	0
 \.
 
 
@@ -1353,6 +1449,14 @@ cmjps89f4000912d1ggn9plym	miacosta	cmjps4e7f000012d1mipap0xq	t	f	\N	2025-12-28 1
 cmjpy0hpz0008oh8okvjgqeeg	miacosta	cmjojjvac001iuzc2514iyrs8	t	f	\N	2025-12-28 16:27:38.807	2025-12-28 17:06:34.938
 cmjpxpaaf000k12zy944b27zb	pascale	cmjojjvac001iuzc2514iyrs8	t	f	\N	2025-12-28 16:18:55.959	2025-12-28 17:06:42.551
 cmjr8e8cg000di3mmdf23j88h	miacosta	cmjr8d46c0009i3mmu90d6k3a	f	f	\N	2025-12-29 14:06:02.176	2025-12-29 14:06:02.176
+\.
+
+
+--
+-- Data for Name: CreatorPublicStats; Type: TABLE DATA; Schema: public; Owner: viponly
+--
+
+COPY public."CreatorPublicStats" (id, "creatorId", "calculatedAt", "revenueLast30d", "revenueAvg3m", "revenueTrend", "totalRevenueAllTime", "revenueFromSubs", "revenueFromPPV", "revenueFromTips", "revenueFromMessages", "activeSubscribers", "subscriberRetention", "avgSubscriptionMonths", "subscriberGrowth30d", "activityRate", "avgResponseMinutes", "lastActiveAt", "messageToSaleRate", "ppvUnlockRate", "totalPosts", "postsLast30d", "avgPostsPerWeek", "totalMedia", "avgLikesPerPost", "avgCommentsPerPost", "monthlyHistory", badges, "isPublic", "createdAt", "updatedAt", "avgRating", "totalReviews", "showRevenue", "showSubscribers", "showActivity") FROM stdin;
 \.
 
 
@@ -1697,39 +1801,39 @@ cmjvhazud0006hpn7dc0qdw5d	cmjoj4cpm000quzc2ow1u2d57	cmjosgmlo007o4h5isnpu79ib	0	
 -- Data for Name: Message; Type: TABLE DATA; Schema: public; Owner: viponly
 --
 
-COPY public."Message" (id, "conversationId", "senderId", "receiverId", text, "replyToId", "isPPV", "ppvPrice", "ppvUnlockedBy", "totalTips", "isRead", "isDeleted", "createdAt", "updatedAt", "aiPersonalityId", "chatterId", "scriptId", "isAiGenerated", "resultedInSale", "saleAmount", "scriptModified") FROM stdin;
-cmjonqs3p000i3wixy22ex16n	cmjonqoky000d3wixhoki89w3	cmjoj4cpm000quzc2ow1u2d57	cmjojjvac001iuzc2514iyrs8	yo	\N	f	\N	[]	0	t	f	2025-12-27 18:52:23.365	2025-12-27 18:53:16.609	\N	\N	\N	f	f	\N	f
-cmjonrz2z000q3wix9l2q49kx	cmjonqoky000d3wixhoki89w3	cmjojjvac001iuzc2514iyrs8	cmjoj4cpm000quzc2ow1u2d57	salut	\N	f	\N	[]	0	t	f	2025-12-27 18:53:19.067	2025-12-27 18:56:59.406	\N	\N	\N	f	f	\N	f
-cmjoognkd000112lyfp9hy349	cmjonqoky000d3wixhoki89w3	cmjojjvac001iuzc2514iyrs8	cmjoj4cpm000quzc2ow1u2d57	salut toi ;)	\N	f	\N	[]	0	t	f	2025-12-27 19:12:30.541	2025-12-27 19:20:02.324	\N	\N	\N	f	f	\N	f
-cmjooieew000312lyh3fokqnu	cmjonqoky000d3wixhoki89w3	cmjojjvac001iuzc2514iyrs8	cmjoj4cpm000quzc2ow1u2d57	salut toi ;)	\N	f	\N	[]	0	t	f	2025-12-27 19:13:51.992	2025-12-27 19:20:02.324	\N	\N	\N	f	f	\N	f
-cmjoooi5l000812lyq69agdu5	cmjonqoky000d3wixhoki89w3	cmjojjvac001iuzc2514iyrs8	cmjoj4cpm000quzc2ow1u2d57	salut oi ;)	\N	f	\N	[]	0	t	f	2025-12-27 19:18:36.777	2025-12-27 19:20:02.324	\N	\N	\N	f	f	\N	f
-cmjoojpld000612lyq29m1wmn	cmjonqoky000d3wixhoki89w3	cmjoj4cpm000quzc2ow1u2d57	cmjojjvac001iuzc2514iyrs8	Just got out of the shower... 💦	\N	f	\N	[]	0	t	f	2025-12-27 19:14:53.137	2025-12-27 19:20:41.596	\N	\N	\N	f	f	\N	f
-cmjoopi2w000b12ly8j1jnzae	cmjonqoky000d3wixhoki89w3	cmjoj4cpm000quzc2ow1u2d57	cmjojjvac001iuzc2514iyrs8	I love chatting with you ❤️	\N	f	\N	[]	0	t	f	2025-12-27 19:19:23.337	2025-12-27 19:20:41.596	\N	\N	\N	f	f	\N	f
-cmjootaik000l12ly8ta6d656	cmjonqoky000d3wixhoki89w3	cmjojjvac001iuzc2514iyrs8	cmjoj4cpm000quzc2ow1u2d57	merci	\N	f	\N	[]	0	t	f	2025-12-27 19:22:20.157	2025-12-27 19:22:32.337	\N	\N	\N	f	f	\N	f
-cmjopbrnx0001h2f9d5dc1gtd	cmjonqoky000d3wixhoki89w3	cmjojjvac001iuzc2514iyrs8	cmjoj4cpm000quzc2ow1u2d57	t'es bonne !	\N	f	\N	[]	0	t	f	2025-12-27 19:36:42.189	2025-12-27 19:36:42.369	\N	\N	\N	f	f	\N	f
-cmjoounet000o12lynpgvhcmp	cmjonqoky000d3wixhoki89w3	cmjoj4cpm000quzc2ow1u2d57	cmjojjvac001iuzc2514iyrs8	Mmm I was just thinking about you...	\N	f	\N	[]	0	t	f	2025-12-27 19:23:23.525	2025-12-27 19:48:52.325	\N	\N	\N	f	f	\N	f
-cmjopcp0q0005h2f9v4mo9vkh	cmjonqoky000d3wixhoki89w3	cmjoj4cpm000quzc2ow1u2d57	cmjojjvac001iuzc2514iyrs8	Mmm I love that 😏	\N	f	\N	[]	0	t	f	2025-12-27 19:37:25.419	2025-12-27 19:48:52.325	\N	\N	\N	f	f	\N	f
-cmjoqfwn6000kh2f9ml3o9l0v	cmjonqoky000d3wixhoki89w3	cmjojjvac001iuzc2514iyrs8	cmjoj4cpm000quzc2ow1u2d57	montre moi tes seins 	\N	f	\N	[]	0	t	f	2025-12-27 20:07:54.882	2025-12-27 20:08:33.544	\N	\N	\N	f	f	\N	f
-cmjoqh94v000oh2f9bpgs8b9b	cmjonqoky000d3wixhoki89w3	cmjoj4cpm000quzc2ow1u2d57	cmjojjvac001iuzc2514iyrs8	Ohhh you know I have to save the best for exclusive 😘 what if I showed you something... *special* instead?	\N	f	\N	[]	0	t	f	2025-12-27 20:08:57.727	2025-12-27 20:08:58.859	\N	\N	\N	f	f	\N	f
-cmjoqti0x000th2f9o9cn9dzn	cmjonqoky000d3wixhoki89w3	cmjoj4cpm000quzc2ow1u2d57	cmjojjvac001iuzc2514iyrs8	Mmm if only... 😉 my private chats are way more *interactive* though... 👀	\N	f	\N	[]	0	t	f	2025-12-27 20:18:29.122	2025-12-27 20:18:33.58	\N	\N	\N	f	f	\N	f
-cmjoqspsp000qh2f9pwodnizw	cmjonqoky000d3wixhoki89w3	cmjojjvac001iuzc2514iyrs8	cmjoj4cpm000quzc2ow1u2d57	tu suces pour combien ?	\N	f	\N	[]	0	t	f	2025-12-27 20:17:52.537	2025-12-27 20:18:36.258	\N	\N	\N	f	f	\N	f
-cmjor130e0002ajb50k8pce5u	cmjonqoky000d3wixhoki89w3	cmjojjvac001iuzc2514iyrs8	cmjoj4cpm000quzc2ow1u2d57	tu fais quoi ? 	\N	f	\N	[]	0	t	f	2025-12-27 20:24:22.91	2025-12-27 20:24:34.194	\N	\N	\N	f	f	\N	f
-cmjor1vvw0005ajb5r2sxeife	cmjonqoky000d3wixhoki89w3	cmjoj4cpm000quzc2ow1u2d57	cmjojjvac001iuzc2514iyrs8	Just got back from the gym... still all hot and sweaty 😈 want to see what I got on?	\N	f	\N	[]	0	t	f	2025-12-27 20:25:00.332	2025-12-27 20:25:03.569	\N	\N	\N	f	f	\N	f
-cmjor29qc0007ajb5cknuyyjv	cmjonqoky000d3wixhoki89w3	cmjojjvac001iuzc2514iyrs8	cmjoj4cpm000quzc2ow1u2d57	yes	\N	f	\N	[]	0	t	f	2025-12-27 20:25:18.276	2025-12-27 20:25:38.18	\N	\N	\N	f	f	\N	f
-cmjor3721000bajb56fdlgr3t	cmjonqoky000d3wixhoki89w3	cmjoj4cpm000quzc2ow1u2d57	cmjojjvac001iuzc2514iyrs8	Ohhh someone’s impatient 😏 *drops a hint in your DMs* Let’s see how long it takes you to unlock the full thing... 😉	\N	f	\N	[]	0	t	f	2025-12-27 20:26:01.465	2025-12-27 20:26:03.564	\N	\N	\N	f	f	\N	f
-cmjor5g96000dajb5ul45xq5p	cmjonqoky000d3wixhoki89w3	cmjojjvac001iuzc2514iyrs8	cmjoj4cpm000quzc2ow1u2d57	j'ai envi d'entendre ta voix	\N	f	\N	[]	0	t	f	2025-12-27 20:27:46.698	2025-12-27 20:27:47.239	\N	\N	\N	f	f	\N	f
-cmjor9861000iajb57z8fehtp	cmjonqoky000d3wixhoki89w3	cmjojjvac001iuzc2514iyrs8	cmjoj4cpm000quzc2ow1u2d57	appel moi et je te donne 100 dollars 	\N	f	\N	[]	0	t	f	2025-12-27 20:30:42.828	2025-12-27 20:30:47.255	\N	\N	\N	f	f	\N	f
-cmjpn2mxx0020ek036277yfws	cmjonqoky000d3wixhoki89w3	cmjojjvac001iuzc2514iyrs8	cmjoj4cpm000quzc2ow1u2d57	Coucou ma belle 	\N	f	\N	[]	0	t	f	2025-12-28 11:21:23.108	2025-12-28 11:35:12.411	\N	\N	\N	f	f	\N	f
-cmjor6fup000gajb5mp0batrg	cmjonqoky000d3wixhoki89w3	cmjoj4cpm000quzc2ow1u2d57	cmjojjvac001iuzc2514iyrs8	*whispers* 😉 maybe I’ll drop a little voice tease in your DMs later... if you ask nice 😘	\N	f	\N	[]	100	t	f	2025-12-27 20:28:32.833	2025-12-28 14:01:57.492	\N	\N	\N	f	f	\N	f
-cmjorac24000lajb5y2d6lg5b	cmjonqoky000d3wixhoki89w3	cmjoj4cpm000quzc2ow1u2d57	cmjojjvac001iuzc2514iyrs8	😈 100? Cute, but I have to *really* earn that... 😘 want to see how I perform first?	\N	f	\N	[]	500	t	f	2025-12-27 20:31:34.539	2025-12-28 14:02:09.591	\N	\N	\N	f	f	\N	f
-cmjpsuf0n0010cli0tyfknsl7	cmjonqoky000d3wixhoki89w3	cmjojjvac001iuzc2514iyrs8	cmjoj4cpm000quzc2ow1u2d57	yoo	\N	f	\N	[]	0	t	f	2025-12-28 14:02:57.287	2025-12-28 14:21:49.052	\N	\N	\N	f	f	\N	f
-cmjpsuoc40013cli0ebumt9g3	cmjonqoky000d3wixhoki89w3	cmjoj4cpm000quzc2ow1u2d57	cmjojjvac001iuzc2514iyrs8	yo	\N	f	\N	[]	0	t	f	2025-12-28 14:03:09.365	2025-12-28 16:14:45.859	\N	\N	\N	f	f	\N	f
-cmjpsv6aw0015cli0l7u0jwxs	cmjonqoky000d3wixhoki89w3	cmjoj4cpm000quzc2ow1u2d57	cmjojjvac001iuzc2514iyrs8	ouuou 💋 how’s my favorite fan doing? *teasing tone*	\N	f	\N	[]	0	t	f	2025-12-28 14:03:32.648	2025-12-28 16:14:45.859	\N	\N	\N	f	f	\N	f
-cmjq4d9sz0009oekcryz5t671	cmjonqoky000d3wixhoki89w3	cmjoj4cpm000quzc2ow1u2d57	cmjojjvac001iuzc2514iyrs8	hey hey... *winks* been thinking about you 😘	\N	f	\N	[]	0	t	f	2025-12-28 19:25:32.771	2025-12-28 19:53:16.103	\N	\N	\N	f	f	\N	f
-cmjq4ccm00004oekc3wpxggqj	cmjonqoky000d3wixhoki89w3	cmjojjvac001iuzc2514iyrs8	cmjoj4cpm000quzc2ow1u2d57	hii	\N	f	\N	[]	0	t	f	2025-12-28 19:24:49.752	2025-12-28 23:17:44.098	\N	\N	\N	f	f	\N	f
-cmjvlb6jc0006vqmvqe78i98l	cmjonqoky000d3wixhoki89w3	cmjoj4cpm000quzc2ow1u2d57	cmjojjvac001iuzc2514iyrs8	\N	\N	t	9.99	["cmjojjvac001iuzc2514iyrs8"]	0	t	f	2026-01-01 15:18:39.576	2026-01-01 15:40:18.699	\N	\N	\N	f	f	\N	f
-cmjvlavw00002vqmvm0yp0q25	cmjonqoky000d3wixhoki89w3	cmjoj4cpm000quzc2ow1u2d57	cmjojjvac001iuzc2514iyrs8	\N	\N	t	1500	["cmjojjvac001iuzc2514iyrs8"]	0	t	f	2026-01-01 15:18:25.777	2026-01-01 15:41:04.212	\N	\N	\N	f	f	\N	f
-cmjvmshmk0002sgfy8w70mwmj	cmjonqoky000d3wixhoki89w3	cmjoj4cpm000quzc2ow1u2d57	cmjojjvac001iuzc2514iyrs8	hey	\N	f	\N	[]	0	t	f	2026-01-01 16:00:06.716	2026-01-01 16:00:52.392	\N	\N	\N	f	f	\N	f
+COPY public."Message" (id, "conversationId", "senderId", "receiverId", text, "replyToId", "isPPV", "ppvPrice", "ppvUnlockedBy", "totalTips", "isRead", "isDeleted", "createdAt", "updatedAt", "aiPersonalityId", "chatterId", "scriptId", "isAiGenerated", "resultedInSale", "saleAmount", "scriptModified", "responseTimeSeconds") FROM stdin;
+cmjonqs3p000i3wixy22ex16n	cmjonqoky000d3wixhoki89w3	cmjoj4cpm000quzc2ow1u2d57	cmjojjvac001iuzc2514iyrs8	yo	\N	f	\N	[]	0	t	f	2025-12-27 18:52:23.365	2025-12-27 18:53:16.609	\N	\N	\N	f	f	\N	f	\N
+cmjonrz2z000q3wix9l2q49kx	cmjonqoky000d3wixhoki89w3	cmjojjvac001iuzc2514iyrs8	cmjoj4cpm000quzc2ow1u2d57	salut	\N	f	\N	[]	0	t	f	2025-12-27 18:53:19.067	2025-12-27 18:56:59.406	\N	\N	\N	f	f	\N	f	\N
+cmjoognkd000112lyfp9hy349	cmjonqoky000d3wixhoki89w3	cmjojjvac001iuzc2514iyrs8	cmjoj4cpm000quzc2ow1u2d57	salut toi ;)	\N	f	\N	[]	0	t	f	2025-12-27 19:12:30.541	2025-12-27 19:20:02.324	\N	\N	\N	f	f	\N	f	\N
+cmjooieew000312lyh3fokqnu	cmjonqoky000d3wixhoki89w3	cmjojjvac001iuzc2514iyrs8	cmjoj4cpm000quzc2ow1u2d57	salut toi ;)	\N	f	\N	[]	0	t	f	2025-12-27 19:13:51.992	2025-12-27 19:20:02.324	\N	\N	\N	f	f	\N	f	\N
+cmjoooi5l000812lyq69agdu5	cmjonqoky000d3wixhoki89w3	cmjojjvac001iuzc2514iyrs8	cmjoj4cpm000quzc2ow1u2d57	salut oi ;)	\N	f	\N	[]	0	t	f	2025-12-27 19:18:36.777	2025-12-27 19:20:02.324	\N	\N	\N	f	f	\N	f	\N
+cmjoojpld000612lyq29m1wmn	cmjonqoky000d3wixhoki89w3	cmjoj4cpm000quzc2ow1u2d57	cmjojjvac001iuzc2514iyrs8	Just got out of the shower... 💦	\N	f	\N	[]	0	t	f	2025-12-27 19:14:53.137	2025-12-27 19:20:41.596	\N	\N	\N	f	f	\N	f	\N
+cmjoopi2w000b12ly8j1jnzae	cmjonqoky000d3wixhoki89w3	cmjoj4cpm000quzc2ow1u2d57	cmjojjvac001iuzc2514iyrs8	I love chatting with you ❤️	\N	f	\N	[]	0	t	f	2025-12-27 19:19:23.337	2025-12-27 19:20:41.596	\N	\N	\N	f	f	\N	f	\N
+cmjootaik000l12ly8ta6d656	cmjonqoky000d3wixhoki89w3	cmjojjvac001iuzc2514iyrs8	cmjoj4cpm000quzc2ow1u2d57	merci	\N	f	\N	[]	0	t	f	2025-12-27 19:22:20.157	2025-12-27 19:22:32.337	\N	\N	\N	f	f	\N	f	\N
+cmjopbrnx0001h2f9d5dc1gtd	cmjonqoky000d3wixhoki89w3	cmjojjvac001iuzc2514iyrs8	cmjoj4cpm000quzc2ow1u2d57	t'es bonne !	\N	f	\N	[]	0	t	f	2025-12-27 19:36:42.189	2025-12-27 19:36:42.369	\N	\N	\N	f	f	\N	f	\N
+cmjoounet000o12lynpgvhcmp	cmjonqoky000d3wixhoki89w3	cmjoj4cpm000quzc2ow1u2d57	cmjojjvac001iuzc2514iyrs8	Mmm I was just thinking about you...	\N	f	\N	[]	0	t	f	2025-12-27 19:23:23.525	2025-12-27 19:48:52.325	\N	\N	\N	f	f	\N	f	\N
+cmjopcp0q0005h2f9v4mo9vkh	cmjonqoky000d3wixhoki89w3	cmjoj4cpm000quzc2ow1u2d57	cmjojjvac001iuzc2514iyrs8	Mmm I love that 😏	\N	f	\N	[]	0	t	f	2025-12-27 19:37:25.419	2025-12-27 19:48:52.325	\N	\N	\N	f	f	\N	f	\N
+cmjoqfwn6000kh2f9ml3o9l0v	cmjonqoky000d3wixhoki89w3	cmjojjvac001iuzc2514iyrs8	cmjoj4cpm000quzc2ow1u2d57	montre moi tes seins 	\N	f	\N	[]	0	t	f	2025-12-27 20:07:54.882	2025-12-27 20:08:33.544	\N	\N	\N	f	f	\N	f	\N
+cmjoqh94v000oh2f9bpgs8b9b	cmjonqoky000d3wixhoki89w3	cmjoj4cpm000quzc2ow1u2d57	cmjojjvac001iuzc2514iyrs8	Ohhh you know I have to save the best for exclusive 😘 what if I showed you something... *special* instead?	\N	f	\N	[]	0	t	f	2025-12-27 20:08:57.727	2025-12-27 20:08:58.859	\N	\N	\N	f	f	\N	f	\N
+cmjoqti0x000th2f9o9cn9dzn	cmjonqoky000d3wixhoki89w3	cmjoj4cpm000quzc2ow1u2d57	cmjojjvac001iuzc2514iyrs8	Mmm if only... 😉 my private chats are way more *interactive* though... 👀	\N	f	\N	[]	0	t	f	2025-12-27 20:18:29.122	2025-12-27 20:18:33.58	\N	\N	\N	f	f	\N	f	\N
+cmjoqspsp000qh2f9pwodnizw	cmjonqoky000d3wixhoki89w3	cmjojjvac001iuzc2514iyrs8	cmjoj4cpm000quzc2ow1u2d57	tu suces pour combien ?	\N	f	\N	[]	0	t	f	2025-12-27 20:17:52.537	2025-12-27 20:18:36.258	\N	\N	\N	f	f	\N	f	\N
+cmjor130e0002ajb50k8pce5u	cmjonqoky000d3wixhoki89w3	cmjojjvac001iuzc2514iyrs8	cmjoj4cpm000quzc2ow1u2d57	tu fais quoi ? 	\N	f	\N	[]	0	t	f	2025-12-27 20:24:22.91	2025-12-27 20:24:34.194	\N	\N	\N	f	f	\N	f	\N
+cmjor1vvw0005ajb5r2sxeife	cmjonqoky000d3wixhoki89w3	cmjoj4cpm000quzc2ow1u2d57	cmjojjvac001iuzc2514iyrs8	Just got back from the gym... still all hot and sweaty 😈 want to see what I got on?	\N	f	\N	[]	0	t	f	2025-12-27 20:25:00.332	2025-12-27 20:25:03.569	\N	\N	\N	f	f	\N	f	\N
+cmjor29qc0007ajb5cknuyyjv	cmjonqoky000d3wixhoki89w3	cmjojjvac001iuzc2514iyrs8	cmjoj4cpm000quzc2ow1u2d57	yes	\N	f	\N	[]	0	t	f	2025-12-27 20:25:18.276	2025-12-27 20:25:38.18	\N	\N	\N	f	f	\N	f	\N
+cmjor3721000bajb56fdlgr3t	cmjonqoky000d3wixhoki89w3	cmjoj4cpm000quzc2ow1u2d57	cmjojjvac001iuzc2514iyrs8	Ohhh someone’s impatient 😏 *drops a hint in your DMs* Let’s see how long it takes you to unlock the full thing... 😉	\N	f	\N	[]	0	t	f	2025-12-27 20:26:01.465	2025-12-27 20:26:03.564	\N	\N	\N	f	f	\N	f	\N
+cmjor5g96000dajb5ul45xq5p	cmjonqoky000d3wixhoki89w3	cmjojjvac001iuzc2514iyrs8	cmjoj4cpm000quzc2ow1u2d57	j'ai envi d'entendre ta voix	\N	f	\N	[]	0	t	f	2025-12-27 20:27:46.698	2025-12-27 20:27:47.239	\N	\N	\N	f	f	\N	f	\N
+cmjor9861000iajb57z8fehtp	cmjonqoky000d3wixhoki89w3	cmjojjvac001iuzc2514iyrs8	cmjoj4cpm000quzc2ow1u2d57	appel moi et je te donne 100 dollars 	\N	f	\N	[]	0	t	f	2025-12-27 20:30:42.828	2025-12-27 20:30:47.255	\N	\N	\N	f	f	\N	f	\N
+cmjpn2mxx0020ek036277yfws	cmjonqoky000d3wixhoki89w3	cmjojjvac001iuzc2514iyrs8	cmjoj4cpm000quzc2ow1u2d57	Coucou ma belle 	\N	f	\N	[]	0	t	f	2025-12-28 11:21:23.108	2025-12-28 11:35:12.411	\N	\N	\N	f	f	\N	f	\N
+cmjor6fup000gajb5mp0batrg	cmjonqoky000d3wixhoki89w3	cmjoj4cpm000quzc2ow1u2d57	cmjojjvac001iuzc2514iyrs8	*whispers* 😉 maybe I’ll drop a little voice tease in your DMs later... if you ask nice 😘	\N	f	\N	[]	100	t	f	2025-12-27 20:28:32.833	2025-12-28 14:01:57.492	\N	\N	\N	f	f	\N	f	\N
+cmjorac24000lajb5y2d6lg5b	cmjonqoky000d3wixhoki89w3	cmjoj4cpm000quzc2ow1u2d57	cmjojjvac001iuzc2514iyrs8	😈 100? Cute, but I have to *really* earn that... 😘 want to see how I perform first?	\N	f	\N	[]	500	t	f	2025-12-27 20:31:34.539	2025-12-28 14:02:09.591	\N	\N	\N	f	f	\N	f	\N
+cmjpsuf0n0010cli0tyfknsl7	cmjonqoky000d3wixhoki89w3	cmjojjvac001iuzc2514iyrs8	cmjoj4cpm000quzc2ow1u2d57	yoo	\N	f	\N	[]	0	t	f	2025-12-28 14:02:57.287	2025-12-28 14:21:49.052	\N	\N	\N	f	f	\N	f	\N
+cmjpsuoc40013cli0ebumt9g3	cmjonqoky000d3wixhoki89w3	cmjoj4cpm000quzc2ow1u2d57	cmjojjvac001iuzc2514iyrs8	yo	\N	f	\N	[]	0	t	f	2025-12-28 14:03:09.365	2025-12-28 16:14:45.859	\N	\N	\N	f	f	\N	f	\N
+cmjpsv6aw0015cli0l7u0jwxs	cmjonqoky000d3wixhoki89w3	cmjoj4cpm000quzc2ow1u2d57	cmjojjvac001iuzc2514iyrs8	ouuou 💋 how’s my favorite fan doing? *teasing tone*	\N	f	\N	[]	0	t	f	2025-12-28 14:03:32.648	2025-12-28 16:14:45.859	\N	\N	\N	f	f	\N	f	\N
+cmjq4d9sz0009oekcryz5t671	cmjonqoky000d3wixhoki89w3	cmjoj4cpm000quzc2ow1u2d57	cmjojjvac001iuzc2514iyrs8	hey hey... *winks* been thinking about you 😘	\N	f	\N	[]	0	t	f	2025-12-28 19:25:32.771	2025-12-28 19:53:16.103	\N	\N	\N	f	f	\N	f	\N
+cmjq4ccm00004oekc3wpxggqj	cmjonqoky000d3wixhoki89w3	cmjojjvac001iuzc2514iyrs8	cmjoj4cpm000quzc2ow1u2d57	hii	\N	f	\N	[]	0	t	f	2025-12-28 19:24:49.752	2025-12-28 23:17:44.098	\N	\N	\N	f	f	\N	f	\N
+cmjvlb6jc0006vqmvqe78i98l	cmjonqoky000d3wixhoki89w3	cmjoj4cpm000quzc2ow1u2d57	cmjojjvac001iuzc2514iyrs8	\N	\N	t	9.99	["cmjojjvac001iuzc2514iyrs8"]	0	t	f	2026-01-01 15:18:39.576	2026-01-01 15:40:18.699	\N	\N	\N	f	f	\N	f	\N
+cmjvlavw00002vqmvm0yp0q25	cmjonqoky000d3wixhoki89w3	cmjoj4cpm000quzc2ow1u2d57	cmjojjvac001iuzc2514iyrs8	\N	\N	t	1500	["cmjojjvac001iuzc2514iyrs8"]	0	t	f	2026-01-01 15:18:25.777	2026-01-01 15:41:04.212	\N	\N	\N	f	f	\N	f	\N
+cmjvmshmk0002sgfy8w70mwmj	cmjonqoky000d3wixhoki89w3	cmjoj4cpm000quzc2ow1u2d57	cmjojjvac001iuzc2514iyrs8	hey	\N	f	\N	[]	0	t	f	2026-01-01 16:00:06.716	2026-01-01 16:00:52.392	\N	\N	\N	f	f	\N	f	\N
 \.
 
 
@@ -4107,7 +4211,145 @@ cmjwsatp30004sw8c3codqgup	/fr/dashboard/agency/scripts	https://viponly.fun/fr/da
 cmjwsc6xh0005sw8co73t1mnk	/fr/dashboard/agency/chatters	https://viponly.fun/fr/dashboard/settings	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1	mobile	Safari	macOS	\N	s_1767352486190_xvb2larbm	2026-01-02 11:23:10.229
 cmjwse05b0006sw8cao7sjed9	/fr/dashboard/agency/ai-personas	https://viponly.fun/fr/dashboard/settings	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1	mobile	Safari	macOS	\N	s_1767352486190_xvb2larbm	2026-01-02 11:24:34.751
 cmjwse49n0007sw8cmysfvbd9	/fr/dashboard/admin/agencies	https://viponly.fun/fr/dashboard/settings	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1	mobile	Safari	macOS	\N	s_1767352486190_xvb2larbm	2026-01-02 11:24:40.091
+cmjx6vhw90002w18mkt2yeesa	/en	\N	v_1767377405524_9tt0vdamdqm	\N	Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/128.0.0.0 Safari/537.36	desktop	Chrome	Linux	\N	s_1767377405525_vaseokcr7hp	2026-01-02 18:10:05.53
 cmjwsm4pd0000uppg9sazg7jd	/fr/miacosta/membership	https://viponly.fun/	v_1767182746440_9h9spo2menp	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767353453720_5xyyhrc5yxm	2026-01-02 11:30:53.905
+cmjwycalv0001otgbj63oak92	/fr/miacosta/membership	https://viponly.fun/	v_1767182746440_9h9spo2menp	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767363072639_n2iz2a4kn8	2026-01-02 14:11:12.691
+cmjwycghb0002otgb2ooajr2h	/fr/miacosta/membership	https://viponly.fun/	v_1767182746440_9h9spo2menp	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767363072639_n2iz2a4kn8	2026-01-02 14:11:20.303
+cmjwycita0003otgbxxyzy0ty	/fr/dashboard/messages	https://viponly.fun/fr/miacosta/membership	v_1767182746440_9h9spo2menp	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767363072639_n2iz2a4kn8	2026-01-02 14:11:23.326
+cmjwyidj40004otgb91eibck1	/fr/dashboard/admin/agencies	https://viponly.fun/fr/dashboard/settings	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1	mobile	Safari	macOS	\N	s_1767363356379_68sew1fa3u4	2026-01-02 14:15:56.416
+cmjwyjl9v0005otgbb94b422w	/fr/dashboard/agency/scripts	https://viponly.fun/fr/dashboard/settings	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1	mobile	Safari	macOS	\N	s_1767363356379_68sew1fa3u4	2026-01-02 14:16:53.108
+cmjwykbl60006otgb77xgndz0	/fr/dashboard/agency/chatters	https://viponly.fun/fr/dashboard/settings	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1	mobile	Safari	macOS	\N	s_1767363356379_68sew1fa3u4	2026-01-02 14:17:27.21
+cmjwyvwq40007otgbbu8ycvmf	/fr/dashboard/agency/chatters	https://viponly.fun/fr/dashboard/settings	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1	mobile	Safari	macOS	\N	s_1767363356379_68sew1fa3u4	2026-01-02 14:26:27.821
+cmjwyvz6d0008otgb7j21oxu9	/fr/dashboard/agency/chatters	https://viponly.fun/fr/dashboard/settings	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1	mobile	Safari	macOS	\N	s_1767363356379_68sew1fa3u4	2026-01-02 14:26:30.997
+cmjwzcdnl0000q9xjoovnep25	/fr	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1	mobile	Safari	macOS	\N	s_1767363356379_68sew1fa3u4	2026-01-02 14:39:16.257
+cmjwzkphe0001q9xj43xfka7w	/fr/dashboard	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767363356379_68sew1fa3u4	2026-01-02 14:45:44.834
+cmjwzkqkq0002q9xjoy1r5qm7	/fr/dashboard/agency	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767363356379_68sew1fa3u4	2026-01-02 14:45:46.251
+cmjwzlkoo0003q9xj8zf2xkrj	/fr/dashboard/agency/chatters	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1	mobile	Safari	macOS	\N	s_1767365185254_dtzxmnv6lai	2026-01-02 14:46:25.272
+cmjwzlsem0004q9xjxmnd0z96	/fr/dashboard/agency	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1	mobile	Safari	macOS	\N	s_1767365185254_dtzxmnv6lai	2026-01-02 14:46:35.279
+cmjwzrm9i0005q9xjbxjb00mg	/fr/dashboard/agency	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1	mobile	Safari	macOS	\N	s_1767365185254_dtzxmnv6lai	2026-01-02 14:51:07.254
+cmjwzu3wt0006q9xj2bqevx36	/fr	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1	mobile	Safari	macOS	\N	s_1767365185254_dtzxmnv6lai	2026-01-02 14:53:03.438
+cmjwzu63i0007q9xjvq7u5549	/fr/creators	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1	mobile	Safari	macOS	\N	s_1767365185254_dtzxmnv6lai	2026-01-02 14:53:06.27
+cmjwzy5yx0008q9xjklx5djy6	/fr/dashboard	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1	mobile	Safari	macOS	\N	s_1767365185254_dtzxmnv6lai	2026-01-02 14:56:12.73
+cmjwzy9p70009q9xjlrqvhq48	/fr/dashboard/agency	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1	mobile	Safari	macOS	\N	s_1767365185254_dtzxmnv6lai	2026-01-02 14:56:17.563
+cmjwzyb7c000aq9xjk995vth4	/fr/dashboard/agency/creators	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1	mobile	Safari	macOS	\N	s_1767365185254_dtzxmnv6lai	2026-01-02 14:56:19.512
+cmjwzyczv000bq9xj65jhqg4f	/fr/dashboard/agency/chatters	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1	mobile	Safari	macOS	\N	s_1767365185254_dtzxmnv6lai	2026-01-02 14:56:21.836
+cmjwzyigu000cq9xjzctz16f7	/fr/dashboard/agency/ai-personas	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1	mobile	Safari	macOS	\N	s_1767365185254_dtzxmnv6lai	2026-01-02 14:56:28.927
+cmjwzyl9o000dq9xjnf3zx1wq	/fr/dashboard/agency	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1	mobile	Safari	macOS	\N	s_1767365185254_dtzxmnv6lai	2026-01-02 14:56:32.556
+cmjwzz98g000eq9xjwnvvt1uq	/fr	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1	mobile	Safari	macOS	\N	s_1767365185254_dtzxmnv6lai	2026-01-02 14:57:03.616
+cmjwzzbhz000fq9xjuyckj8j9	/fr/dashboard	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1	mobile	Safari	macOS	\N	s_1767365185254_dtzxmnv6lai	2026-01-02 14:57:06.551
+cmjx0e92t0000vw47h5im1q9l	/fr/dashboard	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1	mobile	Safari	macOS	\N	s_1767365185254_dtzxmnv6lai	2026-01-02 15:08:43.253
+cmjx0eblp0001vw47ww3sz45o	/fr/dashboard/admin	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1	mobile	Safari	macOS	\N	s_1767365185254_dtzxmnv6lai	2026-01-02 15:08:46.526
+cmjx0edbq0002vw4775z6g71a	/fr/dashboard/admin/agencies	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1	mobile	Safari	macOS	\N	s_1767365185254_dtzxmnv6lai	2026-01-02 15:08:48.758
+cmjx0si620003vw479b8e6qt0	/fr/dashboard/admin/agencies	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1	mobile	Safari	macOS	\N	s_1767367188191_xgm4uj04n5f	2026-01-02 15:19:48.219
+cmjx0sl9t0004vw47k0ge4jtk	/fr/dashboard/admin/agencies	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1	mobile	Safari	macOS	\N	s_1767367188191_xgm4uj04n5f	2026-01-02 15:19:52.241
+cmjx1m5370005vw47vfnq0kp9	/fr/dashboard/admin/agencies	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1	mobile	Safari	macOS	\N	s_1767367188191_xgm4uj04n5f	2026-01-02 15:42:50.948
+cmjx1p9gi0006vw47rcgnya3p	/fr/dashboard/admin/agencies	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1	mobile	Safari	macOS	\N	s_1767367188191_xgm4uj04n5f	2026-01-02 15:45:16.579
+cmjx1pinz0007vw47st5xfkbp	/fr/dashboard/agency	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1	mobile	Safari	macOS	\N	s_1767367188191_xgm4uj04n5f	2026-01-02 15:45:28.511
+cmjx1pnq00008vw47d5a7u6ih	/fr/dashboard/find-creator	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1	mobile	Safari	macOS	\N	s_1767367188191_xgm4uj04n5f	2026-01-02 15:45:35.064
+cmjx1pqcr0009vw47r2jtx6cj	/fr/dashboard/agency/my-listing	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1	mobile	Safari	macOS	\N	s_1767367188191_xgm4uj04n5f	2026-01-02 15:45:38.475
+cmjx1prv8000avw47a4qkw0e5	/fr/dashboard/agency	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1	mobile	Safari	macOS	\N	s_1767367188191_xgm4uj04n5f	2026-01-02 15:45:40.436
+cmjx1q3pg000bvw47j6npgszc	/fr/dashboard/find-creator	https://viponly.fun/fr/dashboard/agency/creators	v_1766804955115_r25kzpvto1	cmjojjvac001iuzc2514iyrs8	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767368754862_ugpvxcrpsqc	2026-01-02 15:45:55.78
+cmjx1qa4o000cvw47zbwt3enj	/fr/dashboard/find-agency	https://viponly.fun/fr/dashboard/agency/creators	v_1766804955115_r25kzpvto1	cmjojjvac001iuzc2514iyrs8	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767368754862_ugpvxcrpsqc	2026-01-02 15:46:04.104
+cmjx1ql7r000dvw47n52vfukj	/fr/dashboard/find-creator	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767367188191_xgm4uj04n5f	2026-01-02 15:46:18.471
+cmjx1wldx0000xp9bsdwu90gv	/fr/dashboard/find-agency	https://viponly.fun/fr/dashboard/agency/creators	v_1766804955115_r25kzpvto1	cmjojjvac001iuzc2514iyrs8	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767368754862_ugpvxcrpsqc	2026-01-02 15:50:58.63
+cmjx1ww430001xp9bq1vmifgt	/fr/dashboard/find-creator	https://viponly.fun/fr/dashboard/agency/creators	v_1766804955115_r25kzpvto1	cmjojjvac001iuzc2514iyrs8	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767368754862_ugpvxcrpsqc	2026-01-02 15:51:12.531
+cmjx20trm000059xi0pm7u6e8	/fr/dashboard/find-creator	https://viponly.fun/fr/dashboard/agency/creators	v_1766804955115_r25kzpvto1	cmjojjvac001iuzc2514iyrs8	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767368754862_ugpvxcrpsqc	2026-01-02 15:54:16.114
+cmjx21u6q000159xi5p5mdhda	/fr/dashboard/find-creator	https://viponly.fun/fr/dashboard/agency/creators	v_1766804955115_r25kzpvto1	cmjojjvac001iuzc2514iyrs8	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767368754862_ugpvxcrpsqc	2026-01-02 15:55:03.314
+cmjx21yqy000259xittn2c5ha	/fr/dashboard/find-creator	https://viponly.fun/fr/dashboard/agency/creators	v_1766804955115_r25kzpvto1	cmjojjvac001iuzc2514iyrs8	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767368754862_ugpvxcrpsqc	2026-01-02 15:55:09.226
+cmjx25gvr0000ad3kf77pqpkf	/fr/dashboard/find-creator	https://viponly.fun/fr/dashboard/agency/creators	v_1766804955115_r25kzpvto1	cmjojjvac001iuzc2514iyrs8	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767368754862_ugpvxcrpsqc	2026-01-02 15:57:52.695
+cmjx263x80001ad3kd0nsslm6	/fr/dashboard/find-agency	https://viponly.fun/fr/dashboard/agency/creators	v_1766804955115_r25kzpvto1	cmjojjvac001iuzc2514iyrs8	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767368754862_ugpvxcrpsqc	2026-01-02 15:58:22.556
+cmjx27u1e0002ad3k4hgsvg9d	/fr/dashboard/agency	https://viponly.fun/fr/dashboard/agency/creators	v_1766804955115_r25kzpvto1	cmjojjvac001iuzc2514iyrs8	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767368754862_ugpvxcrpsqc	2026-01-02 15:59:43.058
+cmjx27wds0003ad3ka4d4yxwm	/fr/dashboard/agency/creators	https://viponly.fun/fr/dashboard/agency/creators	v_1766804955115_r25kzpvto1	cmjojjvac001iuzc2514iyrs8	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767368754862_ugpvxcrpsqc	2026-01-02 15:59:46.097
+cmjx27xyh0004ad3k9t3fyu27	/fr/dashboard/agency/chatters	https://viponly.fun/fr/dashboard/agency/creators	v_1766804955115_r25kzpvto1	cmjojjvac001iuzc2514iyrs8	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767368754862_ugpvxcrpsqc	2026-01-02 15:59:48.137
+cmjx27yu80005ad3ka2dhrxjn	/fr/dashboard/agency/ai-personas	https://viponly.fun/fr/dashboard/agency/creators	v_1766804955115_r25kzpvto1	cmjojjvac001iuzc2514iyrs8	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767368754862_ugpvxcrpsqc	2026-01-02 15:59:49.28
+cmjx280wr0006ad3k00kdypqb	/fr/dashboard/agency/scripts	https://viponly.fun/fr/dashboard/agency/creators	v_1766804955115_r25kzpvto1	cmjojjvac001iuzc2514iyrs8	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767368754862_ugpvxcrpsqc	2026-01-02 15:59:51.963
+cmjx281xl0007ad3k39timhyk	/fr/dashboard/agency/earnings	https://viponly.fun/fr/dashboard/agency/creators	v_1766804955115_r25kzpvto1	cmjojjvac001iuzc2514iyrs8	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767368754862_ugpvxcrpsqc	2026-01-02 15:59:53.289
+cmjx2838c0008ad3kcsplqs04	/fr/dashboard/agency/performance	https://viponly.fun/fr/dashboard/agency/creators	v_1766804955115_r25kzpvto1	cmjojjvac001iuzc2514iyrs8	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767368754862_ugpvxcrpsqc	2026-01-02 15:59:54.972
+cmjx284ik0009ad3kwf4r8jqk	/fr/dashboard/find-creator	https://viponly.fun/fr/dashboard/agency/creators	v_1766804955115_r25kzpvto1	cmjojjvac001iuzc2514iyrs8	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767368754862_ugpvxcrpsqc	2026-01-02 15:59:56.637
+cmjx2i4it000aad3k0os5grto	/fr/dashboard/become-creator	https://viponly.fun/fr/dashboard/find-creator	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767370063184_s5wsis3a6f	2026-01-02 16:07:43.206
+cmjx2i4x2000bad3kx2g634xy	/fr/dashboard/creator	https://viponly.fun/fr/dashboard/find-creator	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767370063184_s5wsis3a6f	2026-01-02 16:07:43.718
+cmjx2ilpa000cad3k35ddjfu8	/fr/dashboard/admin	https://viponly.fun/fr/dashboard/find-creator	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767370063184_s5wsis3a6f	2026-01-02 16:08:05.47
+cmjx2in8n000dad3kmee0eqxv	/fr/dashboard/admin/agencies	https://viponly.fun/fr/dashboard/find-creator	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767370063184_s5wsis3a6f	2026-01-02 16:08:07.464
+cmjx2ioxh000ead3kodhx069z	/fr/dashboard/admin/creators	https://viponly.fun/fr/dashboard/find-creator	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767370063184_s5wsis3a6f	2026-01-02 16:08:09.654
+cmjx2irws000fad3ka4at7z33	/fr/dashboard/admin/users	https://viponly.fun/fr/dashboard/find-creator	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767370063184_s5wsis3a6f	2026-01-02 16:08:13.516
+cmjx2izup000gad3kuhzk5lwn	/fr/dashboard/admin/payments	https://viponly.fun/fr/dashboard/find-creator	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767370063184_s5wsis3a6f	2026-01-02 16:08:23.81
+cmjx34n8o0000glw0hmfm2w16	/fr/dashboard/admin/payments	https://viponly.fun/fr/dashboard/admin/payments	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767370063184_s5wsis3a6f	2026-01-02 16:25:13.896
+cmjx353nj0001glw02uh4pb82	/fr/dashboard/admin/payouts	https://viponly.fun/fr/dashboard/admin/payments	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767370063184_s5wsis3a6f	2026-01-02 16:25:35.167
+cmjx356xx0002glw0g00nlf0w	/fr/dashboard/admin/payments	https://viponly.fun/fr/dashboard/admin/payments	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767370063184_s5wsis3a6f	2026-01-02 16:25:39.429
+cmjx37nc00003glw09oz8sn20	/fr/dashboard/admin/agencies	https://viponly.fun/fr/dashboard/admin/payments	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767370063184_s5wsis3a6f	2026-01-02 16:27:33.984
+cmjx37ojx0004glw0eql6zegw	/fr/dashboard/admin/creators	https://viponly.fun/fr/dashboard/admin/payments	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767370063184_s5wsis3a6f	2026-01-02 16:27:35.565
+cmjx37pw50005glw0e6kfb696	/fr/dashboard/admin/users	https://viponly.fun/fr/dashboard/admin/payments	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767370063184_s5wsis3a6f	2026-01-02 16:27:37.301
+cmjx37r2b0006glw0adxexvjz	/fr/dashboard/admin/payments	https://viponly.fun/fr/dashboard/admin/payments	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767370063184_s5wsis3a6f	2026-01-02 16:27:38.819
+cmjx37xpz0007glw00xvnt5u8	/fr/dashboard/admin/payouts	https://viponly.fun/fr/dashboard/admin/payments	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767370063184_s5wsis3a6f	2026-01-02 16:27:47.447
+cmjx38f2k0008glw00qveio1i	/fr/dashboard/admin/payments	https://viponly.fun/fr/dashboard/admin/payments	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767370063184_s5wsis3a6f	2026-01-02 16:28:09.932
+cmjx38h1a0009glw0v70jbdv8	/fr/dashboard/admin/payouts	https://viponly.fun/fr/dashboard/admin/payments	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767370063184_s5wsis3a6f	2026-01-02 16:28:12.478
+cmjx38jom000aglw0aoht1243	/fr/dashboard/admin/analytics	https://viponly.fun/fr/dashboard/admin/payments	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767370063184_s5wsis3a6f	2026-01-02 16:28:15.91
+cmjx38mj2000bglw0uocaapoz	/fr/dashboard/admin/settings	https://viponly.fun/fr/dashboard/admin/payments	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767370063184_s5wsis3a6f	2026-01-02 16:28:19.598
+cmjx3b73b000cglw0qi3i58dk	/fr/miacosta	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767370063184_s5wsis3a6f	2026-01-02 16:30:19.56
+cmjx3bdjh000dglw02j13prwz	/fr/dashboard/admin/settings	https://viponly.fun/fr/dashboard/admin/payments	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767370063184_s5wsis3a6f	2026-01-02 16:30:27.917
+cmjx3bf12000eglw0toz3qrxg	/fr/miacosta	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767370063184_s5wsis3a6f	2026-01-02 16:30:29.847
+cmjx3fuqp000fglw0xy0gwq3v	/fr/miacosta	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767370063184_s5wsis3a6f	2026-01-02 16:33:56.834
+cmjx408kt000097q5s0qza0av	/fr/miacosta	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767372587786_ri7e371md2a	2026-01-02 16:49:47.885
+cmjx40gos000197q59fi7hv42	/fr/credits	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767372587786_ri7e371md2a	2026-01-02 16:49:58.396
+cmjx40hsi000297q5g7u8m2nf	/fr/miacosta	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767372587786_ri7e371md2a	2026-01-02 16:49:59.827
+cmjx4cgmn000397q5i15605sc	/fr/dashboard	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767372587786_ri7e371md2a	2026-01-02 16:59:18.191
+cmjx4cj57000497q5plfmlij6	/fr/dashboard/agency/ai-personas	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767372587786_ri7e371md2a	2026-01-02 16:59:21.452
+cmjx4u04000001xb1caz3003s	/fr/dashboard/agency/ai-personas	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767372587786_ri7e371md2a	2026-01-02 17:12:56.592
+cmjx518nm00051xb11h5qfxsi	/fr/dashboard/agency/ai-personas	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767372587786_ri7e371md2a	2026-01-02 17:18:34.258
+cmjx52bjm00061xb139t0lt76	/fr/dashboard/agency/ai-personas	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1	mobile	Safari	macOS	\N	s_1767372587786_ri7e371md2a	2026-01-02 17:19:24.658
+cmjx534po00091xb1tn0qj2xf	/fr/dashboard/agency/chatters	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1	mobile	Safari	macOS	\N	s_1767374402441_cztz7erde0p	2026-01-02 17:20:02.46
+cmjx5n7m60000fbktg26kp2ld	/fr/dashboard/agency/chatters	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767374402441_cztz7erde0p	2026-01-02 17:35:39.343
+cmjx5qjws0001fbktc78hwurc	/fr/dashboard/admin/payouts	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767374402441_cztz7erde0p	2026-01-02 17:38:15.244
+cmjx5qlmm0002fbktuezgjgql	/fr/dashboard/admin/payments	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767374402441_cztz7erde0p	2026-01-02 17:38:17.471
+cmjx5xl3t0003fbktm3kmg95v	/fr/dashboard/agency/performance	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767374402441_cztz7erde0p	2026-01-02 17:43:43.385
+cmjx5y4n30004fbktr7rm6qin	/fr/dashboard/agency	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767374402441_cztz7erde0p	2026-01-02 17:44:08.703
+cmjx5y5t80005fbktlx1wpfxa	/fr/dashboard/admin/payouts	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767374402441_cztz7erde0p	2026-01-02 17:44:10.22
+cmjx5y6q10006fbktbqx3mdlr	/fr/dashboard/admin/analytics	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767374402441_cztz7erde0p	2026-01-02 17:44:11.401
+cmjx5y7lu0007fbktyyldcwd6	/fr/dashboard/admin/settings	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767374402441_cztz7erde0p	2026-01-02 17:44:12.546
+cmjx5y8zd0008fbkt19vttluw	/fr/dashboard/agency	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767374402441_cztz7erde0p	2026-01-02 17:44:14.329
+cmjx6sd4f0000w18mc4w17v40	/fr/dashboard/agency/scripts	https://viponly.fun/fr/dashboard/agency	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767377259329_iwhvzgbq5ua	2026-01-02 18:07:39.375
+cmjx6u46k0001w18mcehp4q1k	/fr/dashboard/messages	https://viponly.fun/fr/dashboard/agency	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767377259329_iwhvzgbq5ua	2026-01-02 18:09:01.1
+cmjx6vn3c0003w18mv5oupw9d	/fr/dashboard/messages	https://viponly.fun/fr/dashboard/agency	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1	mobile	Safari	macOS	\N	s_1767377259329_iwhvzgbq5ua	2026-01-02 18:10:12.265
+cmjx6vwnm0004w18m8b7jhupz	/fr/dashboard/admin	https://viponly.fun/fr/dashboard/agency	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767377259329_iwhvzgbq5ua	2026-01-02 18:10:24.658
+cmjx6vz9n0005w18mcm9vlbuh	/fr/dashboard/admin	https://viponly.fun/fr/dashboard/agency	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767377259329_iwhvzgbq5ua	2026-01-02 18:10:28.043
+cmjx6w1gl0006w18mmgpa7s2q	/fr/dashboard/admin/agencies	https://viponly.fun/fr/dashboard/agency	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767377259329_iwhvzgbq5ua	2026-01-02 18:10:30.885
+cmjx6w2a80007w18mizzpqpwt	/fr/dashboard/admin/creators	https://viponly.fun/fr/dashboard/agency	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767377259329_iwhvzgbq5ua	2026-01-02 18:10:31.952
+cmjx6w33t0008w18mzqmdb4is	/fr/dashboard/admin/users	https://viponly.fun/fr/dashboard/agency	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767377259329_iwhvzgbq5ua	2026-01-02 18:10:33.017
+cmjx6w4070009w18m8x2ck6gv	/fr/dashboard/admin/payments	https://viponly.fun/fr/dashboard/agency	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767377259329_iwhvzgbq5ua	2026-01-02 18:10:34.183
+cmjx6w4uw000aw18mfwyxxwn9	/fr/dashboard/admin/analytics	https://viponly.fun/fr/dashboard/agency	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767377259329_iwhvzgbq5ua	2026-01-02 18:10:35.288
+cmjx6w7v3000bw18m9dt9m6az	/fr/dashboard/admin/payouts	https://viponly.fun/fr/dashboard/agency	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767377259329_iwhvzgbq5ua	2026-01-02 18:10:39.183
+cmjx6w9l8000cw18mau0d6rqw	/fr/dashboard/admin/settings	https://viponly.fun/fr/dashboard/agency	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767377259329_iwhvzgbq5ua	2026-01-02 18:10:41.421
+cmjx6wxwn000dw18m86rm7rf7	/fr/dashboard/agency	https://viponly.fun/fr/dashboard/agency	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767377259329_iwhvzgbq5ua	2026-01-02 18:11:12.936
+cmjx6xic7000ew18moej46vvn	/fr/dashboard/agency/creators	https://viponly.fun/fr/dashboard/agency	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767377259329_iwhvzgbq5ua	2026-01-02 18:11:39.415
+cmjx6xin9000fw18m5p9qicw7	/fr/dashboard/admin/payments	https://viponly.fun/fr/dashboard/agency	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767377259329_iwhvzgbq5ua	2026-01-02 18:11:39.813
+cmjx6xkqx000gw18mlzd4rydg	/fr/dashboard/agency/creators	https://viponly.fun/fr/dashboard/agency	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767377259329_iwhvzgbq5ua	2026-01-02 18:11:42.538
+cmjx6xosb000hw18mwmevnftx	/fr/dashboard/agency/chatters	https://viponly.fun/fr/dashboard/agency	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767377259329_iwhvzgbq5ua	2026-01-02 18:11:47.771
+cmjx6xqzx000iw18m2l0lypxb	/fr/dashboard/agency/ai-personas	https://viponly.fun/fr/dashboard/agency	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767377259329_iwhvzgbq5ua	2026-01-02 18:11:50.638
+cmjx6xtjv000jw18m0g3eecjn	/fr/dashboard/agency/scripts	https://viponly.fun/fr/dashboard/agency	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767377259329_iwhvzgbq5ua	2026-01-02 18:11:53.947
+cmjx6xvoc000kw18mpz4rhcqg	/fr/dashboard/agency/earnings	https://viponly.fun/fr/dashboard/agency	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767377259329_iwhvzgbq5ua	2026-01-02 18:11:56.7
+cmjx6y9m6000lw18mxz93ou2h	/fr/dashboard/agency/performance	https://viponly.fun/fr/dashboard/agency	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767377259329_iwhvzgbq5ua	2026-01-02 18:12:14.766
+cmjx6ybl0000mw18mxyxys3kc	/fr/dashboard/agency/performance	https://viponly.fun/fr/dashboard/agency	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767377259329_iwhvzgbq5ua	2026-01-02 18:12:17.316
+cmjx6yg1i000nw18muenrzeve	/fr/dashboard/find-creator	https://viponly.fun/fr/dashboard/agency	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767377259329_iwhvzgbq5ua	2026-01-02 18:12:23.094
+cmjx6yiq4000ow18m13p544yj	/fr/dashboard/agency/settings	https://viponly.fun/fr/dashboard/agency	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767377259329_iwhvzgbq5ua	2026-01-02 18:12:26.573
+cmjx6ylq1000pw18m5ehs40wj	/fr/dashboard/creator	https://viponly.fun/fr/dashboard/agency	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767377259329_iwhvzgbq5ua	2026-01-02 18:12:30.457
+cmjx6yo93000qw18m43by85r1	/fr/dashboard/creator/media	https://viponly.fun/fr/dashboard/agency	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767377259329_iwhvzgbq5ua	2026-01-02 18:12:33.736
+cmjx6ytoq000rw18mcmd8kwt9	/fr/dashboard/creator/members	https://viponly.fun/fr/dashboard/agency	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767377259329_iwhvzgbq5ua	2026-01-02 18:12:40.778
+cmjx6yx21000sw18m7w4mc3jx	/fr/dashboard/creator/earnings	https://viponly.fun/fr/dashboard/agency	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767377259329_iwhvzgbq5ua	2026-01-02 18:12:45.145
+cmjx6yzwy000tw18mkcm9ypp1	/fr/dashboard/creator/analytics	https://viponly.fun/fr/dashboard/agency	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767377259329_iwhvzgbq5ua	2026-01-02 18:12:48.85
+cmjx6z3j2000uw18mjg1f6ihy	/fr/dashboard/find-agency	https://viponly.fun/fr/dashboard/agency	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767377259329_iwhvzgbq5ua	2026-01-02 18:12:53.534
+cmjx6z5jm000vw18m3s8zazzn	/fr/dashboard/creator/settings	https://viponly.fun/fr/dashboard/agency	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767377259329_iwhvzgbq5ua	2026-01-02 18:12:56.146
+cmjx6z82h000ww18mkmjo9h01	/fr/dashboard	https://viponly.fun/fr/dashboard/agency	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767377259329_iwhvzgbq5ua	2026-01-02 18:12:59.418
+cmjx6z9yy000xw18mma6yjon3	/fr/dashboard/library	https://viponly.fun/fr/dashboard/agency	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767377259329_iwhvzgbq5ua	2026-01-02 18:13:01.883
+cmjx6zc0s000yw18mg43bqfw6	/fr/dashboard/billing	https://viponly.fun/fr/dashboard/agency	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767377259329_iwhvzgbq5ua	2026-01-02 18:13:04.54
+cmjx6zdw2000zw18m1al67led	/fr/dashboard/settings	https://viponly.fun/fr/dashboard/agency	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767377259329_iwhvzgbq5ua	2026-01-02 18:13:06.962
+cmjx6zhge0010w18m212ze3ut	/fr/dashboard/creator/earnings	https://viponly.fun/fr/dashboard/agency	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767377259329_iwhvzgbq5ua	2026-01-02 18:13:11.582
+cmjx70py10011w18mx28hpp3b	/fr/dashboard/billing	https://viponly.fun/fr/dashboard/agency	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767377259329_iwhvzgbq5ua	2026-01-02 18:14:09.242
+cmjx71ogz0013w18m063r7v4v	/fr/dashboard/creator/analytics	https://viponly.fun/fr/dashboard/agency	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767377259329_iwhvzgbq5ua	2026-01-02 18:14:53.987
+cmjx71gzf0012w18mexvt4dhc	/fr/dashboard/creator/earnings	https://viponly.fun/fr/dashboard/agency	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767377259329_iwhvzgbq5ua	2026-01-02 18:14:44.284
+cmjx724bz0014w18m5tphdh2r	/fr/dashboard/creator/earnings	https://viponly.fun/fr/dashboard/agency	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767377259329_iwhvzgbq5ua	2026-01-02 18:15:14.543
+cmjx74l7h0015w18mbd36iqaa	/fr/dashboard/admin/payouts	https://viponly.fun/fr/dashboard/agency	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767377259329_iwhvzgbq5ua	2026-01-02 18:17:09.725
+cmjx7oxqr0000wljyviz6mbt7	/fr/dashboard/messages	https://viponly.fun/fr/dashboard/find-creator	v_1766804955115_r25kzpvto1	cmjojjvac001iuzc2514iyrs8	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767378778397_860ceg62lq	2026-01-02 18:32:59.091
+cmjx7v4m30001wljyvyc61p4q	/fr/dashboard/admin/payouts	https://viponly.fun/fr/dashboard/agency	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767379067864_g6lw3i43lhn	2026-01-02 18:37:47.932
 \.
 
 
@@ -4226,11 +4468,11 @@ COPY public."Session" (id, "sessionToken", "userId", expires) FROM stdin;
 --
 
 COPY public."SiteSettings" (id, "creatorSlug", "siteName", "siteDescription", "siteUrl", "welcomeMessage", logo, favicon, "primaryColor", "accentColor", pricing, "stripeEnabled", "cryptoEnabled", "chatEnabled", "tipsEnabled", "ppvEnabled", "maintenanceMode", "registrationEnabled", "emailNotifications", "pushNotifications", "createdAt", "updatedAt", "welcomeMediaId", "welcomeMediaUrl", "platformWalletEth", "platformWalletBtc", "platformCommission", "firstMonthFreeCommission") FROM stdin;
-default	\N	Mia Costa	\N	\N	\N	\N	\N	\N	\N	{}	t	t	t	t	t	f	t	t	f	2025-12-27 16:57:45.585	2025-12-27 23:51:42.09	\N	\N	0x08675E75D3AA250cEC863D59bF2b708Ad8a3cDcE	bc1qf9lrv05g6y9saz2y7ptepkt7zr7gwkruz87te4	0.05	t
 cmjpkfkrp00071366uqgvynb5	miacosta	Mia Costa	\N	\N	\N	\N	\N	\N	\N	{}	t	f	t	t	t	f	t	t	f	2025-12-28 10:07:27.973	2025-12-28 10:07:27.973	\N	\N	\N	\N	0.05	t
 cmjpyp6yk0008vyhv57zptr7a	pascale	Pascale	\N	\N	\N	\N	\N	\N	\N	{"plans":[{"id":"basic","monthlyCredits":999,"annualCredits":9588,"bonusCredits":500},{"id":"vip","monthlyCredits":2999,"annualCredits":28788,"bonusCredits":2000}]}	t	f	t	t	t	f	t	t	f	2025-12-28 16:46:51.26	2025-12-28 16:54:40.295	\N	\N	\N	\N	0.05	t
 cmjqbllwv000910iujnyoubrr	maxoouu	Maxence Bonnet-Carrier	\N	\N	\N	\N	\N	\N	\N	{}	t	f	t	t	t	f	t	t	f	2025-12-28 22:47:59.024	2025-12-28 22:47:59.024	\N	\N	\N	\N	0.05	t
 settings_5291f1959e3ba670	raphi	Raphi	\N	\N	\N	\N	\N	\N	\N	{}	t	f	t	t	t	f	t	t	f	2025-12-28 22:50:31.993	2025-12-28 22:50:31.993	\N	\N	\N	\N	0.05	t
+default	\N	VIpOnly	\N	\N	\N	\N	\N	\N	\N	{}	t	t	t	t	t	f	t	t	f	2025-12-27 16:57:45.585	2026-01-02 16:30:10.759	\N	\N	0x08675E75D3AA250cEC863D59bF2b708Ad8a3cDcE	bc1qf9lrv05g6y9saz2y7ptepkt7zr7gwkruz87te4	0.05	t
 \.
 
 
@@ -4259,8 +4501,8 @@ plan2	VIP	vip	Full access + Direct messaging	29.99	299.99	USD	\N	\N	\N	VIP	t	\N	
 --
 
 COPY public."User" (id, email, "emailVerified", "passwordHash", name, image, role, "isCreator", "stripeCustomerId", "createdAt", "updatedAt", "creditBalance", "isAgencyOwner", "paidCredits", "bonusCredits") FROM stdin;
+cmjojjvac001iuzc2514iyrs8	maxencebonnetcarrier@gmail.com	2025-12-28 12:40:02.104	\\b\\2\\/KiTmuO1CAj48fEazWWqwe8oVY/S2	Maxence Bonnet-Carrier	https://lh3.googleusercontent.com/a/ACg8ocJfPTvQBNSFPZ1QxfSJ1S_zkAxU5w6JmuLR80v90J9mY8H9dg=s96-c	AGENCY	t	\N	2025-12-27 16:55:02.436	2026-01-01 15:41:04.202	12391	t	12391	0
 cmjoj4cpm000quzc2ow1u2d57	viralstudioshop@gmail.com	\N	\N	viral studio	https://lh3.googleusercontent.com/a/ACg8ocItcHGLCZPJV_WNHR_ip-h8V9Y16GN2zr4bZC2Apej1oiEujw=s96-c	ADMIN	t	\N	2025-12-27 16:42:58.523	2026-01-01 14:15:22.894	34050	t	15500	18550
-cmjojjvac001iuzc2514iyrs8	maxencebonnetcarrier@gmail.com	2025-12-28 12:40:02.104	\\b\\2\\/KiTmuO1CAj48fEazWWqwe8oVY/S2	Maxence Bonnet-Carrier	https://lh3.googleusercontent.com/a/ACg8ocJfPTvQBNSFPZ1QxfSJ1S_zkAxU5w6JmuLR80v90J9mY8H9dg=s96-c	USER	t	\N	2025-12-27 16:55:02.436	2026-01-01 15:41:04.202	12391	t	12391	0
 cmjr8d46c0009i3mmu90d6k3a	madajeff2@gmail.com	\N	\N	Jeff Mada	https://lh3.googleusercontent.com/a/ACg8ocI_lgo5EHwiP86X0_Inp5ydoDcIn94j62Fe_N_oeRQf2btj-g=s96-c	USER	f	\N	2025-12-29 14:05:10.117	2025-12-30 09:49:35.627	0	t	0	0
 cmjvbkdf80002x59184poko85	raphi5269@gmail.com	\N	\N	Raph Vln	https://lh3.googleusercontent.com/a/ACg8ocI1OKc7ZjkunYrSe8PvjFowlOoiD-70_uJ2x263ILV5Grl8kA=s96-c	USER	f	\N	2026-01-01 10:45:52.245	2026-01-01 10:45:52.245	0	f	0	0
 \.
@@ -4328,6 +4570,22 @@ ALTER TABLE ONLY public."AgencyListing"
 
 ALTER TABLE ONLY public."AgencyListing"
     ADD CONSTRAINT "AgencyListing_pkey" PRIMARY KEY (id);
+
+
+--
+-- Name: AgencyPublicStats AgencyPublicStats_agencyId_key; Type: CONSTRAINT; Schema: public; Owner: viponly
+--
+
+ALTER TABLE ONLY public."AgencyPublicStats"
+    ADD CONSTRAINT "AgencyPublicStats_agencyId_key" UNIQUE ("agencyId");
+
+
+--
+-- Name: AgencyPublicStats AgencyPublicStats_pkey; Type: CONSTRAINT; Schema: public; Owner: viponly
+--
+
+ALTER TABLE ONLY public."AgencyPublicStats"
+    ADD CONSTRAINT "AgencyPublicStats_pkey" PRIMARY KEY (id);
 
 
 --
@@ -4440,6 +4698,22 @@ ALTER TABLE ONLY public."CreatorEarning"
 
 ALTER TABLE ONLY public."CreatorMember"
     ADD CONSTRAINT "CreatorMember_pkey" PRIMARY KEY (id);
+
+
+--
+-- Name: CreatorPublicStats CreatorPublicStats_creatorId_key; Type: CONSTRAINT; Schema: public; Owner: viponly
+--
+
+ALTER TABLE ONLY public."CreatorPublicStats"
+    ADD CONSTRAINT "CreatorPublicStats_creatorId_key" UNIQUE ("creatorId");
+
+
+--
+-- Name: CreatorPublicStats CreatorPublicStats_pkey; Type: CONSTRAINT; Schema: public; Owner: viponly
+--
+
+ALTER TABLE ONLY public."CreatorPublicStats"
+    ADD CONSTRAINT "CreatorPublicStats_pkey" PRIMARY KEY (id);
 
 
 --
@@ -4749,6 +5023,20 @@ CREATE INDEX "AgencyListing_isActive_idx" ON public."AgencyListing" USING btree 
 
 
 --
+-- Name: AgencyPublicStats_activeCreators_idx; Type: INDEX; Schema: public; Owner: viponly
+--
+
+CREATE INDEX "AgencyPublicStats_activeCreators_idx" ON public."AgencyPublicStats" USING btree ("activeCreators");
+
+
+--
+-- Name: AgencyPublicStats_avgRating_idx; Type: INDEX; Schema: public; Owner: viponly
+--
+
+CREATE INDEX "AgencyPublicStats_avgRating_idx" ON public."AgencyPublicStats" USING btree ("avgRating");
+
+
+--
 -- Name: AgencyReview_rating_idx; Type: INDEX; Schema: public; Owner: viponly
 --
 
@@ -5005,6 +5293,27 @@ CREATE UNIQUE INDEX "CreatorMember_creatorSlug_userId_key" ON public."CreatorMem
 --
 
 CREATE INDEX "CreatorMember_userId_idx" ON public."CreatorMember" USING btree ("userId");
+
+
+--
+-- Name: CreatorPublicStats_activeSubscribers_idx; Type: INDEX; Schema: public; Owner: viponly
+--
+
+CREATE INDEX "CreatorPublicStats_activeSubscribers_idx" ON public."CreatorPublicStats" USING btree ("activeSubscribers");
+
+
+--
+-- Name: CreatorPublicStats_avgRating_idx; Type: INDEX; Schema: public; Owner: viponly
+--
+
+CREATE INDEX "CreatorPublicStats_avgRating_idx" ON public."CreatorPublicStats" USING btree ("avgRating");
+
+
+--
+-- Name: CreatorPublicStats_revenueLast30d_idx; Type: INDEX; Schema: public; Owner: viponly
+--
+
+CREATE INDEX "CreatorPublicStats_revenueLast30d_idx" ON public."CreatorPublicStats" USING btree ("revenueLast30d");
 
 
 --
@@ -5478,6 +5787,14 @@ ALTER TABLE ONLY public."AgencyListing"
 
 
 --
+-- Name: AgencyPublicStats AgencyPublicStats_agencyId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: viponly
+--
+
+ALTER TABLE ONLY public."AgencyPublicStats"
+    ADD CONSTRAINT "AgencyPublicStats_agencyId_fkey" FOREIGN KEY ("agencyId") REFERENCES public."Agency"(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
 -- Name: Agency Agency_ownerId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: viponly
 --
 
@@ -5627,6 +5944,14 @@ ALTER TABLE ONLY public."CreatorEarning"
 
 ALTER TABLE ONLY public."CreatorEarning"
     ADD CONSTRAINT "CreatorEarning_userId_fkey" FOREIGN KEY ("userId") REFERENCES public."User"(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: CreatorPublicStats CreatorPublicStats_creatorId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: viponly
+--
+
+ALTER TABLE ONLY public."CreatorPublicStats"
+    ADD CONSTRAINT "CreatorPublicStats_creatorId_fkey" FOREIGN KEY ("creatorId") REFERENCES public."Creator"(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -5936,5 +6261,5 @@ REVOKE USAGE ON SCHEMA public FROM PUBLIC;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict XjVZQiVDSV1CX8Ltqc2vSF9KarWfs7hNhSr933zVQv0JnVVW0WqFXUxFJoN1OAP
+\unrestrict hMHGq4zc94DkdbYlm0mboPWJe6OPAA2r1yFx3ff8HvKGV9o9KqAoZnyVPFtLtW7
 

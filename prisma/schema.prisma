@@ -2290,3 +2290,91 @@ model VerifiedReview {
 
 // ReviewerType: "CREATOR" | "AGENCY"
 // TargetType: "AGENCY" | "CREATOR"
+
+
+// ============= DMCA NOTICES =============
+
+model DMCANotice {
+  id String @id @default(cuid())
+
+  // Complainant info
+  name    String
+  email   String
+  company String?
+
+  // Content info
+  contentUrl  String // URL of infringing content on VipOnly
+  originalUrl String // URL of original work
+
+  // Description
+  description String @db.Text
+  signature   String // Electronic signature
+
+  // Status
+  status     String    @default("PENDING") // PENDING, INVESTIGATING, ACTIONED, REJECTED, COUNTER_NOTICE
+  resolution String?   @db.Text
+  resolvedAt DateTime?
+  resolvedBy String?
+
+  // Counter-notice
+  counterNotice   Boolean   @default(false)
+  counterNoticeAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([email])
+  @@index([createdAt])
+}
+
+// DMCAStatus: "PENDING" | "INVESTIGATING" | "ACTIONED" | "REJECTED" | "COUNTER_NOTICE"
+
+// ============= CREATOR VERIFICATION (KYC) =============
+
+model CreatorVerification {
+  id String @id @default(cuid())
+
+  // Creator being verified
+  creatorId   String  @unique
+  creatorSlug String
+
+  // Document info
+  documentType String // PASSPORT, ID_CARD, DRIVERS_LICENSE
+  documentFrontUrl String // Uploaded document front
+  documentBackUrl String? // Uploaded document back (if applicable)
+  selfieUrl String // Selfie holding document
+
+  // Extracted info
+  fullName    String?
+  dateOfBirth DateTime?
+  nationality String?
+  documentNumber String?
+  documentExpiry DateTime?
+
+  // Verification status
+  status         String    @default("PENDING") // PENDING, APPROVED, REJECTED, EXPIRED
+  verifiedAt     DateTime?
+  verifiedBy     String?   // Admin who verified
+  rejectionReason String?
+
+  // Auto-verification (if using service)
+  externalId     String?  // ID from verification service (e.g., Jumio, Veriff)
+  externalStatus String?  // Status from service
+  confidenceScore Float?  // 0-1 confidence score
+
+  // Document expiry tracking
+  expiresAt DateTime? // When the ID document expires
+  reminderSent Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([creatorSlug])
+  @@index([expiresAt])
+}
+
+// VerificationDocumentType: "PASSPORT" | "ID_CARD" | "DRIVERS_LICENSE"
+// VerificationStatus: "PENDING" | "APPROVED" | "REJECTED" | "EXPIRED"
+
