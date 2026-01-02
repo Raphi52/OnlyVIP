@@ -569,7 +569,7 @@ export default function ChattersPage() {
   }
 
   return (
-    <div className="p-3 pt-20 sm:p-4 sm:pt-20 lg:p-8 lg:pt-8 space-y-3 sm:space-y-4 lg:space-y-6 overflow-x-hidden max-w-full w-full">
+    <div className="p-4 pt-20 sm:p-4 sm:pt-20 lg:p-8 lg:pt-8 space-y-3 sm:space-y-4 lg:space-y-6 overflow-x-hidden max-w-full w-full pb-28">
       {/* Header - Compact on mobile */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -645,24 +645,24 @@ export default function ChattersPage() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
-        className="flex gap-2 overflow-x-auto pb-1 -mx-3 px-3 sm:mx-0 sm:px-0 scrollbar-hide"
+        className="flex gap-2 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-hide"
       >
         {tabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
             className={cn(
-              "flex items-center gap-1.5 px-3 py-2 rounded-full text-xs sm:text-sm font-medium transition-all whitespace-nowrap flex-shrink-0",
+              "flex items-center gap-1.5 px-3 py-2.5 rounded-full text-xs sm:text-sm font-medium transition-all whitespace-nowrap flex-shrink-0 touch-manipulation active:scale-95",
               activeTab === tab.id
-                ? "bg-purple-500 text-white shadow-lg shadow-purple-500/25"
-                : "bg-white/5 text-gray-400 hover:bg-white/10"
+                ? "bg-purple-500 text-white"
+                : "bg-white/5 text-gray-400 active:bg-white/10"
             )}
           >
-            <tab.icon className="w-3.5 h-3.5" />
-            <span>{tab.id === "all" ? "All" : tab.id === "leaderboard" ? "Top" : tab.id === "monitoring" ? "Monitor" : tab.label.split(' ')[0]}</span>
+            <tab.icon className="w-4 h-4" />
+            <span>{tab.id === "all" ? "All" : tab.id === "leaderboard" ? "Top" : tab.id === "monitoring" ? "Chat" : tab.label.split(' ')[0]}</span>
             {tab.count !== undefined && (
               <span className={cn(
-                "px-1.5 py-0.5 rounded-full text-[10px] min-w-[20px] text-center",
+                "px-1.5 py-0.5 rounded-full text-[10px] min-w-[18px] text-center",
                 activeTab === tab.id ? "bg-white/20" : "bg-white/10"
               )}>
                 {tab.count}
@@ -682,66 +682,55 @@ export default function ChattersPage() {
             exit={{ opacity: 0, x: -10 }}
             className="space-y-4"
           >
-            {/* Search and Filters */}
-            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-gray-500" />
-                <input
-                  type="text"
-                  placeholder="Search..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 sm:pl-12 pr-3 sm:pr-4 py-2.5 sm:py-3 bg-[var(--surface)] border border-[var(--border)] rounded-lg sm:rounded-xl text-sm sm:text-base text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50"
-                />
-              </div>
+            {/* Search */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+              <input
+                type="text"
+                placeholder="Search..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl text-base text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50"
+              />
+            </div>
 
-              <div className="flex gap-2">
-                {/* Filter Dropdown */}
-                <div className="relative flex-1 sm:flex-none">
+            {/* Filters - Mobile optimized */}
+            <div className="flex gap-2">
+              {/* Filter Pills */}
+              <div className="flex gap-1.5 overflow-x-auto scrollbar-hide">
+                {(["all", "active", "inactive"] as FilterStatus[]).map((status) => (
                   <button
-                    onClick={() => { setShowFilterDropdown(!showFilterDropdown); setShowSortDropdown(false); }}
-                    className="w-full sm:w-auto flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2.5 sm:py-3 bg-[var(--surface)] border border-[var(--border)] rounded-lg sm:rounded-xl text-sm sm:text-base text-gray-300 hover:border-purple-500/30"
+                    key={status}
+                    onClick={() => setFilterStatus(status)}
+                    className={cn(
+                      "px-3 py-2 rounded-full text-xs font-medium whitespace-nowrap touch-manipulation",
+                      filterStatus === status
+                        ? "bg-purple-500/20 text-purple-400"
+                        : "bg-white/5 text-gray-400 active:bg-white/10"
+                    )}
                   >
-                    <Users className="w-4 h-4" />
-                    <span className="hidden sm:inline">{filterStatus === "all" ? "All" : filterStatus === "active" ? "Active" : "Inactive"}</span>
-                    <ChevronDown className="w-3 h-3 sm:w-4 sm:h-4" />
+                    {status === "all" ? "All" : status === "active" ? "Active" : "Off"}
                   </button>
-                {showFilterDropdown && (
-                  <div className="absolute right-0 mt-2 w-36 sm:w-40 bg-[var(--surface)] border border-[var(--border)] rounded-lg sm:rounded-xl shadow-xl z-10 overflow-hidden">
-                    {(["all", "active", "inactive"] as FilterStatus[]).map((status) => (
-                      <button
-                        key={status}
-                        onClick={() => { setFilterStatus(status); setShowFilterDropdown(false); }}
-                        className={cn(
-                          "w-full px-3 sm:px-4 py-2 sm:py-2.5 text-left text-xs sm:text-sm hover:bg-white/5",
-                          filterStatus === status ? "text-purple-400 bg-purple-500/10" : "text-gray-300"
-                        )}
-                      >
-                        {status === "all" ? "All" : status === "active" ? "Active" : "Inactive"}
-                      </button>
-                    ))}
-                  </div>
-                )}
+                ))}
               </div>
 
               {/* Sort Dropdown */}
-              <div className="relative flex-1 sm:flex-none">
+              <div className="relative ml-auto flex-shrink-0">
                 <button
-                  onClick={() => { setShowSortDropdown(!showSortDropdown); setShowFilterDropdown(false); }}
-                  className="w-full sm:w-auto flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2.5 sm:py-3 bg-[var(--surface)] border border-[var(--border)] rounded-lg sm:rounded-xl text-sm sm:text-base text-gray-300 hover:border-purple-500/30"
+                  onClick={() => setShowSortDropdown(!showSortDropdown)}
+                  className="flex items-center gap-1.5 px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-xs text-gray-300 touch-manipulation"
                 >
                   <TrendingUp className="w-4 h-4" />
-                  <span className="hidden sm:inline">Sort: {sortBy.charAt(0).toUpperCase() + sortBy.slice(1)}</span>
-                  <ChevronDown className="w-3 h-3 sm:w-4 sm:h-4" />
+                  <ChevronDown className="w-3 h-3" />
                 </button>
                 {showSortDropdown && (
-                  <div className="absolute right-0 mt-2 w-36 sm:w-40 bg-[var(--surface)] border border-[var(--border)] rounded-lg sm:rounded-xl shadow-xl z-10 overflow-hidden">
+                  <div className="absolute right-0 mt-2 w-32 bg-[#0a0a0c] border border-white/10 rounded-xl shadow-xl z-20 overflow-hidden">
                     {(["revenue", "messages", "conversion", "recent"] as SortBy[]).map((sort) => (
                       <button
                         key={sort}
                         onClick={() => { setSortBy(sort); setShowSortDropdown(false); }}
                         className={cn(
-                          "w-full px-3 sm:px-4 py-2 sm:py-2.5 text-left text-xs sm:text-sm hover:bg-white/5",
+                          "w-full px-3 py-2.5 text-left text-xs active:bg-white/10",
                           sortBy === sort ? "text-purple-400 bg-purple-500/10" : "text-gray-300"
                         )}
                       >
@@ -750,7 +739,6 @@ export default function ChattersPage() {
                     ))}
                   </div>
                 )}
-              </div>
               </div>
             </div>
 
