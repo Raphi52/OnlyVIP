@@ -25,10 +25,10 @@ git reset --hard origin/main
 
 # Rebuild and restart only the app container
 log "Rebuilding Docker containers..."
-docker compose build --no-cache app
+docker compose -p onlyvip build --no-cache app
 
 log "Restarting app container..."
-docker compose up -d --no-deps --force-recreate app
+docker compose -p onlyvip up -d --no-deps --force-recreate app
 
 # Cleanup old images
 log "Cleaning up old images..."
