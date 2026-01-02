@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { CREATOR_BADGES } from "@/lib/stats/calculate-creator-stats";
 
 // GET /api/find-model - List all active model listings for agencies to browse
 export async function GET(request: NextRequest) {
@@ -70,6 +71,7 @@ export async function GET(request: NextRequest) {
             avatar: true,
             categories: true,
             agencyId: true,
+            publicStats: true, // Include verified stats
           },
         },
       },
@@ -120,28 +122,75 @@ export async function GET(request: NextRequest) {
     }
 
     // Transform listings
-    const transformedListings = listings.map(listing => ({
-      id: listing.id,
-      bio: listing.bio,
-      photos: listing.photos,
-      socialLinks: JSON.parse(listing.socialLinks || "{}"),
-      tags: listing.tags,
-      revenueShare: listing.revenueShare,
-      chattingEnabled: listing.chattingEnabled,
-      averageRating: listing.averageRating,
-      reviewCount: listing.reviewCount,
-      creator: {
-        id: listing.creator.id,
-        slug: listing.creator.slug,
-        name: listing.creator.name,
-        displayName: listing.creator.displayName,
-        avatar: listing.creator.avatar,
-        categories: JSON.parse(listing.creator.categories || "[]"),
-      },
-      reviews: (reviewsByCreator[listing.creatorId] || []).slice(0, 3),
-      applicationStatus: applicationStatuses[listing.id] || null,
-      createdAt: listing.createdAt,
-    }));
+    const transformedListings = listings.map(listing => {
+      const stats = listing.creator.publicStats;
+
+      // Parse badges if stats exist and are public
+      const badges = stats?.isPublic && stats?.badges
+        ? JSON.parse(stats.badges).slice(0, 3).map((badgeId: string) => {
+            const badge = CREATOR_BADGES[badgeId as keyof typeof CREATOR_BADGES];
+            return badge ? { id: badge.id, label: badge.label, icon: badge.icon, emoji: badge.emoji } : null;
+          }).filter(Boolean)
+        : [];
+
+      return {
+        id: listing.id,
+        bio: listing.bio,
+        photos: listing.photos,
+        socialLinks: JSON.parse(listing.socialLinks || "{}"),
+        tags: listing.tags,
+        revenueShare: listing.revenueShare,
+        chattingEnabled: listing.chattingEnabled,
+        averageRating: listing.averageRating,
+        reviewCount: listing.reviewCount,
+        creator: {
+          id: listing.creator.id,
+          slug: listing.creator.slug,
+          name: listing.creator.name,
+          displayName: listing.creator.displayName,
+          avatar: listing.creator.avatar,
+          categories: JSON.parse(listing.creator.categories || "[]"),
+        },
+        reviews: (reviewsByCreator[listing.creatorId] || []).slice(0, 3),
+        applicationStatus: applicationStatuses[listing.id] || null,
+        createdAt: listing.createdAt,
+
+        // Verified Stats (if public and available, respecting visibility settings)
+        verifiedStats: stats?.isPublic ? {
+          // Revenue (if creator allows)
+          revenueLast30d: stats.showRevenue ? stats.revenueLast30d : null,
+          revenueAvg3m: stats.showRevenue ? stats.revenueAvg3m : null,
+          revenueTrend: stats.showRevenue ? stats.revenueTrend : null,
+
+          // Subscribers (if creator allows)
+          activeSubscribers: stats.showSubscribers ? stats.activeSubscribers : null,
+          subscriberRetention: stats.showSubscribers ? stats.subscriberRetention : null,
+          subscriberGrowth30d: stats.showSubscribers ? stats.subscriberGrowth30d : null,
+
+          // Activity (if creator allows)
+          activityRate: stats.showActivity ? stats.activityRate : null,
+          avgResponseMinutes: stats.showActivity ? stats.avgResponseMinutes : null,
+
+          // Always visible (important for agencies)
+          messageToSaleRate: stats.messageToSaleRate,
+          ppvUnlockRate: stats.ppvUnlockRate,
+          totalPosts: stats.totalPosts,
+          avgPostsPerWeek: stats.avgPostsPerWeek,
+
+          avgRating: stats.avgRating,
+          totalReviews: stats.totalReviews,
+          badges,
+
+          // Visibility flags
+          visibility: {
+            showRevenue: stats.showRevenue,
+            showSubscribers: stats.showSubscribers,
+            showActivity: stats.showActivity,
+          },
+          calculatedAt: stats.calculatedAt,
+        } : null,
+      };
+    });
 
     // Get all unique tags for filter options
     const allTags = new Set<string>();

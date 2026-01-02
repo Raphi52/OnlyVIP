@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { extractVariables, validateScript } from "@/lib/scripts/variables";
 
 // Helper to verify agency ownership
 async function verifyAgencyOwnership(userId: string, agencyId: string) {
@@ -9,6 +10,42 @@ async function verifyAgencyOwnership(userId: string, agencyId: string) {
     select: { ownerId: true },
   });
   return agency?.ownerId === userId;
+}
+
+// Helper to check if user is agency owner or chatter
+async function getUserAgencyRole(userId: string, agencyId: string) {
+  // Check if owner
+  const agency = await prisma.agency.findUnique({
+    where: { id: agencyId },
+    select: { ownerId: true },
+  });
+
+  if (agency?.ownerId === userId) {
+    return { role: "owner" as const, chatterId: null };
+  }
+
+  // Check if chatter (via user email)
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { email: true },
+  });
+
+  if (user?.email) {
+    const chatter = await prisma.chatter.findFirst({
+      where: {
+        agencyId,
+        email: user.email,
+        isActive: true,
+      },
+      select: { id: true },
+    });
+
+    if (chatter) {
+      return { role: "chatter" as const, chatterId: chatter.id };
+    }
+  }
+
+  return { role: null, chatterId: null };
 }
 
 // GET /api/agency/scripts - List scripts for an agency
@@ -23,6 +60,13 @@ export async function GET(request: NextRequest) {
     const agencyId = searchParams.get("agencyId");
     const creatorSlug = searchParams.get("creatorSlug");
     const category = searchParams.get("category");
+    const folderId = searchParams.get("folderId");
+    const status = searchParams.get("status");
+    const authorId = searchParams.get("authorId");
+    const hasMedia = searchParams.get("hasMedia");
+    const sequenceId = searchParams.get("sequenceId");
+    const search = searchParams.get("search");
+    const favorites = searchParams.get("favorites") === "true";
 
     if (!agencyId) {
       return NextResponse.json(
@@ -31,34 +75,153 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Verify ownership
-    if (!(await verifyAgencyOwnership(session.user.id, agencyId))) {
+    // Check user role
+    const { role, chatterId } = await getUserAgencyRole(session.user.id, agencyId);
+    if (!role) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const whereClause: any = { agencyId };
-    if (creatorSlug) {
-      // Get scripts for specific creator OR global scripts (no creatorSlug)
-      whereClause.OR = [{ creatorSlug }, { creatorSlug: null }];
+    // Build where clause
+    const whereClause: any = {
+      agencyId,
+      isActive: true,
+    };
+
+    // For chatters, only show approved scripts + their own drafts
+    if (role === "chatter") {
+      whereClause.OR = [
+        { status: "APPROVED" },
+        { authorId: session.user.id, status: { in: ["DRAFT", "PENDING", "REJECTED"] } },
+      ];
+    } else if (status) {
+      whereClause.status = status;
     }
-    if (category) whereClause.category = category;
+
+    // Creator filter
+    if (creatorSlug) {
+      whereClause.AND = whereClause.AND || [];
+      whereClause.AND.push({
+        OR: [{ creatorSlug }, { creatorSlug: null }],
+      });
+    }
+
+    // Other filters
+    if (category && category !== "ALL") {
+      whereClause.category = category;
+    }
+    if (folderId === "null") {
+      whereClause.folderId = null;
+    } else if (folderId) {
+      whereClause.folderId = folderId;
+    }
+    if (authorId) {
+      whereClause.authorId = authorId;
+    }
+    if (sequenceId) {
+      whereClause.sequenceId = sequenceId;
+    }
+
+    // Search
+    if (search) {
+      whereClause.AND = whereClause.AND || [];
+      whereClause.AND.push({
+        OR: [
+          { name: { contains: search, mode: "insensitive" } },
+          { content: { contains: search, mode: "insensitive" } },
+        ],
+      });
+    }
+
+    // Owner favorites
+    if (favorites && role === "owner") {
+      whereClause.isFavorite = true;
+    }
 
     const scripts = await prisma.script.findMany({
       where: whereClause,
-      orderBy: [{ category: "asc" }, { usageCount: "desc" }],
+      include: {
+        folder: {
+          select: { id: true, name: true, color: true, icon: true },
+        },
+        author: {
+          select: { id: true, name: true, image: true },
+        },
+        approvedBy: {
+          select: { id: true, name: true },
+        },
+        mediaItems: {
+          include: {
+            media: {
+              select: { id: true, contentUrl: true, type: true, thumbnailUrl: true },
+            },
+          },
+          orderBy: { order: "asc" },
+        },
+        sequence: {
+          select: { id: true, name: true },
+        },
+        _count: {
+          select: {
+            chatterFavorites: true,
+          },
+        },
+      },
+      orderBy: [
+        { isFavorite: "desc" },
+        { category: "asc" },
+        { usageCount: "desc" },
+      ],
     });
 
-    // Calculate conversion rate for each script
-    const scriptsWithStats = scripts.map((script) => ({
-      ...script,
-      conversionRate:
-        script.usageCount > 0
-          ? Math.round((script.salesGenerated / script.usageCount) * 10000) /
-            100
-          : 0,
+    // If chatter, also get their favorites
+    let chatterFavoriteIds: Set<string> = new Set();
+    if (chatterId) {
+      const favorites = await prisma.chatterScriptFavorite.findMany({
+        where: { chatterId },
+        select: { scriptId: true },
+      });
+      chatterFavoriteIds = new Set(favorites.map((f) => f.scriptId));
+    }
+
+    // Get category counts
+    const categoryCounts = await prisma.script.groupBy({
+      by: ["category"],
+      where: {
+        agencyId,
+        isActive: true,
+        status: role === "chatter" ? "APPROVED" : undefined,
+      },
+      _count: true,
+    });
+
+    const categories = categoryCounts.map((c) => ({
+      value: c.category,
+      label: c.category.replace(/_/g, " "),
+      count: c._count,
     }));
 
-    return NextResponse.json({ scripts: scriptsWithStats });
+    // Format response
+    const scriptsWithStats = scripts.map((script) => ({
+      ...script,
+      isChatterFavorite: chatterFavoriteIds.has(script.id),
+      mediaCount: script.mediaItems.length,
+      favoritesCount: script._count.chatterFavorites,
+    }));
+
+    // Get pending count for owner
+    let pendingCount = 0;
+    if (role === "owner") {
+      pendingCount = await prisma.script.count({
+        where: { agencyId, status: "PENDING", isActive: true },
+      });
+    }
+
+    return NextResponse.json({
+      scripts: scriptsWithStats,
+      categories,
+      pendingCount,
+      role,
+    });
   } catch (error) {
     console.error("Error fetching scripts:", error);
     return NextResponse.json(
@@ -77,7 +240,17 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { agencyId, name, content, category, creatorSlug } = body;
+    const {
+      agencyId,
+      name,
+      content,
+      category,
+      creatorSlug,
+      folderId,
+      mediaIds,
+      sequenceId,
+      sequenceOrder,
+    } = body;
 
     if (!agencyId || !name || !content || !category) {
       return NextResponse.json(
@@ -86,8 +259,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify ownership
-    if (!(await verifyAgencyOwnership(session.user.id, agencyId))) {
+    // Check user role
+    const { role, chatterId } = await getUserAgencyRole(session.user.id, agencyId);
+    if (!role) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -106,6 +280,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Validate folder belongs to agency
+    if (folderId) {
+      const folder = await prisma.scriptFolder.findFirst({
+        where: { id: folderId, agencyId },
+      });
+      if (!folder) {
+        return NextResponse.json(
+          { error: "Folder not found" },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Extract and validate variables
+    const validation = validateScript(content);
+    const usedVariables = extractVariables(content);
+
+    // Determine status based on role
+    // Owner: auto-approved, Chatter: pending review
+    const status = role === "owner" ? "APPROVED" : "PENDING";
+
     // Create script
     const script = await prisma.script.create({
       data: {
@@ -113,11 +308,62 @@ export async function POST(request: NextRequest) {
         name,
         content,
         category,
-        creatorSlug: creatorSlug || null, // null means global script
+        creatorSlug: creatorSlug || null,
+        folderId: folderId || null,
+        authorId: session.user.id,
+        status,
+        approvedById: role === "owner" ? session.user.id : null,
+        approvedAt: role === "owner" ? new Date() : null,
+        hasVariables: usedVariables.length > 0,
+        variables: usedVariables.length > 0 ? JSON.stringify(usedVariables) : null,
+        sequenceId: sequenceId || null,
+        sequenceOrder: sequenceOrder ?? null,
+      },
+      include: {
+        folder: {
+          select: { id: true, name: true, color: true, icon: true },
+        },
+        author: {
+          select: { id: true, name: true, image: true },
+        },
       },
     });
 
-    return NextResponse.json({ script }, { status: 201 });
+    // Attach media if provided
+    if (mediaIds && mediaIds.length > 0) {
+      const mediaData = mediaIds.map((mediaId: string, index: number) => ({
+        scriptId: script.id,
+        mediaId,
+        order: index,
+      }));
+      await prisma.scriptMedia.createMany({ data: mediaData });
+    }
+
+    // Get full script with media
+    const fullScript = await prisma.script.findUnique({
+      where: { id: script.id },
+      include: {
+        folder: {
+          select: { id: true, name: true, color: true, icon: true },
+        },
+        author: {
+          select: { id: true, name: true, image: true },
+        },
+        mediaItems: {
+          include: {
+            media: {
+              select: { id: true, contentUrl: true, type: true, thumbnailUrl: true },
+            },
+          },
+          orderBy: { order: "asc" },
+        },
+      },
+    });
+
+    return NextResponse.json({
+      script: fullScript,
+      validation,
+    }, { status: 201 });
   } catch (error) {
     console.error("Error creating script:", error);
     return NextResponse.json(
@@ -136,7 +382,22 @@ export async function PATCH(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { id, name, content, category, creatorSlug, isActive } = body;
+    const {
+      id,
+      name,
+      content,
+      category,
+      creatorSlug,
+      isActive,
+      folderId,
+      mediaIds,
+      isFavorite,
+      sequenceId,
+      sequenceOrder,
+      // Approval actions (owner only)
+      action, // "approve" | "reject"
+      rejectionReason,
+    } = body;
 
     if (!id) {
       return NextResponse.json(
@@ -145,31 +406,146 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    // Get script and verify agency ownership
+    // Get script
     const script = await prisma.script.findUnique({
       where: { id },
-      select: { agencyId: true },
+      select: {
+        agencyId: true,
+        authorId: true,
+        status: true,
+      },
     });
 
     if (!script) {
       return NextResponse.json({ error: "Script not found" }, { status: 404 });
     }
 
-    if (!(await verifyAgencyOwnership(session.user.id, script.agencyId))) {
+    // Check user role
+    const { role } = await getUserAgencyRole(session.user.id, script.agencyId);
+    if (!role) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
+    // Chatters can only edit their own draft/rejected scripts
+    if (role === "chatter") {
+      if (script.authorId !== session.user.id) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
+      if (!["DRAFT", "REJECTED"].includes(script.status)) {
+        return NextResponse.json(
+          { error: "Cannot edit approved or pending scripts" },
+          { status: 400 }
+        );
+      }
+    }
+
     const updateData: any = {};
+
+    // Handle approval workflow (owner only)
+    if (role === "owner" && action) {
+      if (action === "approve") {
+        updateData.status = "APPROVED";
+        updateData.approvedById = session.user.id;
+        updateData.approvedAt = new Date();
+        updateData.rejectionReason = null;
+      } else if (action === "reject") {
+        updateData.status = "REJECTED";
+        updateData.rejectionReason = rejectionReason || null;
+      }
+    }
+
+    // Handle content updates
     if (name !== undefined) updateData.name = name;
-    if (content !== undefined) updateData.content = content;
+    if (content !== undefined) {
+      updateData.content = content;
+      // Re-extract variables
+      const usedVariables = extractVariables(content);
+      updateData.hasVariables = usedVariables.length > 0;
+      updateData.variables = usedVariables.length > 0
+        ? JSON.stringify(usedVariables)
+        : null;
+
+      // If chatter modifies a rejected script, set back to pending
+      if (role === "chatter" && script.status === "REJECTED") {
+        updateData.status = "PENDING";
+        updateData.rejectionReason = null;
+      }
+    }
     if (category !== undefined) updateData.category = category;
     if (creatorSlug !== undefined) updateData.creatorSlug = creatorSlug || null;
+    if (folderId !== undefined) updateData.folderId = folderId || null;
     if (isActive !== undefined) updateData.isActive = isActive;
+    if (isFavorite !== undefined && role === "owner") {
+      updateData.isFavorite = isFavorite;
+    }
+    if (sequenceId !== undefined) updateData.sequenceId = sequenceId || null;
+    if (sequenceOrder !== undefined) updateData.sequenceOrder = sequenceOrder;
 
     const updatedScript = await prisma.script.update({
       where: { id },
       data: updateData,
+      include: {
+        folder: {
+          select: { id: true, name: true, color: true, icon: true },
+        },
+        author: {
+          select: { id: true, name: true, image: true },
+        },
+        approvedBy: {
+          select: { id: true, name: true },
+        },
+        mediaItems: {
+          include: {
+            media: {
+              select: { id: true, contentUrl: true, type: true, thumbnailUrl: true },
+            },
+          },
+          orderBy: { order: "asc" },
+        },
+      },
     });
+
+    // Update media attachments if provided
+    if (mediaIds !== undefined) {
+      // Remove existing
+      await prisma.scriptMedia.deleteMany({ where: { scriptId: id } });
+
+      // Add new
+      if (mediaIds.length > 0) {
+        const mediaData = mediaIds.map((mediaId: string, index: number) => ({
+          scriptId: id,
+          mediaId,
+          order: index,
+        }));
+        await prisma.scriptMedia.createMany({ data: mediaData });
+      }
+
+      // Refetch with updated media
+      const refreshedScript = await prisma.script.findUnique({
+        where: { id },
+        include: {
+          folder: {
+            select: { id: true, name: true, color: true, icon: true },
+          },
+          author: {
+            select: { id: true, name: true, image: true },
+          },
+          approvedBy: {
+            select: { id: true, name: true },
+          },
+          mediaItems: {
+            include: {
+              media: {
+                select: { id: true, contentUrl: true, type: true, thumbnailUrl: true },
+              },
+            },
+            orderBy: { order: "asc" },
+          },
+        },
+      });
+
+      return NextResponse.json({ script: refreshedScript });
+    }
 
     return NextResponse.json({ script: updatedScript });
   } catch (error) {
@@ -181,7 +557,7 @@ export async function PATCH(request: NextRequest) {
   }
 }
 
-// DELETE /api/agency/scripts - Delete a script
+// DELETE /api/agency/scripts - Soft delete a script
 export async function DELETE(request: NextRequest) {
   try {
     const session = await auth();
@@ -199,21 +575,32 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    // Get script and verify agency ownership
+    // Get script
     const script = await prisma.script.findUnique({
       where: { id },
-      select: { agencyId: true },
+      select: { agencyId: true, authorId: true },
     });
 
     if (!script) {
       return NextResponse.json({ error: "Script not found" }, { status: 404 });
     }
 
-    if (!(await verifyAgencyOwnership(session.user.id, script.agencyId))) {
+    // Check user role
+    const { role } = await getUserAgencyRole(session.user.id, script.agencyId);
+    if (!role) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    await prisma.script.delete({ where: { id } });
+    // Chatters can only delete their own drafts
+    if (role === "chatter" && script.authorId !== session.user.id) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    // Soft delete
+    await prisma.script.update({
+      where: { id },
+      data: { isActive: false },
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {
@@ -225,7 +612,7 @@ export async function DELETE(request: NextRequest) {
   }
 }
 
-// POST /api/agency/scripts/use - Track script usage
+// PUT /api/agency/scripts - Track script usage (legacy)
 export async function PUT(request: NextRequest) {
   try {
     const session = await auth();

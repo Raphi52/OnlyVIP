@@ -40,6 +40,13 @@ model Agency {
   aiEnabled   Boolean @default(false) // AI disabled by default
   platformFee Float   @default(0.10) // 10% platform commission
 
+  // AI Provider Settings (agency-wide defaults)
+  aiProvider     String  @default("anthropic") // anthropic | openai | openrouter
+  aiModel        String  @default("claude-haiku-4-5-20241022")
+  aiApiKey       String? // Encrypted custom API key (null = use platform key)
+  aiApiKeyHash   String? // Masked key for display (sk-ant-****1234)
+  aiUseCustomKey Boolean @default(false)
+
   // Status
   status String @default("ACTIVE") // ACTIVE | SUSPENDED | BANNED
 
@@ -48,6 +55,8 @@ model Agency {
   chatters        Chatter[]
   aiPersonalities AgencyAiPersonality[]
   scripts         Script[]
+  scriptFolders   ScriptFolder[]
+  scriptSequences ScriptSequence[]
   applications    AgencyApplication[]
   listing         AgencyListing?
   earnings        AgencyEarning[]
@@ -61,6 +70,13 @@ model Agency {
   totalRevenue  Float @default(0)
   averageRating Float @default(0)
   reviewCount   Int   @default(0)
+
+  // Public stats for Find Agency
+  publicStats AgencyPublicStats?
+
+  // Listing visibility
+  isListed        Boolean @default(false) // Show in Find Agency
+  listingPriority Int     @default(0) // Higher = more visible
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -119,6 +135,10 @@ model Chatter {
   // AI Suggestions sent by this chatter
   sentSuggestions AiSuggestion[] @relation("SentBySuggestions")
 
+  // Scripts
+  scriptUsages    ScriptUsage[]
+  scriptFavorites ChatterScriptFavorite[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -161,10 +181,16 @@ model AgencyAiPersonality {
   isActive     Boolean @default(true)
 
   // Media Settings for this AI personality
-  aiMediaEnabled   Boolean @default(true)  // AI can send media in conversations
-  aiMediaFrequency Int     @default(4)     // Send media every X messages on average
-  aiPPVRatio       Int     @default(30)    // % of media that are PPV (0-100)
-  aiTeasingEnabled Boolean @default(true)  // AI can tease about PPV before sending
+  aiMediaEnabled   Boolean @default(true) // AI can send media in conversations
+  aiMediaFrequency Int     @default(4) // Send media every X messages on average
+  aiPPVRatio       Int     @default(30) // % of media that are PPV (0-100)
+  aiTeasingEnabled Boolean @default(true) // AI can tease about PPV before sending
+
+  // Handoff Settings (switch to human chatter)
+  autoHandoffEnabled    Boolean @default(true) // Auto handoff when threshold reached
+  handoffSpendThreshold Float   @default(40) // Spending threshold in EUR (default $40)
+  handoffOnHighIntent   Boolean @default(true) // Handoff on purchase signals
+  handoffKeywords       String? // JSON array of keywords triggering handoff
 
   // Stats
   totalEarnings  Float @default(0)
@@ -234,28 +260,220 @@ model Script {
 
   // Script content
   name     String // "Sexy intro", "PPV pitch", etc.
-  content  String // The script text
+  content  String @db.Text // The script text
   category String // "GREETING" | "PPV_PITCH" | "FOLLOW_UP" | "CLOSING" | "CUSTOM"
+
+  // Folder organization
+  folderId String?
+  folder   ScriptFolder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
 
   // Optional: specific to a creator
   creatorSlug String?
 
-  // Stats
-  usageCount       Int   @default(0)
-  salesGenerated   Int   @default(0)
-  revenueGenerated Float @default(0)
-  conversionRate   Float @default(0) // Calculated: salesGenerated / usageCount
+  // Author (who created this script)
+  authorId String?
+  author   User?   @relation("ScriptAuthor", fields: [authorId], references: [id], onDelete: SetNull)
 
-  isActive Boolean @default(true)
+  // Workflow validation
+  status          String    @default("APPROVED") // DRAFT | PENDING | APPROVED | REJECTED
+  approvedById    String?
+  approvedBy      User?     @relation("ScriptApprover", fields: [approvedById], references: [id], onDelete: SetNull)
+  approvedAt      DateTime?
+  rejectionReason String?
+
+  // Template variables
+  hasVariables Boolean @default(false)
+  variables    String? // JSON array: ["fanName", "price", "creatorName", etc.]
+
+  // Media attachments
+  mediaItems ScriptMedia[]
+
+  // Sequence (for sequential scripts)
+  sequenceId    String?
+  sequence      ScriptSequence? @relation(fields: [sequenceId], references: [id], onDelete: SetNull)
+  sequenceOrder Int? // Position in sequence
+
+  // Stats (calculated automatically)
+  usageCount       Int    @default(0)
+  messagesSent     Int    @default(0)
+  salesGenerated   Int    @default(0)
+  revenueGenerated Float  @default(0)
+  conversionRate   Float  @default(0) // Calculated: salesGenerated / messagesSent * 100
+  avgResponseTime  Float? // Average time before fan response (seconds)
+
+  // Metadata
+  isActive   Boolean @default(true)
+  isFavorite Boolean @default(false) // Owner's favorite
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  messages         Message[]
+  usageLogs        ScriptUsage[]
+  chatterFavorites ChatterScriptFavorite[]
+
+  @@index([agencyId])
+  @@index([creatorSlug])
+  @@index([folderId])
+  @@index([status])
+  @@index([sequenceId])
+}
+
+// ScriptCategory: "GREETING" | "PPV_PITCH" | "FOLLOW_UP" | "CLOSING" | "CUSTOM"
+// ScriptStatus: "DRAFT" | "PENDING" | "APPROVED" | "REJECTED"
+
+// ============= SCRIPT FOLDERS =============
+
+model ScriptFolder {
+  id String @id @default(cuid())
+
+  // Agency
+  agencyId String
+  agency   Agency @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+
+  // Folder info
+  name        String
+  description String?
+  color       String? // Hex color for the folder
+  icon        String? // Emoji or icon name
+
+  // Hierarchy (sub-folders)
+  parentId String?
+  parent   ScriptFolder?  @relation("FolderHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children ScriptFolder[] @relation("FolderHierarchy")
+
+  // Scripts in this folder
+  scripts Script[]
+
+  // Display order
+  order Int @default(0)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([agencyId])
-  @@index([creatorSlug])
+  @@index([parentId])
 }
 
-// ScriptCategory: "GREETING" | "PPV_PITCH" | "FOLLOW_UP" | "CLOSING" | "CUSTOM"
+// ============= SCRIPT MEDIA (attachments) =============
+
+model ScriptMedia {
+  id String @id @default(cuid())
+
+  // Script
+  scriptId String
+  script   Script @relation(fields: [scriptId], references: [id], onDelete: Cascade)
+
+  // Media content
+  mediaId String
+  media   MediaContent @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+
+  // Display order
+  order Int @default(0)
+
+  createdAt DateTime @default(now())
+
+  @@index([scriptId])
+  @@index([mediaId])
+}
+
+// ============= SCRIPT SEQUENCES (conversation flows) =============
+
+model ScriptSequence {
+  id String @id @default(cuid())
+
+  // Agency
+  agencyId String
+  agency   Agency @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+
+  // Sequence info
+  name        String
+  description String?
+  category    String // PPV_FUNNEL | ONBOARDING | REACTIVATION | CUSTOM
+
+  // Scripts in this sequence (ordered by sequenceOrder)
+  scripts Script[]
+
+  // Status
+  isActive Boolean @default(true)
+
+  // Stats
+  timesStarted   Int   @default(0)
+  timesCompleted Int   @default(0)
+  totalRevenue   Float @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([agencyId])
+  @@index([category])
+}
+
+// SequenceCategory: "PPV_FUNNEL" | "ONBOARDING" | "REACTIVATION" | "CUSTOM"
+
+// ============= SCRIPT USAGE LOGS =============
+
+model ScriptUsage {
+  id String @id @default(cuid())
+
+  // Script used
+  scriptId String
+  script   Script @relation(fields: [scriptId], references: [id], onDelete: Cascade)
+
+  // Who used it
+  chatterId String
+  chatter   Chatter @relation(fields: [chatterId], references: [id], onDelete: Cascade)
+
+  // Context
+  conversationId String
+  messageId      String? // Message created with this script
+  creatorSlug    String
+  fanUserId      String
+
+  // Action taken
+  action        String // COPIED | SENT | SENT_MODIFIED | CANCELLED
+  modifications String? @db.Text // What was modified
+
+  // Sale attribution
+  resultedInSale Boolean @default(false)
+  saleAmount     Float?
+  saleType       String? // PPV | TIP | SUBSCRIPTION
+
+  // Timing
+  usedAt       DateTime @default(now())
+  responseTime Int? // Seconds before fan response
+
+  @@index([scriptId])
+  @@index([chatterId])
+  @@index([conversationId])
+  @@index([usedAt])
+  @@index([resultedInSale])
+}
+
+// ScriptUsageAction: "COPIED" | "SENT" | "SENT_MODIFIED" | "CANCELLED"
+
+// ============= CHATTER SCRIPT FAVORITES =============
+
+model ChatterScriptFavorite {
+  id String @id @default(cuid())
+
+  // Chatter
+  chatterId String
+  chatter   Chatter @relation(fields: [chatterId], references: [id], onDelete: Cascade)
+
+  // Script
+  scriptId String
+  script   Script @relation(fields: [scriptId], references: [id], onDelete: Cascade)
+
+  // Display order
+  order Int @default(0)
+
+  createdAt DateTime @default(now())
+
+  @@unique([chatterId, scriptId])
+  @@index([chatterId])
+}
 
 // ============= EARNINGS ATTRIBUTION =============
 
@@ -402,6 +620,13 @@ model Creator {
   aiPPVRatio       Int     @default(30) // % of media that are PPV (0-100)
   aiTeasingEnabled Boolean @default(true) // AI can tease before sending PPV
 
+  // AI Provider Settings
+  aiProvider     String  @default("anthropic") // anthropic | openai | openrouter
+  aiModel        String  @default("claude-haiku-4-5-20241022")
+  aiApiKey       String? // Encrypted custom API key (null = use platform key)
+  aiApiKeyHash   String? // Masked key for display (sk-ant-****1234)
+  aiUseCustomKey Boolean @default(false)
+
   // Earnings tracking
   pendingBalance Float            @default(0) // Balance awaiting payout
   totalEarned    Float            @default(0) // Total earned (net after commission)
@@ -411,10 +636,19 @@ model Creator {
   // Model listing for Find Agency marketplace
   modelListing ModelListing?
 
+  // Public stats for Find Model
+  publicStats CreatorPublicStats?
+
+  // Listing visibility
+  isListed         Boolean @default(false) // Show in Find Model
+  lookingForAgency Boolean @default(false) // Actively looking for agency
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([agencyId])
+  @@index([isListed])
+  @@index([lookingForAgency])
 }
 
 // ============= AI RESPONSE QUEUE =============
@@ -487,6 +721,10 @@ model User {
 
   // Creator earnings (payments made by this user)
   creatorEarnings CreatorEarning[]
+
+  // Scripts (author and approver)
+  authoredScripts Script[] @relation("ScriptAuthor")
+  approvedScripts Script[] @relation("ScriptApprover")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -774,6 +1012,7 @@ model MediaContent {
   // Relations
   purchases    MediaPurchase[]
   messageMedia MessageMedia[]
+  scriptMedia  ScriptMedia[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -861,6 +1100,7 @@ model Conversation {
   messages            Message[]
   personalitySwitches PersonalitySwitch[]
   aiSuggestions       AiSuggestion[]
+  handoffs            ConversationHandoff[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -920,7 +1160,19 @@ model Message {
   chatter         Chatter?             @relation("ChatterMessages", fields: [chatterId], references: [id], onDelete: SetNull)
   aiPersonalityId String? // If sent by an AI personality
   aiPersonality   AgencyAiPersonality? @relation("AiPersonalityMessages", fields: [aiPersonalityId], references: [id], onDelete: SetNull)
-  scriptId        String? // If a script was used
+
+  // Script attribution
+  scriptId       String? // If a script was used
+  script         Script? @relation(fields: [scriptId], references: [id], onDelete: SetNull)
+  scriptModified Boolean @default(false) // True if chatter modified the script
+
+  // Sale result tracking
+  resultedInSale Boolean @default(false)
+  saleAmount     Float?
+
+  // Performance tracking
+  responseTimeSeconds Int?     // Time to respond to previous fan message
+  fanEngagedAfter     Boolean? // Did fan respond within 24h?
 
   // Relations
   conversation Conversation      @relation(fields: [conversationId], references: [id], onDelete: Cascade)
@@ -1388,8 +1640,653 @@ model FanProfile {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // Quality scoring (for pre-qualification)
+  qualityScore            Int      @default(50) // 0-100
+  qualityTier             String   @default("unknown") // "vip", "qualified", "unqualified", "unknown"
+  messagesWithoutPurchase Int      @default(0)
+  freeContentRequests     Int      @default(0)
+  aiOnlyMode              Boolean  @default(false) // If true, never route to human
+  aiOnlyReason            String?
+
   @@unique([fanUserId, creatorSlug])
   @@index([creatorSlug])
   @@index([spendingTier])
   @@index([activityLevel])
+  @@index([qualityTier])
 }
+
+// ============= FAN PRESENCE (for auto-bump) =============
+
+model FanPresence {
+  id              String    @id @default(cuid())
+  fanUserId       String
+  creatorSlug     String
+
+  // Online status
+  isOnline        Boolean   @default(false)
+  lastSeen        DateTime  @default(now())
+
+  // Bump tracking
+  lastBumpedAt      DateTime?
+  bumpCooldownHours Int       @default(24)
+  totalBumps        Int       @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([fanUserId, creatorSlug])
+  @@index([isOnline, lastBumpedAt])
+  @@index([creatorSlug])
+}
+
+// ============= AUTO-BUMP QUEUE =============
+
+model AutoBump {
+  id             String   @id @default(cuid())
+  conversationId String
+  fanUserId      String
+  creatorSlug    String
+
+  // Scheduling
+  scheduledAt DateTime
+  status      String   @default("PENDING") // PENDING, SENT, CANCELLED, FAILED
+
+  // Bump type
+  bumpType String // "online_greeting", "dormant_reactivation", "new_content"
+
+  // AI Personality to use
+  personalityId String?
+
+  // Generated message
+  message String? @db.Text
+
+  // Result
+  sentAt    DateTime?
+  messageId String? // Message created
+  error     String?
+
+  createdAt DateTime @default(now())
+
+  @@index([status, scheduledAt])
+  @@index([creatorSlug])
+  @@index([fanUserId])
+}
+
+// BumpType: "online_greeting" | "dormant_reactivation" | "new_content"
+// BumpStatus: "PENDING" | "SENT" | "CANCELLED" | "FAILED"
+
+// ============= CONVERSATION HANDOFF =============
+
+model ConversationHandoff {
+  id             String @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  // Trigger
+  triggerType  String  // "spending_threshold", "high_intent", "quality_upgrade", "manual"
+  triggerValue String? // e.g., "spent:45.00" or "keyword:buy now"
+
+  // From AI to Human
+  fromAiPersonalityId String?
+  toChatterId         String?
+
+  // Status
+  status      String    @default("PENDING") // PENDING, ACCEPTED, DECLINED, EXPIRED, AUTO_ASSIGNED
+  notifiedAt  DateTime?
+  respondedAt DateTime?
+  expiresAt   DateTime?
+
+  // Notes
+  notes String? @db.Text
+
+  createdAt DateTime @default(now())
+
+  @@index([conversationId])
+  @@index([toChatterId, status])
+  @@index([status])
+}
+
+// HandoffTrigger: "spending_threshold" | "high_intent" | "quality_upgrade" | "manual"
+// HandoffStatus: "PENDING" | "ACCEPTED" | "DECLINED" | "EXPIRED" | "AUTO_ASSIGNED"
+
+// ============= OBJECTION PATTERNS =============
+
+model ObjectionPattern {
+  id       String @id @default(cuid())
+  agencyId String
+
+  // Pattern definition
+  name     String // "Too Expensive", "Maybe Later", etc.
+  patterns String @db.Text // JSON array of regex/keyword patterns
+
+  // Response strategy
+  strategy         String  @default("urgency") // "discount_offer", "urgency", "value_prop", "scarcity", "social_proof"
+  responseTemplate String  @db.Text // Template with variables
+
+  // Discount settings (if strategy = discount_offer)
+  discountEnabled    Boolean @default(false)
+  discountPercent    Int?
+  discountMaxAmount  Float?
+  discountValidHours Int     @default(2)
+
+  // Multi-language support
+  language String @default("all") // "all", "en", "fr", "es", etc.
+
+  // Priority (for multiple matches)
+  priority Int     @default(0)
+  isActive Boolean @default(true)
+
+  // Stats
+  timesTriggered Int   @default(0)
+  timesConverted Int   @default(0)
+  conversionRate Float @default(0)
+  totalRevenue   Float @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  handlings ObjectionHandling[]
+
+  @@index([agencyId])
+  @@index([isActive])
+  @@index([language])
+}
+
+// ObjectionStrategy: "discount_offer" | "urgency" | "value_prop" | "scarcity" | "social_proof"
+
+// ============= OBJECTION HANDLING LOG =============
+
+model ObjectionHandling {
+  id             String @id @default(cuid())
+  conversationId String
+  messageId      String // Fan's objection message
+
+  // Pattern matched
+  patternId String
+  pattern   ObjectionPattern @relation(fields: [patternId], references: [id], onDelete: Cascade)
+
+  // Response
+  responseMessageId String?
+  strategy          String
+  discountCodeId    String? // If discount was offered
+
+  // Outcome
+  outcome          String? // "converted", "declined", "no_response", "escalated"
+  outcomeMessageId String? // The purchase message if converted
+  revenueGenerated Float?
+
+  createdAt  DateTime  @default(now())
+  resolvedAt DateTime?
+
+  @@index([conversationId])
+  @@index([patternId])
+  @@index([outcome])
+}
+
+// ObjectionOutcome: "converted" | "declined" | "no_response" | "escalated"
+
+// ============= DISCOUNT CODES =============
+
+model DiscountCode {
+  id          String @id @default(cuid())
+  code        String @unique
+  creatorSlug String
+
+  // Discount details
+  discountType   String // "percent", "fixed"
+  discountValue  Float // 20 for 20% or 5 for $5
+  maxDiscount    Float? // Max discount in credits (for percent)
+  minPurchase    Float? // Min purchase required
+
+  // Validity
+  expiresAt    DateTime?
+  maxUses      Int?
+  currentUses  Int       @default(0)
+  isActive     Boolean   @default(true)
+
+  // Targeting
+  fanUserId      String? // If specific to a fan
+  conversationId String? // If specific to a conversation
+
+  // Source
+  sourceType String? // "objection", "flash_sale", "retargeting", "manual"
+  sourceId   String? // ObjectionHandling ID, FlashSale ID, etc.
+
+  createdAt DateTime @default(now())
+  usedAt    DateTime?
+
+  @@index([code])
+  @@index([creatorSlug])
+  @@index([fanUserId])
+  @@index([isActive, expiresAt])
+}
+
+// DiscountType: "percent" | "fixed"
+// DiscountSource: "objection" | "flash_sale" | "retargeting" | "manual"
+
+// ============= FAN LEAD SCORE =============
+
+model FanLeadScore {
+  id          String @id @default(cuid())
+  fanUserId   String
+  creatorSlug String
+
+  // Overall score (0-100)
+  score Int @default(50)
+
+  // Component scores (0-100 each)
+  engagementScore Int @default(50) // Message frequency, responses
+  spendingScore   Int @default(50) // Historical + recent spending
+  intentScore     Int @default(50) // Purchase intent signals
+  recencyScore    Int @default(50) // How recent is activity
+
+  // Predictions
+  predictedLTV        Float? // Predicted lifetime value in EUR
+  purchaseProbability Float? // 0-1 probability of next purchase
+  churnRisk           Float? // 0-1 probability of churning
+
+  // Scoring factors (JSON for transparency)
+  factors String? @db.Text
+
+  // Metadata
+  lastCalculated DateTime @default(now())
+  version        Int      @default(1) // Scoring algorithm version
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([fanUserId, creatorSlug])
+  @@index([creatorSlug, score])
+  @@index([score])
+}
+
+// ============= BUNDLES =============
+
+model Bundle {
+  id       String @id @default(cuid())
+  agencyId String
+
+  // Bundle info
+  name        String
+  description String? @db.Text
+  coverImage  String?
+
+  // Contents (JSON array of media IDs)
+  mediaIds String @db.Text
+
+  // Pricing
+  originalPrice   Float // Sum of individual prices
+  bundlePrice     Float // Discounted bundle price
+  discountPercent Int // For display
+
+  // Availability
+  availableFor String? // "all", "whales", "new_fans", "dormant", "qualified"
+  creatorSlug  String? // If specific to a creator
+
+  // Limits
+  maxPurchases Int? // Max total purchases
+  purchaseCount Int @default(0)
+
+  // Status
+  isActive  Boolean   @default(true)
+  startsAt  DateTime?
+  endsAt    DateTime?
+
+  // Stats
+  totalRevenue Float @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  flashSales FlashSale[]
+
+  @@index([agencyId])
+  @@index([creatorSlug])
+  @@index([isActive])
+}
+
+// BundleAvailability: "all" | "whales" | "new_fans" | "dormant" | "qualified"
+
+// ============= FLASH SALES =============
+
+model FlashSale {
+  id             String @id @default(cuid())
+  conversationId String
+  fanUserId      String
+  creatorSlug    String
+
+  // What's on sale
+  bundleId String?
+  bundle   Bundle? @relation(fields: [bundleId], references: [id], onDelete: SetNull)
+  mediaId  String? // Single media if not a bundle
+
+  // Offer details
+  originalPrice Float
+  salePrice     Float
+  discountCode  String @unique
+
+  // Urgency
+  expiresAt    DateTime
+  reminderSent Boolean  @default(false)
+
+  // Status
+  status     String    @default("ACTIVE") // ACTIVE, REDEEMED, EXPIRED, CANCELLED
+  redeemedAt DateTime?
+
+  // Trigger
+  triggerType String? // "ai_detected", "chatter_manual", "scheduled"
+
+  createdAt DateTime @default(now())
+
+  @@index([fanUserId])
+  @@index([creatorSlug])
+  @@index([status, expiresAt])
+  @@index([discountCode])
+}
+
+// FlashSaleStatus: "ACTIVE" | "REDEEMED" | "EXPIRED" | "CANCELLED"
+// FlashSaleTrigger: "ai_detected" | "chatter_manual" | "scheduled"
+
+// ============= FAN MEMORY (conversational memory) =============
+
+model FanMemory {
+  id          String @id @default(cuid())
+  fanUserId   String
+  creatorSlug String
+
+  // Memory content
+  category String // "personal", "preference", "event", "purchase", "relationship"
+  key      String // "name", "birthday", "job", "favorite_type", "mentioned_breakup"
+  value    String @db.Text
+
+  // Confidence and source
+  confidence      Float   @default(0.8) // 0-1 how confident
+  sourceMessageId String? // Message where this was extracted
+  extractedBy     String  @default("ai") // "ai" or "chatter"
+
+  // Validity
+  lastConfirmed DateTime?
+  expiresAt     DateTime? // Some memories expire (e.g., "is traveling")
+  isActive      Boolean   @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([fanUserId, creatorSlug, key])
+  @@index([fanUserId, creatorSlug])
+  @@index([category])
+  @@index([isActive])
+}
+
+// MemoryCategory: "personal" | "preference" | "event" | "purchase" | "relationship"
+
+// ============= RETARGETING CAMPAIGNS =============
+
+model RetargetingCampaign {
+  id          String @id @default(cuid())
+  fanUserId   String
+  creatorSlug String
+
+  // Trigger
+  triggerType String // "dormant_7d", "dormant_30d", "new_content", "birthday", "anniversary"
+  triggeredAt DateTime @default(now())
+
+  // Content
+  channel     String // "email", "push", "in_app"
+  templateId  String?
+  subject     String?
+  content     String  @db.Text
+  mediaId     String? // Attached media teaser
+
+  // Offer (optional)
+  discountCodeId String?
+  flashSaleId    String?
+
+  // Status
+  status      String    @default("PENDING") // PENDING, SENT, OPENED, CLICKED, CONVERTED, FAILED
+  sentAt      DateTime?
+  openedAt    DateTime?
+  clickedAt   DateTime?
+  convertedAt DateTime?
+  error       String?
+
+  // Revenue attribution
+  revenueGenerated Float?
+
+  createdAt DateTime @default(now())
+
+  @@index([fanUserId])
+  @@index([creatorSlug])
+  @@index([status])
+  @@index([triggerType])
+}
+
+// RetargetingTrigger: "dormant_7d" | "dormant_30d" | "new_content" | "birthday" | "anniversary"
+// RetargetingChannel: "email" | "push" | "in_app"
+// RetargetingStatus: "PENDING" | "SENT" | "OPENED" | "CLICKED" | "CONVERTED" | "FAILED"
+
+// ============= AI PERFORMANCE TRACKING =============
+
+model AiPerformanceSummary {
+  id          String   @id @default(cuid())
+  creatorSlug String
+  date        DateTime @db.Date
+
+  // AI metrics
+  aiMessages        Int   @default(0)
+  aiRevenue         Float @default(0)
+  aiConversions     Int   @default(0)
+  aiAvgResponseTime Float @default(0)
+
+  // Chatter metrics
+  chatterMessages        Int   @default(0)
+  chatterRevenue         Float @default(0)
+  chatterConversions     Int   @default(0)
+  chatterAvgResponseTime Float @default(0)
+
+  // Comparison
+  aiRevenuePerMessage      Float @default(0)
+  chatterRevenuePerMessage Float @default(0)
+  aiConversionRate         Float @default(0)
+  chatterConversionRate    Float @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([creatorSlug, date])
+  @@index([creatorSlug])
+  @@index([date])
+}
+
+// ============= TRANSPARENT STATS - AGENCIES =============
+
+model AgencyPublicStats {
+  id       String @id @default(cuid())
+  agencyId String @unique
+  agency   Agency @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+
+  // Snapshot timestamp
+  calculatedAt DateTime @default(now())
+
+  // Creator metrics
+  activeCreators    Int @default(0) // Currently active creators
+  totalCreatorsEver Int @default(0) // Total creators ever managed
+
+  // Revenue metrics (aggregated from all creators, last 30 days)
+  totalRevenueLast30d  Float @default(0)
+  avgRevenuePerCreator Float @default(0)
+  revenueGrowth3m      Float @default(0) // % growth over 3 months
+
+  // Payout reliability
+  payoutSuccessRate  Float @default(100) // % payouts on time
+  avgPayoutDelayDays Float @default(0) // Average days to pay
+
+  // Commission rates
+  avgCommissionRate Float @default(0)
+  minCommissionRate Float @default(0)
+  maxCommissionRate Float @default(0)
+
+  // Retention metrics
+  avgCollaborationMonths Float @default(0) // Average collaboration duration
+  retention6m            Float @default(0) // % creators still active after 6 months
+  retention12m           Float @default(0) // % creators still active after 12 months
+
+  // Responsiveness
+  avgResponseTimeHours Float @default(0)
+
+  // Monthly history for charts (JSON)
+  monthlyHistory String? @db.Text // [{month, revenue, creators, growth}]
+
+  // Earned badges (JSON array of badge IDs)
+  badges String @default("[]")
+
+  // Aggregated review data
+  avgRating    Float @default(0)
+  totalReviews Int   @default(0)
+
+  // Visibility control
+  isPublic Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([avgRating])
+  @@index([activeCreators])
+}
+
+// ============= TRANSPARENT STATS - CREATORS =============
+
+model CreatorPublicStats {
+  id        String  @id @default(cuid())
+  creatorId String  @unique
+  creator   Creator @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+
+  // Snapshot timestamp
+  calculatedAt DateTime @default(now())
+
+  // Revenue metrics
+  revenueLast30d     Float @default(0)
+  revenueAvg3m       Float @default(0)
+  revenueTrend       Float @default(0) // % vs previous month
+  totalRevenueAllTime Float @default(0)
+
+  // Revenue breakdown
+  revenueFromSubs     Float @default(0)
+  revenueFromPPV      Float @default(0)
+  revenueFromTips     Float @default(0)
+  revenueFromMessages Float @default(0)
+
+  // Subscriber metrics
+  activeSubscribers     Int   @default(0)
+  subscriberRetention   Float @default(0) // % who renew
+  avgSubscriptionMonths Float @default(0)
+  subscriberGrowth30d   Float @default(0) // % growth
+
+  // Activity metrics
+  activityRate       Float     @default(0) // % days active last 30
+  avgResponseMinutes Float     @default(0)
+  lastActiveAt       DateTime?
+
+  // Conversion metrics
+  messageToSaleRate Float @default(0) // % messages resulting in sale
+  ppvUnlockRate     Float @default(0) // % PPV unlocked
+
+  // Content metrics
+  totalPosts      Int   @default(0)
+  postsLast30d    Int   @default(0)
+  avgPostsPerWeek Float @default(0)
+  totalMedia      Int   @default(0)
+
+  // Engagement metrics
+  avgLikesPerPost    Float @default(0)
+  avgCommentsPerPost Float @default(0)
+
+  // Monthly history for charts
+  monthlyHistory String? @db.Text // [{month, revenue, subscribers, posts}]
+
+  // Badges
+  badges String @default("[]")
+
+  // Aggregated review data
+  avgRating    Float @default(0)
+  totalReviews Int   @default(0)
+
+  // Visibility controls (creator can hide certain stats)
+  showRevenue     Boolean @default(true)
+  showSubscribers Boolean @default(true)
+  showActivity    Boolean @default(true)
+  isPublic        Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([avgRating])
+  @@index([revenueLast30d])
+  @@index([activeSubscribers])
+}
+
+// ============= STATS SNAPSHOTS (for historical charts) =============
+
+model StatsSnapshot {
+  id         String   @id @default(cuid())
+  entityType String // "AGENCY" | "CREATOR"
+  entityId   String
+  snapshotAt DateTime @default(now())
+
+  // All metrics at this point in time (JSON)
+  metrics String @db.Text
+
+  @@index([entityType, entityId])
+  @@index([snapshotAt])
+}
+
+// StatsEntityType: "AGENCY" | "CREATOR"
+
+// ============= VERIFIED REVIEWS =============
+
+model VerifiedReview {
+  id String @id @default(cuid())
+
+  // Who is reviewing
+  reviewerType String // "CREATOR" | "AGENCY"
+  reviewerId   String
+
+  // Who is being reviewed
+  targetType String // "AGENCY" | "CREATOR"
+  targetId   String
+
+  // Review content
+  rating  Int     @default(5) // 1-5 stars
+  title   String?
+  content String? @db.Text
+
+  // Detailed ratings (1-5 each, optional)
+  communicationRating     Int? // How well they communicate
+  professionalismRating   Int? // How professional they are
+  paymentReliabilityRating Int? // For agencies: do they pay on time
+  contentQualityRating    Int? // For creators: quality of content
+  supportRating           Int? // Quality of support provided
+
+  // Verification
+  isVerified      Boolean @default(false) // True if collaboration verified
+  collaborationId String? // Link to the collaboration record
+
+  // Moderation
+  isPublished Boolean @default(true)
+  reportCount Int     @default(0)
+  isHidden    Boolean @default(false) // Admin can hide
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([reviewerId, targetId]) // One review per relationship
+  @@index([targetType, targetId])
+  @@index([reviewerType, reviewerId])
+  @@index([rating])
+  @@index([isPublished])
+}
+
+// ReviewerType: "CREATOR" | "AGENCY"
+// TargetType: "AGENCY" | "CREATOR"

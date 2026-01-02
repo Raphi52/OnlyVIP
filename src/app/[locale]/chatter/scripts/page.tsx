@@ -94,7 +94,7 @@ export default function ChatterScriptsPage() {
   };
 
   return (
-    <div className="min-h-screen p-3 sm:p-4 pb-24 overflow-x-hidden max-w-full">
+    <div className="min-h-screen p-3 sm:p-4 pb-24 pb-safe overflow-x-hidden max-w-full">
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -173,15 +173,15 @@ export default function ChatterScriptsPage() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.15 }}
-        className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4 mb-6 scrollbar-hide"
+        className="flex gap-2 overflow-x-auto pb-2 -mx-3 px-3 mb-6 scrollbar-hide snap-x snap-mandatory touch-pan-x"
       >
         <button
           onClick={() => setCategory("ALL")}
           className={cn(
-            "px-3 py-2 rounded-full text-sm font-medium transition-all whitespace-nowrap flex-shrink-0 flex items-center gap-1.5",
+            "px-3.5 py-2.5 rounded-full text-sm font-medium transition-all whitespace-nowrap flex-shrink-0 flex items-center gap-1.5 snap-start touch-manipulation",
             category === "ALL"
               ? "bg-white text-black shadow-lg"
-              : "bg-white/5 text-gray-400 hover:bg-white/10"
+              : "bg-white/5 text-gray-400 hover:bg-white/10 active:bg-white/15"
           )}
         >
           <Sparkles className="w-3.5 h-3.5" />
@@ -194,10 +194,10 @@ export default function ChatterScriptsPage() {
               key={cat.value}
               onClick={() => setCategory(cat.value)}
               className={cn(
-                "px-3 py-2 rounded-full text-sm font-medium transition-all whitespace-nowrap flex-shrink-0 flex items-center gap-1.5",
+                "px-3.5 py-2.5 rounded-full text-sm font-medium transition-all whitespace-nowrap flex-shrink-0 flex items-center gap-1.5 snap-start touch-manipulation",
                 category === cat.value
                   ? `${config.bg} ${config.color} ${config.border} border`
-                  : "bg-white/5 text-gray-400 hover:bg-white/10"
+                  : "bg-white/5 text-gray-400 hover:bg-white/10 active:bg-white/15"
               )}
             >
               <span>{config.icon}</span>
@@ -338,10 +338,10 @@ export default function ChatterScriptsPage() {
                               handleCopy(script);
                             }}
                             className={cn(
-                              "flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium transition-all",
+                              "flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-medium transition-all touch-manipulation",
                               isCopied
                                 ? "bg-emerald-500/20 text-emerald-400"
-                                : "bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg shadow-purple-500/25"
+                                : "bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg shadow-purple-500/25 active:shadow-none"
                             )}
                           >
                             {isCopied ? (
@@ -383,10 +383,10 @@ export default function ChatterScriptsPage() {
                           handleCopy(script);
                         }}
                         className={cn(
-                          "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all",
+                          "flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium transition-all touch-manipulation",
                           isCopied
                             ? "bg-emerald-500/20 text-emerald-400"
-                            : "bg-purple-500/20 text-purple-400 hover:bg-purple-500/30"
+                            : "bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 active:bg-purple-500/40"
                         )}
                       >
                         {isCopied ? (

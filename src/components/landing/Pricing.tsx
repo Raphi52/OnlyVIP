@@ -8,6 +8,7 @@ import Link from "next/link";
 import { Check, Star, Crown, Coins, Sparkles, ArrowRight, Gift, Zap, Lock, MessageCircle, X, Loader2, AlertCircle, AlertTriangle, ShoppingCart } from "lucide-react";
 import { Button, Badge } from "@/components/ui";
 import { cn } from "@/lib/utils";
+import { useTranslations } from "next-intl";
 
 interface PricingProps {
   creatorSlug?: string;
@@ -57,17 +58,19 @@ const membershipTiers = [
 // Helper to convert credits to USD
 const creditsToUsd = (credits: number) => (credits / CREDITS_PER_DOLLAR).toFixed(2);
 
-// Credit packages for additional purchases
+// Credit packages for additional purchases (synced with /credits page)
 const creditPackages = [
-  { credits: 500, price: 5, bonus: 50 },
-  { credits: 1000, price: 10, bonus: 150, popular: true },
-  { credits: 2500, price: 25, bonus: 500 },
-  { credits: 5000, price: 50, bonus: 1250, bestValue: true },
+  { id: "starter", credits: 1000, price: 10 },
+  { id: "basic", credits: 2000, price: 20, bonus: 100 },
+  { id: "standard", credits: 5000, price: 50, bonus: 500, popular: true },
+  { id: "premium", credits: 10000, price: 100, bonus: 2000, bestValue: true },
 ];
 
 export function Pricing({ creatorSlug = "miacosta" }: PricingProps) {
   const { data: session } = useSession();
   const router = useRouter();
+  const t = useTranslations("pricingSection");
+  const tCommon = useTranslations("common");
   const [isAnnual, setIsAnnual] = useState(false);
   const [plans, setPlans] = useState(membershipTiers);
   const [isLoadingPlans, setIsLoadingPlans] = useState(true);
@@ -219,14 +222,13 @@ export function Pricing({ creatorSlug = "miacosta" }: PricingProps) {
             viewport={{ once: true }}
           >
             <Sparkles className="w-4 h-4" />
-            Membership & Credits
+            {t("membershipCredits")}
           </motion.span>
           <h2 className="text-4xl sm:text-5xl font-bold text-white mb-4">
-            Unlock <span className="gradient-gold-text">Exclusive Access</span>
+            {t("unlock")} <span className="gradient-gold-text">{t("exclusiveAccess")}</span>
           </h2>
           <p className="text-gray-400 text-lg max-w-2xl mx-auto">
-            Subscribe to access exclusive content, direct messaging, and VIP perks.
-            Buy credits to unlock PPV media and send tips.
+            {t("subscribeDescription")}
           </p>
         </motion.div>
 
@@ -241,27 +243,27 @@ export function Pricing({ creatorSlug = "miacosta" }: PricingProps) {
             <div className="w-12 h-12 rounded-xl bg-purple-500/20 flex items-center justify-center mx-auto mb-4">
               <Crown className="w-6 h-6 text-purple-400" />
             </div>
-            <h3 className="text-lg font-semibold text-white mb-2">1. Subscribe</h3>
+            <h3 className="text-lg font-semibold text-white mb-2">{t("step1Title")}</h3>
             <p className="text-sm text-gray-400">
-              Choose a plan to unlock exclusive content and messaging access
+              {t("step1Desc")}
             </p>
           </div>
           <div className="text-center p-6 rounded-2xl bg-white/5 border border-white/10">
             <div className="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center mx-auto mb-4">
               <Coins className="w-6 h-6 text-blue-400" />
             </div>
-            <h3 className="text-lg font-semibold text-white mb-2">2. Use Credits</h3>
+            <h3 className="text-lg font-semibold text-white mb-2">{t("step2Title")}</h3>
             <p className="text-sm text-gray-400">
-              Spend credits on PPV content, tips, and exclusive media unlocks
+              {t("step2Desc")}
             </p>
           </div>
           <div className="text-center p-6 rounded-2xl bg-white/5 border border-white/10">
             <div className="w-12 h-12 rounded-xl bg-green-500/20 flex items-center justify-center mx-auto mb-4">
               <Zap className="w-6 h-6 text-green-400" />
             </div>
-            <h3 className="text-lg font-semibold text-white mb-2">3. Top Up</h3>
+            <h3 className="text-lg font-semibold text-white mb-2">{t("step3Title")}</h3>
             <p className="text-sm text-gray-400">
-              Need more? Buy additional credits anytime with crypto or card
+              {t("step3Desc")}
             </p>
           </div>
         </motion.div>
@@ -279,7 +281,7 @@ export function Pricing({ creatorSlug = "miacosta" }: PricingProps) {
               !isAnnual ? "text-white" : "text-gray-500"
             )}
           >
-            Monthly
+            {t("monthly")}
           </span>
           <button
             onClick={() => setIsAnnual(!isAnnual)}
@@ -300,7 +302,7 @@ export function Pricing({ creatorSlug = "miacosta" }: PricingProps) {
               isAnnual ? "text-white" : "text-gray-500"
             )}
           >
-            Annual
+            {t("annual")}
           </span>
           {isAnnual && (
             <motion.span
@@ -308,7 +310,7 @@ export function Pricing({ creatorSlug = "miacosta" }: PricingProps) {
               animate={{ opacity: 1, scale: 1 }}
               className="px-3 py-1 rounded-full bg-green-500/20 border border-green-500/30 text-green-400 text-xs font-semibold"
             >
-              Save 20%
+              {t("save20")}
             </motion.span>
           )}
         </motion.div>
@@ -341,7 +343,7 @@ export function Pricing({ creatorSlug = "miacosta" }: PricingProps) {
                   <div className="flex justify-center mb-6">
                     <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[var(--gold)] text-black text-sm font-semibold">
                       <Star className="w-4 h-4" />
-                      Best Value
+                      {t("bestValue")}
                     </span>
                   </div>
                 )}
@@ -369,7 +371,7 @@ export function Pricing({ creatorSlug = "miacosta" }: PricingProps) {
                     <span className="text-4xl font-bold text-white">
                       {Math.round(isAnnual ? plan.annualCredits / 12 : plan.monthlyCredits).toLocaleString()}
                     </span>
-                    <span className="text-gray-400">credits/mo</span>
+                    <span className="text-gray-400">{t("creditsMo")}</span>
                   </div>
                   <p className="text-sm text-gray-400 mt-1">
                     ~${creditsToUsd(isAnnual ? plan.annualCredits / 12 : plan.monthlyCredits)}/month
@@ -414,11 +416,11 @@ export function Pricing({ creatorSlug = "miacosta" }: PricingProps) {
                   {isPurchasing === plan.id ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
-                      Processing...
+                      {t("processing")}
                     </>
                   ) : (
                     <>
-                      Subscribe Now
+                      {t("subscribeNow")}
                       <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
                     </>
                   )}
@@ -436,10 +438,10 @@ export function Pricing({ creatorSlug = "miacosta" }: PricingProps) {
           className="text-center mb-10"
         >
           <h3 className="text-2xl font-bold text-white mb-3">
-            Need More Credits?
+            {t("needMoreCredits")}
           </h3>
           <p className="text-gray-400">
-            Top up anytime with additional credit packages
+            {t("topUpAnytime")}
           </p>
         </motion.div>
 
@@ -450,7 +452,7 @@ export function Pricing({ creatorSlug = "miacosta" }: PricingProps) {
           className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto mb-16"
         >
           {creditPackages.map((pkg, index) => (
-            <Link key={index} href="/credits">
+            <Link key={pkg.id} href={`/credits?package=${pkg.id}`}>
               <motion.div
                 whileHover={{ scale: 1.02 }}
                 className={cn(
@@ -464,24 +466,24 @@ export function Pricing({ creatorSlug = "miacosta" }: PricingProps) {
               >
                 {pkg.popular && (
                   <Badge className="absolute -top-2 left-1/2 -translate-x-1/2 bg-purple-500 text-white border-0 text-xs">
-                    Popular
+                    {t("popular")}
                   </Badge>
                 )}
                 {pkg.bestValue && (
                   <Badge className="absolute -top-2 left-1/2 -translate-x-1/2 bg-[var(--gold)] text-black border-0 text-xs">
-                    Best Value
+                    {t("bestValue")}
                   </Badge>
                 )}
                 <div className="text-center">
                   <div className="flex items-center justify-center gap-1 mb-1">
-                    <Coins className="w-4 h-4 text-purple-400" />
+                    <Coins className="w-4 h-4 text-emerald-400" />
                     <span className="text-xl font-bold text-white">
-                      {(pkg.credits + pkg.bonus).toLocaleString()}
+                      {pkg.credits.toLocaleString()}
                     </span>
                   </div>
-                  {pkg.bonus > 0 && (
-                    <p className="text-xs text-green-400 mb-2">
-                      +{pkg.bonus} bonus
+                  {pkg.bonus && pkg.bonus > 0 && (
+                    <p className="text-xs text-purple-400 mb-2">
+                      +{pkg.bonus.toLocaleString()} {t("bonus")}
                     </p>
                   )}
                   <p className="text-lg font-bold text-white">
@@ -502,24 +504,24 @@ export function Pricing({ creatorSlug = "miacosta" }: PricingProps) {
         >
           <div className="p-6 rounded-2xl bg-gradient-to-r from-purple-500/10 to-blue-500/10 border border-purple-500/20">
             <h4 className="text-lg font-semibold text-white mb-4 text-center">
-              What can you do with credits?
+              {t("whatCanYouDo")}
             </h4>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="text-center">
                 <Lock className="w-6 h-6 text-purple-400 mx-auto mb-2" />
-                <p className="text-sm text-gray-300">Unlock PPV</p>
+                <p className="text-sm text-gray-300">{t("unlockPPV")}</p>
               </div>
               <div className="text-center">
                 <Gift className="w-6 h-6 text-pink-400 mx-auto mb-2" />
-                <p className="text-sm text-gray-300">Send Tips</p>
+                <p className="text-sm text-gray-300">{t("sendTips")}</p>
               </div>
               <div className="text-center">
                 <MessageCircle className="w-6 h-6 text-blue-400 mx-auto mb-2" />
-                <p className="text-sm text-gray-300">Unlock Messages</p>
+                <p className="text-sm text-gray-300">{t("unlockMessages")}</p>
               </div>
               <div className="text-center">
                 <Sparkles className="w-6 h-6 text-[var(--gold)] mx-auto mb-2" />
-                <p className="text-sm text-gray-300">Exclusive Content</p>
+                <p className="text-sm text-gray-300">{t("exclusiveContent")}</p>
               </div>
             </div>
           </div>
@@ -535,14 +537,14 @@ export function Pricing({ creatorSlug = "miacosta" }: PricingProps) {
           >
             <div className="inline-flex items-center gap-3 px-6 py-3 rounded-2xl bg-purple-500/10 border border-purple-500/30">
               <Coins className="w-5 h-5 text-purple-400" />
-              <span className="text-gray-400">Your balance:</span>
+              <span className="text-gray-400">{t("yourBalance")}</span>
               <span className="text-xl font-bold text-white">
                 {isLoadingBalance ? "..." : userBalance.toLocaleString()}
               </span>
-              <span className="text-gray-400">credits</span>
+              <span className="text-gray-400">{t("credits")}</span>
               <Link href="/credits">
                 <Button variant="ghost" size="sm" className="text-purple-400 hover:text-purple-300">
-                  Top Up
+                  {t("topUp")}
                 </Button>
               </Link>
             </div>
@@ -557,7 +559,7 @@ export function Pricing({ creatorSlug = "miacosta" }: PricingProps) {
           className="text-center mt-8"
         >
           <p className="text-sm text-gray-500 mb-4">
-            Buy credits securely with crypto or card
+            {t("buyCreditsSecurely")}
           </p>
           <div className="flex items-center justify-center gap-4 flex-wrap">
             <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 border border-white/10">
@@ -567,7 +569,7 @@ export function Pricing({ creatorSlug = "miacosta" }: PricingProps) {
               <span className="text-[#627EEA] font-medium">Ethereum</span>
             </div>
             <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 border border-white/10">
-              <span className="text-blue-400 font-medium">Credit Card</span>
+              <span className="text-blue-400 font-medium">{t("creditCard")}</span>
             </div>
           </div>
         </motion.div>
@@ -625,10 +627,10 @@ export function Pricing({ creatorSlug = "miacosta" }: PricingProps) {
                     </div>
                     <div>
                       <h3 className="text-xl font-bold text-white">
-                        Insufficient Credits
+                        {t("insufficientCredits")}
                       </h3>
                       <p className="text-sm text-gray-400 mt-0.5">
-                        Top up to continue
+                        {t("topUpToContinue")}
                       </p>
                     </div>
                   </div>
@@ -641,7 +643,7 @@ export function Pricing({ creatorSlug = "miacosta" }: PricingProps) {
                     {/* Required */}
                     <div className="p-4 rounded-2xl bg-purple-500/10 border border-purple-500/20">
                       <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">
-                        Required
+                        {t("required")}
                       </p>
                       <div className="flex items-center gap-2">
                         <Coins className="w-5 h-5 text-purple-400" />
@@ -654,7 +656,7 @@ export function Pricing({ creatorSlug = "miacosta" }: PricingProps) {
                     {/* Your balance */}
                     <div className="p-4 rounded-2xl bg-red-500/10 border border-red-500/20">
                       <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">
-                        Your Balance
+                        {t("yourBalanceLabel")}
                       </p>
                       <div className="flex items-center gap-2">
                         <Coins className="w-5 h-5 text-red-400" />
@@ -677,9 +679,9 @@ export function Pricing({ creatorSlug = "miacosta" }: PricingProps) {
                           <AlertTriangle className="w-5 h-5 text-orange-400" />
                         </div>
                         <div>
-                          <p className="text-sm text-gray-400">You need</p>
+                          <p className="text-sm text-gray-400">{t("youNeed")}</p>
                           <p className="font-bold text-white">
-                            {(requiredCredits - userBalance).toLocaleString()} more credits
+                            {(requiredCredits - userBalance).toLocaleString()} {t("moreCredits")}
                           </p>
                         </div>
                       </div>
@@ -689,7 +691,7 @@ export function Pricing({ creatorSlug = "miacosta" }: PricingProps) {
                   {/* Tip */}
                   <div className="p-4 rounded-2xl bg-purple-500/10 border border-purple-500/20">
                     <p className="text-sm text-purple-400">
-                      <strong>Pro tip:</strong> Bigger packages include bonus credits for better value!
+                      <strong>{t("proTip")}</strong> {t("biggerPackages")}
                     </p>
                   </div>
                 </div>
@@ -700,7 +702,7 @@ export function Pricing({ creatorSlug = "miacosta" }: PricingProps) {
                     onClick={() => setShowInsufficientModal(false)}
                     className="flex-1 px-4 py-3.5 rounded-xl border border-white/10 text-gray-400 hover:bg-white/5 transition-all font-medium"
                   >
-                    Cancel
+                    {tCommon("cancel")}
                   </button>
                   <Link href="/credits" className="flex-1">
                     <motion.button
@@ -709,7 +711,7 @@ export function Pricing({ creatorSlug = "miacosta" }: PricingProps) {
                       className="w-full flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40 transition-all"
                     >
                       <ShoppingCart className="w-4 h-4" />
-                      Buy Credits
+                      {t("buyCredits")}
                     </motion.button>
                   </Link>
                 </div>

@@ -7,9 +7,14 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { Crown, Mail, Lock, User, Eye, EyeOff, Check, Link2, Loader2, Users, Sparkles } from "lucide-react";
 import { Button, Input, Card } from "@/components/ui";
+import { useTranslations } from "next-intl";
 
 export default function RegisterPage() {
   const router = useRouter();
+  const t = useTranslations("auth");
+  const tErrors = useTranslations("errors");
+  const tNav = useTranslations("nav");
+  const tHome = useTranslations("home");
 
   const [accountType, setAccountType] = useState<"fan" | "creator">("fan");
   const [formData, setFormData] = useState({
@@ -49,7 +54,7 @@ export default function RegisterPage() {
     const slugRegex = /^[a-z0-9-]+$/;
     if (!slugRegex.test(formData.slug)) {
       setSlugStatus("invalid");
-      setSlugError("Only lowercase letters, numbers, and hyphens");
+      setSlugError(t("slugValidation"));
       return;
     }
 
@@ -63,7 +68,7 @@ export default function RegisterPage() {
           setSlugError("");
         } else {
           setSlugStatus("taken");
-          setSlugError(data.reason === "reserved" ? "This URL is reserved" : "This URL is already taken");
+          setSlugError(data.reason === "reserved" ? t("slugReserved") : t("slugTaken"));
         }
       } catch {
         setSlugStatus("idle");
@@ -74,9 +79,9 @@ export default function RegisterPage() {
   }, [formData.slug, accountType]);
 
   const passwordRequirements = [
-    { text: "At least 8 characters", met: formData.password.length >= 8 },
-    { text: "Contains a number", met: /\d/.test(formData.password) },
-    { text: "Contains uppercase", met: /[A-Z]/.test(formData.password) },
+    { text: t("passwordRequirements.minLength"), met: formData.password.length >= 8 },
+    { text: t("passwordRequirements.hasNumber"), met: /\d/.test(formData.password) },
+    { text: t("passwordRequirements.hasUppercase"), met: /[A-Z]/.test(formData.password) },
   ];
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -85,13 +90,13 @@ export default function RegisterPage() {
     setError("");
 
     if (formData.password !== formData.confirmPassword) {
-      setError("Passwords do not match");
+      setError(t("passwordMismatch"));
       setIsLoading(false);
       return;
     }
 
     if (!agreeTerms) {
-      setError("Please agree to the terms and conditions");
+      setError(t("agreeTerms"));
       setIsLoading(false);
       return;
     }
@@ -99,12 +104,12 @@ export default function RegisterPage() {
     // Creator-specific validation
     if (accountType === "creator") {
       if (!formData.slug || formData.slug.length < 3) {
-        setError("Please choose a URL for your page (at least 3 characters)");
+        setError(t("usernameHelp"));
         setIsLoading(false);
         return;
       }
       if (slugStatus === "taken" || slugStatus === "invalid") {
-        setError("Please choose a valid and available URL");
+        setError(t("slugTaken"));
         setIsLoading(false);
         return;
       }
@@ -138,7 +143,7 @@ export default function RegisterPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || "Failed to create account");
+        setError(data.error || tErrors("tryAgain"));
         return;
       }
 
@@ -160,7 +165,7 @@ export default function RegisterPage() {
         }
       }
     } catch (err) {
-      setError("Something went wrong. Please try again.");
+      setError(tErrors("tryAgain"));
     } finally {
       setIsLoading(false);
     }
@@ -189,10 +194,10 @@ export default function RegisterPage() {
         <Card variant="luxury" className="p-8">
           <div className="text-center mb-6">
             <h1 className="text-2xl font-semibold text-[var(--foreground)] mb-2">
-              Create Account
+              {t("signupTitle")}
             </h1>
             <p className="text-[var(--muted)]">
-              Join the exclusive community today
+              {t("signupSubtitle")}
             </p>
           </div>
 
@@ -208,7 +213,7 @@ export default function RegisterPage() {
               }`}
             >
               <Users className="w-4 h-4" />
-              Join as Fan
+              {tNav("joinVip")}
             </button>
             <button
               type="button"
@@ -220,7 +225,7 @@ export default function RegisterPage() {
               }`}
             >
               <Sparkles className="w-4 h-4" />
-              Become Creator
+              {tNav("becomeCreator")}
             </button>
           </div>
 
@@ -233,20 +238,20 @@ export default function RegisterPage() {
               className="mb-6 p-4 rounded-xl bg-[var(--gold)]/10 border border-[var(--gold)]/20"
             >
               <p className="text-sm text-[var(--gold)] font-medium mb-2">
-                As a creator you can:
+                {tHome("forCreators")}:
               </p>
               <ul className="text-xs text-[var(--muted)] space-y-1">
                 <li className="flex items-center gap-2">
                   <Check className="w-3 h-3 text-[var(--gold)]" />
-                  Share exclusive content with your fans
+                  {tHome("unlimitedUploads")}
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="w-3 h-3 text-[var(--gold)]" />
-                  Earn from subscriptions and tips
+                  {tHome("zeroFee")} {tHome("firstMonth")}
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="w-3 h-3 text-[var(--gold)]" />
-                  Get your own custom page URL
+                  {tHome("customUrl")}
                 </li>
               </ul>
             </motion.div>
@@ -263,7 +268,7 @@ export default function RegisterPage() {
               <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--muted)]" />
               <Input
                 type="text"
-                placeholder={accountType === "creator" ? "Your name / Brand name" : "Full name"}
+                placeholder={t("name")}
                 value={formData.name}
                 onChange={(e) =>
                   setFormData({ ...formData, name: e.target.value })
@@ -284,7 +289,7 @@ export default function RegisterPage() {
                   <Link2 className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--muted)]" />
                   <Input
                     type="text"
-                    placeholder="your-page-url"
+                    placeholder={t("chooseUsername")}
                     value={formData.slug}
                     onChange={(e) => {
                       const value = e.target.value
@@ -323,7 +328,7 @@ export default function RegisterPage() {
               <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--muted)]" />
               <Input
                 type="email"
-                placeholder="Email address"
+                placeholder={t("email")}
                 value={formData.email}
                 onChange={(e) =>
                   setFormData({ ...formData, email: e.target.value })
@@ -337,7 +342,7 @@ export default function RegisterPage() {
               <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--muted)]" />
               <Input
                 type={showPassword ? "text" : "password"}
-                placeholder="Password"
+                placeholder={t("password")}
                 value={formData.password}
                 onChange={(e) =>
                   setFormData({ ...formData, password: e.target.value })
@@ -388,7 +393,7 @@ export default function RegisterPage() {
               <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--muted)]" />
               <Input
                 type={showPassword ? "text" : "password"}
-                placeholder="Confirm password"
+                placeholder={t("confirmPassword")}
                 value={formData.confirmPassword}
                 onChange={(e) =>
                   setFormData({ ...formData, confirmPassword: e.target.value })
@@ -406,20 +411,7 @@ export default function RegisterPage() {
                 className="mt-1 w-4 h-4 rounded border-[var(--border)] bg-[var(--surface)] text-[var(--gold)] focus:ring-[var(--gold)]"
               />
               <span className="text-sm text-[var(--muted)]">
-                I agree to the{" "}
-                <Link
-                  href="/terms"
-                  className="text-[var(--gold)] hover:text-[var(--gold-light)]"
-                >
-                  Terms of Service
-                </Link>{" "}
-                and{" "}
-                <Link
-                  href="/privacy"
-                  className="text-[var(--gold)] hover:text-[var(--gold-light)]"
-                >
-                  Privacy Policy
-                </Link>
+                {t("termsAgreement")}
               </span>
             </label>
 
@@ -430,17 +422,17 @@ export default function RegisterPage() {
               className="w-full"
               isLoading={isLoading}
             >
-              Create Account
+              {t("createAccount")}
             </Button>
           </form>
 
           <p className="text-center mt-8 text-sm text-[var(--muted)]">
-            Already have an account?{" "}
+            {t("hasAccount")}{" "}
             <Link
               href="/auth/login"
               className="text-[var(--gold)] hover:text-[var(--gold-light)] font-medium"
             >
-              Sign in
+              {t("signIn")}
             </Link>
           </p>
         </Card>

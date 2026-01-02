@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
@@ -54,6 +54,7 @@ interface Transaction {
 export default function CreditsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [balance, setBalance] = useState(0);
   const [paidCredits, setPaidCredits] = useState(0);
   const [bonusCredits, setBonusCredits] = useState(0);
@@ -68,6 +69,7 @@ export default function CreditsPage() {
   const [showCryptoModal, setShowCryptoModal] = useState(false);
   const [showPayGateModal, setShowPayGateModal] = useState(false);
   const [showDisputeForm, setShowDisputeForm] = useState(false);
+  const [hasAutoOpened, setHasAutoOpened] = useState(false);
 
 
   useEffect(() => {
@@ -80,6 +82,21 @@ export default function CreditsPage() {
       fetchCreditsInfo();
     }
   }, [session?.user?.id, status]);
+
+  // Auto-open payment modal if package is specified in URL
+  useEffect(() => {
+    if (hasAutoOpened || isLoading || status !== "authenticated") return;
+
+    const packageId = searchParams.get("package");
+    if (packageId) {
+      const pkg = creditPackages.find((p) => p.id === packageId);
+      if (pkg) {
+        setSelectedPackage(pkg);
+        setShowPaymentMethodModal(true);
+        setHasAutoOpened(true);
+      }
+    }
+  }, [searchParams, isLoading, status, hasAutoOpened]);
 
   const fetchCreditsInfo = async () => {
     try {
@@ -406,10 +423,6 @@ export default function CreditsPage() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
-            onClick={() => {
-              setShowPaymentMethodModal(false);
-              setSelectedPackage(null);
-            }}
           >
             {/* Backdrop with blur */}
             <motion.div
@@ -424,7 +437,6 @@ export default function CreditsPage() {
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: "100%", opacity: 0 }}
               transition={{ type: "spring", damping: 30, stiffness: 400 }}
-              onClick={(e) => e.stopPropagation()}
               className="relative w-full sm:max-w-md overflow-hidden"
             >
               {/* Glow effect */}

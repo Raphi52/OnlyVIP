@@ -6,11 +6,14 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { Crown, Lock, Eye, EyeOff, CheckCircle, AlertCircle } from "lucide-react";
 import { Button, Input, Card } from "@/components/ui";
+import { useTranslations } from "next-intl";
 
 function ResetPasswordForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
+  const t = useTranslations("auth");
+  const tErrors = useTranslations("errors");
 
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -24,12 +27,12 @@ function ResetPasswordForm() {
     setError("");
 
     if (password.length < 8) {
-      setError("Password must be at least 8 characters");
+      setError(t("passwordRequirements.minLength"));
       return;
     }
 
     if (password !== confirmPassword) {
-      setError("Passwords do not match");
+      setError(t("passwordMismatch"));
       return;
     }
 
@@ -50,10 +53,10 @@ function ResetPasswordForm() {
           router.push("/auth/login");
         }, 3000);
       } else {
-        setError(data.error || "Something went wrong");
+        setError(data.error || tErrors("tryAgain"));
       }
     } catch (err) {
-      setError("Something went wrong. Please try again.");
+      setError(tErrors("tryAgain"));
     } finally {
       setIsLoading(false);
     }
@@ -67,14 +70,14 @@ function ResetPasswordForm() {
             <AlertCircle className="w-8 h-8 text-[var(--error)]" />
           </div>
           <h1 className="text-2xl font-semibold text-[var(--foreground)] mb-2">
-            Invalid reset link
+            {tErrors("invalidLink")}
           </h1>
           <p className="text-[var(--muted)] mb-6">
-            This password reset link is invalid or has expired.
+            {tErrors("expiredToken")}
           </p>
           <Link href="/auth/forgot-password">
             <Button variant="premium" className="w-full">
-              Request new link
+              {t("sendResetLink")}
             </Button>
           </Link>
         </Card>
@@ -107,20 +110,20 @@ function ResetPasswordForm() {
                 <CheckCircle className="w-8 h-8 text-emerald-400" />
               </div>
               <h1 className="text-2xl font-semibold text-[var(--foreground)] mb-2">
-                Password reset!
+                {t("passwordUpdated")}
               </h1>
               <p className="text-[var(--muted)]">
-                Your password has been successfully reset. Redirecting to login...
+                {t("backToLogin")}...
               </p>
             </div>
           ) : (
             <>
               <div className="text-center mb-8">
                 <h1 className="text-2xl font-semibold text-[var(--foreground)] mb-2">
-                  Reset your password
+                  {t("setNewPassword")}
                 </h1>
                 <p className="text-[var(--muted)]">
-                  Enter your new password below.
+                  {t("setNewPasswordSubtitle")}
                 </p>
               </div>
 
@@ -135,7 +138,7 @@ function ResetPasswordForm() {
                   <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--muted)]" />
                   <Input
                     type={showPassword ? "text" : "password"}
-                    placeholder="New password"
+                    placeholder={t("newPassword")}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     className="pl-12 pr-12"
@@ -159,7 +162,7 @@ function ResetPasswordForm() {
                   <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--muted)]" />
                   <Input
                     type={showPassword ? "text" : "password"}
-                    placeholder="Confirm new password"
+                    placeholder={t("confirmPassword")}
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     className="pl-12"
@@ -175,7 +178,7 @@ function ResetPasswordForm() {
                   className="w-full"
                   isLoading={isLoading}
                 >
-                  Reset password
+                  {t("resetPassword")}
                 </Button>
               </form>
             </>

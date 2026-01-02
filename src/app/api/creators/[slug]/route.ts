@@ -39,6 +39,11 @@ export async function GET(
         aiEnabled: dbCreator.aiEnabled,
         aiResponseDelay: dbCreator.aiResponseDelay,
         aiPersonality: dbCreator.aiPersonality,
+        // AI Provider Settings
+        aiProvider: dbCreator.aiProvider,
+        aiModel: dbCreator.aiModel,
+        aiUseCustomKey: dbCreator.aiUseCustomKey,
+        aiApiKeyHash: dbCreator.aiApiKeyHash, // Masked key, not actual key
         // AI Media Settings
         aiMediaEnabled: dbCreator.aiMediaEnabled,
         aiMediaFrequency: dbCreator.aiMediaFrequency,

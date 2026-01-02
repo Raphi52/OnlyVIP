@@ -1,9 +1,9 @@
 "use client";
 
-import { useSession } from "next-auth/react";
+import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import Image from "next/image";
 import { useTranslations, useLocale } from "next-intl";
@@ -22,11 +22,19 @@ import {
   Video,
   Users,
   Search,
+  LogOut,
+  User,
+  Building2,
+  BarChart3,
+  UserPlus,
+  Bot,
+  Handshake,
+  Heart,
 } from "lucide-react";
 import { Button, Card } from "@/components/ui";
+import { Footer } from "@/components/layout/Footer";
 import { getCategoryById } from "@/lib/categories";
 import { cn } from "@/lib/utils";
-import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 interface Creator {
   id: string;
@@ -47,6 +55,7 @@ export default function HomePage() {
   const router = useRouter();
   const [creators, setCreators] = useState<Creator[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const t = useTranslations();
   const locale = useLocale();
 
@@ -108,30 +117,91 @@ export default function HomePage() {
             </Link>
 
             <div className="flex items-center gap-3">
-              <LanguageSwitcher />
               {session ? (
-                <>
-                  <Link href={`/${locale}/dashboard`}>
-                    <Button variant="ghost" size="sm">
-                      {t("nav.dashboard")}
-                    </Button>
-                  </Link>
-                  {session.user?.image ? (
-                    <Link href={`/${locale}/dashboard`}>
+                <div className="relative">
+                  <motion.button
+                    onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                    className="flex items-center gap-3 px-3 py-2 rounded-full border border-white/10 hover:border-[var(--gold)]/30 bg-white/5 hover:bg-white/10 transition-all duration-300"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    {session.user?.image ? (
                       <img
                         src={session.user.image}
                         alt={session.user.name || "Profile"}
-                        className="w-9 h-9 rounded-full object-cover ring-2 ring-[var(--gold)]/30"
+                        className="w-8 h-8 rounded-full object-cover border border-[var(--gold)]/50"
+                        referrerPolicy="no-referrer"
                       />
-                    </Link>
-                  ) : (
-                    <Link href={`/${locale}/dashboard`}>
-                      <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[var(--gold)] to-amber-600 flex items-center justify-center text-black font-bold text-sm">
-                        {session.user?.name?.charAt(0) || "U"}
+                    ) : (
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[var(--gold)] to-yellow-600 flex items-center justify-center">
+                        <User className="w-4 h-4 text-black" />
                       </div>
-                    </Link>
-                  )}
-                </>
+                    )}
+                    <span className="text-sm text-gray-300 max-w-[100px] truncate">
+                      {session.user?.name?.split(" ")[0] || "User"}
+                    </span>
+                  </motion.button>
+
+                  <AnimatePresence>
+                    {isUserMenuOpen && (
+                      <>
+                        {/* Backdrop */}
+                        <motion.div
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          className="fixed inset-0 z-40"
+                          onClick={() => setIsUserMenuOpen(false)}
+                        />
+
+                        <motion.div
+                          initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                          transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                          className="absolute right-0 mt-3 w-56 bg-black/95 backdrop-blur-xl border border-[var(--gold)]/20 rounded-2xl shadow-2xl shadow-black/50 overflow-hidden z-50"
+                        >
+                          {/* Gold accent */}
+                          <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-[var(--gold)]/50 to-transparent" />
+
+                          <div className="px-4 py-3 border-b border-white/10">
+                            <p className="text-sm font-semibold text-white">
+                              {session.user?.name || "User"}
+                            </p>
+                            <p className="text-xs text-gray-500 truncate">
+                              {session.user?.email}
+                            </p>
+                          </div>
+                          <div className="py-2">
+                            <Link
+                              href={`/${locale}/dashboard`}
+                              className="flex items-center gap-3 px-4 py-3 text-sm text-gray-300 hover:text-white hover:bg-white/5 transition-colors"
+                              onClick={() => setIsUserMenuOpen(false)}
+                            >
+                              <Crown className="w-4 h-4 text-[var(--gold)]" />
+                              {t("nav.dashboard")}
+                            </Link>
+                            <Link
+                              href={`/${locale}/dashboard/messages`}
+                              className="flex items-center gap-3 px-4 py-3 text-sm text-gray-300 hover:text-white hover:bg-white/5 transition-colors"
+                              onClick={() => setIsUserMenuOpen(false)}
+                            >
+                              <MessageCircle className="w-4 h-4 text-blue-400" />
+                              Messages
+                            </Link>
+                            <button
+                              onClick={() => signOut()}
+                              className="w-full flex items-center gap-3 px-4 py-3 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors"
+                            >
+                              <LogOut className="w-4 h-4" />
+                              {t("nav.logout")}
+                            </button>
+                          </div>
+                        </motion.div>
+                      </>
+                    )}
+                  </AnimatePresence>
+                </div>
               ) : (
                 <>
                   <Link href={`/${locale}/auth/login`}>
@@ -413,20 +483,220 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="py-12 px-4 border-t border-white/10">
+      {/* Divider */}
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        <div className="h-px bg-gradient-to-r from-transparent via-purple-500/30 to-transparent" />
+      </div>
+
+      {/* For Agencies Section */}
+      <section className="py-16 px-4">
         <div className="max-w-6xl mx-auto">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-6 h-6 text-[var(--gold)]" />
-              <span className="font-bold gradient-gold-text">VipOnly</span>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center mb-12"
+          >
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-400 text-sm font-medium mb-6">
+              <Building2 className="w-4 h-4" />
+              {t("home.forAgencies")}
             </div>
-            <p className="text-sm text-gray-500">
-              {new Date().getFullYear()} VipOnly. {t("footer.rights")}
+            <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
+              {t("home.agencyTitle")}
+            </h2>
+            <p className="text-gray-400 max-w-2xl mx-auto">
+              {t("home.agencyCTA")}
             </p>
+          </motion.div>
+
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
+            {/* Agency Features */}
+            <div className="grid sm:grid-cols-2 gap-4">
+              {[
+                { icon: Users, title: t("home.multipleCreators"), desc: t("home.multipleCreatorsDesc") },
+                { icon: BarChart3, title: t("home.performanceTracking"), desc: t("home.performanceTrackingDesc") },
+                { icon: UserPlus, title: t("home.teamManagement"), desc: t("home.teamManagementDesc") },
+                { icon: Bot, title: t("home.aiAssistant"), desc: t("home.aiAssistantDesc") },
+              ].map((feature, i) => (
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: i * 0.1 }}
+                >
+                  <Card className="p-5 h-full hover:border-purple-500/30 transition-colors">
+                    <div className="w-10 h-10 rounded-lg bg-purple-500/10 flex items-center justify-center mb-3">
+                      <feature.icon className="w-5 h-5 text-purple-400" />
+                    </div>
+                    <h3 className="font-semibold text-white mb-1">{feature.title}</h3>
+                    <p className="text-sm text-gray-400">{feature.desc}</p>
+                  </Card>
+                </motion.div>
+              ))}
+            </div>
+
+            {/* Agency Card */}
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+            >
+              <div className="relative">
+                <div className="absolute inset-0 bg-gradient-to-r from-purple-500/20 to-pink-500/20 rounded-3xl blur-3xl" />
+                <Card variant="featured" className="relative p-8">
+                  <div className="flex items-center gap-4 mb-6">
+                    <div className="w-16 h-16 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                      <Building2 className="w-8 h-8 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-white">{t("home.agencyAccount")}</h3>
+                      <p className="text-gray-400">{t("home.manageCreators")}</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4 mb-8">
+                    <div className="flex items-center justify-between py-3 border-b border-white/10">
+                      <span className="text-gray-400">{t("home.firstMonth")}</span>
+                      <span className="text-purple-400 font-bold text-xl">{t("home.zeroFee")}</span>
+                    </div>
+                    <div className="flex items-center justify-between py-3 border-b border-white/10">
+                      <span className="text-gray-400">{t("home.afterFirstMonth")}</span>
+                      <span className="text-white font-semibold">{t("home.onlyFivePercent")}</span>
+                    </div>
+                    <div className="flex items-center justify-between py-3">
+                      <span className="text-gray-400">{t("home.monthlySubscription")}</span>
+                      <span className="text-white font-semibold">{t("home.free")}</span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3 mb-8">
+                    {[
+                      t("home.multipleCreators"),
+                      t("home.performanceTracking"),
+                      t("home.aiAssistant"),
+                      t("home.realtimeAnalytics"),
+                    ].map((benefit, i) => (
+                      <div key={i} className="flex items-center gap-3">
+                        <div className="w-5 h-5 rounded-full bg-purple-500/20 flex items-center justify-center">
+                          <Check className="w-3 h-3 text-purple-400" />
+                        </div>
+                        <span className="text-gray-300 text-sm">{benefit}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <Link href={`/${locale}/dashboard/become-agency`} className="block">
+                    <Button variant="default" size="lg" className="w-full gap-2 bg-purple-500 hover:bg-purple-600">
+                      {t("home.joinAsAgency")}
+                      <ArrowRight className="w-5 h-5" />
+                    </Button>
+                  </Link>
+                </Card>
+              </div>
+            </motion.div>
           </div>
         </div>
-      </footer>
+      </section>
+
+      {/* Divider */}
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        <div className="h-px bg-gradient-to-r from-transparent via-emerald-500/30 to-transparent" />
+      </div>
+
+      {/* Connect Section - Find Agency / Find Creator */}
+      <section className="py-16 px-4">
+        <div className="max-w-6xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center mb-12"
+          >
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm font-medium mb-6">
+              <Handshake className="w-4 h-4" />
+              {t("home.connect")}
+            </div>
+            <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
+              {t("home.connectTitle")}
+            </h2>
+            <p className="text-gray-400 max-w-2xl mx-auto">
+              {t("home.connectCTA")}
+            </p>
+          </motion.div>
+
+          <div className="grid md:grid-cols-2 gap-8">
+            {/* For Creators - Find Agency */}
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+            >
+              <Card className="p-8 h-full hover:border-emerald-500/30 transition-all group">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center mb-6">
+                  <Heart className="w-7 h-7 text-white" />
+                </div>
+                <h3 className="text-2xl font-bold text-white mb-2">{t("home.forCreatorsTitle")}</h3>
+                <p className="text-sm text-emerald-400 mb-4">{t("home.forCreatorsConnect")}</p>
+                <p className="text-gray-400 mb-6">
+                  {t("home.forCreatorsDesc")}
+                </p>
+                <Link href={`/${locale}/dashboard/find-agency`}>
+                  <Button variant="outline" className="w-full gap-2 border-emerald-500/50 text-emerald-400 hover:bg-emerald-500/10">
+                    {t("home.findAgency")}
+                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                  </Button>
+                </Link>
+              </Card>
+            </motion.div>
+
+            {/* For Agencies - Find Creators */}
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+            >
+              <Card className="p-8 h-full hover:border-purple-500/30 transition-all group">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center mb-6">
+                  <Search className="w-7 h-7 text-white" />
+                </div>
+                <h3 className="text-2xl font-bold text-white mb-2">{t("home.forAgenciesTitle")}</h3>
+                <p className="text-sm text-purple-400 mb-4">{t("home.forAgenciesConnect")}</p>
+                <p className="text-gray-400 mb-6">
+                  {t("home.forAgenciesDesc")}
+                </p>
+                <Link href={`/${locale}/dashboard/find-creator`}>
+                  <Button variant="outline" className="w-full gap-2 border-purple-500/50 text-purple-400 hover:bg-purple-500/10">
+                    {t("home.findCreators")}
+                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                  </Button>
+                </Link>
+              </Card>
+            </motion.div>
+          </div>
+
+          {/* Matching System Badge */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="mt-12 text-center"
+          >
+            <div className="inline-flex items-center gap-4 px-6 py-4 rounded-2xl bg-gradient-to-r from-emerald-500/10 via-purple-500/10 to-pink-500/10 border border-white/10">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-purple-500 flex items-center justify-center">
+                <Sparkles className="w-5 h-5 text-white" />
+              </div>
+              <div className="text-left">
+                <p className="font-semibold text-white">{t("home.matchingSystem")}</p>
+                <p className="text-sm text-gray-400">{t("home.matchingSystemDesc")}</p>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <Footer showPlatformLinks={true} />
     </div>
   );
 }

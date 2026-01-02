@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { AGENCY_BADGES } from "@/lib/stats/calculate-agency-stats";
 
 // GET /api/find-agency - List all public agencies for creators to browse
 export async function GET(request: NextRequest) {
@@ -27,6 +28,7 @@ export async function GET(request: NextRequest) {
       },
       include: {
         listing: true,
+        publicStats: true, // Include verified stats
         creators: {
           where: { isActive: true },
           select: {
@@ -88,6 +90,16 @@ export async function GET(request: NextRequest) {
     // Transform agencies
     const transformedAgencies = filteredAgencies.map(agency => {
       const listing = agency.listing!;
+      const stats = agency.publicStats;
+
+      // Parse badges if stats exist and are public
+      const badges = stats?.isPublic && stats?.badges
+        ? JSON.parse(stats.badges).slice(0, 3).map((badgeId: string) => {
+            const badge = AGENCY_BADGES[badgeId as keyof typeof AGENCY_BADGES];
+            return badge ? { id: badge.id, label: badge.label, icon: badge.icon, emoji: badge.emoji } : null;
+          }).filter(Boolean)
+        : [];
+
       return {
         id: agency.id,
         name: agency.name,
@@ -108,7 +120,7 @@ export async function GET(request: NextRequest) {
         providesMarketing: listing.providesMarketing,
         location: listing.location,
         acceptsRemote: listing.acceptsRemote,
-        // Agency stats
+        // Agency stats (original)
         creatorCount: agency._count.creators,
         creators: agency.creators.slice(0, 5),
         averageRating: listing.averageRating,
@@ -116,6 +128,26 @@ export async function GET(request: NextRequest) {
         reviews: (reviewsByAgency[agency.id] || []).slice(0, 3),
         applicationStatus: applicationStatuses[agency.id] || null,
         createdAt: listing.createdAt,
+
+        // Verified Stats (if public and available)
+        verifiedStats: stats?.isPublic ? {
+          activeCreators: stats.activeCreators,
+          avgRevenuePerCreator: stats.avgRevenuePerCreator,
+          revenueGrowth3m: stats.revenueGrowth3m,
+          payoutSuccessRate: stats.payoutSuccessRate,
+          avgPayoutDelayDays: stats.avgPayoutDelayDays,
+          retention12m: stats.retention12m,
+          avgResponseTimeHours: stats.avgResponseTimeHours,
+          commissionRange: {
+            min: stats.minCommissionRate,
+            max: stats.maxCommissionRate,
+            avg: stats.avgCommissionRate,
+          },
+          avgRating: stats.avgRating,
+          totalReviews: stats.totalReviews,
+          badges,
+          calculatedAt: stats.calculatedAt,
+        } : null,
       };
     });
 

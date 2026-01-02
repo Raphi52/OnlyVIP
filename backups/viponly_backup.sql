@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict c3knMjvz3SeGCtcoofA7Qsh91HB3gGkphYbQ34acwXYRQXg2E8FX9uXTAbMjVh6
+\restrict N4U4zHa4raIZDCBBIjF9OAKDZXYhRAgIVM7dxVkspVuxDuTvgdtMZyqfIgaxrqe
 
 -- Dumped from database version 16.11
 -- Dumped by pg_dump version 16.11
@@ -90,8 +90,6 @@ CREATE TABLE public."Agency" (
     slug text NOT NULL,
     "ownerId" text NOT NULL,
     "aiEnabled" boolean DEFAULT false NOT NULL,
-    "maxCreators" integer DEFAULT 10 NOT NULL,
-    "maxChatters" integer DEFAULT 20 NOT NULL,
     "platformFee" double precision DEFAULT 0.10 NOT NULL,
     status text DEFAULT 'ACTIVE'::text NOT NULL,
     "totalRevenue" double precision DEFAULT 0 NOT NULL,
@@ -141,10 +139,10 @@ CREATE TABLE public."AgencyAiPersonality" (
     "updatedAt" timestamp(3) without time zone NOT NULL,
     "primaryTone" text,
     "toneKeywords" text,
-    "aiMediaEnabled" boolean DEFAULT true,
-    "aiMediaFrequency" integer DEFAULT 4,
-    "aiPPVRatio" integer DEFAULT 30,
-    "aiTeasingEnabled" boolean DEFAULT true
+    "aiMediaEnabled" boolean DEFAULT true NOT NULL,
+    "aiMediaFrequency" integer DEFAULT 4 NOT NULL,
+    "aiPPVRatio" integer DEFAULT 30 NOT NULL,
+    "aiTeasingEnabled" boolean DEFAULT true NOT NULL
 );
 
 
@@ -389,6 +387,21 @@ CREATE TABLE public."ChatterEarning" (
 
 
 ALTER TABLE public."ChatterEarning" OWNER TO viponly;
+
+--
+-- Name: ChatterScriptFavorite; Type: TABLE; Schema: public; Owner: viponly
+--
+
+CREATE TABLE public."ChatterScriptFavorite" (
+    id text NOT NULL,
+    "chatterId" text NOT NULL,
+    "scriptId" text NOT NULL,
+    "order" integer DEFAULT 0 NOT NULL,
+    "createdAt" timestamp(3) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+
+ALTER TABLE public."ChatterScriptFavorite" OWNER TO viponly;
 
 --
 -- Name: Conversation; Type: TABLE; Schema: public; Owner: viponly
@@ -671,7 +684,10 @@ CREATE TABLE public."Message" (
     "aiPersonalityId" text,
     "chatterId" text,
     "scriptId" text,
-    "isAiGenerated" boolean DEFAULT false NOT NULL
+    "isAiGenerated" boolean DEFAULT false NOT NULL,
+    "resultedInSale" boolean DEFAULT false NOT NULL,
+    "saleAmount" double precision,
+    "scriptModified" boolean DEFAULT false NOT NULL
 );
 
 
@@ -800,6 +816,34 @@ CREATE TABLE public."Payment" (
 ALTER TABLE public."Payment" OWNER TO viponly;
 
 --
+-- Name: PaymentDispute; Type: TABLE; Schema: public; Owner: viponly
+--
+
+CREATE TABLE public."PaymentDispute" (
+    id text NOT NULL,
+    "userId" text NOT NULL,
+    "transactionId" text,
+    "paymentMethod" text NOT NULL,
+    amount double precision NOT NULL,
+    "transactionHash" text,
+    "walletAddress" text,
+    "paymentDate" timestamp(3) without time zone NOT NULL,
+    "cryptoCurrency" text,
+    email text NOT NULL,
+    description text NOT NULL,
+    status text DEFAULT 'PENDING'::text NOT NULL,
+    resolution text,
+    "creditAmount" integer,
+    "resolvedAt" timestamp(3) without time zone,
+    "resolvedBy" text,
+    "createdAt" timestamp(3) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    "updatedAt" timestamp(3) without time zone NOT NULL
+);
+
+
+ALTER TABLE public."PaymentDispute" OWNER TO viponly;
+
+--
 -- Name: PersonalitySwitch; Type: TABLE; Schema: public; Owner: viponly
 --
 
@@ -834,11 +878,104 @@ CREATE TABLE public."Script" (
     "conversionRate" double precision DEFAULT 0 NOT NULL,
     "isActive" boolean DEFAULT true NOT NULL,
     "createdAt" timestamp(3) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    "updatedAt" timestamp(3) without time zone NOT NULL
+    "updatedAt" timestamp(3) without time zone NOT NULL,
+    "approvedAt" timestamp(3) without time zone,
+    "approvedById" text,
+    "authorId" text,
+    "avgResponseTime" double precision,
+    "folderId" text,
+    "hasVariables" boolean DEFAULT false NOT NULL,
+    "isFavorite" boolean DEFAULT false NOT NULL,
+    "messagesSent" integer DEFAULT 0 NOT NULL,
+    "rejectionReason" text,
+    "sequenceId" text,
+    "sequenceOrder" integer,
+    status text DEFAULT 'APPROVED'::text NOT NULL,
+    variables text
 );
 
 
 ALTER TABLE public."Script" OWNER TO viponly;
+
+--
+-- Name: ScriptFolder; Type: TABLE; Schema: public; Owner: viponly
+--
+
+CREATE TABLE public."ScriptFolder" (
+    id text NOT NULL,
+    "agencyId" text NOT NULL,
+    name text NOT NULL,
+    description text,
+    color text,
+    icon text,
+    "parentId" text,
+    "order" integer DEFAULT 0 NOT NULL,
+    "createdAt" timestamp(3) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    "updatedAt" timestamp(3) without time zone NOT NULL
+);
+
+
+ALTER TABLE public."ScriptFolder" OWNER TO viponly;
+
+--
+-- Name: ScriptMedia; Type: TABLE; Schema: public; Owner: viponly
+--
+
+CREATE TABLE public."ScriptMedia" (
+    id text NOT NULL,
+    "scriptId" text NOT NULL,
+    "mediaId" text NOT NULL,
+    "order" integer DEFAULT 0 NOT NULL,
+    "createdAt" timestamp(3) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+
+ALTER TABLE public."ScriptMedia" OWNER TO viponly;
+
+--
+-- Name: ScriptSequence; Type: TABLE; Schema: public; Owner: viponly
+--
+
+CREATE TABLE public."ScriptSequence" (
+    id text NOT NULL,
+    "agencyId" text NOT NULL,
+    name text NOT NULL,
+    description text,
+    category text NOT NULL,
+    "isActive" boolean DEFAULT true NOT NULL,
+    "timesStarted" integer DEFAULT 0 NOT NULL,
+    "timesCompleted" integer DEFAULT 0 NOT NULL,
+    "totalRevenue" double precision DEFAULT 0 NOT NULL,
+    "createdAt" timestamp(3) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    "updatedAt" timestamp(3) without time zone NOT NULL
+);
+
+
+ALTER TABLE public."ScriptSequence" OWNER TO viponly;
+
+--
+-- Name: ScriptUsage; Type: TABLE; Schema: public; Owner: viponly
+--
+
+CREATE TABLE public."ScriptUsage" (
+    id text NOT NULL,
+    "scriptId" text NOT NULL,
+    "chatterId" text NOT NULL,
+    "conversationId" text NOT NULL,
+    "messageId" text,
+    "creatorSlug" text NOT NULL,
+    "fanUserId" text NOT NULL,
+    action text NOT NULL,
+    modifications text,
+    "resultedInSale" boolean DEFAULT false NOT NULL,
+    "saleAmount" double precision,
+    "saleType" text,
+    "usedAt" timestamp(3) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    "responseTime" integer
+);
+
+
+ALTER TABLE public."ScriptUsage" OWNER TO viponly;
 
 --
 -- Name: Session; Type: TABLE; Schema: public; Owner: viponly
@@ -1012,10 +1149,10 @@ COPY public."AccountingQueue" (id, payload, status, attempts, "maxAttempts", "la
 -- Data for Name: Agency; Type: TABLE DATA; Schema: public; Owner: viponly
 --
 
-COPY public."Agency" (id, name, slug, "ownerId", "aiEnabled", "maxCreators", "maxChatters", "platformFee", status, "totalRevenue", "createdAt", "updatedAt", logo, description, "publicVisible", "averageRating", "reviewCount", website, tagline, services, specialties, "minRevenueShare", "maxRevenueShare", "socialLinks", "portfolioImages", location, languages, "yearsInBusiness", "pendingBalance", "totalEarned", "totalPaid") FROM stdin;
-cmjrkebo40007vdmsh4a4hc7u	LVM	lvm	cmjojjvac001iuzc2514iyrs8	f	10	20	0.1	ACTIVE	0	2025-12-29 19:42:01.877	2025-12-29 19:42:01.877	\N	\N	t	0	0	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	0	0	0
-cmjr8o7yl0018i3mmy7gwlcub	jeff agency	jeff-agency	cmjr8d46c0009i3mmu90d6k3a	f	10	20	0.1	ACTIVE	0	2025-12-29 14:13:48.237	2025-12-29 23:10:58.042	\N	\N	t	0	0	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	0	0	0
-cmjr5g2e70001j3u415qpk7o2	Viral Studio Agency	viral-studio-agency	cmjoj4cpm000quzc2ow1u2d57	t	10	20	0.1	ACTIVE	29.918931	2025-12-29 12:43:28.927	2026-01-01 15:41:04.257	/uploads/avatar/bdbc6aaaf00b8595362108431aac67ca.jpg	\N	t	0	0	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	29.918931	29.918931	0
+COPY public."Agency" (id, name, slug, "ownerId", "aiEnabled", "platformFee", status, "totalRevenue", "createdAt", "updatedAt", logo, description, "publicVisible", "averageRating", "reviewCount", website, tagline, services, specialties, "minRevenueShare", "maxRevenueShare", "socialLinks", "portfolioImages", location, languages, "yearsInBusiness", "pendingBalance", "totalEarned", "totalPaid") FROM stdin;
+cmjrkebo40007vdmsh4a4hc7u	LVM	lvm	cmjojjvac001iuzc2514iyrs8	f	0.1	ACTIVE	0	2025-12-29 19:42:01.877	2025-12-29 19:42:01.877	\N	\N	t	0	0	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	0	0	0
+cmjr8o7yl0018i3mmy7gwlcub	jeff agency	jeff-agency	cmjr8d46c0009i3mmu90d6k3a	f	0.1	ACTIVE	0	2025-12-29 14:13:48.237	2025-12-29 23:10:58.042	\N	\N	t	0	0	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	0	0	0
+cmjr5g2e70001j3u415qpk7o2	Viral Studio Agency	viral-studio-agency	cmjoj4cpm000quzc2ow1u2d57	t	0.1	ACTIVE	29.918931	2025-12-29 12:43:28.927	2026-01-01 15:41:04.257	/uploads/avatar/bdbc6aaaf00b8595362108431aac67ca.jpg	\N	t	0	0	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	29.918931	29.918931	0
 \.
 
 
@@ -1033,7 +1170,6 @@ cmjr8szxz000710sqxir9f5ss	Direct Flirty	cmjr5g2e70001j3u415qpk7o2	miacosta	{"ton
 --
 
 COPY public."AgencyApplication" (id, "modelListingId", "agencyId", "initiatedBy", status, message, "conversationId", "createdAt", "updatedAt", "agencyListingId") FROM stdin;
-cmjsjpqq5000gcm82xf8xqwo6	cmjsjlfhy000acm82lzvnuaoi	cmjr5g2e70001j3u415qpk7o2	AGENCY	PENDING	kikoou	\N	2025-12-30 12:10:41.166	2025-12-30 12:10:41.166	\N
 \.
 
 
@@ -1043,7 +1179,6 @@ cmjsjpqq5000gcm82xf8xqwo6	cmjsjlfhy000acm82lzvnuaoi	cmjr5g2e70001j3u415qpk7o2	AG
 
 COPY public."AgencyEarning" (id, "agencyId", "creatorEarningId", "grossAmount", "agencyShare", "agencyGross", "chatterAmount", "netAmount", type, status, "paidAt", "createdAt") FROM stdin;
 cmjvcaxck000dstjoah1988go	cmjr5g2e70001j3u415qpk7o2	cmjvcaxcc000bstjolbubq1ne	15	0.3	4.500000000000001	0	4.500000000000001	MEDIA_UNLOCK	PENDING	\N	2026-01-01 11:06:31.124
-cmjvj1t10000cmb0nmhqa61n0	cmjr5g2e70001j3u415qpk7o2	cmjvj1t0t000amb0n44km3jgz	50	0.3	15	0	15	TIP	PENDING	\N	2026-01-01 14:15:22.932
 cmjvm30z9000al0biulh4logx	cmjr5g2e70001j3u415qpk7o2	cmjvm30yz0008l0bibhd1k9o0	0.0999	0.69	0.06893099999999999	0	0.06893099999999999	PPV	PENDING	\N	2026-01-01 15:40:18.742
 cmjvm403f000ol0biorq7k9d1	cmjr5g2e70001j3u415qpk7o2	cmjvm4033000ml0bisr7vf70w	15	0.69	10.35	0	10.35	PPV	PENDING	\N	2026-01-01 15:41:04.252
 \.
@@ -1148,12 +1283,19 @@ COPY public."ChatterEarning" (id, "chatterId", "creatorEarningId", "grossAmount"
 
 
 --
+-- Data for Name: ChatterScriptFavorite; Type: TABLE DATA; Schema: public; Owner: viponly
+--
+
+COPY public."ChatterScriptFavorite" (id, "chatterId", "scriptId", "order", "createdAt") FROM stdin;
+\.
+
+
+--
 -- Data for Name: Conversation; Type: TABLE DATA; Schema: public; Owner: viponly
 --
 
 COPY public."Conversation" (id, "creatorSlug", "createdAt", "updatedAt", "aiPersonalityId", "detectedTone", "toneConfidence", "lastToneCheck", "autoToneSwitch", "aiMode", "assignedChatterId") FROM stdin;
 cmjonqoky000d3wixhoki89w3	miacosta	2025-12-27 18:52:18.802	2026-01-01 16:00:06.723	\N	\N	\N	\N	t	auto	\N
-cmjq0mtgk000as9pq8u7i10is	pascale	2025-12-28 17:40:59.685	2026-01-01 16:15:52.28	\N	\N	\N	\N	t	auto	\N
 \.
 
 
@@ -1162,8 +1304,6 @@ cmjq0mtgk000as9pq8u7i10is	pascale	2025-12-28 17:40:59.685	2026-01-01 16:15:52.28
 --
 
 COPY public."ConversationParticipant" (id, "conversationId", "userId", "lastReadAt", "isTyping", "isPinned", "isMuted") FROM stdin;
-cmjq0mtgk000ds9pqfivqy7em	cmjq0mtgk000as9pq8u7i10is	cmjojjvac001iuzc2514iyrs8	2026-01-01 16:16:17.579	f	f	f
-cmjq0mtgk000cs9pq37k99stv	cmjq0mtgk000as9pq8u7i10is	cmjoj4cpm000quzc2ow1u2d57	2026-01-01 18:13:56.807	f	f	f
 cmjonqoky000g3wixs2nzjwna	cmjonqoky000d3wixhoki89w3	cmjojjvac001iuzc2514iyrs8	2026-01-01 16:16:13.333	f	f	f
 cmjonqoky000f3wixtqaj136i	cmjonqoky000d3wixhoki89w3	cmjoj4cpm000quzc2ow1u2d57	2026-01-01 16:02:37.184	f	f	f
 \.
@@ -1174,9 +1314,7 @@ cmjonqoky000f3wixtqaj136i	cmjonqoky000d3wixhoki89w3	cmjoj4cpm000quzc2ow1u2d57	20
 --
 
 COPY public."Creator" (id, slug, name, "displayName", avatar, "cardImage", "coverImage", bio, "userId", "socialLinks", theme, "walletEth", "walletBtc", "photoCount", "videoCount", "subscriberCount", "isActive", "sortOrder", "aiEnabled", "aiPersonality", "aiResponseDelay", "aiLastActive", "createdAt", "updatedAt", "pendingBalance", "totalEarned", "totalPaid", categories, "agencyId", "aiMediaEnabled", "aiMediaFrequency", "aiPPVRatio", "aiTeasingEnabled") FROM stdin;
-creator1	miacosta	Mia Costa	Mia Costa	/uploads/avatar/1ada6c0dbec69879472ab2eab3d35b9d.jpg	/uploads/media/e4fc30ad5a727a3bb34917c75876c7ad.jpg	/uploads/media/18041315e666de6f50028a06ce904f9b.jpg	Welcome to my exclusive content. Join my VIP for the full experience.	cmjoj4cpm000quzc2ow1u2d57	{"instagram":"https://instagram.com/miacosta","twitter":null,"tiktok":null}	{}	0x08675E75D3AA250cEC863D59bF2b708Ad8a3cDcE	bc1qf9lrv05g6y9saz2y7ptepkt7zr7gwkruz87te4	450	25	2500	t	0	f	{"name":"Mia Costa","age":24,"traits":["flirty","playful","teasing","caring","bold","romantic"],"interests":["fitness","travel","cooking","yoga","dancing","nature","reading"],"style":"casual_sexy","language":"en","customPrompt":"Avoid Perfect AI like sentences, make sure you look human and unperfect","mediaKeywords":{"sexy":["hot","nude","naked","explicit","naughty","spicy","pics","photos","show me","see you","uncensored","wild","dirty","horny"],"fitness":["workout","gym","sport","exercise","fit","body","abs","muscles","training","sweat","yoga","stretching"],"lingerie":["lingerie","underwear","bra","panties","sexy outfit","lace","thong","corset","stockings","garter"],"beach":["beach","bikini","pool","swim","tan","summer","vacation","tropical","sun","water"],"casual":["selfie","daily","lifestyle","chill","relax","cute","morning","night","bed","cozy"],"cosplay":["cosplay","costume","anime","character","roleplay","fantasy","dress up","halloween"],"outdoor":["outdoor","nature","forest","park","hiking","adventure","outside","garden"],"shower":["shower","bath","wet","water","soap","bubbles","bathroom","towel","steam"],"mirror":["mirror","reflection","selfie","bathroom","dressing room","fitting room"],"feet":["feet","toes","foot","soles","pedicure","barefoot","heels","shoes"],"ass":["ass","booty","butt","behind","back","twerk","booty pics"],"boobs":["boobs","tits","chest","cleavage","topless","braless","breasts"],"face":["face","smile","eyes","lips","kiss","tongue","wink","expression"],"video":["video","clip","watch","motion","moving","action","live"],"exclusive":["exclusive","special","private","vip","premium","rare","limited"]}}	30	2025-12-28 19:25:32.791	2025-12-27 15:54:48.557	2026-01-01 15:41:04.243	31.180968999999997	31.180968999999997	0	["curvy", "latina", "lingerie"]	cmjr5g2e70001j3u415qpk7o2	t	4	30	t
-cmjrjtpdz00077k1o7xye82ke	carolos-little-toes	Carolo's little toes	Carolo's little toes	/uploads/avatar/f453a9302a24871fb0217521fa194dd9.png	/uploads/media/6dba00445dcc3c5bec1897e871be44a5.png	/uploads/media/6a10b441c2640e1d91b008249c35b2cc.png	\N	cmjoj4cpm000quzc2ow1u2d57	{"instagram":null,"twitter":null,"tiktok":null}	{}	\N	\N	0	0	0	t	0	f	\N	120	\N	2025-12-29 19:25:59.88	2025-12-30 00:25:17.541	0	0	0	["feet","fetish","asian","petite","tattoo"]	cmjr5g2e70001j3u415qpk7o2	t	4	30	t
-cmjpw45330002aj96dxrnn2lf	pascale	Pascale	Pascale	/uploads/avatar/9cfaf7927c8ca18ee7181a7fecaea563.png	/uploads/media/77ebaef7c47e1f858ca0fdc6d5d861de.jpg	/uploads/media/7004327c9d2e2d8e49da76f5c89278c5.png	50 ans d'expérience à votre service	cmjoj4cpm000quzc2ow1u2d57	{"instagram":null,"twitter":null,"tiktok":null}	{}	\N	\N	0	0	0	t	0	t	{"name":"Pascale","age":24,"traits":["confident","bold","naughty"],"interests":[],"style":"casual_sexy","language":"fr","customPrompt":"She ONLY talks about sex, she turns everything into disgusting sex pratice that she does.","mediaKeywords":{"sexy":["hot","nude","naked","explicit","naughty","spicy","pics","photos","show me","see you","uncensored","wild","dirty","horny"],"fitness":["workout","gym","sport","exercise","fit","body","abs","muscles","training","sweat","yoga","stretching"],"lingerie":["lingerie","underwear","bra","panties","sexy outfit","lace","thong","corset","stockings","garter"],"beach":["beach","bikini","pool","swim","tan","summer","vacation","tropical","sun","water"],"casual":["selfie","daily","lifestyle","chill","relax","cute","morning","night","bed","cozy"],"cosplay":["cosplay","costume","anime","character","roleplay","fantasy","dress up","halloween"],"outdoor":["outdoor","nature","forest","park","hiking","adventure","outside","garden"],"shower":["shower","bath","wet","water","soap","bubbles","bathroom","towel","steam"],"mirror":["mirror","reflection","selfie","bathroom","dressing room","fitting room"],"feet":["feet","toes","foot","soles","pedicure","barefoot","heels","shoes"],"ass":["ass","booty","butt","behind","back","twerk","booty pics"],"boobs":["boobs","tits","chest","cleavage","topless","braless","breasts"],"face":["face","smile","eyes","lips","kiss","tongue","wink","expression"],"video":["video","clip","watch","motion","moving","action","live"],"exclusive":["exclusive","special","private","vip","premium","rare","limited"]}}	30	2025-12-28 21:53:26.947	2025-12-28 15:34:29.823	2026-01-01 14:15:22.928	35	35	0	["solo", "fetish", "submissive"]	cmjr5g2e70001j3u415qpk7o2	t	4	30	t
+creator1	miacosta	Mia Costa	Mia Costa	/uploads/avatar/1ada6c0dbec69879472ab2eab3d35b9d.jpg	/uploads/media/e4fc30ad5a727a3bb34917c75876c7ad.jpg	/uploads/media/18041315e666de6f50028a06ce904f9b.jpg	Welcome to my exclusive content. Join my VIP for the full experience.	cmjoj4cpm000quzc2ow1u2d57	{"instagram":"https://instagram.com/miacosta","twitter":null,"tiktok":null}	{}	0x08675E75D3AA250cEC863D59bF2b708Ad8a3cDcE	bc1qf9lrv05g6y9saz2y7ptepkt7zr7gwkruz87te4	450	25	2500	t	0	f	{"name":"Mia Costa","age":24,"traits":["flirty","playful","teasing","caring","bold","romantic"],"interests":["fitness","travel","cooking","yoga","dancing","nature","reading"],"style":"casual_sexy","language":"en","customPrompt":"Avoid Perfect AI like sentences, make sure you look human and unperfect","mediaKeywords":{"sexy":["hot","nude","naked","explicit","naughty","spicy","pics","photos","show me","see you","uncensored","wild","dirty","horny"],"fitness":["workout","gym","sport","exercise","fit","body","abs","muscles","training","sweat","yoga","stretching"],"lingerie":["lingerie","underwear","bra","panties","sexy outfit","lace","thong","corset","stockings","garter"],"beach":["beach","bikini","pool","swim","tan","summer","vacation","tropical","sun","water"],"casual":["selfie","daily","lifestyle","chill","relax","cute","morning","night","bed","cozy"],"cosplay":["cosplay","costume","anime","character","roleplay","fantasy","dress up","halloween"],"outdoor":["outdoor","nature","forest","park","hiking","adventure","outside","garden"],"shower":["shower","bath","wet","water","soap","bubbles","bathroom","towel","steam"],"mirror":["mirror","reflection","selfie","bathroom","dressing room","fitting room"],"feet":["feet","toes","foot","soles","pedicure","barefoot","heels","shoes"],"ass":["ass","booty","butt","behind","back","twerk","booty pics"],"boobs":["boobs","tits","chest","cleavage","topless","braless","breasts"],"face":["face","smile","eyes","lips","kiss","tongue","wink","expression"],"video":["video","clip","watch","motion","moving","action","live"],"exclusive":["exclusive","special","private","vip","premium","rare","limited"]}}	30	2025-12-28 19:25:32.791	2025-12-27 15:54:48.557	2026-01-01 15:41:04.243	31.180968999999997	31.180968999999997	0	["curvy", "latina"]	cmjr5g2e70001j3u415qpk7o2	t	4	30	t
 \.
 
 
@@ -1189,7 +1327,6 @@ cmjpst4w3000lcli0dh6xvxjf	miacosta	TIP	cmjor6fup000gajb5mp0batrg	1	0	0	1	PENDING
 cmjpste82000tcli0t2mc0cgo	miacosta	TIP	cmjorac24000lajb5y2d6lg5b	5	0	0	5	PENDING	\N	\N	cmjojjvac001iuzc2514iyrs8	2025-12-28 14:02:09.602	\N	\N	\N
 cmjpy17x2000joh8ocyugq43r	miacosta	MEDIA_UNLOCK	cmjosgmp4007p4h5ix6m16qyk	10	0	0	10	PENDING	\N	\N	cmjojjvac001iuzc2514iyrs8	2025-12-28 16:28:12.758	\N	\N	\N
 cmjvcaxcc000bstjolbubq1ne	miacosta	MEDIA_UNLOCK	cmjosgmlo007o4h5isnpu79ib	15	0	0	10.5	PENDING	\N	\N	cmjojjvac001iuzc2514iyrs8	2026-01-01 11:06:31.116	\N	\N	\N
-cmjvj1t0t000amb0n44km3jgz	pascale	TIP	cmjq9m5ek000fpdc30an1uny9	50	0	0	35	PENDING	\N	\N	cmjoj4cpm000quzc2ow1u2d57	2026-01-01 14:15:22.925	\N	cmjq9m5ek000fpdc30an1uny9	\N
 cmjvm30yz0008l0bibhd1k9o0	miacosta	PPV	cmjvlb6jc0006vqmvqe78i98l	0.0999	0	0	0.030969	PENDING	\N	\N	cmjojjvac001iuzc2514iyrs8	2026-01-01 15:40:18.731	\N	cmjvlb6jc0006vqmvqe78i98l	\N
 cmjvm4033000ml0bisr7vf70w	miacosta	PPV	cmjvlavw00002vqmvm0yp0q25	15	0	0	4.65	PENDING	\N	\N	cmjojjvac001iuzc2514iyrs8	2026-01-01 15:41:04.239	\N	cmjvlavw00002vqmvm0yp0q25	\N
 \.
@@ -1250,7 +1387,6 @@ COPY public."FanProfile" (id, "fanUserId", "creatorSlug", "preferredTone", "pref
 --
 
 COPY public."MediaContent" (id, title, slug, description, "creatorSlug", type, "accessTier", "isPurchaseable", price, "thumbnailUrl", "previewUrl", "contentUrl", "storageKey", "fileSize", duration, width, height, "mimeType", "categoryId", tags, "viewCount", "purchaseCount", "isPublished", "isFeatured", "publishedAt", "createdAt", "updatedAt", "showInGallery", "ppvPriceCredits", "tagAI", "tagFree", "tagGallery", "tagPPV", "tagVIP") FROM stdin;
-cmjpyvkk7000svyhva8jnlsxu	Chilling	chilling-9800f398	\N	pascale	PHOTO	FREE	f	\N	/uploads/media/8fa079f3b95b422c8c37a9f54725fb64.jpg	/uploads/media/8fa079f3b95b422c8c37a9f54725fb64.jpg	/uploads/media/8fa079f3b95b422c8c37a9f54725fb64.jpg	\N	73264	\N	\N	\N	image/jpeg	\N	[]	0	0	t	f	2025-12-28 16:51:48.821	2025-12-28 16:51:48.823	2025-12-28 16:51:48.823	t	\N	f	t	f	f	f
 cmjojjhl3001guzc24djhvogr	Sunbass	sunbass-fedecfbc	Something special for you 🎬	miacosta	VIDEO	FREE	f	\N	/uploads/media/45f9db97d7e6b3724442ffd0fdcc668b_thumb.jpg	/uploads/media/45f9db97d7e6b3724442ffd0fdcc668b_thumb.jpg	/uploads/media/45f9db97d7e6b3724442ffd0fdcc668b.mp4	\N	702280	3	\N	\N	video/mp4	\N	[]	0	0	t	f	2025-12-27 16:54:44.678	2025-12-27 16:54:44.679	2025-12-27 22:49:45.756	t	\N	f	t	t	f	f
 cmjomvl6n0004uten3zsjekhq	cute	cute-f11dfeae	Watch me 👀	miacosta	VIDEO	FREE	f	\N	/uploads/media/678a8bd636ad7a745b3d591833089860_thumb.jpg	/uploads/media/678a8bd636ad7a745b3d591833089860_thumb.jpg	/uploads/media/678a8bd636ad7a745b3d591833089860.mp4	\N	3461320	14	\N	\N	video/mp4	\N	[]	0	0	t	f	2025-12-27 18:28:08.062	2025-12-27 18:28:08.064	2025-12-27 22:49:45.756	t	\N	f	t	t	f	f
 cmjosgc4t00064h5i3qeit43u	Exclusive Photo #007	brenda-photo-0007-fa5b4740	Back view for you 😏	miacosta	PHOTO	FREE	f	\N	/uploads/media/2545446868282112113_4.jpg	/uploads/media/2545446868282112113_4.jpg	/uploads/media/2545446868282112113_4.jpg	\N	270903	\N	\N	\N	image/jpg	\N	[]	0	0	t	f	2025-12-27 21:04:14.188	2025-12-27 21:04:14.189	2025-12-27 22:49:45.756	f	\N	f	t	t	f	f
@@ -1261,7 +1397,6 @@ cmjosghbm002m4h5ibplgmd9f	Exclusive Photo #095	brenda-photo-0095-1206781d	From b
 cmjosghwi00384h5is7d2yc0r	Exclusive Photo #116	brenda-photo-0116-3eefe1d3	Back view for you 😏	miacosta	PHOTO	FREE	f	\N	/uploads/media/3501163451534143489_3.jpg	/uploads/media/3501163451534143489_3.jpg	/uploads/media/3501163451534143489_3.jpg	\N	160757	\N	\N	\N	image/jpg	\N	[]	0	0	t	f	2025-12-27 21:04:21.666	2025-12-27 21:04:21.667	2025-12-27 22:49:45.756	f	\N	f	t	t	f	f
 cmjosgj5b003u4h5i2vs24bgn	Exclusive Photo #132	brenda-photo-0132-3aaa0f77	Booty check 🍑	miacosta	PHOTO	FREE	f	\N	/uploads/media/3583226058298249047_1.jpg	/uploads/media/3583226058298249047_1.jpg	/uploads/media/3583226058298249047_1.jpg	\N	112125	\N	\N	\N	image/jpg	\N	[]	0	0	t	f	2025-12-27 21:04:23.278	2025-12-27 21:04:23.279	2025-12-27 22:49:45.756	f	\N	f	t	t	f	f
 cmjosgjjz004g4h5iituk82ub	Exclusive Photo #151	brenda-photo-0151-6c0cc7d1	Peach vibes 🍑	miacosta	PHOTO	FREE	f	\N	/uploads/media/3596274153735033641_4.jpg	/uploads/media/3596274153735033641_4.jpg	/uploads/media/3596274153735033641_4.jpg	\N	161426	\N	\N	\N	image/jpg	\N	[]	0	0	t	f	2025-12-27 21:04:23.806	2025-12-27 21:04:23.807	2025-12-27 22:49:45.756	f	\N	f	t	t	f	f
-cmjq8u9tn0007pu6nqskyncb9	Ma chatte	ma-chatte-cd9c919a	Ma chatte, mon petit minou, ma zezette.	pascale	PHOTO	FREE	f	\N	/uploads/media/5dc299a51f92a5d171b9f43651ae419e.jpg	/uploads/media/5dc299a51f92a5d171b9f43651ae419e.jpg	/uploads/media/5dc299a51f92a5d171b9f43651ae419e.jpg	\N	48602	\N	\N	\N	image/jpeg	\N	[]	0	0	t	f	2025-12-28 21:30:44.41	2025-12-28 21:30:44.411	2025-12-28 21:30:44.411	t	1000	t	f	f	t	f
 cmjosgkcw00524h5itdnspobm	Private Video #019	brenda-video-0019-8126b464	Action time 💋	miacosta	VIDEO	BASIC	f	\N	/uploads/media/3656991515847354582_1_thumb.jpg	/uploads/media/3656991515847354582_1_thumb.jpg	/uploads/media/3656991515847354582_1.mp4	\N	3139275	11	\N	\N	video/mp4	\N	[]	0	0	t	f	2025-12-27 21:04:24.847	2025-12-27 21:04:24.848	2025-12-27 22:49:45.756	f	\N	f	t	t	f	f
 cmjosgklm005o4h5ib5pok1eg	Exclusive Photo #177	brenda-photo-0177-52ea782b	From behind 👀	miacosta	PHOTO	FREE	f	\N	/uploads/media/3670769911249100998_4.jpg	/uploads/media/3670769911249100998_4.jpg	/uploads/media/3670769911249100998_4.jpg	\N	251014	\N	\N	\N	image/jpg	\N	[]	0	0	t	f	2025-12-27 21:04:25.162	2025-12-27 21:04:25.163	2025-12-27 22:49:45.756	f	\N	f	t	t	f	f
 cmjosgkxf006a4h5iuwen4eud	Exclusive Photo #197	brenda-photo-0197-ac1d6807	Back view for you 😏	miacosta	PHOTO	FREE	f	\N	/uploads/media/3681129820689319374_3.jpg	/uploads/media/3681129820689319374_3.jpg	/uploads/media/3681129820689319374_3.jpg	\N	257179	\N	\N	\N	image/jpg	\N	[]	0	0	t	f	2025-12-27 21:04:25.586	2025-12-27 21:04:25.587	2025-12-27 22:49:45.756	f	\N	f	t	t	f	f
@@ -1550,68 +1685,39 @@ cmjvhazud0006hpn7dc0qdw5d	cmjoj4cpm000quzc2ow1u2d57	cmjosgmlo007o4h5isnpu79ib	0	
 -- Data for Name: Message; Type: TABLE DATA; Schema: public; Owner: viponly
 --
 
-COPY public."Message" (id, "conversationId", "senderId", "receiverId", text, "replyToId", "isPPV", "ppvPrice", "ppvUnlockedBy", "totalTips", "isRead", "isDeleted", "createdAt", "updatedAt", "aiPersonalityId", "chatterId", "scriptId", "isAiGenerated") FROM stdin;
-cmjonqs3p000i3wixy22ex16n	cmjonqoky000d3wixhoki89w3	cmjoj4cpm000quzc2ow1u2d57	cmjojjvac001iuzc2514iyrs8	yo	\N	f	\N	[]	0	t	f	2025-12-27 18:52:23.365	2025-12-27 18:53:16.609	\N	\N	\N	f
-cmjonrz2z000q3wix9l2q49kx	cmjonqoky000d3wixhoki89w3	cmjojjvac001iuzc2514iyrs8	cmjoj4cpm000quzc2ow1u2d57	salut	\N	f	\N	[]	0	t	f	2025-12-27 18:53:19.067	2025-12-27 18:56:59.406	\N	\N	\N	f
-cmjoognkd000112lyfp9hy349	cmjonqoky000d3wixhoki89w3	cmjojjvac001iuzc2514iyrs8	cmjoj4cpm000quzc2ow1u2d57	salut toi ;)	\N	f	\N	[]	0	t	f	2025-12-27 19:12:30.541	2025-12-27 19:20:02.324	\N	\N	\N	f
-cmjooieew000312lyh3fokqnu	cmjonqoky000d3wixhoki89w3	cmjojjvac001iuzc2514iyrs8	cmjoj4cpm000quzc2ow1u2d57	salut toi ;)	\N	f	\N	[]	0	t	f	2025-12-27 19:13:51.992	2025-12-27 19:20:02.324	\N	\N	\N	f
-cmjoooi5l000812lyq69agdu5	cmjonqoky000d3wixhoki89w3	cmjojjvac001iuzc2514iyrs8	cmjoj4cpm000quzc2ow1u2d57	salut oi ;)	\N	f	\N	[]	0	t	f	2025-12-27 19:18:36.777	2025-12-27 19:20:02.324	\N	\N	\N	f
-cmjoojpld000612lyq29m1wmn	cmjonqoky000d3wixhoki89w3	cmjoj4cpm000quzc2ow1u2d57	cmjojjvac001iuzc2514iyrs8	Just got out of the shower... 💦	\N	f	\N	[]	0	t	f	2025-12-27 19:14:53.137	2025-12-27 19:20:41.596	\N	\N	\N	f
-cmjoopi2w000b12ly8j1jnzae	cmjonqoky000d3wixhoki89w3	cmjoj4cpm000quzc2ow1u2d57	cmjojjvac001iuzc2514iyrs8	I love chatting with you ❤️	\N	f	\N	[]	0	t	f	2025-12-27 19:19:23.337	2025-12-27 19:20:41.596	\N	\N	\N	f
-cmjootaik000l12ly8ta6d656	cmjonqoky000d3wixhoki89w3	cmjojjvac001iuzc2514iyrs8	cmjoj4cpm000quzc2ow1u2d57	merci	\N	f	\N	[]	0	t	f	2025-12-27 19:22:20.157	2025-12-27 19:22:32.337	\N	\N	\N	f
-cmjopbrnx0001h2f9d5dc1gtd	cmjonqoky000d3wixhoki89w3	cmjojjvac001iuzc2514iyrs8	cmjoj4cpm000quzc2ow1u2d57	t'es bonne !	\N	f	\N	[]	0	t	f	2025-12-27 19:36:42.189	2025-12-27 19:36:42.369	\N	\N	\N	f
-cmjoounet000o12lynpgvhcmp	cmjonqoky000d3wixhoki89w3	cmjoj4cpm000quzc2ow1u2d57	cmjojjvac001iuzc2514iyrs8	Mmm I was just thinking about you...	\N	f	\N	[]	0	t	f	2025-12-27 19:23:23.525	2025-12-27 19:48:52.325	\N	\N	\N	f
-cmjopcp0q0005h2f9v4mo9vkh	cmjonqoky000d3wixhoki89w3	cmjoj4cpm000quzc2ow1u2d57	cmjojjvac001iuzc2514iyrs8	Mmm I love that 😏	\N	f	\N	[]	0	t	f	2025-12-27 19:37:25.419	2025-12-27 19:48:52.325	\N	\N	\N	f
-cmjoqfwn6000kh2f9ml3o9l0v	cmjonqoky000d3wixhoki89w3	cmjojjvac001iuzc2514iyrs8	cmjoj4cpm000quzc2ow1u2d57	montre moi tes seins 	\N	f	\N	[]	0	t	f	2025-12-27 20:07:54.882	2025-12-27 20:08:33.544	\N	\N	\N	f
-cmjoqh94v000oh2f9bpgs8b9b	cmjonqoky000d3wixhoki89w3	cmjoj4cpm000quzc2ow1u2d57	cmjojjvac001iuzc2514iyrs8	Ohhh you know I have to save the best for exclusive 😘 what if I showed you something... *special* instead?	\N	f	\N	[]	0	t	f	2025-12-27 20:08:57.727	2025-12-27 20:08:58.859	\N	\N	\N	f
-cmjoqti0x000th2f9o9cn9dzn	cmjonqoky000d3wixhoki89w3	cmjoj4cpm000quzc2ow1u2d57	cmjojjvac001iuzc2514iyrs8	Mmm if only... 😉 my private chats are way more *interactive* though... 👀	\N	f	\N	[]	0	t	f	2025-12-27 20:18:29.122	2025-12-27 20:18:33.58	\N	\N	\N	f
-cmjoqspsp000qh2f9pwodnizw	cmjonqoky000d3wixhoki89w3	cmjojjvac001iuzc2514iyrs8	cmjoj4cpm000quzc2ow1u2d57	tu suces pour combien ?	\N	f	\N	[]	0	t	f	2025-12-27 20:17:52.537	2025-12-27 20:18:36.258	\N	\N	\N	f
-cmjor130e0002ajb50k8pce5u	cmjonqoky000d3wixhoki89w3	cmjojjvac001iuzc2514iyrs8	cmjoj4cpm000quzc2ow1u2d57	tu fais quoi ? 	\N	f	\N	[]	0	t	f	2025-12-27 20:24:22.91	2025-12-27 20:24:34.194	\N	\N	\N	f
-cmjor1vvw0005ajb5r2sxeife	cmjonqoky000d3wixhoki89w3	cmjoj4cpm000quzc2ow1u2d57	cmjojjvac001iuzc2514iyrs8	Just got back from the gym... still all hot and sweaty 😈 want to see what I got on?	\N	f	\N	[]	0	t	f	2025-12-27 20:25:00.332	2025-12-27 20:25:03.569	\N	\N	\N	f
-cmjor29qc0007ajb5cknuyyjv	cmjonqoky000d3wixhoki89w3	cmjojjvac001iuzc2514iyrs8	cmjoj4cpm000quzc2ow1u2d57	yes	\N	f	\N	[]	0	t	f	2025-12-27 20:25:18.276	2025-12-27 20:25:38.18	\N	\N	\N	f
-cmjor3721000bajb56fdlgr3t	cmjonqoky000d3wixhoki89w3	cmjoj4cpm000quzc2ow1u2d57	cmjojjvac001iuzc2514iyrs8	Ohhh someone’s impatient 😏 *drops a hint in your DMs* Let’s see how long it takes you to unlock the full thing... 😉	\N	f	\N	[]	0	t	f	2025-12-27 20:26:01.465	2025-12-27 20:26:03.564	\N	\N	\N	f
-cmjor5g96000dajb5ul45xq5p	cmjonqoky000d3wixhoki89w3	cmjojjvac001iuzc2514iyrs8	cmjoj4cpm000quzc2ow1u2d57	j'ai envi d'entendre ta voix	\N	f	\N	[]	0	t	f	2025-12-27 20:27:46.698	2025-12-27 20:27:47.239	\N	\N	\N	f
-cmjor9861000iajb57z8fehtp	cmjonqoky000d3wixhoki89w3	cmjojjvac001iuzc2514iyrs8	cmjoj4cpm000quzc2ow1u2d57	appel moi et je te donne 100 dollars 	\N	f	\N	[]	0	t	f	2025-12-27 20:30:42.828	2025-12-27 20:30:47.255	\N	\N	\N	f
-cmjpn2mxx0020ek036277yfws	cmjonqoky000d3wixhoki89w3	cmjojjvac001iuzc2514iyrs8	cmjoj4cpm000quzc2ow1u2d57	Coucou ma belle 	\N	f	\N	[]	0	t	f	2025-12-28 11:21:23.108	2025-12-28 11:35:12.411	\N	\N	\N	f
-cmjor6fup000gajb5mp0batrg	cmjonqoky000d3wixhoki89w3	cmjoj4cpm000quzc2ow1u2d57	cmjojjvac001iuzc2514iyrs8	*whispers* 😉 maybe I’ll drop a little voice tease in your DMs later... if you ask nice 😘	\N	f	\N	[]	100	t	f	2025-12-27 20:28:32.833	2025-12-28 14:01:57.492	\N	\N	\N	f
-cmjorac24000lajb5y2d6lg5b	cmjonqoky000d3wixhoki89w3	cmjoj4cpm000quzc2ow1u2d57	cmjojjvac001iuzc2514iyrs8	😈 100? Cute, but I have to *really* earn that... 😘 want to see how I perform first?	\N	f	\N	[]	500	t	f	2025-12-27 20:31:34.539	2025-12-28 14:02:09.591	\N	\N	\N	f
-cmjpsuf0n0010cli0tyfknsl7	cmjonqoky000d3wixhoki89w3	cmjojjvac001iuzc2514iyrs8	cmjoj4cpm000quzc2ow1u2d57	yoo	\N	f	\N	[]	0	t	f	2025-12-28 14:02:57.287	2025-12-28 14:21:49.052	\N	\N	\N	f
-cmjpsuoc40013cli0ebumt9g3	cmjonqoky000d3wixhoki89w3	cmjoj4cpm000quzc2ow1u2d57	cmjojjvac001iuzc2514iyrs8	yo	\N	f	\N	[]	0	t	f	2025-12-28 14:03:09.365	2025-12-28 16:14:45.859	\N	\N	\N	f
-cmjpsv6aw0015cli0l7u0jwxs	cmjonqoky000d3wixhoki89w3	cmjoj4cpm000quzc2ow1u2d57	cmjojjvac001iuzc2514iyrs8	ouuou 💋 how’s my favorite fan doing? *teasing tone*	\N	f	\N	[]	0	t	f	2025-12-28 14:03:32.648	2025-12-28 16:14:45.859	\N	\N	\N	f
-cmjq22p01000gdzurnz5koclx	cmjq0mtgk000as9pq8u7i10is	cmjojjvac001iuzc2514iyrs8	cmjoj4cpm000quzc2ow1u2d57	hey	\N	f	\N	[]	0	t	f	2025-12-28 18:21:20.017	2025-12-28 18:21:44.357	\N	\N	\N	f
-cmjq246ko000ldzurkzhbgzu0	cmjq0mtgk000as9pq8u7i10is	cmjoj4cpm000quzc2ow1u2d57	cmjojjvac001iuzc2514iyrs8	<bot> Oh, hello there! 😉 What brings you to my little corner of the internet?\n\n<s>	\N	f	\N	[]	0	t	f	2025-12-28 18:22:29.445	2025-12-28 19:24:57.918	\N	\N	\N	f
-cmjq4d9sz0009oekcryz5t671	cmjonqoky000d3wixhoki89w3	cmjoj4cpm000quzc2ow1u2d57	cmjojjvac001iuzc2514iyrs8	hey hey... *winks* been thinking about you 😘	\N	f	\N	[]	0	t	f	2025-12-28 19:25:32.771	2025-12-28 19:53:16.103	\N	\N	\N	f
-cmjq4d9f60007oekcj2hc0oz2	cmjq0mtgk000as9pq8u7i10is	cmjoj4cpm000quzc2ow1u2d57	cmjojjvac001iuzc2514iyrs8	Mmm, bonjour, beau stranger... you like what you see? 😈	\N	f	\N	[]	0	t	f	2025-12-28 19:25:32.274	2025-12-28 19:53:16.793	\N	\N	\N	f
-cmjq4c1x80001oekcdhkff8z9	cmjq0mtgk000as9pq8u7i10is	cmjojjvac001iuzc2514iyrs8	cmjoj4cpm000quzc2ow1u2d57	hi	\N	f	\N	[]	0	t	f	2025-12-28 19:24:35.9	2025-12-28 22:07:09.68	\N	\N	\N	f
-cmjq546wk000414h5qplpu7vk	cmjq0mtgk000as9pq8u7i10is	cmjojjvac001iuzc2514iyrs8	cmjoj4cpm000quzc2ow1u2d57	ca va ma cochonne?	\N	f	\N	[]	0	t	f	2025-12-28 19:46:28.724	2025-12-28 22:07:09.68	\N	\N	\N	f
-cmjq4ccm00004oekc3wpxggqj	cmjonqoky000d3wixhoki89w3	cmjojjvac001iuzc2514iyrs8	cmjoj4cpm000quzc2ow1u2d57	hii	\N	f	\N	[]	0	t	f	2025-12-28 19:24:49.752	2025-12-28 23:17:44.098	\N	\N	\N	f
-cmjq551rw000714h5ro5msys9	cmjq0mtgk000as9pq8u7i10is	cmjoj4cpm000quzc2ow1u2d57	cmjojjvac001iuzc2514iyrs8	Oh, tu veux jouer ? 😘 Je suis toujours partante pour un peu de fun...	\N	f	\N	[]	0	t	f	2025-12-28 19:47:08.732	2025-12-28 19:53:16.793	\N	\N	\N	f
-cmjq59l6g0004ca3qio7d3dwf	cmjq0mtgk000as9pq8u7i10is	cmjoj4cpm000quzc2ow1u2d57	cmjojjvac001iuzc2514iyrs8	Mmm, le cheval ? T'es un petit coquin toi... 😏 J'ai une préférence pour d'autres "montures"... Tu vois ce que je veux dire, non ? 😉	\N	f	\N	[]	0	t	f	2025-12-28 19:50:40.504	2025-12-28 19:53:16.793	\N	\N	\N	f
-cmjq5c6oy0009ca3q5osd5k3m	cmjq0mtgk000as9pq8u7i10is	cmjoj4cpm000quzc2ow1u2d57	cmjojjvac001iuzc2514iyrs8	Ohhh, tu veux que je te montre plutôt ? 😈 Et après tu me diras si t'as tout compris... 😘	\N	f	\N	[]	0	t	f	2025-12-28 19:52:41.698	2025-12-28 19:53:16.793	\N	\N	\N	f
-cmjq5dhjz000gca3qmytj5rfd	cmjq0mtgk000as9pq8u7i10is	cmjoj4cpm000quzc2ow1u2d57	cmjojjvac001iuzc2514iyrs8	*soupir* Tu me fais trop bander...😖 On se donne RDV pour une démonstration ? 😈	\N	f	\N	[]	0	t	f	2025-12-28 19:53:42.431	2025-12-28 20:05:13.69	\N	\N	\N	f
-cmjq8g6010005na2hl5wwipw9	cmjq0mtgk000as9pq8u7i10is	cmjoj4cpm000quzc2ow1u2d57	cmjojjvac001iuzc2514iyrs8	Hey toi ! 😍 Tu veux que je te montre comment je fais monter la température ? 😈	\N	f	\N	[]	0	t	f	2025-12-28 21:19:46.273	2025-12-28 21:19:46.31	\N	\N	\N	f
-cmjq8hgxa000ana2hkgdvrc75	cmjq0mtgk000as9pq8u7i10is	cmjoj4cpm000quzc2ow1u2d57	cmjojjvac001iuzc2514iyrs8	Ohhh, tu veux vraiment que je te détaille ma collection de jouets ? 😉 Ou tu préfères les surprises ? 😏	\N	f	\N	[]	0	t	f	2025-12-28 21:20:47.085	2025-12-28 21:20:47.11	\N	\N	\N	f
-cmjq8irt6000fna2hw5hplh2z	cmjq0mtgk000as9pq8u7i10is	cmjoj4cpm000quzc2ow1u2d57	cmjojjvac001iuzc2514iyrs8	*mord la lèvre* Alors accroche-toi bien, petit coquin... 😘🔥	\N	f	\N	[]	0	t	f	2025-12-28 21:21:47.85	2025-12-28 21:21:47.869	\N	\N	\N	f
-cmjq8rsya0004pu6ntrau69o1	cmjq0mtgk000as9pq8u7i10is	cmjoj4cpm000quzc2ow1u2d57	cmjojjvac001iuzc2514iyrs8	Une femme, bien sûr, mon petit... 😘 Et je sais exactement ce qu'il faut pour te faire jouir... Tu veux que je te montre ? 😈	\N	f	\N	[]	0	t	f	2025-12-28 21:28:49.234	2025-12-28 21:28:49.27	\N	\N	\N	f
-cmjq9k5dc0008pdc32s0dgoxs	cmjq0mtgk000as9pq8u7i10is	cmjoj4cpm000quzc2ow1u2d57	cmjojjvac001iuzc2514iyrs8	*giggle* Tu veux voir ma petite chatte ? 😼 Viens me chercher... 😈 Mais attention, je ne laisse pas tous les messieurs entrer dans mon jardin secret... 😉	\N	f	\N	[]	0	t	f	2025-12-28 21:50:51.696	2025-12-28 21:50:51.706	\N	\N	\N	f
-cmjq9lh3x000dpdc3k3ea656p	cmjq0mtgk000as9pq8u7i10is	cmjoj4cpm000quzc2ow1u2d57	cmjojjvac001iuzc2514iyrs8	*soupir* Ohhh, tu es bien impatent... 😏 Mais je te préviens, une fois que tu auras goûté, tu ne voudras plus jamais t'arrêter... 😈	\N	f	\N	[]	0	t	f	2025-12-28 21:51:53.565	2025-12-28 21:51:53.575	\N	\N	\N	f
-cmjq9nh5j000ipdc3sst50peu	cmjq0mtgk000as9pq8u7i10is	cmjoj4cpm000quzc2ow1u2d57	cmjojjvac001iuzc2514iyrs8	*mord la lèvre* Tu me fais trop bander, Maxence... 😖 Mais attention, c'est du premium... Tu es prêt à payer le prix ? 😈	\N	f	\N	[]	0	t	f	2025-12-28 21:53:26.935	2025-12-28 21:53:26.948	\N	\N	\N	f
-cmjq58onn0001ca3qe1k1098b	cmjq0mtgk000as9pq8u7i10is	cmjojjvac001iuzc2514iyrs8	cmjoj4cpm000quzc2ow1u2d57	t'aimes le cheval?	\N	f	\N	[]	0	t	f	2025-12-28 19:49:58.356	2025-12-28 22:07:09.68	\N	\N	\N	f
-cmjq5bdkf0006ca3qnw45dz9v	cmjq0mtgk000as9pq8u7i10is	cmjojjvac001iuzc2514iyrs8	cmjoj4cpm000quzc2ow1u2d57	explique moi	\N	f	\N	[]	0	t	f	2025-12-28 19:52:03.952	2025-12-28 22:07:09.68	\N	\N	\N	f
-cmjq5cf5v000bca3qqgul51b5	cmjq0mtgk000as9pq8u7i10is	cmjojjvac001iuzc2514iyrs8	cmjoj4cpm000quzc2ow1u2d57	ouai 	\N	f	\N	[]	0	t	f	2025-12-28 19:52:52.675	2025-12-28 22:07:09.68	\N	\N	\N	f
-cmjq8fdp90002na2hazrvtn3s	cmjq0mtgk000as9pq8u7i10is	cmjojjvac001iuzc2514iyrs8	cmjoj4cpm000quzc2ow1u2d57	hey	\N	f	\N	[]	0	t	f	2025-12-28 21:19:09.597	2025-12-28 22:07:09.68	\N	\N	\N	f
-cmjq8gqk00007na2ht9r0awu9	cmjq0mtgk000as9pq8u7i10is	cmjojjvac001iuzc2514iyrs8	cmjoj4cpm000quzc2ow1u2d57	ouai tu sais faire quoi?	\N	f	\N	[]	0	t	f	2025-12-28 21:20:12.912	2025-12-28 22:07:09.68	\N	\N	\N	f
-cmjq8hptf000cna2hrvljps1u	cmjq0mtgk000as9pq8u7i10is	cmjojjvac001iuzc2514iyrs8	cmjoj4cpm000quzc2ow1u2d57	surprends moi	\N	f	\N	[]	0	t	f	2025-12-28 21:20:58.611	2025-12-28 22:07:09.68	\N	\N	\N	f
-cmjq8qrh80001pu6n4a7183wl	cmjq0mtgk000as9pq8u7i10is	cmjojjvac001iuzc2514iyrs8	cmjoj4cpm000quzc2ow1u2d57	t'es un homme ou une femme?	\N	f	\N	[]	0	t	f	2025-12-28 21:28:00.668	2025-12-28 22:07:09.68	\N	\N	\N	f
-cmjq9j6jc0005pdc38h6sm1ew	cmjq0mtgk000as9pq8u7i10is	cmjojjvac001iuzc2514iyrs8	cmjoj4cpm000quzc2ow1u2d57	envoi moi ta chatte	\N	f	\N	[]	0	t	f	2025-12-28 21:50:06.552	2025-12-28 22:07:09.68	\N	\N	\N	f
-cmjq9kjiq000apdc3cnt9isc6	cmjq0mtgk000as9pq8u7i10is	cmjojjvac001iuzc2514iyrs8	cmjoj4cpm000quzc2ow1u2d57	envoi ta chatte	\N	f	\N	[]	0	t	f	2025-12-28 21:51:10.034	2025-12-28 22:07:09.68	\N	\N	\N	f
-cmjvlb6jc0006vqmvqe78i98l	cmjonqoky000d3wixhoki89w3	cmjoj4cpm000quzc2ow1u2d57	cmjojjvac001iuzc2514iyrs8	\N	\N	t	9.99	["cmjojjvac001iuzc2514iyrs8"]	0	t	f	2026-01-01 15:18:39.576	2026-01-01 15:40:18.699	\N	\N	\N	f
-cmjqan7uc000410iutr18glcz	cmjq0mtgk000as9pq8u7i10is	cmjoj4cpm000quzc2ow1u2d57	cmjojjvac001iuzc2514iyrs8	aze	\N	f	\N	[]	0	t	f	2025-12-28 22:21:14.484	2025-12-28 22:49:23.314	\N	\N	\N	f
-cmjvlavw00002vqmvm0yp0q25	cmjonqoky000d3wixhoki89w3	cmjoj4cpm000quzc2ow1u2d57	cmjojjvac001iuzc2514iyrs8	\N	\N	t	1500	["cmjojjvac001iuzc2514iyrs8"]	0	t	f	2026-01-01 15:18:25.777	2026-01-01 15:41:04.212	\N	\N	\N	f
-cmjvhdoi5000shpn7yaony0fb	cmjq0mtgk000as9pq8u7i10is	cmjoj4cpm000quzc2ow1u2d57	cmjojjvac001iuzc2514iyrs8	\N	\N	f	\N	[]	0	t	f	2026-01-01 13:28:37.709	2026-01-01 13:30:33.051	\N	\N	\N	f
-cmjq9m5ek000fpdc30an1uny9	cmjq0mtgk000as9pq8u7i10is	cmjojjvac001iuzc2514iyrs8	cmjoj4cpm000quzc2ow1u2d57	ferme la et envoi le media	\N	f	\N	[]	5000	t	f	2025-12-28 21:52:25.052	2026-01-01 14:15:22.909	\N	\N	\N	f
-cmjvmshmk0002sgfy8w70mwmj	cmjonqoky000d3wixhoki89w3	cmjoj4cpm000quzc2ow1u2d57	cmjojjvac001iuzc2514iyrs8	hey	\N	f	\N	[]	0	t	f	2026-01-01 16:00:06.716	2026-01-01 16:00:52.392	\N	\N	\N	f
-cmjvncr7p0002y4e5h71z6q96	cmjq0mtgk000as9pq8u7i10is	cmjoj4cpm000quzc2ow1u2d57	cmjojjvac001iuzc2514iyrs8	\N	\N	t	1000	[]	0	t	f	2026-01-01 16:15:52.261	2026-01-01 16:16:13.565	\N	\N	\N	f
+COPY public."Message" (id, "conversationId", "senderId", "receiverId", text, "replyToId", "isPPV", "ppvPrice", "ppvUnlockedBy", "totalTips", "isRead", "isDeleted", "createdAt", "updatedAt", "aiPersonalityId", "chatterId", "scriptId", "isAiGenerated", "resultedInSale", "saleAmount", "scriptModified") FROM stdin;
+cmjonqs3p000i3wixy22ex16n	cmjonqoky000d3wixhoki89w3	cmjoj4cpm000quzc2ow1u2d57	cmjojjvac001iuzc2514iyrs8	yo	\N	f	\N	[]	0	t	f	2025-12-27 18:52:23.365	2025-12-27 18:53:16.609	\N	\N	\N	f	f	\N	f
+cmjonrz2z000q3wix9l2q49kx	cmjonqoky000d3wixhoki89w3	cmjojjvac001iuzc2514iyrs8	cmjoj4cpm000quzc2ow1u2d57	salut	\N	f	\N	[]	0	t	f	2025-12-27 18:53:19.067	2025-12-27 18:56:59.406	\N	\N	\N	f	f	\N	f
+cmjoognkd000112lyfp9hy349	cmjonqoky000d3wixhoki89w3	cmjojjvac001iuzc2514iyrs8	cmjoj4cpm000quzc2ow1u2d57	salut toi ;)	\N	f	\N	[]	0	t	f	2025-12-27 19:12:30.541	2025-12-27 19:20:02.324	\N	\N	\N	f	f	\N	f
+cmjooieew000312lyh3fokqnu	cmjonqoky000d3wixhoki89w3	cmjojjvac001iuzc2514iyrs8	cmjoj4cpm000quzc2ow1u2d57	salut toi ;)	\N	f	\N	[]	0	t	f	2025-12-27 19:13:51.992	2025-12-27 19:20:02.324	\N	\N	\N	f	f	\N	f
+cmjoooi5l000812lyq69agdu5	cmjonqoky000d3wixhoki89w3	cmjojjvac001iuzc2514iyrs8	cmjoj4cpm000quzc2ow1u2d57	salut oi ;)	\N	f	\N	[]	0	t	f	2025-12-27 19:18:36.777	2025-12-27 19:20:02.324	\N	\N	\N	f	f	\N	f
+cmjoojpld000612lyq29m1wmn	cmjonqoky000d3wixhoki89w3	cmjoj4cpm000quzc2ow1u2d57	cmjojjvac001iuzc2514iyrs8	Just got out of the shower... 💦	\N	f	\N	[]	0	t	f	2025-12-27 19:14:53.137	2025-12-27 19:20:41.596	\N	\N	\N	f	f	\N	f
+cmjoopi2w000b12ly8j1jnzae	cmjonqoky000d3wixhoki89w3	cmjoj4cpm000quzc2ow1u2d57	cmjojjvac001iuzc2514iyrs8	I love chatting with you ❤️	\N	f	\N	[]	0	t	f	2025-12-27 19:19:23.337	2025-12-27 19:20:41.596	\N	\N	\N	f	f	\N	f
+cmjootaik000l12ly8ta6d656	cmjonqoky000d3wixhoki89w3	cmjojjvac001iuzc2514iyrs8	cmjoj4cpm000quzc2ow1u2d57	merci	\N	f	\N	[]	0	t	f	2025-12-27 19:22:20.157	2025-12-27 19:22:32.337	\N	\N	\N	f	f	\N	f
+cmjopbrnx0001h2f9d5dc1gtd	cmjonqoky000d3wixhoki89w3	cmjojjvac001iuzc2514iyrs8	cmjoj4cpm000quzc2ow1u2d57	t'es bonne !	\N	f	\N	[]	0	t	f	2025-12-27 19:36:42.189	2025-12-27 19:36:42.369	\N	\N	\N	f	f	\N	f
+cmjoounet000o12lynpgvhcmp	cmjonqoky000d3wixhoki89w3	cmjoj4cpm000quzc2ow1u2d57	cmjojjvac001iuzc2514iyrs8	Mmm I was just thinking about you...	\N	f	\N	[]	0	t	f	2025-12-27 19:23:23.525	2025-12-27 19:48:52.325	\N	\N	\N	f	f	\N	f
+cmjopcp0q0005h2f9v4mo9vkh	cmjonqoky000d3wixhoki89w3	cmjoj4cpm000quzc2ow1u2d57	cmjojjvac001iuzc2514iyrs8	Mmm I love that 😏	\N	f	\N	[]	0	t	f	2025-12-27 19:37:25.419	2025-12-27 19:48:52.325	\N	\N	\N	f	f	\N	f
+cmjoqfwn6000kh2f9ml3o9l0v	cmjonqoky000d3wixhoki89w3	cmjojjvac001iuzc2514iyrs8	cmjoj4cpm000quzc2ow1u2d57	montre moi tes seins 	\N	f	\N	[]	0	t	f	2025-12-27 20:07:54.882	2025-12-27 20:08:33.544	\N	\N	\N	f	f	\N	f
+cmjoqh94v000oh2f9bpgs8b9b	cmjonqoky000d3wixhoki89w3	cmjoj4cpm000quzc2ow1u2d57	cmjojjvac001iuzc2514iyrs8	Ohhh you know I have to save the best for exclusive 😘 what if I showed you something... *special* instead?	\N	f	\N	[]	0	t	f	2025-12-27 20:08:57.727	2025-12-27 20:08:58.859	\N	\N	\N	f	f	\N	f
+cmjoqti0x000th2f9o9cn9dzn	cmjonqoky000d3wixhoki89w3	cmjoj4cpm000quzc2ow1u2d57	cmjojjvac001iuzc2514iyrs8	Mmm if only... 😉 my private chats are way more *interactive* though... 👀	\N	f	\N	[]	0	t	f	2025-12-27 20:18:29.122	2025-12-27 20:18:33.58	\N	\N	\N	f	f	\N	f
+cmjoqspsp000qh2f9pwodnizw	cmjonqoky000d3wixhoki89w3	cmjojjvac001iuzc2514iyrs8	cmjoj4cpm000quzc2ow1u2d57	tu suces pour combien ?	\N	f	\N	[]	0	t	f	2025-12-27 20:17:52.537	2025-12-27 20:18:36.258	\N	\N	\N	f	f	\N	f
+cmjor130e0002ajb50k8pce5u	cmjonqoky000d3wixhoki89w3	cmjojjvac001iuzc2514iyrs8	cmjoj4cpm000quzc2ow1u2d57	tu fais quoi ? 	\N	f	\N	[]	0	t	f	2025-12-27 20:24:22.91	2025-12-27 20:24:34.194	\N	\N	\N	f	f	\N	f
+cmjor1vvw0005ajb5r2sxeife	cmjonqoky000d3wixhoki89w3	cmjoj4cpm000quzc2ow1u2d57	cmjojjvac001iuzc2514iyrs8	Just got back from the gym... still all hot and sweaty 😈 want to see what I got on?	\N	f	\N	[]	0	t	f	2025-12-27 20:25:00.332	2025-12-27 20:25:03.569	\N	\N	\N	f	f	\N	f
+cmjor29qc0007ajb5cknuyyjv	cmjonqoky000d3wixhoki89w3	cmjojjvac001iuzc2514iyrs8	cmjoj4cpm000quzc2ow1u2d57	yes	\N	f	\N	[]	0	t	f	2025-12-27 20:25:18.276	2025-12-27 20:25:38.18	\N	\N	\N	f	f	\N	f
+cmjor3721000bajb56fdlgr3t	cmjonqoky000d3wixhoki89w3	cmjoj4cpm000quzc2ow1u2d57	cmjojjvac001iuzc2514iyrs8	Ohhh someone’s impatient 😏 *drops a hint in your DMs* Let’s see how long it takes you to unlock the full thing... 😉	\N	f	\N	[]	0	t	f	2025-12-27 20:26:01.465	2025-12-27 20:26:03.564	\N	\N	\N	f	f	\N	f
+cmjor5g96000dajb5ul45xq5p	cmjonqoky000d3wixhoki89w3	cmjojjvac001iuzc2514iyrs8	cmjoj4cpm000quzc2ow1u2d57	j'ai envi d'entendre ta voix	\N	f	\N	[]	0	t	f	2025-12-27 20:27:46.698	2025-12-27 20:27:47.239	\N	\N	\N	f	f	\N	f
+cmjor9861000iajb57z8fehtp	cmjonqoky000d3wixhoki89w3	cmjojjvac001iuzc2514iyrs8	cmjoj4cpm000quzc2ow1u2d57	appel moi et je te donne 100 dollars 	\N	f	\N	[]	0	t	f	2025-12-27 20:30:42.828	2025-12-27 20:30:47.255	\N	\N	\N	f	f	\N	f
+cmjpn2mxx0020ek036277yfws	cmjonqoky000d3wixhoki89w3	cmjojjvac001iuzc2514iyrs8	cmjoj4cpm000quzc2ow1u2d57	Coucou ma belle 	\N	f	\N	[]	0	t	f	2025-12-28 11:21:23.108	2025-12-28 11:35:12.411	\N	\N	\N	f	f	\N	f
+cmjor6fup000gajb5mp0batrg	cmjonqoky000d3wixhoki89w3	cmjoj4cpm000quzc2ow1u2d57	cmjojjvac001iuzc2514iyrs8	*whispers* 😉 maybe I’ll drop a little voice tease in your DMs later... if you ask nice 😘	\N	f	\N	[]	100	t	f	2025-12-27 20:28:32.833	2025-12-28 14:01:57.492	\N	\N	\N	f	f	\N	f
+cmjorac24000lajb5y2d6lg5b	cmjonqoky000d3wixhoki89w3	cmjoj4cpm000quzc2ow1u2d57	cmjojjvac001iuzc2514iyrs8	😈 100? Cute, but I have to *really* earn that... 😘 want to see how I perform first?	\N	f	\N	[]	500	t	f	2025-12-27 20:31:34.539	2025-12-28 14:02:09.591	\N	\N	\N	f	f	\N	f
+cmjpsuf0n0010cli0tyfknsl7	cmjonqoky000d3wixhoki89w3	cmjojjvac001iuzc2514iyrs8	cmjoj4cpm000quzc2ow1u2d57	yoo	\N	f	\N	[]	0	t	f	2025-12-28 14:02:57.287	2025-12-28 14:21:49.052	\N	\N	\N	f	f	\N	f
+cmjpsuoc40013cli0ebumt9g3	cmjonqoky000d3wixhoki89w3	cmjoj4cpm000quzc2ow1u2d57	cmjojjvac001iuzc2514iyrs8	yo	\N	f	\N	[]	0	t	f	2025-12-28 14:03:09.365	2025-12-28 16:14:45.859	\N	\N	\N	f	f	\N	f
+cmjpsv6aw0015cli0l7u0jwxs	cmjonqoky000d3wixhoki89w3	cmjoj4cpm000quzc2ow1u2d57	cmjojjvac001iuzc2514iyrs8	ouuou 💋 how’s my favorite fan doing? *teasing tone*	\N	f	\N	[]	0	t	f	2025-12-28 14:03:32.648	2025-12-28 16:14:45.859	\N	\N	\N	f	f	\N	f
+cmjq4d9sz0009oekcryz5t671	cmjonqoky000d3wixhoki89w3	cmjoj4cpm000quzc2ow1u2d57	cmjojjvac001iuzc2514iyrs8	hey hey... *winks* been thinking about you 😘	\N	f	\N	[]	0	t	f	2025-12-28 19:25:32.771	2025-12-28 19:53:16.103	\N	\N	\N	f	f	\N	f
+cmjq4ccm00004oekc3wpxggqj	cmjonqoky000d3wixhoki89w3	cmjojjvac001iuzc2514iyrs8	cmjoj4cpm000quzc2ow1u2d57	hii	\N	f	\N	[]	0	t	f	2025-12-28 19:24:49.752	2025-12-28 23:17:44.098	\N	\N	\N	f	f	\N	f
+cmjvlb6jc0006vqmvqe78i98l	cmjonqoky000d3wixhoki89w3	cmjoj4cpm000quzc2ow1u2d57	cmjojjvac001iuzc2514iyrs8	\N	\N	t	9.99	["cmjojjvac001iuzc2514iyrs8"]	0	t	f	2026-01-01 15:18:39.576	2026-01-01 15:40:18.699	\N	\N	\N	f	f	\N	f
+cmjvlavw00002vqmvm0yp0q25	cmjonqoky000d3wixhoki89w3	cmjoj4cpm000quzc2ow1u2d57	cmjojjvac001iuzc2514iyrs8	\N	\N	t	1500	["cmjojjvac001iuzc2514iyrs8"]	0	t	f	2026-01-01 15:18:25.777	2026-01-01 15:41:04.212	\N	\N	\N	f	f	\N	f
+cmjvmshmk0002sgfy8w70mwmj	cmjonqoky000d3wixhoki89w3	cmjoj4cpm000quzc2ow1u2d57	cmjojjvac001iuzc2514iyrs8	hey	\N	f	\N	[]	0	t	f	2026-01-01 16:00:06.716	2026-01-01 16:00:52.392	\N	\N	\N	f	f	\N	f
 \.
 
 
@@ -1620,10 +1726,8 @@ cmjvncr7p0002y4e5h71z6q96	cmjq0mtgk000as9pq8u7i10is	cmjoj4cpm000quzc2ow1u2d57	cm
 --
 
 COPY public."MessageMedia" (id, "messageId", "mediaId", type, url, "previewUrl", "createdAt") FROM stdin;
-cmjvhdoi5000thpn74euzavf8	cmjvhdoi5000shpn7yaony0fb	\N	PHOTO	/uploads/chat/8576bee820fe0b2c235ad6e04d1c40fb.png	/uploads/chat/8576bee820fe0b2c235ad6e04d1c40fb.png	2026-01-01 13:28:37.709
 cmjvlavw10004vqmvjac1p1bc	cmjvlavw00002vqmvm0yp0q25	cmjosgmlo007o4h5isnpu79ib	PHOTO	/uploads/media/3768612561235223583_7.jpg	/uploads/media/3768612561235223583_7.jpg	2026-01-01 15:18:25.777
 cmjvlb6jc0008vqmvkj41u0bz	cmjvlb6jc0006vqmvqe78i98l	\N	PHOTO	/uploads/chat/63b99569f27f69e9202fcd2e0c773c36.png	/uploads/chat/63b99569f27f69e9202fcd2e0c773c36.png	2026-01-01 15:18:39.576
-cmjvncr7q0004y4e5d6imdo9y	cmjvncr7p0002y4e5h71z6q96	cmjq8u9tn0007pu6nqskyncb9	PHOTO	/uploads/media/5dc299a51f92a5d171b9f43651ae419e.jpg	/uploads/media/5dc299a51f92a5d171b9f43651ae419e.jpg	2026-01-01 16:15:52.261
 \.
 
 
@@ -1634,7 +1738,6 @@ cmjvncr7q0004y4e5d6imdo9y	cmjvncr7p0002y4e5h71z6q96	cmjq8u9tn0007pu6nqskyncb9	PH
 COPY public."MessagePayment" (id, "messageId", "userId", type, amount, currency, provider, "providerTxId", status, "createdAt") FROM stdin;
 cmjpst4vo000icli0kkqnwflv	cmjor6fup000gajb5mp0batrg	cmjojjvac001iuzc2514iyrs8	TIP	100	USD	CREDITS	\N	COMPLETED	2025-12-28 14:01:57.492
 cmjpste7r000qcli0whnyrx2x	cmjorac24000lajb5y2d6lg5b	cmjojjvac001iuzc2514iyrs8	TIP	500	USD	CREDITS	\N	COMPLETED	2025-12-28 14:02:09.591
-cmjvj1t0d0007mb0n4abjxrrw	cmjq9m5ek000fpdc30an1uny9	cmjoj4cpm000quzc2ow1u2d57	TIP	5000	USD	CREDITS	\N	COMPLETED	2026-01-01 14:15:22.909
 cmjvm30y30005l0bi3qi6a1i6	cmjvlb6jc0006vqmvqe78i98l	cmjojjvac001iuzc2514iyrs8	PPV_UNLOCK	9.99	USD	CREDITS	\N	COMPLETED	2026-01-01 15:40:18.699
 cmjvm402c000jl0bi0m3xrjo9	cmjvlavw00002vqmvm0yp0q25	cmjojjvac001iuzc2514iyrs8	PPV_UNLOCK	1500	USD	CREDITS	\N	COMPLETED	2026-01-01 15:41:04.212
 \.
@@ -1660,7 +1763,6 @@ cmjpwzb3x000110cs8m6eskhy	cmjpn2mxx0020ek036277yfws	cmjoj4cpm000quzc2ow1u2d57	�
 --
 
 COPY public."ModelListing" (id, "creatorId", bio, photos, "socialLinks", tags, "revenueShare", "chattingEnabled", "averageRating", "reviewCount", "isActive", "createdAt", "updatedAt") FROM stdin;
-cmjsjlfhy000acm82lzvnuaoi	cmjrjtpdz00077k1o7xye82ke	les petits pieds d'ange	{/uploads/listing/9cd315bdb23dcd03faa7e93a8e6e54e0.png}	{"instagram":"","twitter":"","tiktok":""}	{feet,fetish,asian,petite,tattoo}	70	t	0	0	t	2025-12-30 12:07:19.99	2025-12-30 13:07:31.065
 cmjvhf02f000yhpn7idk1amdz	creator1	\N	{/uploads/listing/6e4dd11f94c73f9e28943a869d04c225.png}	{"instagram":"","twitter":"","tiktok":""}	{curvy,latina,lingerie,submissive,brunette}	31	f	0	0	t	2026-01-01 13:29:39.351	2026-01-01 13:29:39.351
 \.
 
@@ -3862,6 +3964,80 @@ cmjvruo1w001atjbfwumzf0lh	/	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2
 cmjvrtjv00019tjbfyjj0gc2b	/subscriptions	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767290767821_stfok1i30gc	2026-01-01 18:20:54.348
 cmjvrz4fv001btjbf08hv9d7p	/	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767290767821_stfok1i30gc	2026-01-01 18:25:14.3
 cmjvseq2g001ctjbf8vqioiwm	/	\N	v_1767292642165_op8iqymviec	\N	Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/139.0.7258.5 Safari/537.36	desktop	Chrome	Linux	\N	s_1767292642166_imp2ctvtfq	2026-01-01 18:37:22.168
+cmjvtan2n001dtjbf1eah7ua3	/dashboard	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767294131255_1ifwekmihfm	2026-01-01 19:02:11.279
+cmjvtbsfb001etjbf5wbkt3t2	/	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767294131255_1ifwekmihfm	2026-01-01 19:03:04.872
+cmjvtc7xr001ftjbfyvkuu0fc	/dashboard	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767294131255_1ifwekmihfm	2026-01-01 19:03:24.975
+cmjvte290001gtjbf02y9cmor	/dashboard/messages	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767294131255_1ifwekmihfm	2026-01-01 19:04:50.917
+cmjvte75c001htjbfb8ebj3jr	/dashboard/admin/agencies	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767294131255_1ifwekmihfm	2026-01-01 19:04:57.264
+cmjvtj6i3001itjbfcm7vtqhn	/zh	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767294131255_1ifwekmihfm	2026-01-01 19:08:49.708
+cmjvtjaxe001jtjbfxvp10x8g	/fr	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767294131255_1ifwekmihfm	2026-01-01 19:08:55.442
+cmjvtju35001ktjbfo3uwd192	/fr	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767294131255_1ifwekmihfm	2026-01-01 19:09:20.273
+cmjvtkzlf001ltjbf59k6t7sw	/	https://www.google.com/	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767294131255_1ifwekmihfm	2026-01-01 19:10:14.067
+cmjvtl6bs001mtjbfxw2u1an0	/dashboard	https://www.google.com/	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767294131255_1ifwekmihfm	2026-01-01 19:10:22.792
+cmjvtlb7x001ntjbf8j7rzl8w	/dashboard/admin/creators	https://www.google.com/	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767294131255_1ifwekmihfm	2026-01-01 19:10:29.133
+cmjvtld69001otjbfkfsk8sl8	/dashboard/agency/creators	https://www.google.com/	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767294131255_1ifwekmihfm	2026-01-01 19:10:31.665
+cmjvtlwbl001ptjbf0n6qbg8d	/dashboard/agency/creators	https://www.google.com/	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767294131255_1ifwekmihfm	2026-01-01 19:10:56.481
+cmjvtm5jm001qtjbfanc4blxo	/dashboard/creator/settings	https://www.google.com/	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767294131255_1ifwekmihfm	2026-01-01 19:11:08.434
+cmjvtmecx001stjbft5dlosgj	/dashboard	https://www.google.com/	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767294131255_1ifwekmihfm	2026-01-01 19:11:19.857
+cmjvtmegu001ttjbfjm65czjf	/dashboard	https://viponly.fun/dashboard/creator/settings	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767294131255_1ifwekmihfm	2026-01-01 19:11:19.999
+cmjvtmju3001utjbfpassagl3	/dashboard	https://viponly.fun/dashboard/creator/settings	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767294131255_1ifwekmihfm	2026-01-01 19:11:26.955
+cmjvtmse1001vtjbfedl3c30a	/dashboard	https://viponly.fun/dashboard/creator/settings	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767294131255_1ifwekmihfm	2026-01-01 19:11:38.042
+cmjvtmw1i001wtjbfjchwxsl3	/	https://viponly.fun/dashboard/creator/settings	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767294131255_1ifwekmihfm	2026-01-01 19:11:42.775
+cmjvtmxvg001xtjbf60fv8539	/dashboard	https://viponly.fun/dashboard/creator/settings	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767294131255_1ifwekmihfm	2026-01-01 19:11:45.147
+cmjvtn66m001ytjbfpimxeav8	/dashboard	https://viponly.fun/dashboard/creator/settings	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767294131255_1ifwekmihfm	2026-01-01 19:11:55.918
+cmjvtnfgu001ztjbfnd0dpz3h	/dashboard	https://viponly.fun/dashboard/creator/settings	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767294131255_1ifwekmihfm	2026-01-01 19:12:07.951
+cmjvtniaw0020tjbfrd5ngsta	/dashboard/admin/users	https://viponly.fun/dashboard/creator/settings	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767294131255_1ifwekmihfm	2026-01-01 19:12:11.624
+cmjvtoywa0021tjbff82ikf82	/dashboard/admin/agencies	https://viponly.fun/dashboard/creator/settings	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767294131255_1ifwekmihfm	2026-01-01 19:13:19.787
+cmjvtozq90022tjbf2od8ykxo	/dashboard/admin	https://viponly.fun/dashboard/creator/settings	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767294131255_1ifwekmihfm	2026-01-01 19:13:20.865
+cmjvtp1270023tjbf40bosmpl	/dashboard/admin/agencies	https://viponly.fun/dashboard/creator/settings	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767294131255_1ifwekmihfm	2026-01-01 19:13:22.591
+cmjvu7pvk000013zcbbdbgbci	/fr/dashboard/creator/settings	https://viponly.fun/dashboard/agency/scripts	v_1766808100130_nq519a6ii39	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767295674375_x9lfmj7q1ze	2026-01-01 19:27:54.561
+cmjvu7qvv000113zczygxxqqu	/fr	https://viponly.fun/dashboard/agency/scripts	v_1766808100130_nq519a6ii39	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767295674375_x9lfmj7q1ze	2026-01-01 19:27:55.867
+cmjvu82jm000213zcr19gmnpe	/zh	\N	v_1766808100130_nq519a6ii39	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767295674375_x9lfmj7q1ze	2026-01-01 19:28:10.978
+cmjvu8b9b000313zc8476sk3e	/fr	https://viponly.fun/dashboard/agency/scripts	v_1766808100130_nq519a6ii39	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767295674375_x9lfmj7q1ze	2026-01-01 19:28:22.271
+cmjvu8c0j000413zck9i1a1wf	/fr/dashboard/creator/settings	https://viponly.fun/dashboard/agency/scripts	v_1766808100130_nq519a6ii39	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767295674375_x9lfmj7q1ze	2026-01-01 19:28:23.251
+cmjvv65av00001r8jqo0w5za9	/fr/dashboard/creator/settings	https://viponly.fun/dashboard/agency/scripts	v_1766808100130_nq519a6ii39	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767295674375_x9lfmj7q1ze	2026-01-01 19:54:40.855
+cmjvv6bj000011r8jjcteqxn9	/fr/dashboard/creator/settings	https://viponly.fun/dashboard/agency/scripts	v_1766808100130_nq519a6ii39	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767295674375_x9lfmj7q1ze	2026-01-01 19:54:48.925
+cmjvv6h0w00021r8jc3thtgwg	/fr/dashboard/agency/scripts	https://viponly.fun/dashboard/agency/scripts	v_1766808100130_nq519a6ii39	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767295674375_x9lfmj7q1ze	2026-01-01 19:54:56.048
+cmjvvhouf00031r8jx2s2gmen	/fr/dashboard/agency/scripts	https://viponly.fun/dashboard/agency/scripts	v_1766808100130_nq519a6ii39	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767297819363_x51ed5miw2a	2026-01-01 20:03:39.399
+cmjvvhqor00041r8jodxi5jgz	/fr/dashboard/agency/scripts	https://viponly.fun/dashboard/agency/scripts	v_1766808100130_nq519a6ii39	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767297819363_x51ed5miw2a	2026-01-01 20:03:41.787
+cmjvwx8vg0000ukk3pc4xfc9c	/fr/dashboard/agency/scripts	https://viponly.fun/dashboard/admin/agencies	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767300224497_x55vu3iyrb	2026-01-01 20:43:44.812
+cmjvxprwj0003ukk3sk7hvxk1	/fr/dashboard/agency/scripts	https://viponly.fun/dashboard/admin/agencies	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1	mobile	Safari	macOS	\N	s_1767300224497_x55vu3iyrb	2026-01-01 21:05:55.843
+cmjvxpuv80004ukk3pzna1blv	/fr/dashboard/agency/scripts	https://viponly.fun/dashboard/admin/agencies	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1	mobile	Safari	macOS	\N	s_1767300224497_x55vu3iyrb	2026-01-01 21:05:59.684
+cmjvy5cdm0005ukk3medw21r3	/fr	https://viponly.fun/dashboard/admin/agencies	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767302282153_vt7crougmwg	2026-01-01 21:18:02.218
+cmjvy5e6c0006ukk3h8vdtzf3	/fr/miacosta	https://viponly.fun/dashboard/admin/agencies	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767302282153_vt7crougmwg	2026-01-01 21:18:04.548
+cmjw27qtm0007ukk3lnkqd6rr	/fr	https://www.google.com/	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767309112602_q8639bfqdxb	2026-01-01 23:11:52.715
+cmjw4a8zv0008ukk3dx89z8dr	/fr	https://www.google.com/	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767312588670_f9m815flk69	2026-01-02 00:09:48.812
+cmjw4d4510009ukk3wt0kyrgq	/fr/miacosta	https://www.google.com/	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767312588670_f9m815flk69	2026-01-02 00:12:02.486
+cmjw4e0lm000aukk3u8z0spso	/fr/credits	https://www.google.com/	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767312588670_f9m815flk69	2026-01-02 00:12:44.554
+cmjw4e46s000bukk3t2znpmri	/fr/miacosta	https://www.google.com/	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767312588670_f9m815flk69	2026-01-02 00:12:49.204
+cmjw4gfl0000cukk3ywhy9pyk	/fr/credits	https://www.google.com/	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767312588670_f9m815flk69	2026-01-02 00:14:37.285
+cmjw4sfmo000dukk3q7ngc7a7	/fr/miacosta	https://www.google.com/	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767312588670_f9m815flk69	2026-01-02 00:23:57.216
+cmjw4x8j0000eukk39rdezvzh	/fr/miacosta	https://www.google.com/	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767312588670_f9m815flk69	2026-01-02 00:27:41.293
+cmjw541n7000fukk31k06lv11	/fr	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767312588670_f9m815flk69	2026-01-02 00:32:58.963
+cmjw5c2mg000gukk3btv48ncs	/fr/credits	https://viponly.fun/dashboard/admin/agencies	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767312588670_f9m815flk69	2026-01-02 00:39:13.48
+cmjw5c55q000hukk39pgrmw1s	/fr/miacosta	https://viponly.fun/dashboard/admin/agencies	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767312588670_f9m815flk69	2026-01-02 00:39:16.767
+cmjw5krpp000iukk3w31hpaax	/fr	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767314759164_535qbgg81pj	2026-01-02 00:45:59.245
+cmjw5m5hn000jukk3u9zgatr2	/fr	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767314759164_535qbgg81pj	2026-01-02 00:47:03.755
+cmjw5m9d0000kukk36qrs9e84	/fr	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767314759164_535qbgg81pj	2026-01-02 00:47:08.772
+cmjw5mass000lukk3tnkozozp	/fr	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767314759164_535qbgg81pj	2026-01-02 00:47:10.637
+cmjw5mdxl000mukk3hhlcu5pn	/fr	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767314759164_535qbgg81pj	2026-01-02 00:47:14.698
+cmjw5mhiv000nukk3muf14t5x	/en	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767314759164_535qbgg81pj	2026-01-02 00:47:19.351
+cmjw60a7u000013jtaf5hzjm5	/fr/dashboard/agency/scripts	https://viponly.fun/dashboard/agency/scripts	v_1766808100130_nq519a6ii39	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767315483020_8y3pkychq7m	2026-01-02 00:58:03.066
+cmjw60dzx000113jtii3gk0qi	/fr/dashboard/agency/scripts	https://viponly.fun/dashboard/agency/scripts	v_1766808100130_nq519a6ii39	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767315483020_8y3pkychq7m	2026-01-02 00:58:07.965
+cmjw6s4xe000213jt0dfse4dn	/fr/dashboard/agency/scripts	https://viponly.fun/dashboard/agency/scripts	v_1766808100130_nq519a6ii39	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767315483020_8y3pkychq7m	2026-01-02 01:19:42.578
+cmjw6s6ba000313jtiwjtr4xo	/fr/dashboard/agency/scripts	https://viponly.fun/dashboard/agency/scripts	v_1766808100130_nq519a6ii39	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767315483020_8y3pkychq7m	2026-01-02 01:19:44.375
+cmjwbkws8000413jtsysxrcf3	/fr/dashboard/agency/scripts	https://viponly.fun/dashboard/agency/scripts	v_1766808100130_nq519a6ii39	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767324843501_1tsrzxrzjnm	2026-01-02 03:34:03.512
+cmjwnw2pl000513jt76l7rnlm	/fr/miacosta	https://viponly.fun/dashboard/admin/agencies	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767345519645_15y0cvwkbjw	2026-01-02 09:18:39.801
+cmjwo4153000613jtgvojf829	/fr	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767345519645_15y0cvwkbjw	2026-01-02 09:24:51.016
+cmjwo4ahk000713jtmwbc8vp6	/fr/top-creators	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767345519645_15y0cvwkbjw	2026-01-02 09:25:03.128
+cmjwo4tn0000813jt4d6mdi94	/fr	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767345519645_15y0cvwkbjw	2026-01-02 09:25:27.948
+cmjwo8e0t000913jt8552jzak	/fr	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767345519645_15y0cvwkbjw	2026-01-02 09:28:14.333
+cmjwo8z9o000a13jtyon20n6l	/fr/creators	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767345519645_15y0cvwkbjw	2026-01-02 09:28:41.869
+cmjwo9byi000b13jt6j5urskm	/fr	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767345519645_15y0cvwkbjw	2026-01-02 09:28:58.315
+cmjwo9jyi000c13jt2aka4ylf	/fr/dashboard/find-creator	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767345519645_15y0cvwkbjw	2026-01-02 09:29:08.682
+cmjwo9m15000d13jthw3gv2n0	/fr	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767345519645_15y0cvwkbjw	2026-01-02 09:29:11.369
+cmjwo9qq3000e13jto26whxju	/fr/blog	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767345519645_15y0cvwkbjw	2026-01-02 09:29:17.45
+cmjwo9vtu000f13jtnobm6l5a	/fr	\N	v_1766804038091_cp6wd3qhq1	cmjoj4cpm000quzc2ow1u2d57	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767345519645_15y0cvwkbjw	2026-01-02 09:29:24.066
 \.
 
 
@@ -3911,6 +4087,14 @@ cmjvhizfq001ihpn7rrgmf160	cmjoj4cpm000quzc2ow1u2d57	miacosta	500	USD	0	0	PAYGATE
 
 
 --
+-- Data for Name: PaymentDispute; Type: TABLE DATA; Schema: public; Owner: viponly
+--
+
+COPY public."PaymentDispute" (id, "userId", "transactionId", "paymentMethod", amount, "transactionHash", "walletAddress", "paymentDate", "cryptoCurrency", email, description, status, resolution, "creditAmount", "resolvedAt", "resolvedBy", "createdAt", "updatedAt") FROM stdin;
+\.
+
+
+--
 -- Data for Name: PersonalitySwitch; Type: TABLE DATA; Schema: public; Owner: viponly
 --
 
@@ -3922,7 +4106,40 @@ COPY public."PersonalitySwitch" (id, "conversationId", "fromPersonalityId", "toP
 -- Data for Name: Script; Type: TABLE DATA; Schema: public; Owner: viponly
 --
 
-COPY public."Script" (id, "agencyId", name, content, category, "creatorSlug", "usageCount", "salesGenerated", "revenueGenerated", "conversionRate", "isActive", "createdAt", "updatedAt") FROM stdin;
+COPY public."Script" (id, "agencyId", name, content, category, "creatorSlug", "usageCount", "salesGenerated", "revenueGenerated", "conversionRate", "isActive", "createdAt", "updatedAt", "approvedAt", "approvedById", "authorId", "avgResponseTime", "folderId", "hasVariables", "isFavorite", "messagesSent", "rejectionReason", "sequenceId", "sequenceOrder", status, variables) FROM stdin;
+cmjvwydmb0002ukk3svowguf5	cmjr5g2e70001j3u415qpk7o2	script 1	hey	PPV_PITCH	\N	0	0	0	0	t	2026-01-01 20:44:37.619	2026-01-01 20:44:37.619	\N	\N	\N	\N	\N	f	f	0	\N	\N	\N	APPROVED	\N
+\.
+
+
+--
+-- Data for Name: ScriptFolder; Type: TABLE DATA; Schema: public; Owner: viponly
+--
+
+COPY public."ScriptFolder" (id, "agencyId", name, description, color, icon, "parentId", "order", "createdAt", "updatedAt") FROM stdin;
+\.
+
+
+--
+-- Data for Name: ScriptMedia; Type: TABLE DATA; Schema: public; Owner: viponly
+--
+
+COPY public."ScriptMedia" (id, "scriptId", "mediaId", "order", "createdAt") FROM stdin;
+\.
+
+
+--
+-- Data for Name: ScriptSequence; Type: TABLE DATA; Schema: public; Owner: viponly
+--
+
+COPY public."ScriptSequence" (id, "agencyId", name, description, category, "isActive", "timesStarted", "timesCompleted", "totalRevenue", "createdAt", "updatedAt") FROM stdin;
+\.
+
+
+--
+-- Data for Name: ScriptUsage; Type: TABLE DATA; Schema: public; Owner: viponly
+--
+
+COPY public."ScriptUsage" (id, "scriptId", "chatterId", "conversationId", "messageId", "creatorSlug", "fanUserId", action, modifications, "resultedInSale", "saleAmount", "saleType", "usedAt", "responseTime") FROM stdin;
 \.
 
 
@@ -3944,7 +4161,6 @@ cmjpkfkrp00071366uqgvynb5	miacosta	Mia Costa	\N	\N	\N	\N	\N	\N	\N	{}	t	f	t	t	t	f
 cmjpyp6yk0008vyhv57zptr7a	pascale	Pascale	\N	\N	\N	\N	\N	\N	\N	{"plans":[{"id":"basic","monthlyCredits":999,"annualCredits":9588,"bonusCredits":500},{"id":"vip","monthlyCredits":2999,"annualCredits":28788,"bonusCredits":2000}]}	t	f	t	t	t	f	t	t	f	2025-12-28 16:46:51.26	2025-12-28 16:54:40.295	\N	\N	\N	\N	0.05	t
 cmjqbllwv000910iujnyoubrr	maxoouu	Maxence Bonnet-Carrier	\N	\N	\N	\N	\N	\N	\N	{}	t	f	t	t	t	f	t	t	f	2025-12-28 22:47:59.024	2025-12-28 22:47:59.024	\N	\N	\N	\N	0.05	t
 settings_5291f1959e3ba670	raphi	Raphi	\N	\N	\N	\N	\N	\N	\N	{}	t	f	t	t	t	f	t	t	f	2025-12-28 22:50:31.993	2025-12-28 22:50:31.993	\N	\N	\N	\N	0.05	t
-cmjrjtpeb00087k1ox9m4xnby	carolos-little-toes	Carolo's cutty toes	\N	\N	\N	\N	\N	\N	\N	{"plans":[{"id":"basic","monthlyCredits":999,"annualCredits":9588,"bonusCredits":500},{"id":"vip","monthlyCredits":2999,"annualCredits":28788,"bonusCredits":2000}]}	t	f	t	t	t	f	t	t	f	2025-12-29 19:25:59.892	2025-12-30 00:25:17.551	\N	\N	\N	\N	0.05	t
 \.
 
 
@@ -3955,8 +4171,6 @@ cmjrjtpeb00087k1ox9m4xnby	carolos-little-toes	Carolo's cutty toes	\N	\N	\N	\N	\N
 COPY public."Subscription" (id, "userId", "planId", "creatorSlug", status, "paymentProvider", "stripeSubscriptionId", "stripeCustomerId", "billingInterval", "currentPeriodStart", "currentPeriodEnd", "cancelAtPeriodEnd", "canceledAt", "trialStart", "trialEnd", metadata, "createdAt", "updatedAt", "lastCreditGrant", "nextCreditGrant") FROM stdin;
 sub_admin_b5c7cd02-ceca-4ddc-b02e-b76f86fa3cca	cmjoj4cpm000quzc2ow1u2d57	plan2	miacosta	ACTIVE	CREDITS	\N	\N	ANNUAL	2025-12-28 20:24:19.604	2026-12-28 20:24:19.604	f	\N	\N	\N	\N	2025-12-28 20:24:19.604	2025-12-28 20:24:19.604	\N	\N
 sub_mia_7306d289	cmjojjvac001iuzc2514iyrs8	plan2	miacosta	ACTIVE	CREDITS	\N	\N	ANNUAL	2025-12-28 20:24:30.602	2026-12-28 20:24:30.602	f	\N	\N	\N	\N	2025-12-28 20:24:30.602	2025-12-28 20:24:30.602	\N	\N
-sub_pas_da9909a0	cmjojjvac001iuzc2514iyrs8	plan2	pascale	ACTIVE	CREDITS	\N	\N	ANNUAL	2025-12-28 20:24:30.602	2026-12-28 20:24:30.602	f	\N	\N	\N	\N	2025-12-28 20:24:30.602	2025-12-28 20:24:30.602	\N	\N
-sub_admin_pascale	cmjoj4cpm000quzc2ow1u2d57	plan2	pascale	ACTIVE	CREDITS	\N	\N	ANNUAL	2025-12-28 20:24:54.233	2026-12-28 20:24:54.233	f	\N	\N	\N	\N	2025-12-28 20:24:54.233	2025-12-28 20:24:54.233	\N	\N
 \.
 
 
@@ -4111,6 +4325,14 @@ ALTER TABLE ONLY public."ChatterEarning"
 
 
 --
+-- Name: ChatterScriptFavorite ChatterScriptFavorite_pkey; Type: CONSTRAINT; Schema: public; Owner: viponly
+--
+
+ALTER TABLE ONLY public."ChatterScriptFavorite"
+    ADD CONSTRAINT "ChatterScriptFavorite_pkey" PRIMARY KEY (id);
+
+
+--
 -- Name: Chatter Chatter_pkey; Type: CONSTRAINT; Schema: public; Owner: viponly
 --
 
@@ -4255,6 +4477,14 @@ ALTER TABLE ONLY public."PageView"
 
 
 --
+-- Name: PaymentDispute PaymentDispute_pkey; Type: CONSTRAINT; Schema: public; Owner: viponly
+--
+
+ALTER TABLE ONLY public."PaymentDispute"
+    ADD CONSTRAINT "PaymentDispute_pkey" PRIMARY KEY (id);
+
+
+--
 -- Name: Payment Payment_pkey; Type: CONSTRAINT; Schema: public; Owner: viponly
 --
 
@@ -4268,6 +4498,38 @@ ALTER TABLE ONLY public."Payment"
 
 ALTER TABLE ONLY public."PersonalitySwitch"
     ADD CONSTRAINT "PersonalitySwitch_pkey" PRIMARY KEY (id);
+
+
+--
+-- Name: ScriptFolder ScriptFolder_pkey; Type: CONSTRAINT; Schema: public; Owner: viponly
+--
+
+ALTER TABLE ONLY public."ScriptFolder"
+    ADD CONSTRAINT "ScriptFolder_pkey" PRIMARY KEY (id);
+
+
+--
+-- Name: ScriptMedia ScriptMedia_pkey; Type: CONSTRAINT; Schema: public; Owner: viponly
+--
+
+ALTER TABLE ONLY public."ScriptMedia"
+    ADD CONSTRAINT "ScriptMedia_pkey" PRIMARY KEY (id);
+
+
+--
+-- Name: ScriptSequence ScriptSequence_pkey; Type: CONSTRAINT; Schema: public; Owner: viponly
+--
+
+ALTER TABLE ONLY public."ScriptSequence"
+    ADD CONSTRAINT "ScriptSequence_pkey" PRIMARY KEY (id);
+
+
+--
+-- Name: ScriptUsage ScriptUsage_pkey; Type: CONSTRAINT; Schema: public; Owner: viponly
+--
+
+ALTER TABLE ONLY public."ScriptUsage"
+    ADD CONSTRAINT "ScriptUsage_pkey" PRIMARY KEY (id);
 
 
 --
@@ -4564,6 +4826,20 @@ CREATE INDEX "ChatterEarning_status_idx" ON public."ChatterEarning" USING btree 
 
 
 --
+-- Name: ChatterScriptFavorite_chatterId_idx; Type: INDEX; Schema: public; Owner: viponly
+--
+
+CREATE INDEX "ChatterScriptFavorite_chatterId_idx" ON public."ChatterScriptFavorite" USING btree ("chatterId");
+
+
+--
+-- Name: ChatterScriptFavorite_chatterId_scriptId_key; Type: INDEX; Schema: public; Owner: viponly
+--
+
+CREATE UNIQUE INDEX "ChatterScriptFavorite_chatterId_scriptId_key" ON public."ChatterScriptFavorite" USING btree ("chatterId", "scriptId");
+
+
+--
 -- Name: Chatter_agencyId_idx; Type: INDEX; Schema: public; Owner: viponly
 --
 
@@ -4851,6 +5127,27 @@ CREATE INDEX "PageView_visitorId_idx" ON public."PageView" USING btree ("visitor
 
 
 --
+-- Name: PaymentDispute_createdAt_idx; Type: INDEX; Schema: public; Owner: viponly
+--
+
+CREATE INDEX "PaymentDispute_createdAt_idx" ON public."PaymentDispute" USING btree ("createdAt");
+
+
+--
+-- Name: PaymentDispute_status_idx; Type: INDEX; Schema: public; Owner: viponly
+--
+
+CREATE INDEX "PaymentDispute_status_idx" ON public."PaymentDispute" USING btree (status);
+
+
+--
+-- Name: PaymentDispute_userId_idx; Type: INDEX; Schema: public; Owner: viponly
+--
+
+CREATE INDEX "PaymentDispute_userId_idx" ON public."PaymentDispute" USING btree ("userId");
+
+
+--
 -- Name: PersonalitySwitch_conversationId_idx; Type: INDEX; Schema: public; Owner: viponly
 --
 
@@ -4879,6 +5176,83 @@ CREATE INDEX "PersonalitySwitch_toPersonalityId_idx" ON public."PersonalitySwitc
 
 
 --
+-- Name: ScriptFolder_agencyId_idx; Type: INDEX; Schema: public; Owner: viponly
+--
+
+CREATE INDEX "ScriptFolder_agencyId_idx" ON public."ScriptFolder" USING btree ("agencyId");
+
+
+--
+-- Name: ScriptFolder_parentId_idx; Type: INDEX; Schema: public; Owner: viponly
+--
+
+CREATE INDEX "ScriptFolder_parentId_idx" ON public."ScriptFolder" USING btree ("parentId");
+
+
+--
+-- Name: ScriptMedia_mediaId_idx; Type: INDEX; Schema: public; Owner: viponly
+--
+
+CREATE INDEX "ScriptMedia_mediaId_idx" ON public."ScriptMedia" USING btree ("mediaId");
+
+
+--
+-- Name: ScriptMedia_scriptId_idx; Type: INDEX; Schema: public; Owner: viponly
+--
+
+CREATE INDEX "ScriptMedia_scriptId_idx" ON public."ScriptMedia" USING btree ("scriptId");
+
+
+--
+-- Name: ScriptSequence_agencyId_idx; Type: INDEX; Schema: public; Owner: viponly
+--
+
+CREATE INDEX "ScriptSequence_agencyId_idx" ON public."ScriptSequence" USING btree ("agencyId");
+
+
+--
+-- Name: ScriptSequence_category_idx; Type: INDEX; Schema: public; Owner: viponly
+--
+
+CREATE INDEX "ScriptSequence_category_idx" ON public."ScriptSequence" USING btree (category);
+
+
+--
+-- Name: ScriptUsage_chatterId_idx; Type: INDEX; Schema: public; Owner: viponly
+--
+
+CREATE INDEX "ScriptUsage_chatterId_idx" ON public."ScriptUsage" USING btree ("chatterId");
+
+
+--
+-- Name: ScriptUsage_conversationId_idx; Type: INDEX; Schema: public; Owner: viponly
+--
+
+CREATE INDEX "ScriptUsage_conversationId_idx" ON public."ScriptUsage" USING btree ("conversationId");
+
+
+--
+-- Name: ScriptUsage_resultedInSale_idx; Type: INDEX; Schema: public; Owner: viponly
+--
+
+CREATE INDEX "ScriptUsage_resultedInSale_idx" ON public."ScriptUsage" USING btree ("resultedInSale");
+
+
+--
+-- Name: ScriptUsage_scriptId_idx; Type: INDEX; Schema: public; Owner: viponly
+--
+
+CREATE INDEX "ScriptUsage_scriptId_idx" ON public."ScriptUsage" USING btree ("scriptId");
+
+
+--
+-- Name: ScriptUsage_usedAt_idx; Type: INDEX; Schema: public; Owner: viponly
+--
+
+CREATE INDEX "ScriptUsage_usedAt_idx" ON public."ScriptUsage" USING btree ("usedAt");
+
+
+--
 -- Name: Script_agencyId_idx; Type: INDEX; Schema: public; Owner: viponly
 --
 
@@ -4890,6 +5264,27 @@ CREATE INDEX "Script_agencyId_idx" ON public."Script" USING btree ("agencyId");
 --
 
 CREATE INDEX "Script_creatorSlug_idx" ON public."Script" USING btree ("creatorSlug");
+
+
+--
+-- Name: Script_folderId_idx; Type: INDEX; Schema: public; Owner: viponly
+--
+
+CREATE INDEX "Script_folderId_idx" ON public."Script" USING btree ("folderId");
+
+
+--
+-- Name: Script_sequenceId_idx; Type: INDEX; Schema: public; Owner: viponly
+--
+
+CREATE INDEX "Script_sequenceId_idx" ON public."Script" USING btree ("sequenceId");
+
+
+--
+-- Name: Script_status_idx; Type: INDEX; Schema: public; Owner: viponly
+--
+
+CREATE INDEX "Script_status_idx" ON public."Script" USING btree (status);
 
 
 --
@@ -5093,6 +5488,22 @@ ALTER TABLE ONLY public."ChatterEarning"
 
 
 --
+-- Name: ChatterScriptFavorite ChatterScriptFavorite_chatterId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: viponly
+--
+
+ALTER TABLE ONLY public."ChatterScriptFavorite"
+    ADD CONSTRAINT "ChatterScriptFavorite_chatterId_fkey" FOREIGN KEY ("chatterId") REFERENCES public."Chatter"(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: ChatterScriptFavorite ChatterScriptFavorite_scriptId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: viponly
+--
+
+ALTER TABLE ONLY public."ChatterScriptFavorite"
+    ADD CONSTRAINT "ChatterScriptFavorite_scriptId_fkey" FOREIGN KEY ("scriptId") REFERENCES public."Script"(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
 -- Name: Chatter Chatter_agencyId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: viponly
 --
 
@@ -5277,6 +5688,14 @@ ALTER TABLE ONLY public."Message"
 
 
 --
+-- Name: Message Message_scriptId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: viponly
+--
+
+ALTER TABLE ONLY public."Message"
+    ADD CONSTRAINT "Message_scriptId_fkey" FOREIGN KEY ("scriptId") REFERENCES public."Script"(id) ON UPDATE CASCADE ON DELETE SET NULL;
+
+
+--
 -- Name: Message Message_senderId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: viponly
 --
 
@@ -5317,11 +5736,99 @@ ALTER TABLE ONLY public."PersonalitySwitch"
 
 
 --
+-- Name: ScriptFolder ScriptFolder_agencyId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: viponly
+--
+
+ALTER TABLE ONLY public."ScriptFolder"
+    ADD CONSTRAINT "ScriptFolder_agencyId_fkey" FOREIGN KEY ("agencyId") REFERENCES public."Agency"(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: ScriptFolder ScriptFolder_parentId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: viponly
+--
+
+ALTER TABLE ONLY public."ScriptFolder"
+    ADD CONSTRAINT "ScriptFolder_parentId_fkey" FOREIGN KEY ("parentId") REFERENCES public."ScriptFolder"(id) ON UPDATE CASCADE ON DELETE SET NULL;
+
+
+--
+-- Name: ScriptMedia ScriptMedia_mediaId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: viponly
+--
+
+ALTER TABLE ONLY public."ScriptMedia"
+    ADD CONSTRAINT "ScriptMedia_mediaId_fkey" FOREIGN KEY ("mediaId") REFERENCES public."MediaContent"(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: ScriptMedia ScriptMedia_scriptId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: viponly
+--
+
+ALTER TABLE ONLY public."ScriptMedia"
+    ADD CONSTRAINT "ScriptMedia_scriptId_fkey" FOREIGN KEY ("scriptId") REFERENCES public."Script"(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: ScriptSequence ScriptSequence_agencyId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: viponly
+--
+
+ALTER TABLE ONLY public."ScriptSequence"
+    ADD CONSTRAINT "ScriptSequence_agencyId_fkey" FOREIGN KEY ("agencyId") REFERENCES public."Agency"(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: ScriptUsage ScriptUsage_chatterId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: viponly
+--
+
+ALTER TABLE ONLY public."ScriptUsage"
+    ADD CONSTRAINT "ScriptUsage_chatterId_fkey" FOREIGN KEY ("chatterId") REFERENCES public."Chatter"(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: ScriptUsage ScriptUsage_scriptId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: viponly
+--
+
+ALTER TABLE ONLY public."ScriptUsage"
+    ADD CONSTRAINT "ScriptUsage_scriptId_fkey" FOREIGN KEY ("scriptId") REFERENCES public."Script"(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
 -- Name: Script Script_agencyId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: viponly
 --
 
 ALTER TABLE ONLY public."Script"
     ADD CONSTRAINT "Script_agencyId_fkey" FOREIGN KEY ("agencyId") REFERENCES public."Agency"(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: Script Script_approvedById_fkey; Type: FK CONSTRAINT; Schema: public; Owner: viponly
+--
+
+ALTER TABLE ONLY public."Script"
+    ADD CONSTRAINT "Script_approvedById_fkey" FOREIGN KEY ("approvedById") REFERENCES public."User"(id) ON UPDATE CASCADE ON DELETE SET NULL;
+
+
+--
+-- Name: Script Script_authorId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: viponly
+--
+
+ALTER TABLE ONLY public."Script"
+    ADD CONSTRAINT "Script_authorId_fkey" FOREIGN KEY ("authorId") REFERENCES public."User"(id) ON UPDATE CASCADE ON DELETE SET NULL;
+
+
+--
+-- Name: Script Script_folderId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: viponly
+--
+
+ALTER TABLE ONLY public."Script"
+    ADD CONSTRAINT "Script_folderId_fkey" FOREIGN KEY ("folderId") REFERENCES public."ScriptFolder"(id) ON UPDATE CASCADE ON DELETE SET NULL;
+
+
+--
+-- Name: Script Script_sequenceId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: viponly
+--
+
+ALTER TABLE ONLY public."Script"
+    ADD CONSTRAINT "Script_sequenceId_fkey" FOREIGN KEY ("sequenceId") REFERENCES public."ScriptSequence"(id) ON UPDATE CASCADE ON DELETE SET NULL;
 
 
 --
@@ -5359,5 +5866,5 @@ REVOKE USAGE ON SCHEMA public FROM PUBLIC;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict c3knMjvz3SeGCtcoofA7Qsh91HB3gGkphYbQ34acwXYRQXg2E8FX9uXTAbMjVh6
+\unrestrict N4U4zHa4raIZDCBBIjF9OAKDZXYhRAgIVM7dxVkspVuxDuTvgdtMZyqfIgaxrqe
 

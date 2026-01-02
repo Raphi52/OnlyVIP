@@ -8,6 +8,7 @@ import { Play, Crown, Sparkles, ChevronDown, Lock, Heart, Users, Camera, Eye, St
 import { Button } from "@/components/ui";
 import { FollowButton } from "@/components/FollowButton";
 import { Creator } from "@/lib/creators";
+import { useTranslations } from "next-intl";
 
 interface HeroProps {
   creator?: Creator;
@@ -75,6 +76,8 @@ function GlowParticle({ delay, x, size }: { delay: number; x: string; size: numb
 }
 
 export function Hero({ creator }: HeroProps) {
+  const t = useTranslations("landing");
+  const tNav = useTranslations("nav");
   const creatorSlug = creator?.slug || "miacosta";
   const basePath = `/${creatorSlug}`;
   const containerRef = useRef<HTMLElement>(null);
@@ -179,11 +182,11 @@ export function Hero({ creator }: HeroProps) {
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
                     <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
                   </span>
-                  LIVE NOW
+                  {t("liveNow")}
                 </span>
                 <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[var(--gold)]/10 border border-[var(--gold)]/20 text-[var(--gold)] text-sm font-medium">
                   <Sparkles className="w-4 h-4" />
-                  Exclusive Creator
+                  {t("exclusiveCreator")}
                 </span>
               </motion.div>
 
@@ -194,12 +197,12 @@ export function Hero({ creator }: HeroProps) {
                 transition={{ duration: 0.8, delay: 0.2 }}
                 className="text-5xl sm:text-6xl lg:text-7xl xl:text-8xl font-bold text-white mb-6 leading-[0.95]"
               >
-                <span className="block">Welcome to</span>
+                <span className="block">{t("welcomeTo")}</span>
                 <span className="relative inline-block mt-2">
                   <span className="gradient-gold-text-animated">{creator?.displayName || "Mia Costa"}'s</span>
                 </span>
                 <span className="block mt-2 text-4xl sm:text-5xl lg:text-6xl text-gray-300">
-                  Private World
+                  {t("privateWorld")}
                 </span>
               </motion.h1>
 
@@ -214,10 +217,9 @@ export function Hero({ creator }: HeroProps) {
                   creator.bio.trim().length > 250 ? `${creator.bio.trim().slice(0, 250)}...` : creator.bio.trim()
                 ) : (
                   <>
-                    Get exclusive access to my most intimate content, private messages,
-                    and VIP-only photos & videos. Join{" "}
-                    <span className="text-[var(--gold)] font-semibold">2,500+ members</span>{" "}
-                    who already unlocked everything.
+                    {t("exclusiveAccess")}{" "}
+                    <span className="text-[var(--gold)] font-semibold">{t("membersCount", { count: "2,500" })}</span>{" "}
+                    {t("unlockedEverything")}
                   </>
                 )}
               </motion.p>
@@ -237,7 +239,7 @@ export function Hero({ creator }: HeroProps) {
                   >
                     <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
                     <Crown className="w-5 h-5 flex-shrink-0" />
-                    <span className="flex-shrink-0">Join VIP</span>
+                    <span className="flex-shrink-0">{tNav("joinVip")}</span>
                   </Button>
                 </Link>
                 <Link href={`${basePath}/gallery`}>
@@ -247,7 +249,7 @@ export function Hero({ creator }: HeroProps) {
                     className="gap-2 text-lg px-8 py-7 backdrop-blur-sm"
                   >
                     <Eye className="w-5 h-5" />
-                    Preview Gallery
+                    {t("previewGallery")}
                   </Button>
                 </Link>
                 <FollowButton creatorSlug={creatorSlug} className="text-lg px-8 py-7" />
@@ -305,15 +307,15 @@ export function Hero({ creator }: HeroProps) {
               >
                 <div className="flex items-center gap-2">
                   <Lock className="w-4 h-4 text-[var(--gold)]" />
-                  <span>Secure & Private</span>
+                  <span>{t("securePrivate")}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Star className="w-4 h-4 text-[var(--gold)]" />
-                  <span>4.9/5 Rating</span>
+                  <span>{t("rating")}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Heart className="w-4 h-4 text-[var(--gold)]" />
-                  <span>Cancel Anytime</span>
+                  <span>{t("cancelAnytime")}</span>
                 </div>
               </motion.div>
             </div>
@@ -359,7 +361,7 @@ export function Hero({ creator }: HeroProps) {
                         transition={{ duration: 2, repeat: Infinity }}
                       >
                         <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                        <span className="text-sm text-white font-medium">Online</span>
+                        <span className="text-sm text-white font-medium">{t("online")}</span>
                       </motion.div>
                       <motion.div
                         className="px-3 py-1.5 rounded-full bg-gradient-to-r from-[var(--gold)] to-yellow-500 text-black text-sm font-bold"
@@ -403,7 +405,7 @@ export function Hero({ creator }: HeroProps) {
                   animate={{ y: [0, 5, 0] }}
                   transition={{ duration: 2.5, repeat: Infinity, delay: 0.5 }}
                 >
-                  Premium Content
+                  {t("premiumContent")}
                 </motion.div>
               </div>
             </motion.div>
@@ -420,9 +422,9 @@ export function Hero({ creator }: HeroProps) {
           <div className="max-w-4xl mx-auto">
             <div className="grid grid-cols-3 gap-2 sm:gap-4 lg:gap-8">
               {[
-                { icon: Lock, label: "100% Private" },
-                { icon: Heart, label: "Direct Chat" },
-                { icon: Sparkles, label: "Instant Access" },
+                { icon: Lock, label: t("hundredPrivate") },
+                { icon: Heart, label: t("directChat") },
+                { icon: Sparkles, label: t("instantAccess") },
               ].map((badge, index) => (
                 <motion.div
                   key={badge.label}
@@ -453,7 +455,7 @@ export function Hero({ creator }: HeroProps) {
           className="flex flex-col items-center gap-2 cursor-pointer group"
         >
           <span className="text-xs uppercase tracking-[0.2em] text-gray-500 group-hover:text-[var(--gold)] transition-colors">
-            Explore More
+            {t("exploreMore")}
           </span>
           <div className="w-6 h-10 rounded-full border-2 border-gray-600 group-hover:border-[var(--gold)] transition-colors flex justify-center pt-2">
             <motion.div

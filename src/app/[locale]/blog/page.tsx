@@ -19,6 +19,45 @@ export const metadata: Metadata = {
 
 // Blog posts data - can be moved to database later
 const blogPosts = [
+  // SEO Articles - Crypto
+  {
+    slug: "pay-onlyfans-with-crypto-bitcoin",
+    title: "How to Pay for Adult Content with Crypto in 2025 — Complete Guide",
+    excerpt:
+      "Learn how to pay for OnlyFans-style content with Bitcoin, Ethereum, and other cryptocurrencies. VipOnly accepts all major cryptos for anonymous payments.",
+    date: "2025-12-15",
+    category: "Crypto",
+    readTime: "8 min read",
+  },
+  {
+    slug: "onlyfans-alternatives-accept-bitcoin-crypto",
+    title: "Best OnlyFans Alternatives That Accept Bitcoin & Crypto (2025)",
+    excerpt:
+      "Looking for OnlyFans alternatives that accept Bitcoin? Here are the top platforms where you can pay with cryptocurrency for creator content.",
+    date: "2025-12-10",
+    category: "Comparisons",
+    readTime: "7 min read",
+  },
+  // SEO Articles - Agency
+  {
+    slug: "how-to-start-onlyfans-agency-2025",
+    title: "How to Start an OnlyFans Agency in 2025 — Complete Guide",
+    excerpt:
+      "Learn how to start and run a successful OnlyFans management agency. From recruiting creators to hiring chatters, this guide covers everything.",
+    date: "2025-12-05",
+    category: "Agency",
+    readTime: "12 min read",
+  },
+  {
+    slug: "onlyfans-chatter-jobs-guide",
+    title: "OnlyFans Chatter Jobs — How to Become a Chatter in 2025",
+    excerpt:
+      "Looking for OnlyFans chatter jobs? Learn what chatters do, how much they earn, and how to get hired by agencies managing creator accounts.",
+    date: "2025-12-01",
+    category: "Agency",
+    readTime: "10 min read",
+  },
+  // Original Articles
   {
     slug: "best-onlyfans-alternatives-2026",
     title: "Best OnlyFans Alternatives in 2026 — Top Creator Platforms",

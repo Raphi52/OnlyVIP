@@ -1,4 +1,6 @@
 import { prisma } from "./prisma";
+import { generateAiMessage, type ChatMessage } from "./ai-client";
+import { type AiProvider } from "./ai-providers";
 
 // ============= TYPES =============
 
@@ -268,20 +270,25 @@ export async function selectRelevantMedia(
 
 // ============= RESPONSE GENERATION =============
 
-const OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions";
+export interface GenerateAiOptions {
+  fanMemories?: string;
+  isAiOnlyFan?: boolean;
+  // Multi-provider settings
+  provider?: AiProvider;
+  model?: string;
+  apiKey?: string | null; // Encrypted custom key or null for platform key
+}
 
 export async function generateAiResponse(
   context: ConversationContext,
   personality: AiPersonality,
-  suggestedMedia: ScoredMedia["media"] | null
+  suggestedMedia: ScoredMedia["media"] | null,
+  options: GenerateAiOptions = {}
 ): Promise<string> {
-  const apiKey = process.env.OPENROUTER_API_KEY;
-  const model = process.env.AI_MODEL || "mistralai/mistral-7b-instruct";
-
-  if (!apiKey) {
-    console.error("OPENROUTER_API_KEY not configured");
-    return getFallbackResponse(personality, suggestedMedia);
-  }
+  // Get provider settings (defaults to anthropic/haiku)
+  const provider = options.provider || "anthropic";
+  const model = options.model || "claude-haiku-4-5-20241022";
+  const customApiKey = options.apiKey || null;
 
   const hasMedia = suggestedMedia !== null;
   const systemPrompt = generateSystemPrompt(personality, hasMedia);
@@ -292,6 +299,16 @@ export async function generateAiResponse(
   // Add user name context if available
   if (context.userName) {
     additionalContext += `\n[You are chatting with ${context.userName}. Use their name occasionally to be more personal.]`;
+  }
+
+  // ===== ADD FAN MEMORIES FOR PERSONALIZATION =====
+  if (options.fanMemories) {
+    additionalContext += `\n[${options.fanMemories}]`;
+  }
+
+  // ===== AI-ONLY FAN: Use shorter, less engaged responses =====
+  if (options.isAiOnlyFan) {
+    additionalContext += `\n[Note: This fan has low engagement. Keep responses shorter and focus on driving purchases.]`;
   }
 
   // Add media context if available
@@ -305,37 +322,24 @@ export async function generateAiResponse(
     additionalContext += `\n[You have exclusive content "${suggestedMedia.title}" (${priceDisplay}) that might interest them. Tease about it naturally if appropriate.]`;
   }
 
-  const messages = [
-    { role: "system", content: systemPrompt + additionalContext },
-    ...context.messages,
-  ];
+  // Build messages for the unified AI client
+  const chatMessages: ChatMessage[] = context.messages.map((m) => ({
+    role: m.role,
+    content: m.content,
+  }));
 
   try {
-    const response = await fetch(OPENROUTER_API_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-        "HTTP-Referer": process.env.NEXT_PUBLIC_APP_URL || "https://viponly.fun",
-        "X-Title": "VipOnly AI",
-      },
-      body: JSON.stringify({
-        model,
-        messages,
-        max_tokens: 150,
-        temperature: 0.9,
-        top_p: 0.95,
-      }),
+    const result = await generateAiMessage({
+      provider,
+      model,
+      apiKey: customApiKey,
+      messages: chatMessages,
+      systemPrompt: systemPrompt + additionalContext,
+      maxTokens: 150,
+      temperature: 0.9,
     });
 
-    if (!response.ok) {
-      const error = await response.text();
-      console.error("OpenRouter error:", error);
-      return getFallbackResponse(personality, suggestedMedia);
-    }
-
-    const data = await response.json();
-    let aiResponse = data.choices?.[0]?.message?.content?.trim();
+    let aiResponse = result.content?.trim();
 
     if (!aiResponse) {
       return getFallbackResponse(personality, suggestedMedia);

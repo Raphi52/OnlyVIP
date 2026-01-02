@@ -2,53 +2,66 @@
 
 import { motion } from "framer-motion";
 import { Star, Quote, Shield, CreditCard, Clock } from "lucide-react";
+import { useTranslations } from "next-intl";
 
-const testimonials = [
+interface Testimonial {
+  id: number;
+  nameKey: string;
+  avatar: string;
+  rating: number;
+  textKey: string;
+  tier: string;
+  dateKey: string;
+}
+
+const testimonials: Testimonial[] = [
   {
     id: 1,
-    name: "Alex M.",
+    nameKey: "testimonial1Name",
     avatar: "A",
     rating: 5,
-    text: "Absolutely worth every penny! The VIP content is amazing and she actually responds to messages. Best subscription I've ever had.",
+    textKey: "testimonial1Text",
     tier: "VIP",
-    date: "2 weeks ago",
+    dateKey: "testimonial1Date",
   },
   {
     id: 2,
-    name: "Jordan K.",
+    nameKey: "testimonial2Name",
     avatar: "J",
     rating: 5,
-    text: "The quality of content is incredible. New posts almost every day and the exclusive stuff is fire. Highly recommend!",
+    textKey: "testimonial2Text",
     tier: "VIP",
-    date: "1 month ago",
+    dateKey: "testimonial2Date",
   },
   {
     id: 3,
-    name: "Chris T.",
+    nameKey: "testimonial3Name",
     avatar: "C",
     rating: 5,
-    text: "Started with Basic but upgraded to VIP within a week. The private content is worth it. Very professional and always delivers.",
+    textKey: "testimonial3Text",
     tier: "VIP",
-    date: "3 weeks ago",
+    dateKey: "testimonial3Date",
   },
   {
     id: 4,
-    name: "Sam R.",
+    nameKey: "testimonial4Name",
     avatar: "S",
     rating: 5,
-    text: "Love the variety of content! Photos, videos, behind-the-scenes... there's always something new. Great value for the price.",
+    textKey: "testimonial4Text",
     tier: "Basic",
-    date: "1 week ago",
+    dateKey: "testimonial4Date",
   },
 ];
 
 const trustBadges = [
-  { icon: Shield, text: "Secure Payments", subtext: "256-bit SSL" },
-  { icon: CreditCard, text: "Discrete Billing", subtext: "Private name" },
-  { icon: Clock, text: "Instant Access", subtext: "No waiting" },
+  { icon: Shield, textKey: "securePayments", subtextKey: "ssl256" },
+  { icon: CreditCard, textKey: "discreteBilling", subtextKey: "privateName" },
+  { icon: Clock, textKey: "instantAccess", subtextKey: "noWaiting" },
 ];
 
 export function Testimonials() {
+  const t = useTranslations("testimonials");
+
   return (
     <section className="py-20 relative overflow-hidden">
       {/* Background */}
@@ -68,14 +81,14 @@ export function Testimonials() {
         >
           <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[var(--gold)]/10 border border-[var(--gold)]/20 text-[var(--gold)] text-sm font-medium mb-6">
             <Star className="w-4 h-4 fill-current" />
-            Member Reviews
+            {t("memberReviews")}
           </span>
           <h2 className="text-4xl sm:text-5xl font-bold text-white mb-4">
-            What Members{" "}
-            <span className="gradient-gold-text">Say</span>
+            {t("whatMembers")}{" "}
+            <span className="gradient-gold-text">{t("say")}</span>
           </h2>
           <p className="text-gray-400 text-lg max-w-xl mx-auto">
-            Join thousands of satisfied members enjoying exclusive content
+            {t("joinThousands")}
           </p>
         </motion.div>
 
@@ -101,7 +114,7 @@ export function Testimonials() {
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
-                    <h4 className="font-semibold text-white">{testimonial.name}</h4>
+                    <h4 className="font-semibold text-white">{t(testimonial.nameKey)}</h4>
                     <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                       testimonial.tier === "VIP"
                         ? "bg-[var(--gold)]/20 text-[var(--gold)]"
@@ -110,7 +123,7 @@ export function Testimonials() {
                       {testimonial.tier}
                     </span>
                   </div>
-                  <p className="text-sm text-gray-500">{testimonial.date}</p>
+                  <p className="text-sm text-gray-500">{t(testimonial.dateKey)}</p>
                 </div>
               </div>
 
@@ -122,7 +135,7 @@ export function Testimonials() {
               </div>
 
               {/* Text */}
-              <p className="text-gray-300 leading-relaxed">{testimonial.text}</p>
+              <p className="text-gray-300 leading-relaxed">{t(testimonial.textKey)}</p>
 
               {/* Hover glow */}
               <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-[var(--gold)]/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
@@ -139,7 +152,7 @@ export function Testimonials() {
         >
           {trustBadges.map((badge, index) => (
             <motion.div
-              key={badge.text}
+              key={badge.textKey}
               initial={{ opacity: 0, y: 10 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
@@ -150,8 +163,8 @@ export function Testimonials() {
                 <badge.icon className="w-5 h-5 text-[var(--gold)]" />
               </div>
               <div>
-                <p className="text-white font-medium">{badge.text}</p>
-                <p className="text-sm text-gray-500">{badge.subtext}</p>
+                <p className="text-white font-medium">{t(badge.textKey)}</p>
+                <p className="text-sm text-gray-500">{t(badge.subtextKey)}</p>
               </div>
             </motion.div>
           ))}
@@ -167,17 +180,17 @@ export function Testimonials() {
           <div className="inline-flex flex-wrap items-center justify-center gap-4 sm:gap-8 px-4 sm:px-8 py-4 rounded-2xl bg-gradient-to-r from-[var(--gold)]/10 via-[var(--gold)]/5 to-[var(--gold)]/10 border border-[var(--gold)]/20 max-w-full">
             <div className="px-2">
               <p className="text-2xl sm:text-3xl font-bold gradient-gold-text">2,500+</p>
-              <p className="text-xs sm:text-sm text-gray-400">Members</p>
+              <p className="text-xs sm:text-sm text-gray-400">{t("members")}</p>
             </div>
             <div className="hidden sm:block w-px h-12 bg-[var(--gold)]/20" />
             <div className="px-2">
               <p className="text-2xl sm:text-3xl font-bold gradient-gold-text">4.9</p>
-              <p className="text-xs sm:text-sm text-gray-400">Rating</p>
+              <p className="text-xs sm:text-sm text-gray-400">{t("ratingLabel")}</p>
             </div>
             <div className="hidden sm:block w-px h-12 bg-[var(--gold)]/20" />
             <div className="px-2">
               <p className="text-2xl sm:text-3xl font-bold gradient-gold-text">98%</p>
-              <p className="text-xs sm:text-sm text-gray-400">Satisfaction</p>
+              <p className="text-xs sm:text-sm text-gray-400">{t("satisfaction")}</p>
             </div>
           </div>
         </motion.div>

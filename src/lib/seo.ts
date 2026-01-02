@@ -343,6 +343,69 @@ export function generateBreadcrumbSchema(
   };
 }
 
+// Category collection page schema
+export function generateCategoryCollectionSchema(
+  category: { id: string; label: string },
+  creators: Array<{ slug: string; displayName: string; avatar?: string | null; cardImage?: string | null }>,
+  locale: string = 'en'
+) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    name: `Best ${category.label} OnlyFans Models & Creators`,
+    description: `Discover the best ${category.label.toLowerCase()} content creators on VipOnly - the #1 OnlyFans alternative with crypto payments and lower fees.`,
+    url: `${BASE_URL}/${locale}/creators/${category.id}`,
+    isPartOf: {
+      "@id": `${BASE_URL}/#website`,
+    },
+    about: {
+      "@type": "Thing",
+      name: category.label,
+    },
+    mainEntity: {
+      "@type": "ItemList",
+      name: `${category.label} Models on VipOnly`,
+      numberOfItems: creators.length,
+      itemListElement: creators.slice(0, 10).map((creator, index) => ({
+        "@type": "ListItem",
+        position: index + 1,
+        url: `${BASE_URL}/${locale}/${creator.slug}`,
+        name: creator.displayName,
+        image: creator.cardImage || creator.avatar,
+      })),
+    },
+  };
+}
+
+// Top creators / Best models page schema
+export function generateTopCreatorsSchema(
+  creators: Array<{ slug: string; displayName: string; avatar?: string | null; cardImage?: string | null }>,
+  locale: string = 'en'
+) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    name: "Best OnlyFans Models & Top Creators 2025",
+    description: "Discover the best models and top content creators on VipOnly - the #1 OnlyFans alternative with crypto payments and lower fees.",
+    url: `${BASE_URL}/${locale}/top-creators`,
+    isPartOf: {
+      "@id": `${BASE_URL}/#website`,
+    },
+    mainEntity: {
+      "@type": "ItemList",
+      name: "Top Creators on VipOnly",
+      numberOfItems: creators.length,
+      itemListElement: creators.slice(0, 10).map((creator, index) => ({
+        "@type": "ListItem",
+        position: index + 1,
+        url: `${BASE_URL}/${locale}/${creator.slug}`,
+        name: creator.displayName,
+        image: creator.cardImage || creator.avatar,
+      })),
+    },
+  };
+}
+
 // ItemList schema for creators directory
 export function generateCreatorsListSchema(creators: Creator[], locale: string = 'en') {
   return {

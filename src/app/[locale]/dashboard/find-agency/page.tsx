@@ -31,8 +31,36 @@ import {
   Handshake,
   XCircle,
   ExternalLink,
+  ShieldCheck,
+  DollarSign,
+  Timer,
+  Award,
 } from "lucide-react";
 import { Button, Card, Badge } from "@/components/ui";
+
+interface VerifiedStats {
+  activeCreators: number;
+  avgRevenuePerCreator: number;
+  revenueGrowth3m: number;
+  payoutSuccessRate: number;
+  avgPayoutDelayDays: number;
+  retention12m: number;
+  avgResponseTimeHours: number;
+  commissionRange: {
+    min: number;
+    max: number;
+    avg: number;
+  };
+  avgRating: number;
+  totalReviews: number;
+  badges: {
+    id: string;
+    label: string;
+    icon: string;
+    emoji: string;
+  }[];
+  calculatedAt: string;
+}
 
 interface Agency {
   id: string;
@@ -64,6 +92,7 @@ interface Agency {
   averageRating: number;
   reviewCount: number;
   applicationStatus: string | null;
+  verifiedStats: VerifiedStats | null;
 }
 
 interface AgenciesData {
@@ -637,6 +666,57 @@ export default function FindAgencyPage() {
                   </Badge>
                 </div>
 
+                {/* Verified Stats */}
+                {agency.verifiedStats && (
+                  <div className="mb-3 p-2.5 rounded-lg bg-[var(--gold)]/5 border border-[var(--gold)]/20">
+                    <div className="flex items-center gap-1.5 mb-2">
+                      <ShieldCheck className="w-3.5 h-3.5 text-[var(--gold)]" />
+                      <span className="text-[10px] font-medium text-[var(--gold)]">VERIFIED STATS</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="flex items-center gap-1.5">
+                        <DollarSign className="w-3 h-3 text-emerald-400" />
+                        <span className="text-[10px] text-gray-400">
+                          ${(agency.verifiedStats.avgRevenuePerCreator / 1000).toFixed(1)}k/creator
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <TrendingUp className="w-3 h-3 text-blue-400" />
+                        <span className="text-[10px] text-gray-400">
+                          {agency.verifiedStats.revenueGrowth3m > 0 ? "+" : ""}
+                          {agency.verifiedStats.revenueGrowth3m.toFixed(0)}% growth
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <ShieldCheck className="w-3 h-3 text-green-400" />
+                        <span className="text-[10px] text-gray-400">
+                          {agency.verifiedStats.payoutSuccessRate.toFixed(0)}% paid on time
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <Users className="w-3 h-3 text-purple-400" />
+                        <span className="text-[10px] text-gray-400">
+                          {agency.verifiedStats.retention12m.toFixed(0)}% retention
+                        </span>
+                      </div>
+                    </div>
+                    {/* Badges */}
+                    {agency.verifiedStats.badges.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-2 pt-2 border-t border-[var(--gold)]/10">
+                        {agency.verifiedStats.badges.slice(0, 3).map((badge) => (
+                          <span
+                            key={badge.id}
+                            className="px-1.5 py-0.5 rounded text-[9px] bg-[var(--gold)]/10 text-[var(--gold)] flex items-center gap-1"
+                            title={badge.label}
+                          >
+                            {badge.emoji} {badge.label}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {/* Services Provided */}
                 <div className="flex flex-wrap gap-1 mb-3">
                   {agency.providesChatting && (
@@ -844,6 +924,66 @@ export default function FindAgencyPage() {
                     </Badge>
                   )}
                 </div>
+
+                {/* Verified Stats Section */}
+                {selectedAgency.verifiedStats && (
+                  <div className="p-4 rounded-xl bg-gradient-to-br from-[var(--gold)]/10 to-[var(--gold)]/5 border border-[var(--gold)]/20">
+                    <div className="flex items-center gap-2 mb-4">
+                      <ShieldCheck className="w-5 h-5 text-[var(--gold)]" />
+                      <span className="font-medium text-[var(--gold)]">Verified Platform Statistics</span>
+                      <span className="text-xs text-gray-500 ml-auto">
+                        Updated {new Date(selectedAgency.verifiedStats.calculatedAt).toLocaleDateString()}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-white">
+                          ${(selectedAgency.verifiedStats.avgRevenuePerCreator / 1000).toFixed(1)}k
+                        </div>
+                        <div className="text-xs text-gray-400">Avg Revenue/Creator</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-white">
+                          {selectedAgency.verifiedStats.revenueGrowth3m > 0 ? "+" : ""}
+                          {selectedAgency.verifiedStats.revenueGrowth3m.toFixed(0)}%
+                        </div>
+                        <div className="text-xs text-gray-400">3-Month Growth</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-emerald-400">
+                          {selectedAgency.verifiedStats.payoutSuccessRate.toFixed(0)}%
+                        </div>
+                        <div className="text-xs text-gray-400">Paid On Time</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-white">
+                          {selectedAgency.verifiedStats.retention12m.toFixed(0)}%
+                        </div>
+                        <div className="text-xs text-gray-400">12m Retention</div>
+                      </div>
+                    </div>
+
+                    {/* Badges */}
+                    {selectedAgency.verifiedStats.badges.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-[var(--gold)]/20">
+                        {selectedAgency.verifiedStats.badges.map((badge) => (
+                          <span
+                            key={badge.id}
+                            className="px-3 py-1.5 rounded-full text-sm bg-[var(--gold)]/10 text-[var(--gold)] flex items-center gap-1.5"
+                          >
+                            {badge.emoji} {badge.label}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
+                    <p className="text-[10px] text-gray-500 mt-3 flex items-center gap-1">
+                      <ShieldCheck className="w-3 h-3" />
+                      These stats are calculated from verified platform data and cannot be modified
+                    </p>
+                  </div>
+                )}
 
                 {/* Services */}
                 <div>

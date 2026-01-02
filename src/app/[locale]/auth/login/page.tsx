@@ -7,10 +7,14 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { Crown, Mail, Lock, Eye, EyeOff, CheckCircle, AlertCircle } from "lucide-react";
 import { Button, Input, Card } from "@/components/ui";
+import { useTranslations } from "next-intl";
 
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const t = useTranslations("auth");
+  const tErrors = useTranslations("errors");
+
   // Only use callbackUrl if it's a simple path, not a full URL with query params
   const rawCallbackUrl = searchParams.get("callbackUrl");
   const callbackUrl = rawCallbackUrl && !rawCallbackUrl.includes("?")
@@ -60,12 +64,12 @@ function LoginForm() {
             return;
           }
         }
-        setError("Invalid email or password");
+        setError(t("invalidCredentials"));
       } else {
         router.push(callbackUrl);
       }
     } catch (err) {
-      setError("Something went wrong. Please try again.");
+      setError(tErrors("tryAgain"));
     } finally {
       setIsLoading(false);
     }
@@ -87,10 +91,10 @@ function LoginForm() {
       if (data.sent || data.message) {
         setResendSuccess(true);
       } else {
-        setError(data.error || "Failed to send verification email");
+        setError(data.error || tErrors("verificationFailed"));
       }
     } catch (err) {
-      setError("Failed to resend verification email");
+      setError(tErrors("verificationFailed"));
     } finally {
       setResendLoading(false);
     }
@@ -123,17 +127,17 @@ function LoginForm() {
         <Card variant="luxury" className="p-8">
           <div className="text-center mb-8">
             <h1 className="text-2xl font-semibold text-[var(--foreground)] mb-2">
-              Welcome Back
+              {t("loginTitle")}
             </h1>
             <p className="text-[var(--muted)]">
-              Sign in to access your exclusive content
+              {t("loginSubtitle")}
             </p>
           </div>
 
           {verified && (
             <div className="mb-6 p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-sm flex items-center gap-2">
               <CheckCircle className="w-5 h-5 flex-shrink-0" />
-              <span>Email verified successfully! You can now sign in.</span>
+              <span>{t("emailVerifiedSuccess")}</span>
             </div>
           )}
 
@@ -141,12 +145,12 @@ function LoginForm() {
             <div className="mb-6 p-4 rounded-lg bg-[var(--error)]/10 border border-[var(--error)]/30 text-[var(--error)] text-sm flex items-center gap-2">
               <AlertCircle className="w-5 h-5 flex-shrink-0" />
               <span>
-                {urlError === "expired_token" && "Verification link has expired. Please register again."}
-                {urlError === "invalid_token" && "Invalid verification link."}
-                {urlError === "missing_token" && "Missing verification token."}
-                {urlError === "user_not_found" && "User not found."}
-                {urlError === "verification_failed" && "Verification failed. Please try again."}
-                {!["expired_token", "invalid_token", "missing_token", "user_not_found", "verification_failed"].includes(urlError) && "An error occurred."}
+                {urlError === "expired_token" && tErrors("expiredToken")}
+                {urlError === "invalid_token" && tErrors("invalidLink")}
+                {urlError === "missing_token" && tErrors("missingToken")}
+                {urlError === "user_not_found" && tErrors("userNotFound")}
+                {urlError === "verification_failed" && tErrors("verificationFailed")}
+                {!["expired_token", "invalid_token", "missing_token", "user_not_found", "verification_failed"].includes(urlError) && tErrors("somethingWentWrong")}
               </span>
             </div>
           )}
@@ -156,14 +160,14 @@ function LoginForm() {
               <div className="flex items-start gap-3">
                 <Mail className="w-5 h-5 flex-shrink-0 mt-0.5" />
                 <div className="flex-1">
-                  <p className="font-medium mb-1">Email not verified</p>
+                  <p className="font-medium mb-1">{t("emailNotVerified")}</p>
                   <p className="text-sm opacity-80 mb-3">
-                    Please verify your email address before signing in. Check your inbox for the verification link.
+                    {t("verifyEmailPrompt")}
                   </p>
                   {resendSuccess ? (
                     <div className="flex items-center gap-2 text-emerald-400">
                       <CheckCircle className="w-4 h-4" />
-                      <span className="text-sm">Verification email sent!</span>
+                      <span className="text-sm">{t("verificationSent")}</span>
                     </div>
                   ) : (
                     <Button
@@ -175,7 +179,7 @@ function LoginForm() {
                       className="border-yellow-500/50 text-yellow-400 hover:bg-yellow-500/10"
                     >
                       <Mail className="w-4 h-4 mr-2" />
-                      Resend verification email
+                      {t("resendVerification")}
                     </Button>
                   )}
                 </div>
@@ -194,7 +198,7 @@ function LoginForm() {
               <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--muted)]" />
               <Input
                 type="email"
-                placeholder="Email address"
+                placeholder={t("email")}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="pl-12"
@@ -206,7 +210,7 @@ function LoginForm() {
               <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--muted)]" />
               <Input
                 type={showPassword ? "text" : "password"}
-                placeholder="Password"
+                placeholder={t("password")}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="pl-12 pr-12"
@@ -231,13 +235,13 @@ function LoginForm() {
                   type="checkbox"
                   className="w-4 h-4 rounded border-[var(--border)] bg-[var(--surface)] text-[var(--gold)] focus:ring-[var(--gold)]"
                 />
-                <span className="text-sm text-[var(--muted)]">Remember me</span>
+                <span className="text-sm text-[var(--muted)]">{t("rememberMe")}</span>
               </label>
               <Link
                 href="/auth/forgot-password"
                 className="text-sm text-[var(--gold)] hover:text-[var(--gold-light)]"
               >
-                Forgot password?
+                {t("forgotPassword")}
               </Link>
             </div>
 
@@ -248,7 +252,7 @@ function LoginForm() {
               className="w-full"
               isLoading={isLoading}
             >
-              Sign In
+              {t("signIn")}
             </Button>
           </form>
 
@@ -258,7 +262,7 @@ function LoginForm() {
             </div>
             <div className="relative flex justify-center">
               <span className="px-4 bg-[var(--surface-card)] text-sm text-[var(--muted)]">
-                Or continue with
+                {t("orContinueWith")}
               </span>
             </div>
           </div>
@@ -288,16 +292,16 @@ function LoginForm() {
                 d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
               />
             </svg>
-            Continue with Google
+            {t("google")}
           </Button>
 
           <p className="text-center mt-8 text-sm text-[var(--muted)]">
-            Don&apos;t have an account?{" "}
+            {t("noAccount")}{" "}
             <Link
               href="/auth/register"
               className="text-[var(--gold)] hover:text-[var(--gold-light)] font-medium"
             >
-              Sign up
+              {t("signUp")}
             </Link>
           </p>
         </Card>

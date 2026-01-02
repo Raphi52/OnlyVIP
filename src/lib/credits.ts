@@ -34,7 +34,8 @@ export type CreditTransactionType =
   | "PPV"
   | "EXPIRATION"
   | "ADMIN_GRANT"
-  | "RECURRING_GRANT";
+  | "RECURRING_GRANT"
+  | "AI_CHAT"; // Coût par réponse AI (débité à l'agence/créateur)
 
 /**
  * Get user's credit balances (paid and bonus separately)
@@ -563,6 +564,130 @@ export async function grantSubscriptionCredits(
   }
 
   return { creditsGranted: plan.initialCredits };
+}
+
+/**
+ * Charge creator/agency for AI chat response
+ * Returns the userId that was charged (agency owner if agency, else creator)
+ */
+export async function chargeAiChatCredit(
+  creatorSlug: string,
+  options?: {
+    messageId?: string;
+    conversationId?: string;
+  }
+): Promise<{
+  success: boolean;
+  charged: boolean;
+  chargedUserId?: string;
+  newBalance?: number;
+  error?: string;
+}> {
+  // Get creator and their agency
+  const creator = await prisma.creator.findUnique({
+    where: { slug: creatorSlug },
+    select: {
+      userId: true,
+      agencyId: true,
+      agency: {
+        select: {
+          ownerId: true,
+        },
+      },
+    },
+  });
+
+  if (!creator) {
+    return { success: false, charged: false, error: "Creator not found" };
+  }
+
+  // Determine who to charge: agency owner if agency exists, else creator
+  const userIdToCharge = creator.agency?.ownerId || creator.userId;
+
+  if (!userIdToCharge) {
+    return { success: false, charged: false, error: "No user to charge" };
+  }
+
+  // Check balance
+  const balances = await getCreditBalances(userIdToCharge);
+
+  if (balances.paid < 1) {
+    // Not enough credits - AI response will not be sent
+    return {
+      success: true,
+      charged: false,
+      chargedUserId: userIdToCharge,
+      error: "Insufficient credits for AI response",
+    };
+  }
+
+  try {
+    // Spend 1 credit (paid only, no bonus for AI)
+    const result = await spendCredits(
+      userIdToCharge,
+      1,
+      "AI_CHAT",
+      {
+        allowBonus: false,
+        description: `AI response for ${creatorSlug}`,
+        messageId: options?.messageId,
+      }
+    );
+
+    return {
+      success: true,
+      charged: true,
+      chargedUserId: userIdToCharge,
+      newBalance: result.newBalance,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      charged: false,
+      chargedUserId: userIdToCharge,
+      error: error instanceof Error ? error.message : "Failed to charge credit",
+    };
+  }
+}
+
+/**
+ * Check if creator/agency has credits for AI chat
+ */
+export async function hasAiChatCredits(creatorSlug: string): Promise<{
+  hasCredits: boolean;
+  balance: number;
+  chargedUserId?: string;
+}> {
+  const creator = await prisma.creator.findUnique({
+    where: { slug: creatorSlug },
+    select: {
+      userId: true,
+      agencyId: true,
+      agency: {
+        select: {
+          ownerId: true,
+        },
+      },
+    },
+  });
+
+  if (!creator) {
+    return { hasCredits: false, balance: 0 };
+  }
+
+  const userIdToCharge = creator.agency?.ownerId || creator.userId;
+
+  if (!userIdToCharge) {
+    return { hasCredits: false, balance: 0 };
+  }
+
+  const balances = await getCreditBalances(userIdToCharge);
+
+  return {
+    hasCredits: balances.paid >= 1,
+    balance: balances.paid,
+    chargedUserId: userIdToCharge,
+  };
 }
 
 /**

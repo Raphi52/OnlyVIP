@@ -13,6 +13,14 @@ import {
   checkForToneSwitch,
   switchPersonality,
 } from "@/lib/ai-personality-selector";
+import { shouldHandoff, createHandoff } from "@/lib/handoff-manager";
+import { detectObjection, handleObjection } from "@/lib/objection-handler";
+import { getLeadScore } from "@/lib/lead-scoring";
+import { formatMemoriesForPrompt, extractMemories } from "@/lib/memory-extractor";
+import { isAiOnlyFan, updateFanQualification } from "@/lib/fan-qualifier";
+import { selectModel, type LLMContext } from "@/lib/llm-router";
+import { hasAiChatCredits, chargeAiChatCredit } from "@/lib/credits";
+import { type AiProvider } from "@/lib/ai-providers";
 
 // This endpoint should be called by a cron job every 30 seconds
 // or can be triggered manually for testing
@@ -64,6 +72,82 @@ export async function GET(request: NextRequest) {
 
         if (!originalMessage) {
           throw new Error("Original message not found");
+        }
+
+        const fanUserId = originalMessage.senderId;
+
+        // ===== CHECK HANDOFF THRESHOLD =====
+        // Before generating AI response, check if fan should be handed off to human
+        const handoffResult = await shouldHandoff(
+          queueItem.conversationId,
+          originalMessage.text || ""
+        );
+
+        if (handoffResult.shouldHandoff) {
+          console.log(`[AI] Handoff triggered for ${queueItem.conversationId}: ${handoffResult.trigger}`);
+
+          // Create handoff to human chatter
+          await createHandoff(
+            queueItem.conversationId,
+            handoffResult.trigger || "spending_threshold",
+            handoffResult.triggerValue
+          );
+
+          // Mark queue as skipped (handoff)
+          await prisma.aiResponseQueue.update({
+            where: { id: queueItem.id },
+            data: {
+              status: "FAILED",
+              error: `Handoff triggered: ${handoffResult.trigger}`,
+              processedAt: new Date(),
+            },
+          });
+
+          results.push({ id: queueItem.id, status: "HANDOFF", error: handoffResult.trigger });
+          continue;
+        }
+
+        // ===== CHECK IF CREATOR USES CUSTOM API KEY =====
+        // First, get creator's API key settings to determine if we need to check credits
+        const creatorKeySettings = await prisma.creator.findUnique({
+          where: { slug: queueItem.creatorSlug },
+          select: { aiUseCustomKey: true, aiApiKey: true },
+        });
+        const usingCustomKey = creatorKeySettings?.aiUseCustomKey && creatorKeySettings?.aiApiKey;
+
+        // ===== CHECK AI CREDITS (1 credit per response) - SKIP IF USING CUSTOM KEY =====
+        if (!usingCustomKey) {
+          const creditCheck = await hasAiChatCredits(queueItem.creatorSlug);
+          if (!creditCheck.hasCredits) {
+            console.log(`[AI] No credits for ${queueItem.creatorSlug} (balance: ${creditCheck.balance}) - skipping AI response`);
+
+            await prisma.aiResponseQueue.update({
+              where: { id: queueItem.id },
+              data: {
+                status: "FAILED",
+                error: "Insufficient AI credits",
+                processedAt: new Date(),
+              },
+            });
+
+            results.push({ id: queueItem.id, status: "NO_CREDITS", error: "Insufficient AI credits" });
+            continue;
+          }
+        } else {
+          console.log(`[AI] Creator ${queueItem.creatorSlug} using custom API key - no credits needed`);
+        }
+
+        // ===== GET LEAD SCORE FOR LLM SELECTION =====
+        const leadScore = await getLeadScore(fanUserId, queueItem.creatorSlug);
+        const fanProfile = await prisma.fanProfile.findUnique({
+          where: {
+            fanUserId_creatorSlug: { fanUserId, creatorSlug: queueItem.creatorSlug },
+          },
+        });
+
+        // ===== CHECK IF FAN IS AI-ONLY (time waster) =====
+        if (fanProfile?.aiOnlyMode) {
+          console.log(`[AI] Fan ${fanUserId} is AI-only mode - using shorter responses`);
         }
 
         // Get conversation with AI personality assignment (including media settings)
@@ -179,12 +263,17 @@ export async function GET(request: NextRequest) {
           }
         }
 
-        // Get creator info
+        // Get creator info including AI provider settings
         const creator = await prisma.creator.findUnique({
           where: { slug: queueItem.creatorSlug },
           select: {
             userId: true,
             displayName: true,
+            // AI Provider Settings
+            aiProvider: true,
+            aiModel: true,
+            aiApiKey: true,
+            aiUseCustomKey: true,
           },
         });
 
@@ -248,15 +337,85 @@ export async function GET(request: NextRequest) {
           };
         }
 
-        // Generate AI response
-        // If TEASE, we'll use the teaser text as part of the response
+        // ===== OBJECTION DETECTION =====
+        // Check if fan is expressing objection (too expensive, maybe later, etc.)
+        const objectionResult = detectObjection(originalMessage.text || "");
+
         let responseText: string;
-        if (mediaDecision.type === "TEASE" && mediaDecision.teaseText) {
+
+        if (objectionResult) {
+          console.log(`[AI] Objection detected: ${objectionResult.patternName} (${objectionResult.strategy})`);
+
+          // Handle objection with counter-offer
+          const objectionResponse = await handleObjection(
+            queueItem.conversationId,
+            queueItem.messageId,
+            originalMessage.text || "",
+            {
+              creatorSlug: queueItem.creatorSlug,
+              fanUserId,
+            }
+          );
+
+          if (objectionResponse) {
+            responseText = objectionResponse.text;
+          } else {
+            // Fallback to normal AI response if objection handling fails
+            responseText = await generateAiResponse(context, personality, suggestedMediaForAI, {
+              provider: (creator.aiProvider as AiProvider) || "anthropic",
+              model: creator.aiModel || "claude-haiku-4-5-20241022",
+              apiKey: creator.aiUseCustomKey ? creator.aiApiKey : null,
+            });
+          }
+        } else if (mediaDecision.type === "TEASE" && mediaDecision.teaseText) {
           // For teasing, generate a response that incorporates the tease
           responseText = mediaDecision.teaseText;
         } else {
-          responseText = await generateAiResponse(context, personality, suggestedMediaForAI);
+          // ===== GET FAN MEMORIES FOR PERSONALIZATION =====
+          const memoriesPrompt = await formatMemoriesForPrompt(fanUserId, queueItem.creatorSlug);
+          if (memoriesPrompt) {
+            console.log(`[AI] Injecting fan memories: ${memoriesPrompt.substring(0, 100)}...`);
+          }
+
+          // ===== SELECT LLM MODEL BASED ON CONTEXT =====
+          const llmContext: LLMContext = {
+            conversationType: objectionResult ? "closing" : "normal",
+            fanSpendingTier: "regular",
+            leadScore: leadScore?.overall,
+            isObjectionHandling: !!objectionResult,
+          };
+          const selectedModel = selectModel(llmContext);
+          console.log(`[AI] Selected model: ${selectedModel} for fan ${fanUserId || "unknown"}`);
+
+          // Generate AI response with memories context and provider settings
+          responseText = await generateAiResponse(
+            context,
+            personality,
+            suggestedMediaForAI,
+            {
+              fanMemories: memoriesPrompt || undefined,
+              isAiOnlyFan: fanProfile?.aiOnlyMode || false,
+              // Multi-provider AI settings
+              provider: (creator.aiProvider as AiProvider) || "anthropic",
+              model: creator.aiModel || "claude-haiku-4-5-20241022",
+              apiKey: creator.aiUseCustomKey ? creator.aiApiKey : null,
+            }
+          );
         }
+
+        // ===== EXTRACT MEMORIES FROM FAN MESSAGE (async, non-blocking) =====
+        // Schedule memory extraction in background
+        extractMemories(
+          queueItem.conversationId,
+          fanUserId,
+          queueItem.creatorSlug,
+          { sourceMessageId: queueItem.messageId, useLLM: false } // Quick extraction only
+        ).catch((err) => console.error("[AI] Memory extraction error:", err));
+
+        // ===== UPDATE FAN QUALIFICATION (async, non-blocking) =====
+        updateFanQualification(fanUserId, queueItem.creatorSlug).catch((err) =>
+          console.error("[AI] Qualification update error:", err)
+        );
 
         // Determine if this message should be PPV and the price
         const shouldBePPV = mediaDecision.type === "PPV" && mediaDecision.media !== null;
@@ -301,6 +460,11 @@ export async function GET(request: NextRequest) {
         }
 
         // ===== AUTO MODE: Send message directly =====
+        // Calculate response time in seconds
+        const responseTimeSeconds = Math.round(
+          (Date.now() - new Date(originalMessage.createdAt).getTime()) / 1000
+        );
+
         // Create the response message as the creator
         const aiMessage = await prisma.message.create({
           data: {
@@ -311,6 +475,8 @@ export async function GET(request: NextRequest) {
             // AI personality attribution
             aiPersonalityId: conversation.aiPersonalityId,
             isAiGenerated: true,
+            // Track response time for analytics
+            responseTimeSeconds,
             // Only set PPV for actual PPV media, not for free or tease
             isPPV: shouldBePPV,
             ppvPrice: ppvPrice,
@@ -385,6 +551,22 @@ export async function GET(request: NextRequest) {
             processedAt: new Date(),
           },
         });
+
+        // ===== CHARGE 1 CREDIT FOR AI RESPONSE (SKIP IF CUSTOM KEY) =====
+        if (!usingCustomKey) {
+          const chargeResult = await chargeAiChatCredit(queueItem.creatorSlug, {
+            messageId: aiMessage.id,
+            conversationId: queueItem.conversationId,
+          });
+
+          if (chargeResult.charged) {
+            console.log(`[AI] Charged 1 credit to ${chargeResult.chargedUserId} (new balance: ${chargeResult.newBalance})`);
+          } else {
+            console.warn(`[AI] Failed to charge credit: ${chargeResult.error}`);
+          }
+        } else {
+          console.log(`[AI] Using custom API key - no credit charged for ${queueItem.creatorSlug}`);
+        }
 
         results.push({ id: queueItem.id, status: "COMPLETED" });
         console.log(`[AI] Sent response for message ${queueItem.messageId}`);

@@ -10,8 +10,7 @@ import { User, LogOut, Crown, MessageCircle, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui";
 import { getCreator, Creator } from "@/lib/creators";
 import { CreditBalance } from "@/components/layout/CreditBalance";
-import { LanguageSwitcher } from "@/components/LanguageSwitcher";
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 
 interface NavbarProps {
   creatorSlug?: string;
@@ -21,6 +20,9 @@ export function Navbar({ creatorSlug = "miacosta" }: NavbarProps) {
   const { data: session, status } = useSession();
   const router = useRouter();
   const locale = useLocale();
+  const t = useTranslations("nav");
+  const tCreator = useTranslations("creator");
+  const tDashboard = useTranslations("dashboard");
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [hasVipAccess, setHasVipAccess] = useState(false);
@@ -166,7 +168,7 @@ export function Navbar({ creatorSlug = "miacosta" }: NavbarProps) {
   }, []);
 
   const navLinks = [
-    { href: `${basePath}/gallery`, label: "Gallery", icon: Sparkles },
+    { href: `${basePath}/gallery`, label: t("gallery"), icon: Sparkles },
   ];
 
   return (
@@ -215,7 +217,7 @@ export function Navbar({ creatorSlug = "miacosta" }: NavbarProps) {
                 </span>
                 <div className="flex items-center gap-1.5 text-xs text-gray-500">
                   <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
-                  Online now
+                  {t("online")}
                 </div>
               </div>
             </motion.div>
@@ -223,7 +225,6 @@ export function Navbar({ creatorSlug = "miacosta" }: NavbarProps) {
 
           {/* Desktop Navigation - Centered */}
           <div className="hidden md:flex items-center gap-3">
-            <LanguageSwitcher />
             {navLinks.map((link, index) => (
               <motion.div
                 key={link.href}
@@ -252,7 +253,7 @@ export function Navbar({ creatorSlug = "miacosta" }: NavbarProps) {
                 className="flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-medium text-gray-300 border border-transparent hover:text-[var(--gold)] hover:bg-[var(--gold)]/10 hover:border-[var(--gold)]/30 transition-all duration-300 disabled:opacity-50"
               >
                 <MessageCircle className={`w-4 h-4 ${isStartingChat ? "animate-pulse" : ""}`} />
-                Send Message
+                {tCreator("sendMessage")}
               </button>
             </motion.div>
           </div>
@@ -326,8 +327,8 @@ export function Navbar({ creatorSlug = "miacosta" }: NavbarProps) {
                         </div>
                         <div className="py-2">
                           {[
-                            { href: `/${locale}/dashboard`, icon: Crown, label: "Dashboard", color: "text-[var(--gold)]" },
-                            { href: `/${locale}/dashboard/messages`, icon: MessageCircle, label: "Messages", color: "text-blue-400" },
+                            { href: `/${locale}/dashboard`, icon: Crown, label: t("dashboard"), color: "text-[var(--gold)]" },
+                            { href: `/${locale}/dashboard/messages`, icon: MessageCircle, label: t("messages"), color: "text-blue-400" },
                           ].map((item) => (
                             <Link
                               key={item.href}
@@ -344,7 +345,7 @@ export function Navbar({ creatorSlug = "miacosta" }: NavbarProps) {
                             className="w-full flex items-center gap-3 px-5 py-3 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors"
                           >
                             <LogOut className="w-4 h-4" />
-                            Sign out
+                            {t("signOut")}
                           </button>
                         </div>
                       </motion.div>
@@ -361,7 +362,7 @@ export function Navbar({ creatorSlug = "miacosta" }: NavbarProps) {
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                   >
-                    Sign in
+                    {t("signIn")}
                   </motion.button>
                 </Link>
                 <Link href={`${basePath}/auth/register`}>
@@ -378,7 +379,7 @@ export function Navbar({ creatorSlug = "miacosta" }: NavbarProps) {
 
                     <span className="relative flex items-center gap-2 text-sm font-bold text-black">
                       <Crown className="w-4 h-4" />
-                      Join VIP
+                      {t("joinVip")}
                     </span>
                   </motion.button>
                 </Link>
@@ -394,7 +395,7 @@ export function Navbar({ creatorSlug = "miacosta" }: NavbarProps) {
             disabled={isStartingChat || status === "loading" || isCheckingVip}
           >
             <MessageCircle className={`w-4 h-4 ${isStartingChat || isCheckingVip ? "animate-pulse" : ""}`} />
-            <span>{(status === "loading" || isCheckingVip) ? "..." : "Message"}</span>
+            <span>{(status === "loading" || isCheckingVip) ? "..." : tCreator("message")}</span>
           </button>
         </div>
       </div>

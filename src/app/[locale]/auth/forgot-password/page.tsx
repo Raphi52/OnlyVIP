@@ -5,8 +5,12 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { Crown, Mail, ArrowLeft, CheckCircle } from "lucide-react";
 import { Button, Input, Card } from "@/components/ui";
+import { useTranslations } from "next-intl";
 
 export default function ForgotPasswordPage() {
+  const t = useTranslations("auth");
+  const tErrors = useTranslations("errors");
+
   const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -28,10 +32,10 @@ export default function ForgotPasswordPage() {
         setIsSubmitted(true);
       } else {
         const data = await res.json();
-        setError(data.error || "Something went wrong");
+        setError(data.error || tErrors("tryAgain"));
       }
     } catch (err) {
-      setError("Something went wrong. Please try again.");
+      setError(tErrors("tryAgain"));
     } finally {
       setIsLoading(false);
     }
@@ -62,15 +66,15 @@ export default function ForgotPasswordPage() {
                 <CheckCircle className="w-8 h-8 text-emerald-400" />
               </div>
               <h1 className="text-2xl font-semibold text-[var(--foreground)] mb-2">
-                Check your email
+                {t("resetLinkSent")}
               </h1>
               <p className="text-[var(--muted)] mb-6">
-                If an account exists with <strong>{email}</strong>, you will receive a password reset link.
+                {email}
               </p>
               <Link href="/auth/login">
                 <Button variant="outline" className="w-full">
                   <ArrowLeft className="w-4 h-4 mr-2" />
-                  Back to login
+                  {t("backToLogin")}
                 </Button>
               </Link>
             </div>
@@ -78,10 +82,10 @@ export default function ForgotPasswordPage() {
             <>
               <div className="text-center mb-8">
                 <h1 className="text-2xl font-semibold text-[var(--foreground)] mb-2">
-                  Forgot password?
+                  {t("resetPassword")}
                 </h1>
                 <p className="text-[var(--muted)]">
-                  No worries, we&apos;ll send you reset instructions.
+                  {t("resetPasswordSubtitle")}
                 </p>
               </div>
 
@@ -96,7 +100,7 @@ export default function ForgotPasswordPage() {
                   <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--muted)]" />
                   <Input
                     type="email"
-                    placeholder="Email address"
+                    placeholder={t("email")}
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="pl-12"
@@ -111,7 +115,7 @@ export default function ForgotPasswordPage() {
                   className="w-full"
                   isLoading={isLoading}
                 >
-                  Reset password
+                  {t("sendResetLink")}
                 </Button>
               </form>
 
@@ -121,7 +125,7 @@ export default function ForgotPasswordPage() {
                   className="text-sm text-[var(--muted)] hover:text-[var(--foreground)] inline-flex items-center gap-1"
                 >
                   <ArrowLeft className="w-4 h-4" />
-                  Back to login
+                  {t("backToLogin")}
                 </Link>
               </div>
             </>

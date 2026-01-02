@@ -15,6 +15,13 @@ import {
   Users,
   Bot,
   Crown,
+  Server,
+  Key,
+  Coins,
+  Eye,
+  EyeOff,
+  RefreshCw,
+  CheckCircle,
 } from "lucide-react";
 import { Button, Card } from "@/components/ui";
 import { useAdminCreator } from "@/components/providers/AdminCreatorContext";
@@ -26,12 +33,64 @@ interface Agency {
   logo: string | null;
   website: string | null;
   aiEnabled: boolean;
+  // AI Provider Settings
+  aiProvider: string;
+  aiModel: string;
+  aiApiKeyHash: string | null;
+  aiUseCustomKey: boolean;
   stats: {
     creatorsCount: number;
     chattersCount: number;
     aiPersonalitiesCount: number;
   };
 }
+
+// AI Provider configurations
+type AiProvider = "anthropic" | "openai" | "openrouter";
+
+interface AiModel {
+  id: string;
+  name: string;
+  tier: "free" | "fast" | "balanced" | "premium";
+  default?: boolean;
+}
+
+const AI_PROVIDERS: Record<AiProvider, { name: string; models: AiModel[]; keyPlaceholder: string }> = {
+  anthropic: {
+    name: "Anthropic (Claude)",
+    models: [
+      { id: "claude-haiku-4-5-20241022", name: "Claude Haiku 4.5", tier: "fast", default: true },
+      { id: "claude-sonnet-4-20250514", name: "Claude Sonnet 4", tier: "balanced" },
+      { id: "claude-opus-4-20250514", name: "Claude Opus 4", tier: "premium" },
+    ],
+    keyPlaceholder: "sk-ant-api03-...",
+  },
+  openai: {
+    name: "OpenAI (GPT)",
+    models: [
+      { id: "gpt-4o-mini", name: "GPT-4o Mini", tier: "fast", default: true },
+      { id: "gpt-4o", name: "GPT-4o", tier: "balanced" },
+      { id: "gpt-4-turbo", name: "GPT-4 Turbo", tier: "premium" },
+    ],
+    keyPlaceholder: "sk-proj-...",
+  },
+  openrouter: {
+    name: "OpenRouter",
+    models: [
+      { id: "mistralai/mistral-7b-instruct", name: "Mistral 7B (Free)", tier: "free", default: true },
+      { id: "meta-llama/llama-3.1-70b-instruct", name: "Llama 3.1 70B", tier: "fast" },
+      { id: "anthropic/claude-3.5-sonnet", name: "Claude 3.5 Sonnet", tier: "balanced" },
+    ],
+    keyPlaceholder: "sk-or-v1-...",
+  },
+};
+
+const TIER_COLORS: Record<string, string> = {
+  free: "text-green-400 bg-green-500/10",
+  fast: "text-blue-400 bg-blue-500/10",
+  balanced: "text-purple-400 bg-purple-500/10",
+  premium: "text-amber-400 bg-amber-500/10",
+};
 
 export default function AgencySettingsPage() {
   const { data: session, status } = useSession();
@@ -52,6 +111,17 @@ export default function AgencySettingsPage() {
 
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // AI Provider Settings
+  const [aiProvider, setAiProvider] = useState<AiProvider>("anthropic");
+  const [aiModel, setAiModel] = useState("claude-haiku-4-5-20241022");
+  const [aiUseCustomKey, setAiUseCustomKey] = useState(false);
+  const [aiApiKey, setAiApiKey] = useState("");
+  const [aiApiKeyHash, setAiApiKeyHash] = useState<string | null>(null);
+  const [showApiKey, setShowApiKey] = useState(false);
+  const [isValidatingKey, setIsValidatingKey] = useState(false);
+  const [keyValidation, setKeyValidation] = useState<{ valid: boolean; error?: string } | null>(null);
+  const [isSavingAi, setIsSavingAi] = useState(false);
 
   const isAgencyOwner = (session?.user as any)?.isAgencyOwner === true;
   const { refreshAgency } = useAdminCreator();
@@ -79,6 +149,11 @@ export default function AgencySettingsPage() {
           setName(agencyData.name);
           setWebsite(agencyData.website || "");
           setLogoPreview(agencyData.logo);
+          // Load AI Provider Settings
+          setAiProvider((agencyData.aiProvider as AiProvider) || "anthropic");
+          setAiModel(agencyData.aiModel || "claude-haiku-4-5-20241022");
+          setAiUseCustomKey(agencyData.aiUseCustomKey || false);
+          setAiApiKeyHash(agencyData.aiApiKeyHash || null);
         }
       }
     } catch (error) {
@@ -193,6 +268,103 @@ export default function AgencySettingsPage() {
     } finally {
       setIsDeleting(false);
       setShowDeleteModal(false);
+    }
+  };
+
+  // AI Provider handlers
+  const handleProviderChange = (newProvider: AiProvider) => {
+    setAiProvider(newProvider);
+    const defaultModel = AI_PROVIDERS[newProvider].models.find((m) => m.default);
+    setAiModel(defaultModel?.id || AI_PROVIDERS[newProvider].models[0].id);
+    setKeyValidation(null);
+    setAiApiKey("");
+  };
+
+  const handleValidateKey = async () => {
+    if (!aiApiKey) return;
+    setIsValidatingKey(true);
+    setKeyValidation(null);
+
+    try {
+      const res = await fetch("/api/ai/validate-key", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ provider: aiProvider, apiKey: aiApiKey }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setKeyValidation(data);
+      } else {
+        setKeyValidation({ valid: false, error: "Failed to validate key" });
+      }
+    } catch {
+      setKeyValidation({ valid: false, error: "Network error" });
+    } finally {
+      setIsValidatingKey(false);
+    }
+  };
+
+  const handleSaveAi = async () => {
+    if (!agency) return;
+    setIsSavingAi(true);
+    setMessage(null);
+
+    try {
+      const res = await fetch("/api/agency/ai-settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          agencyId: agency.id,
+          aiProvider,
+          aiModel,
+          aiUseCustomKey,
+          aiApiKey: aiApiKey || undefined,
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.aiApiKeyHash) {
+          setAiApiKeyHash(data.aiApiKeyHash);
+        }
+        setAiApiKey("");
+        setMessage({ type: "success", text: "AI settings saved!" });
+        setTimeout(() => setMessage(null), 3000);
+      } else {
+        const error = await res.json();
+        setMessage({ type: "error", text: error.error || "Failed to save AI settings" });
+      }
+    } catch (error) {
+      console.error("Error saving AI settings:", error);
+      setMessage({ type: "error", text: "Failed to save AI settings" });
+    } finally {
+      setIsSavingAi(false);
+    }
+  };
+
+  const handleClearApiKey = async () => {
+    if (!agency) return;
+
+    try {
+      const res = await fetch("/api/agency/ai-settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          agencyId: agency.id,
+          aiApiKey: null,
+          aiUseCustomKey: false,
+        }),
+      });
+
+      if (res.ok) {
+        setAiApiKey("");
+        setAiApiKeyHash(null);
+        setAiUseCustomKey(false);
+        setKeyValidation(null);
+      }
+    } catch (error) {
+      console.error("Error clearing key:", error);
     }
   };
 
@@ -343,11 +515,239 @@ export default function AgencySettingsPage() {
           </Card>
         </motion.div>
 
+        {/* AI Provider Settings Card */}
+        {agency?.aiEnabled && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+          >
+            <Card variant="default" className="p-6">
+              <h2 className="text-xl font-semibold text-[var(--foreground)] mb-4 flex items-center gap-2">
+                <Server className="w-5 h-5 text-purple-400" />
+                AI Provider & Model
+              </h2>
+              <p className="text-sm text-[var(--muted)] mb-6">
+                Configure the default AI provider for all creators. Use your own API key for free messaging.
+              </p>
+
+              {/* Provider Selection */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
+                {(Object.keys(AI_PROVIDERS) as AiProvider[]).map((provider) => (
+                  <button
+                    key={provider}
+                    onClick={() => handleProviderChange(provider)}
+                    className={`p-4 rounded-xl border text-left transition-all ${
+                      aiProvider === provider
+                        ? "border-purple-500 bg-purple-500/10"
+                        : "border-[var(--border)] hover:border-purple-500/50"
+                    }`}
+                  >
+                    <p className="font-medium text-[var(--foreground)]">{AI_PROVIDERS[provider].name}</p>
+                    <p className="text-xs text-[var(--muted)]">{AI_PROVIDERS[provider].models.length} models</p>
+                  </button>
+                ))}
+              </div>
+
+              {/* Model Selection */}
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-[var(--foreground)] mb-2">Model</label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {AI_PROVIDERS[aiProvider].models.map((model) => (
+                    <button
+                      key={model.id}
+                      onClick={() => setAiModel(model.id)}
+                      className={`p-3 rounded-xl border text-left transition-all ${
+                        aiModel === model.id
+                          ? "border-purple-500 bg-purple-500/10"
+                          : "border-[var(--border)] hover:border-purple-500/50"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <p className="font-medium text-[var(--foreground)]">{model.name}</p>
+                        <span className={`px-2 py-0.5 rounded-full text-xs ${TIER_COLORS[model.tier]}`}>
+                          {model.tier}
+                        </span>
+                      </div>
+                      {model.default && (
+                        <p className="text-xs text-[var(--muted)] mt-1">Recommended</p>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* API Key Section */}
+              <div className="p-4 rounded-xl bg-gradient-to-r from-purple-500/10 to-amber-500/10 border border-[var(--border)]">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <Key className="w-5 h-5 text-purple-400" />
+                    <div>
+                      <p className="font-medium text-[var(--foreground)]">API Key</p>
+                      <p className="text-xs text-[var(--muted)]">
+                        {aiUseCustomKey && aiApiKeyHash ? "Using your custom key" : "Using platform key"}
+                      </p>
+                    </div>
+                  </div>
+                  <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full ${
+                    aiUseCustomKey && aiApiKeyHash
+                      ? "bg-emerald-500/20 text-emerald-400"
+                      : "bg-purple-500/20 text-purple-400"
+                  }`}>
+                    <Coins className="w-4 h-4" />
+                    <span className="text-sm font-medium">
+                      {aiUseCustomKey && aiApiKeyHash ? "FREE" : "1 credit/msg"}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Toggle Custom Key */}
+                <div className="flex items-center justify-between p-3 rounded-lg bg-[var(--background)] mb-4">
+                  <div>
+                    <p className="text-sm font-medium text-[var(--foreground)]">Use my own API key</p>
+                    <p className="text-xs text-[var(--muted)]">No credits charged per message</p>
+                  </div>
+                  <button
+                    onClick={() => setAiUseCustomKey(!aiUseCustomKey)}
+                    className={`relative w-12 h-6 rounded-full transition-colors ${
+                      aiUseCustomKey ? "bg-emerald-500" : "bg-[var(--border)]"
+                    }`}
+                  >
+                    <span
+                      className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${
+                        aiUseCustomKey ? "left-7" : "left-1"
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                {/* API Key Input */}
+                {aiUseCustomKey && (
+                  <div className="space-y-3">
+                    {/* Show existing key hash */}
+                    {aiApiKeyHash && !aiApiKey && (
+                      <div className="flex items-center justify-between p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30">
+                        <div className="flex items-center gap-2">
+                          <CheckCircle className="w-4 h-4 text-emerald-400" />
+                          <span className="text-sm text-emerald-400 font-mono">{aiApiKeyHash}</span>
+                        </div>
+                        <button
+                          onClick={handleClearApiKey}
+                          className="px-3 py-1 text-xs rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    )}
+
+                    {/* New key input */}
+                    {(!aiApiKeyHash || aiApiKey) && (
+                      <div>
+                        <div className="relative">
+                          <input
+                            type={showApiKey ? "text" : "password"}
+                            value={aiApiKey}
+                            onChange={(e) => {
+                              setAiApiKey(e.target.value);
+                              setKeyValidation(null);
+                            }}
+                            placeholder={AI_PROVIDERS[aiProvider].keyPlaceholder}
+                            className="w-full px-4 py-3 pr-24 rounded-xl bg-[var(--background)] border border-[var(--border)] text-[var(--foreground)] font-mono text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                          />
+                          <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                            <button
+                              onClick={() => setShowApiKey(!showApiKey)}
+                              className="p-2 rounded-lg hover:bg-[var(--surface)] text-[var(--muted)]"
+                            >
+                              {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                            </button>
+                            <button
+                              onClick={handleValidateKey}
+                              disabled={!aiApiKey || isValidatingKey}
+                              className="px-3 py-1.5 rounded-lg bg-purple-500/20 text-purple-400 text-xs font-medium hover:bg-purple-500/30 disabled:opacity-50"
+                            >
+                              {isValidatingKey ? (
+                                <RefreshCw className="w-4 h-4 animate-spin" />
+                              ) : (
+                                "Test"
+                              )}
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Validation result */}
+                        {keyValidation && (
+                          <div className={`mt-2 flex items-center gap-2 text-sm ${
+                            keyValidation.valid ? "text-emerald-400" : "text-red-400"
+                          }`}>
+                            {keyValidation.valid ? (
+                              <>
+                                <CheckCircle className="w-4 h-4" />
+                                <span>API key is valid</span>
+                              </>
+                            ) : (
+                              <>
+                                <AlertTriangle className="w-4 h-4" />
+                                <span>{keyValidation.error || "Invalid API key"}</span>
+                              </>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    <p className="text-xs text-[var(--muted)]">
+                      Get your API key from{" "}
+                      {aiProvider === "anthropic" && (
+                        <a href="https://console.anthropic.com" target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:underline">
+                          console.anthropic.com
+                        </a>
+                      )}
+                      {aiProvider === "openai" && (
+                        <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:underline">
+                          platform.openai.com
+                        </a>
+                      )}
+                      {aiProvider === "openrouter" && (
+                        <a href="https://openrouter.ai/keys" target="_blank" rel="noopener noreferrer" className="text-purple-400 hover:underline">
+                          openrouter.ai
+                        </a>
+                      )}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Save AI Settings Button */}
+              <div className="mt-6">
+                <Button
+                  variant="default"
+                  onClick={handleSaveAi}
+                  disabled={isSavingAi}
+                  className="w-full bg-purple-500 hover:bg-purple-600"
+                >
+                  {isSavingAi ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                      Saving AI Settings...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-5 h-5 mr-2" />
+                      Save AI Settings
+                    </>
+                  )}
+                </Button>
+              </div>
+            </Card>
+          </motion.div>
+        )}
+
         {/* Limits & Stats Card */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
+          transition={{ delay: 0.2 }}
         >
           <Card variant="default" className="p-6">
             <h2 className="text-xl font-semibold text-[var(--foreground)] mb-6 flex items-center gap-2">
