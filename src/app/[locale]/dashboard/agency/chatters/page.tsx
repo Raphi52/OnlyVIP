@@ -1813,11 +1813,11 @@ export default function ChattersPage() {
                 )}
 
                 {/* Assigned Creators - horizontal scroll on mobile */}
-                {showDetailModal.assignedCreators.length > 0 && (
+                {showDetailModal.assignedCreators?.length > 0 && (
                   <div className="mb-4">
                     <h3 className="text-xs font-medium text-gray-400 mb-2">Assigned Creators</h3>
                     <div className="flex flex-wrap gap-1.5">
-                      {showDetailModal.assignedCreators.map((c) => {
+                      {showDetailModal.assignedCreators?.map((c) => {
                         const creator = agency?.creators.find(cr => cr.slug === c.creatorSlug);
                         return (
                           <div key={c.creatorSlug} className="px-2.5 py-1.5 bg-white/5 rounded-lg">
