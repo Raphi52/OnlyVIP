@@ -29,8 +29,8 @@ export const defaultCreators: Record<string, Creator> = {
     slug: "miacosta",
     name: "Mia Costa",
     displayName: "Mia Costa",
-    avatar: "/media/preview/3039035234726006678_1.jpg",
-    coverImage: "/media/preview/3036738115692549406_1.jpg",
+    avatar: "/uploads/avatar/1ada6c0dbec69879472ab2eab3d35b9d.jpg",
+    coverImage: "/uploads/media/e4fc30ad5a727a3bb34917c75876c7ad.jpg",
     bio: "Welcome to my exclusive content. Join my VIP for the full experience.",
     socialLinks: {
       instagram: "https://instagram.com/miacosta",
