@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
@@ -19,8 +19,12 @@ import {
   Building2,
   Crown,
   User,
+  Wallet,
+  Send,
+  Copy,
+  Check,
 } from "lucide-react";
-import { Button, Card } from "@/components/ui";
+import { Button, Card, Input } from "@/components/ui";
 import { cn } from "@/lib/utils";
 
 interface Earning {
@@ -69,6 +73,31 @@ const typeLabels: Record<string, { label: string; icon: typeof DollarSign; color
   SUBSCRIPTION: { label: "Sub", icon: CreditCard, color: "text-green-400", bg: "bg-green-500/20" },
 };
 
+interface PayoutRequest {
+  id: string;
+  amount: number;
+  walletType: string;
+  walletAddress: string;
+  status: string;
+  createdAt: string;
+  paidAt: string | null;
+  txHash: string | null;
+}
+
+interface AgencyPayoutData {
+  pendingBalance: number;
+  totalEarned: number;
+  totalPaid: number;
+  minimumPayout: number;
+  walletEth: string | null;
+  walletBtc: string | null;
+  latestRequest: PayoutRequest | null;
+  canRequest: boolean;
+  cooldownPassed: boolean;
+  hasEnoughBalance: boolean;
+  payoutHistory: PayoutRequest[];
+}
+
 export default function AgencyEarningsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -76,6 +105,14 @@ export default function AgencyEarningsPage() {
   const [data, setData] = useState<EarningsData | null>(null);
   const [page, setPage] = useState(1);
   const [typeFilter, setTypeFilter] = useState<string>("");
+
+  // Payout state
+  const [agencyId, setAgencyId] = useState<string | null>(null);
+  const [payoutData, setPayoutData] = useState<AgencyPayoutData | null>(null);
+  const [walletType, setWalletType] = useState<"ETH" | "BTC">("ETH");
+  const [walletAddress, setWalletAddress] = useState("");
+  const [isRequesting, setIsRequesting] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const isAgencyOwner = (session?.user as any)?.isAgencyOwner === true;
 
@@ -89,7 +126,76 @@ export default function AgencyEarningsPage() {
     if (status === "loading") return;
     if (!session || !isAgencyOwner) return;
     fetchEarnings();
+    fetchAgencyId();
   }, [session, status, isAgencyOwner, page, typeFilter]);
+
+  // Fetch agency ID
+  const fetchAgencyId = async () => {
+    try {
+      const res = await fetch("/api/agency");
+      if (res.ok) {
+        const data = await res.json();
+        if (data.agencies?.[0]?.id) {
+          setAgencyId(data.agencies[0].id);
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching agency:", error);
+    }
+  };
+
+  // Fetch payout data when agencyId is available
+  useEffect(() => {
+    if (!agencyId) return;
+    fetchPayoutData();
+  }, [agencyId]);
+
+  const fetchPayoutData = async () => {
+    try {
+      const res = await fetch(`/api/agency/payout-request?agencyId=${agencyId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setPayoutData(data);
+        if (data.walletEth) {
+          setWalletType("ETH");
+          setWalletAddress(data.walletEth);
+        } else if (data.walletBtc) {
+          setWalletType("BTC");
+          setWalletAddress(data.walletBtc);
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching payout data:", error);
+    }
+  };
+
+  const handlePayoutRequest = async () => {
+    if (!agencyId || !walletAddress) return;
+    setIsRequesting(true);
+    try {
+      const res = await fetch("/api/agency/payout-request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ agencyId, walletType, walletAddress }),
+      });
+      if (res.ok) {
+        fetchPayoutData();
+      } else {
+        const data = await res.json();
+        alert(data.error || "Failed to create payout request");
+      }
+    } catch (error) {
+      console.error("Error creating payout request:", error);
+    } finally {
+      setIsRequesting(false);
+    }
+  };
+
+  const copyAddress = (addr: string) => {
+    navigator.clipboard.writeText(addr);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   const fetchEarnings = async () => {
     setIsLoading(true);
@@ -228,6 +334,127 @@ export default function AgencyEarningsPage() {
           </div>
         ))}
       </motion.div>
+
+      {/* Payout Request Card - Compact mobile design */}
+      {payoutData && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.12 }}
+          className="rounded-xl bg-gradient-to-br from-purple-500/10 to-purple-700/10 border border-purple-500/20 p-3 sm:p-4"
+        >
+          <div className="flex items-center gap-2 mb-3">
+            <Wallet className="w-4 h-4 text-purple-400" />
+            <h2 className="text-sm font-medium text-white">Request Payout</h2>
+          </div>
+
+          {payoutData.latestRequest?.status === "PENDING" ? (
+            <div className="p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+              <div className="flex items-center gap-2 text-yellow-400 mb-1">
+                <Clock className="w-4 h-4" />
+                <span className="text-xs font-medium">Pending Request</span>
+              </div>
+              <p className="text-sm text-white font-bold">
+                {formatEuro(payoutData.latestRequest.amount)}
+              </p>
+              <p className="text-[10px] text-gray-400 mt-1">
+                {payoutData.latestRequest.walletType}: {payoutData.latestRequest.walletAddress.slice(0, 10)}...
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {/* Wallet Type Toggle */}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    setWalletType("ETH");
+                    setWalletAddress(payoutData.walletEth || "");
+                  }}
+                  className={cn(
+                    "flex-1 py-2 rounded-lg text-xs font-medium transition-all",
+                    walletType === "ETH"
+                      ? "bg-purple-500 text-white"
+                      : "bg-white/5 text-gray-400"
+                  )}
+                >
+                  ETH
+                </button>
+                <button
+                  onClick={() => {
+                    setWalletType("BTC");
+                    setWalletAddress(payoutData.walletBtc || "");
+                  }}
+                  className={cn(
+                    "flex-1 py-2 rounded-lg text-xs font-medium transition-all",
+                    walletType === "BTC"
+                      ? "bg-purple-500 text-white"
+                      : "bg-white/5 text-gray-400"
+                  )}
+                >
+                  BTC
+                </button>
+              </div>
+
+              {/* Wallet Address */}
+              <Input
+                value={walletAddress}
+                onChange={(e) => setWalletAddress(e.target.value)}
+                placeholder={`${walletType} address`}
+                className="bg-black/30 border-white/10 text-sm h-9"
+              />
+
+              {/* Request Button */}
+              <div className="flex items-center justify-between gap-3">
+                <div className="text-[10px] text-gray-400">
+                  Min: {formatEuro(payoutData.minimumPayout)}
+                  {!payoutData.hasEnoughBalance && (
+                    <span className="text-red-400 ml-1">• Insufficient</span>
+                  )}
+                </div>
+                <Button
+                  onClick={handlePayoutRequest}
+                  disabled={!payoutData.canRequest || !walletAddress || isRequesting}
+                  size="sm"
+                  className="bg-purple-600 hover:bg-purple-700 text-xs h-8 px-3"
+                >
+                  {isRequesting ? (
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                  ) : (
+                    <>
+                      <Send className="w-3 h-3 mr-1" />
+                      Request {formatEuro(payoutData.pendingBalance)}
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Recent Payout History - Compact */}
+          {payoutData.payoutHistory.length > 0 && (
+            <div className="mt-3 pt-3 border-t border-white/10">
+              <p className="text-[10px] text-gray-500 mb-2">Recent</p>
+              <div className="space-y-1.5">
+                {payoutData.payoutHistory.slice(0, 2).map((req) => (
+                  <div key={req.id} className="flex items-center justify-between text-xs">
+                    <span className="text-gray-300">{formatEuro(req.amount)}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-gray-500">{req.walletType}</span>
+                      {req.status === "PAID" ? (
+                        <span className="text-emerald-400 flex items-center gap-1">
+                          <Check className="w-3 h-3" /> Paid
+                        </span>
+                      ) : (
+                        <span className="text-yellow-400">Pending</span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </motion.div>
+      )}
 
       {/* Creator Breakdown - Horizontal scroll on mobile */}
       {data?.creatorBreakdown && data.creatorBreakdown.length > 0 && (

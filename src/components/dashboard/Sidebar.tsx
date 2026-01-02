@@ -76,7 +76,7 @@ const agencyLinks = [
   { href: "/dashboard/agency/chatters", icon: MessageCircle, label: "Chatters" },
   { href: "/dashboard/agency/ai-personas", icon: Bot, label: "AI Personalities" },
   { href: "/dashboard/agency/scripts", icon: FileText, label: "Scripts Library" },
-  { href: "/dashboard/agency/earnings", icon: DollarSign, label: "Earnings" },
+  { href: "/dashboard/agency/earnings", icon: DollarSign, label: "Earnings & Payouts" },
   { href: "/dashboard/agency/performance", icon: BarChart3, label: "Performance" },
   { href: "/dashboard/find-creator", icon: Search, label: "Find Creator" },
   { href: "/dashboard/agency/settings", icon: Settings, label: "Agency Settings" },
