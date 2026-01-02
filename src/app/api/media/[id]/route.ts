@@ -147,14 +147,6 @@ export async function PATCH(
       );
     }
 
-    // In production, check for admin role
-    // if (session.user.role !== "ADMIN") {
-    //   return NextResponse.json(
-    //     { error: "Admin access required" },
-    //     { status: 403 }
-    //   );
-    // }
-
     const body = await request.json();
     const {
       title,
@@ -178,12 +170,25 @@ export async function PATCH(
 
     const media = await prisma.mediaContent.findUnique({
       where: { id },
+      include: { creator: { select: { userId: true } } },
     });
 
     if (!media) {
       return NextResponse.json(
         { error: "Media not found" },
         { status: 404 }
+      );
+    }
+
+    // Check authorization: must be admin or media owner
+    const user = session.user as { role?: string };
+    const isAdmin = user.role === "ADMIN";
+    const isOwner = media.creator?.userId === session.user.id;
+
+    if (!isAdmin && !isOwner) {
+      return NextResponse.json(
+        { error: "You can only edit your own media" },
+        { status: 403 }
       );
     }
 
@@ -263,22 +268,27 @@ export async function DELETE(
       );
     }
 
-    // In production, check for admin role
-    // if (session.user.role !== "ADMIN") {
-    //   return NextResponse.json(
-    //     { error: "Admin access required" },
-    //     { status: 403 }
-    //   );
-    // }
-
     const media = await prisma.mediaContent.findUnique({
       where: { id },
+      include: { creator: { select: { userId: true } } },
     });
 
     if (!media) {
       return NextResponse.json(
         { error: "Media not found" },
         { status: 404 }
+      );
+    }
+
+    // Check authorization: must be admin or media owner
+    const user = session.user as { role?: string };
+    const isAdmin = user.role === "ADMIN";
+    const isOwner = media.creator?.userId === session.user.id;
+
+    if (!isAdmin && !isOwner) {
+      return NextResponse.json(
+        { error: "You can only delete your own media" },
+        { status: 403 }
       );
     }
 

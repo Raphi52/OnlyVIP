@@ -1,19 +1,31 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import crypto from "crypto";
 
-// Admin password - in production, use environment variable
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "Raph-Max69";
+// Admin password - MUST be set in environment variable
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 
-// Simple token generation
+// Secure token generation using cryptographic randomness
 function generateToken(): string {
-  return Buffer.from(Date.now().toString() + Math.random().toString()).toString("base64");
+  return crypto.randomBytes(32).toString("hex");
 }
 
 export async function POST(request: NextRequest) {
   try {
+    // Reject if ADMIN_PASSWORD not configured
+    if (!ADMIN_PASSWORD) {
+      console.error("ADMIN_PASSWORD environment variable not set");
+      return NextResponse.json({ success: false, error: "Admin login disabled" }, { status: 503 });
+    }
+
     const { password } = await request.json();
 
-    if (password === ADMIN_PASSWORD) {
+    // Use timing-safe comparison to prevent timing attacks
+    const passwordBuffer = Buffer.from(password || "");
+    const adminBuffer = Buffer.from(ADMIN_PASSWORD);
+
+    if (passwordBuffer.length === adminBuffer.length &&
+        crypto.timingSafeEqual(passwordBuffer, adminBuffer)) {
       const token = generateToken();
 
       // Set cookie

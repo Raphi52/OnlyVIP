@@ -9,7 +9,6 @@ export async function PATCH(
 ) {
   try {
     const session = await auth();
-    console.log("[PATCH conversation] Session:", session?.user?.id);
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -17,7 +16,6 @@ export async function PATCH(
     const { id: conversationId } = await params;
     const userId = session.user.id;
     const body = await request.json();
-    console.log("[PATCH conversation] conversationId:", conversationId, "body:", body);
 
     // Find participant record for current user
     const participant = await prisma.conversationParticipant.findUnique({
@@ -29,7 +27,6 @@ export async function PATCH(
       },
     });
 
-    console.log("[PATCH conversation] Participant found:", participant?.id);
     if (!participant) {
       return NextResponse.json(
         { error: "Conversation not found or you are not a participant" },
@@ -43,12 +40,10 @@ export async function PATCH(
     if (body.isMuted !== undefined) updateData.isMuted = body.isMuted;
 
     // Update participant settings
-    console.log("[PATCH conversation] Updating with:", updateData);
     const updated = await prisma.conversationParticipant.update({
       where: { id: participant.id },
       data: updateData,
     });
-    console.log("[PATCH conversation] Update result:", updated);
 
     return NextResponse.json({
       success: true,

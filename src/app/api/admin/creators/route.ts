@@ -5,6 +5,36 @@ import { join } from "path";
 import crypto from "crypto";
 import prisma from "@/lib/prisma";
 
+// Magic bytes for image validation
+const MAGIC_BYTES: Record<string, { bytes: number[]; offset?: number }[]> = {
+  "image/jpeg": [{ bytes: [0xFF, 0xD8, 0xFF] }],
+  "image/png": [{ bytes: [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A] }],
+  "image/webp": [{ bytes: [0x52, 0x49, 0x46, 0x46], offset: 0 }, { bytes: [0x57, 0x45, 0x42, 0x50], offset: 8 }],
+  "image/gif": [{ bytes: [0x47, 0x49, 0x46, 0x38] }],
+};
+
+const SAFE_EXTENSIONS: Record<string, string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+  "image/gif": "gif",
+};
+
+function detectMimeType(buffer: Buffer): string | null {
+  for (const [mimeType, signatures] of Object.entries(MAGIC_BYTES)) {
+    for (const sig of signatures) {
+      const offset = sig.offset || 0;
+      if (buffer.length < offset + sig.bytes.length) continue;
+      let matches = true;
+      for (let i = 0; i < sig.bytes.length; i++) {
+        if (buffer[offset + i] !== sig.bytes[i]) { matches = false; break; }
+      }
+      if (matches) return mimeType;
+    }
+  }
+  return null;
+}
+
 // GET /api/admin/creators - Get creators (all for admin, own for creators)
 export async function GET(request: NextRequest) {
   try {
@@ -123,34 +153,42 @@ export async function POST(request: NextRequest) {
         socialLinks = { instagram, twitter, tiktok };
       }
 
-      // Handle avatar upload
+      // Handle avatar upload with magic bytes validation
       const avatarFile = formData.get("avatar") as File | null;
       if (avatarFile && avatarFile.size > 0) {
-        const uploadDir = join(process.cwd(), "public", "uploads", "creators");
-        await mkdir(uploadDir, { recursive: true });
-
-        const ext = avatarFile.name.split(".").pop() || "jpg";
-        const hash = crypto.randomBytes(8).toString("hex");
-        const filename = `${slug}_avatar_${hash}.${ext}`;
-
         const bytes = await avatarFile.arrayBuffer();
-        await writeFile(join(uploadDir, filename), Buffer.from(bytes));
-        avatarUrl = `/uploads/creators/${filename}`;
+        const buffer = Buffer.from(bytes);
+        const detectedMime = detectMimeType(buffer);
+        const safeExt = detectedMime ? SAFE_EXTENSIONS[detectedMime] : null;
+
+        if (safeExt) {
+          const uploadDir = join(process.cwd(), "public", "uploads", "creators");
+          await mkdir(uploadDir, { recursive: true });
+
+          const hash = crypto.randomBytes(8).toString("hex");
+          const filename = `${slug}_avatar_${hash}.${safeExt}`;
+          await writeFile(join(uploadDir, filename), buffer);
+          avatarUrl = `/uploads/creators/${filename}`;
+        }
       }
 
-      // Handle cover image upload
+      // Handle cover image upload with magic bytes validation
       const coverFile = formData.get("coverImage") as File | null;
       if (coverFile && coverFile.size > 0) {
-        const uploadDir = join(process.cwd(), "public", "uploads", "creators");
-        await mkdir(uploadDir, { recursive: true });
-
-        const ext = coverFile.name.split(".").pop() || "jpg";
-        const hash = crypto.randomBytes(8).toString("hex");
-        const filename = `${slug}_cover_${hash}.${ext}`;
-
         const bytes = await coverFile.arrayBuffer();
-        await writeFile(join(uploadDir, filename), Buffer.from(bytes));
-        coverImageUrl = `/uploads/creators/${filename}`;
+        const buffer = Buffer.from(bytes);
+        const detectedMime = detectMimeType(buffer);
+        const safeExt = detectedMime ? SAFE_EXTENSIONS[detectedMime] : null;
+
+        if (safeExt) {
+          const uploadDir = join(process.cwd(), "public", "uploads", "creators");
+          await mkdir(uploadDir, { recursive: true });
+
+          const hash = crypto.randomBytes(8).toString("hex");
+          const filename = `${slug}_cover_${hash}.${safeExt}`;
+          await writeFile(join(uploadDir, filename), buffer);
+          coverImageUrl = `/uploads/creators/${filename}`;
+        }
       }
     } else {
       const body = await request.json();

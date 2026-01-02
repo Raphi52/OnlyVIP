@@ -5,6 +5,34 @@ import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
 import crypto from "crypto";
 
+// Magic bytes for avatar validation
+const MAGIC_BYTES: Record<string, { bytes: number[]; offset?: number }[]> = {
+  "image/jpeg": [{ bytes: [0xFF, 0xD8, 0xFF] }],
+  "image/png": [{ bytes: [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A] }],
+  "image/webp": [{ bytes: [0x52, 0x49, 0x46, 0x46], offset: 0 }, { bytes: [0x57, 0x45, 0x42, 0x50], offset: 8 }],
+};
+
+const SAFE_EXTENSIONS: Record<string, string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+};
+
+function detectMimeType(buffer: Buffer): string | null {
+  for (const [mimeType, signatures] of Object.entries(MAGIC_BYTES)) {
+    for (const sig of signatures) {
+      const offset = sig.offset || 0;
+      if (buffer.length < offset + sig.bytes.length) continue;
+      let matches = true;
+      for (let i = 0; i < sig.bytes.length; i++) {
+        if (buffer[offset + i] !== sig.bytes[i]) { matches = false; break; }
+      }
+      if (matches) return mimeType;
+    }
+  }
+  return null;
+}
+
 // GET /api/user/profile - Get current user profile
 export async function GET() {
   try {
@@ -61,15 +89,6 @@ export async function PUT(request: NextRequest) {
       }
 
       if (file) {
-        // Validate file type
-        const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
-        if (!allowedTypes.includes(file.type)) {
-          return NextResponse.json(
-            { error: "Invalid file type. Only JPEG, PNG, and WebP are allowed." },
-            { status: 400 }
-          );
-        }
-
         // Validate file size (5MB max)
         if (file.size > 5 * 1024 * 1024) {
           return NextResponse.json(
@@ -78,17 +97,34 @@ export async function PUT(request: NextRequest) {
           );
         }
 
-        // Generate unique filename
-        const ext = file.name.split(".").pop();
+        // Read file and detect actual type from magic bytes
+        const bytes = await file.arrayBuffer();
+        const buffer = Buffer.from(bytes);
+        const detectedMime = detectMimeType(buffer);
+
+        if (!detectedMime) {
+          return NextResponse.json(
+            { error: "Invalid file type. Only JPEG, PNG, and WebP are allowed." },
+            { status: 400 }
+          );
+        }
+
+        // Get safe extension based on detected type
+        const safeExt = SAFE_EXTENSIONS[detectedMime];
+        if (!safeExt) {
+          return NextResponse.json(
+            { error: "Invalid file type. Only JPEG, PNG, and WebP are allowed." },
+            { status: 400 }
+          );
+        }
+
+        // Generate unique filename with safe extension
         const hash = crypto.randomBytes(16).toString("hex");
-        const filename = `${hash}.${ext}`;
+        const filename = `${hash}.${safeExt}`;
 
         // Save file
         const uploadDir = join(process.cwd(), "public", "uploads", "avatars");
         await mkdir(uploadDir, { recursive: true });
-
-        const bytes = await file.arrayBuffer();
-        const buffer = Buffer.from(bytes);
         const filePath = join(uploadDir, filename);
         await writeFile(filePath, buffer);
 
