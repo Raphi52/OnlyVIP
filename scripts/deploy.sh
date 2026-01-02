@@ -23,12 +23,12 @@ log "Pulling latest changes..."
 git fetch origin main
 git reset --hard origin/main
 
-# Rebuild and restart containers
+# Rebuild and restart only the app container
 log "Rebuilding Docker containers..."
 docker compose build --no-cache app
 
-log "Restarting containers..."
-docker compose up -d app
+log "Restarting app container..."
+docker compose up -d --no-deps --force-recreate app
 
 # Cleanup old images
 log "Cleaning up old images..."
