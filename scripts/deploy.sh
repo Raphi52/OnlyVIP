@@ -15,6 +15,9 @@ log "=== Starting deployment ==="
 
 cd "$DEPLOY_DIR"
 
+# Ensure we use HTTPS (no SSH in container)
+git remote set-url origin https://github.com/Raphi52/OnlyVIP.git 2>/dev/null || true
+
 # Pull latest changes
 log "Pulling latest changes..."
 git fetch origin main
