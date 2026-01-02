@@ -218,7 +218,8 @@ export default function MyListingPage() {
         setMessage({ type: "success", text: listing ? "Listing updated!" : "Listing created!" });
       } else {
         const error = await res.json();
-        setMessage({ type: "error", text: error.error || "Failed to save" });
+        const errorText = error.details ? `${error.error}: ${error.details}` : (error.error || "Failed to save");
+        setMessage({ type: "error", text: errorText });
       }
     } catch (error) {
       console.error("Error saving listing:", error);

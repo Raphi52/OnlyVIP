@@ -119,8 +119,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ listing }, { status: 201 });
   } catch (error) {
     console.error("Error creating model listing:", error);
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(
-      { error: "Failed to create model listing" },
+      { error: "Failed to create model listing", details: errorMessage },
       { status: 500 }
     );
   }
