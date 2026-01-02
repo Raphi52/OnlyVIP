@@ -73,14 +73,24 @@ export async function GET(request: NextRequest) {
           _sum: { grossAmount: true },
         });
 
+        // Safe JSON parse helper
+        const safeJsonParse = (str: string | null, fallback: any) => {
+          if (!str) return fallback;
+          try {
+            return JSON.parse(str);
+          } catch {
+            return fallback;
+          }
+        };
+
         return {
           ...agency,
-          // Parse JSON fields
-          services: agency.services ? JSON.parse(agency.services) : [],
-          specialties: agency.specialties ? JSON.parse(agency.specialties) : [],
-          socialLinks: agency.socialLinks ? JSON.parse(agency.socialLinks) : {},
-          portfolioImages: agency.portfolioImages ? JSON.parse(agency.portfolioImages) : [],
-          languages: agency.languages ? JSON.parse(agency.languages) : [],
+          // Parse JSON fields safely
+          services: safeJsonParse(agency.services, []),
+          specialties: safeJsonParse(agency.specialties, []),
+          socialLinks: safeJsonParse(agency.socialLinks, {}),
+          portfolioImages: safeJsonParse(agency.portfolioImages, []),
+          languages: safeJsonParse(agency.languages, []),
           stats: {
             totalRevenue: totalRevenue._sum.grossAmount || 0,
             revenue30d: revenue30d._sum.grossAmount || 0,
@@ -96,10 +106,11 @@ export async function GET(request: NextRequest) {
     );
 
     return NextResponse.json({ agencies: agenciesWithStats });
-  } catch (error) {
-    console.error("Error fetching agencies:", error);
+  } catch (error: any) {
+    console.error("Error fetching agencies:", error?.message || error);
+    console.error("Stack:", error?.stack);
     return NextResponse.json(
-      { error: "Failed to fetch agencies" },
+      { error: "Failed to fetch agencies", details: error?.message },
       { status: 500 }
     );
   }

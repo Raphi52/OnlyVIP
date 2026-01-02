@@ -201,6 +201,29 @@ export default function AgencyDashboardPage() {
 
   // Show agency creation form if user has no agency
   if (!selectedAgency) {
+    // If user is already an agency owner but no agency loaded, there's a data issue
+    // Redirect to dashboard to avoid showing the "become agency" form
+    if (isAgencyOwner) {
+      return (
+        <div className="p-8">
+          <div className="max-w-lg mx-auto text-center py-20">
+            <div className="w-24 h-24 rounded-full bg-gradient-to-br from-purple-500/20 to-purple-700/20 flex items-center justify-center mx-auto mb-6">
+              <Building2 className="w-12 h-12 text-purple-500" />
+            </div>
+            <h2 className="text-2xl font-bold text-[var(--foreground)] mb-3">
+              Loading your agency...
+            </h2>
+            <p className="text-[var(--muted)] mb-8">
+              If this persists, please refresh the page.
+            </p>
+            <Button variant="default" onClick={() => window.location.reload()}>
+              Refresh
+            </Button>
+          </div>
+        </div>
+      );
+    }
+
     // If user is not a creator, redirect to become-creator
     if (!isCreator) {
       return (

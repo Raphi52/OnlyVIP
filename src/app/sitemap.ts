@@ -53,45 +53,43 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { path: "/blog", priority: 0.7, changeFrequency: "weekly" as const },
   ];
 
-  // Add static pages for all locales with hreflang alternates
-  for (const locale of allLocales) {
-    for (const route of staticRoutes) {
-      sitemapEntries.push({
-        url: `${baseUrl}/${locale}${route.path}`,
-        lastModified: new Date(),
-        changeFrequency: route.changeFrequency,
-        priority: route.priority,
-        alternates: {
-          languages: generateAlternates(route.path),
-        },
-      });
-    }
+  // Add static pages with hreflang alternates (one entry per page, English as canonical)
+  for (const route of staticRoutes) {
+    sitemapEntries.push({
+      url: `${baseUrl}/en${route.path}`,
+      lastModified: new Date(),
+      changeFrequency: route.changeFrequency,
+      priority: route.priority,
+      alternates: {
+        languages: generateAlternates(route.path),
+      },
+    });
+  }
 
-    // Blog posts with hreflang
-    for (const slug of blogPostSlugs) {
-      sitemapEntries.push({
-        url: `${baseUrl}/${locale}/blog/${slug}`,
-        lastModified: new Date(),
-        changeFrequency: "monthly" as const,
-        priority: 0.6,
-        alternates: {
-          languages: generateAlternates(`/blog/${slug}`),
-        },
-      });
-    }
+  // Blog posts with hreflang
+  for (const slug of blogPostSlugs) {
+    sitemapEntries.push({
+      url: `${baseUrl}/en/blog/${slug}`,
+      lastModified: new Date(),
+      changeFrequency: "monthly" as const,
+      priority: 0.6,
+      alternates: {
+        languages: generateAlternates(`/blog/${slug}`),
+      },
+    });
+  }
 
-    // Category pages with hreflang
-    for (const category of categoryPages) {
-      sitemapEntries.push({
-        url: `${baseUrl}/${locale}/creators/${category}`,
-        lastModified: new Date(),
-        changeFrequency: "daily" as const,
-        priority: 0.85,
-        alternates: {
-          languages: generateAlternates(`/creators/${category}`),
-        },
-      });
-    }
+  // Category pages with hreflang
+  for (const category of categoryPages) {
+    sitemapEntries.push({
+      url: `${baseUrl}/en/creators/${category}`,
+      lastModified: new Date(),
+      changeFrequency: "daily" as const,
+      priority: 0.85,
+      alternates: {
+        languages: generateAlternates(`/creators/${category}`),
+      },
+    });
   }
 
   // Dynamic creator pages (no limit)
@@ -102,18 +100,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       orderBy: { updatedAt: "desc" },
     });
 
-    for (const locale of allLocales) {
-      for (const creator of creators) {
-        sitemapEntries.push({
-          url: `${baseUrl}/${locale}/${creator.slug}`,
-          lastModified: creator.updatedAt,
-          changeFrequency: "daily" as const,
-          priority: 0.8,
-          alternates: {
-            languages: generateAlternates(`/${creator.slug}`),
-          },
-        });
-      }
+    for (const creator of creators) {
+      sitemapEntries.push({
+        url: `${baseUrl}/en/${creator.slug}`,
+        lastModified: creator.updatedAt,
+        changeFrequency: "daily" as const,
+        priority: 0.8,
+        alternates: {
+          languages: generateAlternates(`/${creator.slug}`),
+        },
+      });
     }
   } catch (error) {
     console.error("Error fetching creators for sitemap:", error);
