@@ -43,9 +43,6 @@ export async function GET(req: NextRequest) {
         isActive: true,
         aiEnabled: true,
         agencyId: true,
-        subscriberCount: true,
-        photoCount: true,
-        videoCount: true,
       },
     });
 
@@ -64,26 +61,62 @@ export async function GET(req: NextRequest) {
         isActive: true,
         aiEnabled: true,
         agencyId: true,
-        subscriberCount: true,
-        photoCount: true,
-        videoCount: true,
       },
     });
 
-    // Format creators
-    const formatCreator = (creator: any) => ({
-      id: creator.id,
-      slug: creator.slug,
-      name: creator.name,
-      displayName: creator.displayName,
-      avatar: creator.avatar,
-      isActive: creator.isActive,
-      aiEnabled: creator.aiEnabled,
-      agencyId: creator.agencyId,
-      subscriberCount: creator.subscriberCount || 0,
-      photoCount: creator.photoCount || 0,
-      videoCount: creator.videoCount || 0,
+    // Get all slugs to fetch counts
+    const allSlugs = [...creators, ...availableCreators].map((c) => c.slug);
+
+    // Get real counts from related tables
+    const [subscriptionCounts, mediaCounts] = await Promise.all([
+      // Count active subscriptions per creator
+      prisma.subscription.groupBy({
+        by: ["creatorSlug"],
+        where: {
+          creatorSlug: { in: allSlugs },
+          status: "ACTIVE",
+        },
+        _count: { id: true },
+      }),
+      // Count media per creator by type
+      prisma.mediaContent.groupBy({
+        by: ["creatorSlug", "type"],
+        where: {
+          creatorSlug: { in: allSlugs },
+        },
+        _count: { id: true },
+      }),
+    ]);
+
+    // Build lookup maps
+    const subCountMap = new Map(
+      subscriptionCounts.map((s) => [s.creatorSlug, s._count.id])
+    );
+    const mediaCountMap = new Map<string, { photo: number; video: number }>();
+    mediaCounts.forEach((m) => {
+      const current = mediaCountMap.get(m.creatorSlug) || { photo: 0, video: 0 };
+      if (m.type === "PHOTO") current.photo = m._count.id;
+      if (m.type === "VIDEO") current.video = m._count.id;
+      mediaCountMap.set(m.creatorSlug, current);
     });
+
+    // Format creators with real counts
+    const formatCreator = (creator: any) => {
+      const media = mediaCountMap.get(creator.slug) || { photo: 0, video: 0 };
+      return {
+        id: creator.id,
+        slug: creator.slug,
+        name: creator.name,
+        displayName: creator.displayName,
+        avatar: creator.avatar,
+        isActive: creator.isActive,
+        aiEnabled: creator.aiEnabled,
+        agencyId: creator.agencyId,
+        subscriberCount: subCountMap.get(creator.slug) || 0,
+        photoCount: media.photo,
+        videoCount: media.video,
+      };
+    };
 
     return NextResponse.json({
       agency,

@@ -145,6 +145,30 @@ export default function AdminCreatorsPage() {
     }
   };
 
+  const toggleAI = async (creator: Creator) => {
+    try {
+      const res = await fetch(`/api/admin/creators/${creator.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          aiEnabled: !creator.aiEnabled,
+        }),
+      });
+
+      if (res.ok) {
+        setCreators((prev) =>
+          prev.map((c) =>
+            c.id === creator.id ? { ...c, aiEnabled: !c.aiEnabled } : c
+          )
+        );
+      } else {
+        alert("Failed to toggle AI");
+      }
+    } catch (error) {
+      console.error("Error toggling AI:", error);
+    }
+  };
+
   const openAddModal = () => {
     setModalMode("add");
     setEditingCreator(null);
@@ -405,15 +429,25 @@ export default function AdminCreatorsPage() {
                         >
                           {creator.isActive ? "Active" : "Off"}
                         </Badge>
-                        {creator.aiEnabled && (
-                          <Badge className="bg-purple-500/20 text-purple-400 flex items-center gap-0.5 text-[10px] px-1.5 py-0.5">
-                            <Bot className="w-2.5 h-2.5" />
-                            AI
-                          </Badge>
-                        )}
                       </div>
                       <p className="text-xs text-[var(--muted)]">@{creator.slug}</p>
                     </div>
+
+                    {/* AI Toggle */}
+                    <button
+                      onClick={() => toggleAI(creator)}
+                      className={`relative w-10 h-5 rounded-full transition-colors ${
+                        creator.aiEnabled ? "bg-purple-500" : "bg-gray-600"
+                      }`}
+                      title={creator.aiEnabled ? "Disable AI" : "Enable AI"}
+                    >
+                      <div
+                        className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${
+                          creator.aiEnabled ? "left-5" : "left-0.5"
+                        }`}
+                      />
+                      <Bot className={`absolute top-0.5 w-4 h-4 ${creator.aiEnabled ? "left-0.5 text-purple-300" : "left-5 text-gray-400"}`} />
+                    </button>
 
                     {/* Delete button */}
                     <button
@@ -505,12 +539,6 @@ export default function AdminCreatorsPage() {
                       >
                         {creator.isActive ? "Active" : "Inactive"}
                       </Badge>
-                      {creator.aiEnabled && (
-                        <Badge className="bg-purple-500/20 text-purple-400 flex items-center gap-1">
-                          <Bot className="w-3 h-3" />
-                          AI
-                        </Badge>
-                      )}
                     </div>
                     <p className="text-sm text-[var(--muted)] mb-2">
                       @{creator.slug}
@@ -538,6 +566,30 @@ export default function AdminCreatorsPage() {
 
                   {/* Actions */}
                   <div className="flex items-center gap-2">
+                    {/* AI Toggle */}
+                    <button
+                      onClick={() => toggleAI(creator)}
+                      className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-colors ${
+                        creator.aiEnabled
+                          ? "bg-purple-500/20 text-purple-400 hover:bg-purple-500/30"
+                          : "bg-gray-500/20 text-gray-400 hover:bg-gray-500/30"
+                      }`}
+                      title={creator.aiEnabled ? "Disable AI" : "Enable AI"}
+                    >
+                      <Bot className="w-4 h-4" />
+                      <span className="text-sm font-medium">AI</span>
+                      <div
+                        className={`w-8 h-4 rounded-full transition-colors ${
+                          creator.aiEnabled ? "bg-purple-500" : "bg-gray-600"
+                        }`}
+                      >
+                        <div
+                          className={`w-3 h-3 mt-0.5 rounded-full bg-white transition-transform ${
+                            creator.aiEnabled ? "ml-4" : "ml-0.5"
+                          }`}
+                        />
+                      </div>
+                    </button>
                     <Button
                       variant="outline"
                       size="sm"
