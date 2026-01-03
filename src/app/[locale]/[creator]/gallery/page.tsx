@@ -172,8 +172,8 @@ export default function GalleryPage() {
   useEffect(() => {
     const fetchMedia = async () => {
       try {
-        // Fetch only published media that are tagged for gallery
-        const res = await fetch(`/api/media?published=true&tagGallery=true&creator=${creatorSlug}`);
+        // Fetch media tagged for gallery (no need for published check)
+        const res = await fetch(`/api/media?tagGallery=true&creator=${creatorSlug}`);
         if (res.ok) {
           const data = await res.json();
           setMediaItems(data.media || []);

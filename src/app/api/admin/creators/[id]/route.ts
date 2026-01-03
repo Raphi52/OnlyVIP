@@ -77,10 +77,7 @@ export async function PATCH(
       return NextResponse.json({ error: "Creator not found" }, { status: 404 });
     }
 
-    // Verify ownership
-    if (existingCreator.userId !== session.user.id) {
-      return NextResponse.json({ error: "You can only update your own creators" }, { status: 403 });
-    }
+    // Admin can update any creator (no ownership check needed)
 
     const updateData: any = {};
 

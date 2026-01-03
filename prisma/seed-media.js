@@ -1,6 +1,6 @@
-import { PrismaClient } from "@prisma/client";
-import * as fs from "fs";
-import * as path from "path";
+const { PrismaClient } = require("@prisma/client");
+const fs = require("fs");
+const path = require("path");
 
 const prisma = new PrismaClient();
 
@@ -19,7 +19,7 @@ async function seedMedia() {
 
   const mediaDir = path.join(process.cwd(), "public/uploads/media");
 
-  let allFiles: string[];
+  let allFiles;
   try {
     allFiles = fs.readdirSync(mediaDir).filter(f =>
       f.endsWith(".jpg") || f.endsWith(".mp4") || f.endsWith(".png")
@@ -32,8 +32,8 @@ async function seedMedia() {
   const esmeraldaFiles = allFiles.filter(f => ESMERALDA_PREFIXES.has(f.split("_")[0]));
   const boldKiraFiles = allFiles.filter(f => BOLDKIRA_PREFIXES.has(f.split("_")[0]));
 
-  console.log(`Found ${esmeraldaFiles.length} files for esmeralda`);
-  console.log(`Found ${boldKiraFiles.length} files for bold-kira\n`);
+  console.log("Found " + esmeraldaFiles.length + " files for esmeralda");
+  console.log("Found " + boldKiraFiles.length + " files for bold-kira\n");
 
   await seedCreatorMedia("esmeralda", esmeraldaFiles);
   await seedCreatorMedia("bold-kira", boldKiraFiles);
@@ -41,30 +41,30 @@ async function seedMedia() {
   console.log("\nMedia seed complete!");
 }
 
-async function seedCreatorMedia(creatorSlug: string, files: string[]) {
-  console.log(`Seeding media for ${creatorSlug}...`);
+async function seedCreatorMedia(creatorSlug, files) {
+  console.log("Seeding media for " + creatorSlug + "...");
 
   const creator = await prisma.creator.findUnique({
     where: { slug: creatorSlug },
   });
 
   if (!creator) {
-    console.log(`Creator ${creatorSlug} not found, skipping...`);
+    console.log("Creator " + creatorSlug + " not found, skipping...");
     return;
   }
 
   // Group files by post
-  const posts = new Map<string, string[]>();
+  const posts = new Map();
   for (const file of files) {
     const match = file.match(/^(.+?)_\d+\.(jpg|mp4|png)$/);
     if (match) {
       const postId = match[1];
       if (!posts.has(postId)) posts.set(postId, []);
-      posts.get(postId)!.push(file);
+      posts.get(postId).push(file);
     }
   }
 
-  console.log(`Found ${posts.size} posts`);
+  console.log("Found " + posts.size + " posts");
 
   let created = 0;
   let skipped = 0;
@@ -79,8 +79,8 @@ async function seedCreatorMedia(creatorSlug: string, files: string[]) {
     const mainFile = postFiles[0];
     const isVideo = mainFile.endsWith(".mp4");
     const type = isVideo ? "VIDEO" : "PHOTO";
-    const contentUrl = `/uploads/media/${mainFile}`;
-    const slug = `${creatorSlug}-${postId}`;
+    const contentUrl = "/uploads/media/" + mainFile;
+    const slug = creatorSlug + "-" + postId;
 
     // Check if exists
     const existing = await prisma.mediaContent.findUnique({ where: { slug } });
@@ -90,8 +90,8 @@ async function seedCreatorMedia(creatorSlug: string, files: string[]) {
     }
 
     // Random tags
-    const tagGallery = Math.random() > 0.2; // 80% in gallery
-    const tagFree = Math.random() > 0.6; // 40% free
+    const tagGallery = Math.random() > 0.2;
+    const tagFree = Math.random() > 0.6;
     const tagVIP = !tagFree && Math.random() > 0.5;
     const tagPPV = !tagFree && !tagVIP;
     const ppvPrice = tagPPV ? Math.floor(Math.random() * 10) + 3 : null;
@@ -100,7 +100,7 @@ async function seedCreatorMedia(creatorSlug: string, files: string[]) {
       data: {
         creatorSlug,
         slug,
-        title: `Post ${postId.slice(-6)}`,
+        title: "Post " + postId.slice(-6),
         type,
         contentUrl,
         thumbnailUrl: isVideo ? contentUrl.replace(".mp4", "_thumb.jpg") : contentUrl,
@@ -116,7 +116,7 @@ async function seedCreatorMedia(creatorSlug: string, files: string[]) {
     created++;
   }
 
-  console.log(`${creatorSlug}: Created ${created}, skipped ${skipped}`);
+  console.log(creatorSlug + ": Created " + created + ", skipped " + skipped);
 }
 
 seedMedia()

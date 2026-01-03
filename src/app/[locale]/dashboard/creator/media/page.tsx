@@ -958,7 +958,7 @@ export default function CreatorMediaPage() {
                       {item.title}
                     </h3>
                     <p className="text-white/60 text-sm">
-                      {item.viewCount.toLocaleString()} views
+                      {item.viewCount} views
                     </p>
                   </div>
                 </div>

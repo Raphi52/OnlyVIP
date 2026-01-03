@@ -114,6 +114,7 @@ export function Hero({ creator }: HeroProps) {
             fill
             priority
             sizes="100vw"
+            unoptimized={(creator?.coverImage || "").startsWith("/uploads")}
             className="object-cover"
           />
         </div>
@@ -348,6 +349,7 @@ export function Hero({ creator }: HeroProps) {
                       fill
                       priority
                       sizes="(max-width: 768px) 100vw, 400px"
+                      unoptimized={(creator?.cardImage || creator?.avatar || "").startsWith("/uploads")}
                       className="object-cover"
                     />
                     {/* Gradient overlay */}
@@ -444,7 +446,7 @@ export function Hero({ creator }: HeroProps) {
 
       {/* Scroll indicator */}
       <motion.div
-        className="absolute bottom-8 left-1/2 -translate-x-1/2 z-30"
+        className="absolute bottom-2 left-1/2 -translate-x-1/2 z-30"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 2 }}

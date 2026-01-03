@@ -526,6 +526,7 @@ function CreatorCard({ creator, size }: { creator: Creator; size: GridSize }) {
               src={creator.cardImage || creator.avatar || ""}
               alt={creator.displayName}
               fill
+              unoptimized={(creator.cardImage || creator.avatar || "").startsWith("/uploads")}
               className={cn(
                 "object-cover transition-transform duration-700",
                 isHovered && "scale-110"

@@ -569,6 +569,7 @@ function CreatorCard({
               src={creator.cardImage || creator.avatar || ""}
               alt={`${creator.displayName} - VipOnly Creator`}
               fill
+              unoptimized={(creator.cardImage || creator.avatar || "").startsWith("/uploads")}
               className={cn(
                 "object-cover transition-transform duration-700",
                 isHovered && "scale-110"
