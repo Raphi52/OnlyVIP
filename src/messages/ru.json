@@ -188,6 +188,8 @@
     "exploreMore": "Узнать больше"
   },
   "pricing": {
+    "basicPlan": "Базовый",
+    "vipPlan": "VIP",
     "accessBasicContent": "Доступ к базовому контенту и сообщениям",
     "directMessaging": "Личные сообщения",
     "supportCreator": "Поддержка создателя",
@@ -358,6 +360,8 @@
     "privateName": "Приватное имя",
     "instantAccess": "Мгновенный доступ",
     "noWaiting": "Без ожидания",
+    "cancelAnytime": "Отмена в любое время",
+    "noCommitment": "Без обязательств",
     "members": "Участников",
     "ratingLabel": "Рейтинг",
     "satisfaction": "Удовлетворённость"

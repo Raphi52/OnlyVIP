@@ -61,10 +61,18 @@ model Agency {
   listing         AgencyListing?
   earnings        AgencyEarning[]
 
+  // Payout requests
+  payoutRequests        AgencyPayoutRequest[]
+  creatorPayouts        AgencyCreatorPayout[]
+
   // Balance tracking
   pendingBalance Float @default(0) // Balance awaiting payout
   totalEarned    Float @default(0) // Total earned (net after chatter commission)
   totalPaid      Float @default(0) // Total paid out
+
+  // Payment wallets for agency payouts
+  walletEth String?
+  walletBtc String?
 
   // Stats cache
   totalRevenue  Float @default(0)
@@ -110,6 +118,10 @@ model Chatter {
   pendingBalance Float @default(0) // Balance awaiting payout
   totalPaid      Float @default(0) // Total paid out
 
+  // Payment wallets for chatter payouts
+  walletEth String?
+  walletBtc String?
+
   // Stats
   totalEarnings        Float @default(0)
   totalMessages        Int   @default(0)
@@ -125,6 +137,9 @@ model Chatter {
 
   // Attributed earnings
   earnings ChatterEarning[]
+
+  // Payout requests
+  payoutRequests ChatterPayoutRequest[]
 
   // Messages sent by this chatter
   messages Message[] @relation("ChatterMessages")
@@ -2399,6 +2414,94 @@ model PayoutRequest {
 
   createdAt   DateTime @default(now())
 
+  @@index([creatorSlug])
+  @@index([status])
+  @@index([createdAt])
+}
+
+// ============= AGENCY PAYOUT REQUESTS =============
+
+model AgencyPayoutRequest {
+  id       String @id @default(cuid())
+  agencyId String
+
+  agency Agency @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+
+  // Amount requested
+  amount Float
+
+  // Wallet info
+  walletType    String // "ETH" | "BTC"
+  walletAddress String
+
+  // Status
+  status String    @default("PENDING") // "PENDING" | "PAID"
+  paidAt DateTime?
+  paidBy String? // Admin user ID
+  txHash String? // Blockchain transaction hash
+
+  createdAt DateTime @default(now())
+
+  @@index([agencyId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+// ============= CHATTER PAYOUT REQUESTS =============
+
+model ChatterPayoutRequest {
+  id        String @id @default(cuid())
+  chatterId String
+  agencyId  String // Agency that processed the payout
+
+  chatter Chatter @relation(fields: [chatterId], references: [id], onDelete: Cascade)
+
+  // Amount paid
+  amount Float
+
+  // Wallet info
+  walletType    String // "ETH" | "BTC"
+  walletAddress String
+
+  // Status
+  status String    @default("PENDING") // "PENDING" | "PAID"
+  paidAt DateTime?
+  paidBy String? // Agency owner who processed
+  txHash String?
+
+  createdAt DateTime @default(now())
+
+  @@index([chatterId])
+  @@index([agencyId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+// ============= AGENCY -> CREATOR PAYOUT =============
+
+model AgencyCreatorPayout {
+  id          String @id @default(cuid())
+  agencyId    String
+  creatorSlug String
+
+  agency Agency @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+
+  // Amount paid
+  amount Float
+
+  // Wallet info (copied from creator at time of payout)
+  walletType    String
+  walletAddress String
+
+  // Status
+  status String    @default("PENDING") // "PENDING" | "PAID"
+  paidAt DateTime?
+  paidBy String? // Agency owner who processed
+  txHash String?
+
+  createdAt DateTime @default(now())
+
+  @@index([agencyId])
   @@index([creatorSlug])
   @@index([status])
   @@index([createdAt])

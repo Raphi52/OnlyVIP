@@ -431,10 +431,23 @@ export default function MessagesPage() {
           setMessages((prev) =>
             prev.map((msg) =>
               msg.id === messageId
-                ? { ...msg, isUnlocked: true, ppvUnlockedBy: [...msg.ppvUnlockedBy, userId!] }
+                ? {
+                    ...msg,
+                    isUnlocked: true,
+                    ppvUnlockedBy: [...msg.ppvUnlockedBy, userId!],
+                    // Update media URLs with unlocked content
+                    media: data.media || msg.media,
+                  }
                 : msg
             )
           );
+        }
+      } else {
+        const errorData = await res.json();
+        if (errorData.error === "Insufficient paid credits") {
+          alert(`Not enough credits. You have ${errorData.balance} but need ${errorData.required} credits.`);
+        } else {
+          alert(errorData.error || "Failed to unlock content");
         }
       }
     } catch (error) {

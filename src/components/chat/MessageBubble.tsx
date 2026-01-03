@@ -268,31 +268,32 @@ export const MessageBubble = memo(function MessageBubble({
         {media && media.length > 0 && (
           <div className={cn(
             "overflow-hidden rounded-2xl mb-0.5",
-            media.length > 1 && !showLocked && "grid gap-0.5",
-            media.length === 2 && !showLocked && "grid-cols-2",
-            media.length >= 3 && !showLocked && "grid-cols-2",
+            media.length > 1 && !showLocked && !showSentPPV && "grid gap-0.5",
+            media.length === 2 && !showLocked && !showSentPPV && "grid-cols-2",
+            media.length >= 3 && !showLocked && !showSentPPV && "grid-cols-2",
             isSent ? "rounded-br-md" : "rounded-bl-md"
           )}>
-            {(showLocked ? media.slice(0, 1) : media.slice(0, 4)).map((item, index) => (
+            {((showLocked || showSentPPV) ? media.slice(0, 1) : media.slice(0, 4)).map((item, index) => (
               <motion.div
                 key={item.id}
                 className={cn(
                   "relative cursor-pointer overflow-hidden",
-                  // Locked PPV - big premium card
-                  showLocked
-                    ? "aspect-[3/4] min-h-[350px] max-h-[450px] bg-gradient-to-br from-pink-950/50 via-black to-purple-950/50"
-                    : "bg-black/20",
-                  // Regular media sizing
-                  !showLocked && media.length === 1 && "aspect-[4/3] max-h-[320px]",
-                  !showLocked && media.length > 1 && "aspect-square",
-                  !showLocked && index === 0 && media.length === 3 && "row-span-2"
+                  // Locked PPV - big premium card (buyer view)
+                  showLocked && "aspect-[9/16] min-h-[420px] max-h-[520px] w-full bg-gradient-to-br from-pink-950/50 via-black to-purple-950/50",
+                  // Sent PPV - big card (seller view)
+                  showSentPPV && "aspect-[4/5] min-h-[320px] max-h-[400px] w-full bg-black/20",
+                  // Regular media sizing (non-PPV)
+                  !showLocked && !showSentPPV && "bg-black/20",
+                  !showLocked && !showSentPPV && media.length === 1 && "aspect-[4/3] max-h-[320px]",
+                  !showLocked && !showSentPPV && media.length > 1 && "aspect-square",
+                  !showLocked && !showSentPPV && index === 0 && media.length === 3 && "row-span-2"
                 )}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => !showLocked && onMediaClick?.(item)}
               >
                 {showLocked ? (
-                  /* Premium Locked PPV - Sexy & Enticing Design */
-                  <div className="absolute inset-0 overflow-hidden">
+                  /* Ultra Modern Locked PPV Card */
+                  <div className="absolute inset-0 overflow-hidden bg-gradient-to-br from-gray-900 via-black to-gray-900">
                     {/* Blurred preview background */}
                     {item.previewUrl ? (
                       <Image
@@ -300,175 +301,123 @@ export const MessageBubble = memo(function MessageBubble({
                         alt=""
                         fill
                         sizes="300px"
-                        className="object-cover blur-xl scale-125 opacity-70"
+                        className="object-cover blur-2xl scale-150 opacity-40"
                       />
-                    ) : (
-                      <div className="absolute inset-0 bg-gradient-to-br from-pink-900/50 via-purple-900/50 to-rose-900/50" />
-                    )}
+                    ) : null}
 
-                    {/* Animated gradient overlay */}
-                    <motion.div
-                      className="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-transparent"
-                      animate={{
-                        background: [
-                          "linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0.7) 50%, rgba(0,0,0,0) 100%)",
-                          "linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0.6) 40%, rgba(0,0,0,0) 100%)",
-                          "linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0.7) 50%, rgba(0,0,0,0) 100%)",
-                        ]
-                      }}
-                      transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
-                    />
+                    {/* Gradient overlay */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/80 to-black/40" />
 
-                    {/* Sparkle effects */}
-                    <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                      {[...Array(5)].map((_, i) => (
-                        <motion.div
-                          key={i}
-                          className="absolute w-1 h-1 bg-white rounded-full"
-                          style={{
-                            left: `${20 + i * 15}%`,
-                            top: `${30 + (i % 3) * 20}%`,
-                          }}
-                          animate={{
-                            opacity: [0, 1, 0],
-                            scale: [0.5, 1.5, 0.5],
-                          }}
-                          transition={{
-                            repeat: Infinity,
-                            duration: 2,
-                            delay: i * 0.4,
-                            ease: "easeInOut",
-                          }}
-                        />
-                      ))}
+                    {/* Animated gradient border */}
+                    <div className="absolute inset-0 rounded-2xl overflow-hidden">
+                      <motion.div
+                        className="absolute -inset-[100%]"
+                        style={{
+                          background: "conic-gradient(from 0deg, transparent 0%, rgba(236, 72, 153, 0.8) 25%, transparent 50%, rgba(251, 191, 36, 0.8) 75%, transparent 100%)",
+                        }}
+                        animate={{ rotate: [0, 360] }}
+                        transition={{ repeat: Infinity, duration: 3, ease: "linear" }}
+                      />
                     </div>
 
-                    {/* Content type badge */}
-                    <div className="absolute top-3 left-3 z-10">
+                    {/* Inner content area */}
+                    <div className="absolute inset-[2px] rounded-2xl bg-black/90" />
+
+                    {/* Top section */}
+                    <div className="absolute top-4 left-4 right-4 z-10 flex items-center justify-between">
+                      {/* Media count pill */}
                       <motion.div
                         initial={{ opacity: 0, x: -10 }}
                         animate={{ opacity: 1, x: 0 }}
-                        className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/50 backdrop-blur-md border border-white/10"
+                        className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/10"
                       >
-                        {item.type === "VIDEO" ? (
-                          <>
-                            <Play className="w-3 h-3 text-pink-400" fill="currentColor" />
-                            <span className="text-[10px] font-semibold text-white/90">VIDEO</span>
-                          </>
+                        {media && media.some(m => m.type === "VIDEO") ? (
+                          <Play className="w-3.5 h-3.5 text-white" fill="currentColor" />
                         ) : (
-                          <>
-                            <Lock className="w-3 h-3 text-pink-400" />
-                            <span className="text-[10px] font-semibold text-white/90">PHOTO</span>
-                          </>
+                          <Lock className="w-3.5 h-3.5 text-white/70" />
                         )}
+                        <span className="text-xs font-semibold text-white">
+                          {media ? media.length : 1} {media && media.some(m => m.type === "VIDEO") ? "video" : "photo"}{media && media.length > 1 ? "s" : ""}
+                        </span>
+                      </motion.div>
+
+                      {/* VIP badge */}
+                      <motion.div
+                        initial={{ opacity: 0, x: 10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        className="px-3 py-1.5 rounded-full bg-gradient-to-r from-pink-500 to-rose-500"
+                      >
+                        <span className="text-[10px] font-black text-white tracking-widest">VIP</span>
                       </motion.div>
                     </div>
 
-                    {/* VIP Badge */}
-                    <div className="absolute top-3 right-3 z-10">
+                    {/* Center content */}
+                    <div className="absolute inset-0 flex flex-col items-center justify-center p-6 z-10">
+                      {/* Lock icon */}
                       <motion.div
-                        animate={{
-                          boxShadow: [
-                            "0 0 10px rgba(236, 72, 153, 0.3)",
-                            "0 0 20px rgba(236, 72, 153, 0.5)",
-                            "0 0 10px rgba(236, 72, 153, 0.3)",
-                          ]
-                        }}
-                        transition={{ repeat: Infinity, duration: 2 }}
-                        className="px-2 py-0.5 rounded-full bg-gradient-to-r from-pink-500 to-rose-500 border border-pink-400/30"
+                        className="relative mb-8"
+                        animate={{ y: [0, -6, 0] }}
+                        transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
                       >
-                        <span className="text-[9px] font-bold text-white tracking-wider">EXCLUSIVE</span>
-                      </motion.div>
-                    </div>
-
-                    {/* Main content area */}
-                    <div className="absolute inset-0 flex flex-col items-center justify-center p-4">
-                      {/* Lock icon with premium animation */}
-                      <motion.div
-                        className="relative mb-4"
-                        animate={{ y: [0, -5, 0] }}
-                        transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
-                      >
-                        {/* Outer glow ring */}
-                        <motion.div
-                          className="absolute inset-0 rounded-full"
-                          animate={{
-                            boxShadow: [
-                              "0 0 30px 10px rgba(236, 72, 153, 0.2)",
-                              "0 0 50px 15px rgba(236, 72, 153, 0.4)",
-                              "0 0 30px 10px rgba(236, 72, 153, 0.2)",
-                            ],
-                            scale: [1, 1.1, 1],
-                          }}
-                          transition={{ repeat: Infinity, duration: 2 }}
-                        />
-
-                        {/* Lock container */}
-                        <div className="relative w-16 h-16 rounded-full bg-gradient-to-br from-pink-500 via-rose-500 to-pink-600 flex items-center justify-center shadow-2xl">
-                          {/* Inner shine */}
-                          <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-white/0 via-white/30 to-white/0" />
-                          <Lock className="w-7 h-7 text-white drop-shadow-lg" />
+                        <div className="relative w-16 h-16 rounded-2xl bg-gradient-to-br from-pink-500 to-rose-600 flex items-center justify-center shadow-2xl shadow-pink-500/30">
+                          <Lock className="w-8 h-8 text-white" />
                         </div>
+                        {/* Glow */}
+                        <div className="absolute -inset-2 rounded-2xl bg-pink-500/20 blur-xl -z-10" />
                       </motion.div>
 
-                      {/* Price tag with sexy gradient */}
+                      {/* Price display */}
                       <motion.div
-                        initial={{ scale: 0.9, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        transition={{ delay: 0.1 }}
-                        className="text-center mb-4"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="text-center mb-8"
                       >
-                        <div className="flex items-center justify-center gap-1.5 mb-1">
-                          <Coins className="w-5 h-5 text-[var(--gold)]" />
-                          <span className="text-3xl font-black bg-gradient-to-r from-[var(--gold)] via-amber-300 to-[var(--gold)] bg-clip-text text-transparent">
-                            {ppvPrice || 0}
-                          </span>
+                        <div className="flex items-center justify-center gap-2 mb-2">
+                          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[var(--gold)] to-amber-600 flex items-center justify-center">
+                            <Coins className="w-4 h-4 text-black" />
+                          </div>
+                          <span className="text-5xl font-black text-white">{ppvPrice || 0}</span>
                         </div>
-                        <p className="text-xs text-white/60 font-medium">credits to unlock</p>
+                        <p className="text-sm text-white/50 font-medium">credits to unlock</p>
                       </motion.div>
 
-                      {/* Sexy unlock button */}
+                      {/* Unlock button */}
                       <motion.button
                         onClick={(e) => { e.stopPropagation(); onUnlock?.(id); }}
-                        className="relative group/btn overflow-hidden px-8 py-3 rounded-full bg-gradient-to-r from-pink-500 via-rose-500 to-pink-600 shadow-lg shadow-pink-500/40"
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        animate={{
-                          boxShadow: [
-                            "0 10px 30px rgba(236, 72, 153, 0.3)",
-                            "0 10px 40px rgba(236, 72, 153, 0.5)",
-                            "0 10px 30px rgba(236, 72, 153, 0.3)",
-                          ]
-                        }}
-                        transition={{ repeat: Infinity, duration: 2 }}
+                        className="relative w-full max-w-[200px] overflow-hidden rounded-xl"
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
                       >
+                        {/* Button gradient bg */}
+                        <div className="absolute inset-0 bg-gradient-to-r from-pink-500 via-rose-500 to-pink-500 bg-[length:200%_100%] animate-gradient" />
+
                         {/* Shine effect */}
                         <motion.div
-                          className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full"
-                          animate={{ translateX: ["100%", "-100%"] }}
+                          className="absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent"
+                          initial={{ x: "-100%" }}
+                          animate={{ x: "100%" }}
                           transition={{ repeat: Infinity, duration: 2, ease: "linear", repeatDelay: 1 }}
                         />
 
-                        <span className="relative flex items-center gap-2 text-white font-bold text-sm tracking-wide">
-                          <Lock className="w-4 h-4" />
-                          UNLOCK NOW
-                        </span>
+                        <div className="relative px-8 py-4 flex items-center justify-center gap-2">
+                          <Lock className="w-5 h-5 text-white" />
+                          <span className="text-base font-bold text-white tracking-wide">UNLOCK</span>
+                        </div>
                       </motion.button>
-
-                      {/* Trust indicator */}
-                      <motion.p
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ delay: 0.3 }}
-                        className="mt-3 text-[10px] text-white/40 flex items-center gap-1"
-                      >
-                        <Check className="w-3 h-3 text-emerald-500" />
-                        Instant access after payment
-                      </motion.p>
                     </div>
 
-                    {/* Bottom gradient fade */}
-                    <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-black/80 to-transparent pointer-events-none" />
+                    {/* Bottom info */}
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: 0.4 }}
+                      className="absolute bottom-4 left-0 right-0 flex justify-center z-10"
+                    >
+                      <div className="flex items-center gap-1.5 text-white/40 text-xs">
+                        <Check className="w-3.5 h-3.5 text-emerald-500" />
+                        <span>Instant access</span>
+                      </div>
+                    </motion.div>
                   </div>
                 ) : item.type === "VIDEO" ? (
                   /* Video Player */
@@ -566,58 +515,88 @@ export const MessageBubble = memo(function MessageBubble({
                   </div>
                 )}
 
-                {/* Sent PPV Overlay - Premium Creator View */}
+                {/* Sent PPV Overlay - Premium Creator View (image visible) */}
                 {showSentPPV && index === 0 && (
                   <div className="absolute inset-0 pointer-events-none">
-                    {/* Subtle gradient overlay */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                    {/* Glowing animated border */}
+                    <motion.div
+                      className="absolute inset-0 rounded-2xl"
+                      animate={{
+                        boxShadow: [
+                          "inset 0 0 0 3px rgba(236, 72, 153, 0.8), 0 0 20px rgba(236, 72, 153, 0.4)",
+                          "inset 0 0 0 3px rgba(251, 191, 36, 0.8), 0 0 20px rgba(251, 191, 36, 0.4)",
+                          "inset 0 0 0 3px rgba(236, 72, 153, 0.8), 0 0 20px rgba(236, 72, 153, 0.4)",
+                        ]
+                      }}
+                      transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
+                    />
 
-                    {/* Top badges */}
-                    <div className="absolute top-2.5 left-2.5 right-2.5 flex items-center justify-between z-10">
-                      {/* PPV Badge */}
-                      <motion.div
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gradient-to-r from-[var(--gold)]/90 to-amber-500/90 backdrop-blur-md shadow-lg"
-                      >
-                        <Lock className="w-3 h-3 text-black" />
-                        <span className="text-[10px] font-bold text-black tracking-wide">PPV</span>
-                      </motion.div>
+                    {/* Light gradient overlay at bottom only for readability */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent rounded-2xl" />
 
-                      {/* Price Badge */}
-                      <motion.div
-                        initial={{ opacity: 0, x: 10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-md border border-[var(--gold)]/30"
-                      >
-                        <Coins className="w-3 h-3 text-[var(--gold)]" />
-                        <span className="text-[11px] font-bold text-[var(--gold)]">{ppvPrice || 0}</span>
-                      </motion.div>
-                    </div>
+                    {/* Top left - Status pill */}
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="absolute top-3 left-3 z-10"
+                    >
+                      <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500 shadow-lg shadow-emerald-500/40">
+                        <motion.div
+                          animate={{ scale: [1, 1.2, 1] }}
+                          transition={{ repeat: Infinity, duration: 1.5 }}
+                          className="w-1.5 h-1.5 rounded-full bg-white"
+                        />
+                        <span className="text-[10px] font-bold text-white uppercase tracking-wider">Sent</span>
+                      </div>
+                    </motion.div>
 
-                    {/* Bottom info bar */}
-                    <div className="absolute bottom-0 left-0 right-0 p-2.5">
+                    {/* Top right - VIP badge like buyer card */}
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.1 }}
+                      className="absolute top-3 right-3 z-10"
+                    >
+                      <div className="px-3 py-1.5 rounded-full bg-gradient-to-r from-pink-500 to-rose-500 shadow-lg shadow-pink-500/30">
+                        <span className="text-[10px] font-black text-white tracking-widest">VIP</span>
+                      </div>
+                    </motion.div>
+
+                    {/* Bottom card - Price & Info */}
+                    <div className="absolute bottom-0 left-0 right-0 p-2 z-10">
                       <motion.div
-                        initial={{ opacity: 0, y: 10 }}
+                        initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="flex items-center justify-between px-3 py-2 rounded-xl bg-black/50 backdrop-blur-md border border-white/10"
+                        transition={{ delay: 0.2 }}
                       >
-                        <div className="flex items-center gap-2">
-                          <div className="w-6 h-6 rounded-full bg-gradient-to-br from-[var(--gold)] to-amber-600 flex items-center justify-center">
-                            <Lock className="w-3 h-3 text-black" />
+                        <div className="rounded-xl bg-black/60 backdrop-blur-xl border border-white/10">
+                          <div className="p-3">
+                            <div className="flex items-center gap-3">
+                              {/* Coin icon with glow */}
+                              <div className="relative shrink-0">
+                                <div className="absolute inset-0 bg-[var(--gold)] rounded-lg blur-md opacity-40" />
+                                <div className="relative w-10 h-10 rounded-lg bg-gradient-to-br from-[var(--gold)] to-amber-600 flex items-center justify-center">
+                                  <Coins className="w-5 h-5 text-black" />
+                                </div>
+                              </div>
+
+                              {/* Price text */}
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-baseline gap-1">
+                                  <span className="text-2xl font-black text-white">{ppvPrice || 0}</span>
+                                  <span className="text-xs font-medium text-white/50">credits</span>
+                                </div>
+                                <p className="text-[10px] text-white/40 truncate">
+                                  {media && media.length > 1 ? `${media.length} exclusive files` : "Exclusive content"}
+                                </p>
+                              </div>
+
+                              {/* PPV Badge */}
+                              <div className="shrink-0 px-3 py-1.5 rounded-lg bg-gradient-to-r from-[var(--gold)] to-amber-500 shadow-lg shadow-amber-500/30">
+                                <span className="text-xs font-black text-black">PPV</span>
+                              </div>
+                            </div>
                           </div>
-                          <div>
-                            <p className="text-[10px] font-semibold text-white">Exclusive Content</p>
-                            <p className="text-[9px] text-white/50">Waiting for unlock</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-1 text-emerald-400">
-                          <motion.div
-                            animate={{ scale: [1, 1.2, 1] }}
-                            transition={{ repeat: Infinity, duration: 2 }}
-                            className="w-1.5 h-1.5 rounded-full bg-emerald-400"
-                          />
-                          <span className="text-[9px] font-medium">Sent</span>
                         </div>
                       </motion.div>
                     </div>

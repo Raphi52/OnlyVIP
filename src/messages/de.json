@@ -188,6 +188,8 @@
     "exploreMore": "Mehr Entdecken"
   },
   "pricing": {
+    "basicPlan": "Basis",
+    "vipPlan": "VIP",
     "accessBasicContent": "Zugang zu Basis-Content & Messaging",
     "directMessaging": "Direktnachrichten",
     "supportCreator": "Creator unterstützen",
@@ -308,6 +310,8 @@
     "privateName": "Privater Name",
     "instantAccess": "Sofortiger Zugang",
     "noWaiting": "Kein Warten",
+    "cancelAnytime": "Jederzeit kündbar",
+    "noCommitment": "Keine Bindung",
     "members": "Mitglieder",
     "ratingLabel": "Bewertung",
     "satisfaction": "Zufriedenheit"

@@ -18,7 +18,12 @@ import {
   Eye,
   CheckCircle,
   X,
-  FileText,
+  Image,
+  MessageCircle,
+  Video,
+  Gift,
+  CreditCard,
+  ChevronRight,
 } from "lucide-react";
 import { Button, Card } from "@/components/ui";
 import { cn } from "@/lib/utils";
@@ -50,42 +55,51 @@ interface Totals {
   paid: { gross: number; commission: number; net: number };
 }
 
-interface PayoutRequest {
-  id: string;
-  creatorSlug: string;
-  amount: number;
-  walletType: string;
-  walletAddress: string;
-  status: string;
-  createdAt: string;
-  paidAt: string | null;
+interface CreatorDetailStats {
   creator: {
+    id: string;
+    slug: string;
     displayName: string;
     avatar: string | null;
+    email: string;
     pendingBalance: number;
-  } | null;
-  verification: {
-    documentType: string;
-    documentFrontUrl: string;
-    documentBackUrl: string | null;
-    selfieUrl: string;
-    fullName: string | null;
-    status: string;
-  } | null;
+    totalEarned: number;
+    totalPaid: number;
+    walletEth: string | null;
+    walletBtc: string | null;
+    subscriptionPrice: number;
+    createdAt: string;
+  };
+  stats: {
+    totalGross: number;
+    totalNet: number;
+    totalCommission: number;
+    commissionRate: string;
+    subscriberCount: number;
+    totalSubscribers: number;
+    totalMedia: number;
+    ppvMedia: number;
+    freeMedia: number;
+    mediaPurchaseCount: number;
+    mediaPurchaseRevenue: number;
+  };
+  earnings: {
+    byType: EarningsBreakdown[];
+    byStatus: { status: string; count: number; grossAmount: number; netAmount: number; commission: number }[];
+    recent: { id: string; type: string; grossAmount: number; netAmount: number; commissionAmount: number; status: string; createdAt: string }[];
+  };
+  messagePayments: { type: string; count: number; amount: number }[];
+  mediaStats: { type: string; count: number }[];
 }
 
-export default function AdminPayoutsPage() {
+export default function AdminCreatorRevenuesPage() {
   const [creators, setCreators] = useState<Creator[]>([]);
   const [totals, setTotals] = useState<Totals | null>(null);
   const [loading, setLoading] = useState(true);
   const [copiedWallet, setCopiedWallet] = useState<string | null>(null);
-
-  // Payout requests state
-  const [payoutRequests, setPayoutRequests] = useState<PayoutRequest[]>([]);
-  const [requestsTotals, setRequestsTotals] = useState<{ pendingCount: number; pendingAmount: number } | null>(null);
-  const [loadingRequests, setLoadingRequests] = useState(true);
-  const [processingId, setProcessingId] = useState<string | null>(null);
-  const [viewingDoc, setViewingDoc] = useState<PayoutRequest | null>(null);
+  const [selectedCreator, setSelectedCreator] = useState<string | null>(null);
+  const [creatorDetail, setCreatorDetail] = useState<CreatorDetailStats | null>(null);
+  const [loadingDetail, setLoadingDetail] = useState(false);
 
   const fetchData = async () => {
     setLoading(true);
@@ -103,54 +117,24 @@ export default function AdminPayoutsPage() {
     }
   };
 
-  const fetchPayoutRequests = async () => {
-    setLoadingRequests(true);
+  const fetchCreatorDetail = async (slug: string) => {
+    setLoadingDetail(true);
+    setSelectedCreator(slug);
     try {
-      const res = await fetch("/api/admin/payout-requests");
+      const res = await fetch(`/api/admin/creator-stats/${slug}`);
       if (res.ok) {
         const data = await res.json();
-        setPayoutRequests(data.requests || []);
-        setRequestsTotals(data.totals || null);
+        setCreatorDetail(data);
       }
     } catch (err) {
-      console.error("Error fetching payout requests:", err);
+      console.error("Error fetching creator detail:", err);
     } finally {
-      setLoadingRequests(false);
-    }
-  };
-
-  const handleMarkAsPaid = async (requestId: string) => {
-    if (!confirm("Are you sure you want to mark this payout as paid? This will deduct from the creator's balance.")) {
-      return;
-    }
-
-    setProcessingId(requestId);
-    try {
-      const res = await fetch(`/api/admin/payout-requests/${requestId}/pay`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}),
-      });
-
-      if (res.ok) {
-        // Refresh both data sets
-        fetchPayoutRequests();
-        fetchData();
-      } else {
-        const error = await res.json();
-        alert(error.error || "Failed to process payout");
-      }
-    } catch (err) {
-      console.error("Error processing payout:", err);
-      alert("Failed to process payout");
-    } finally {
-      setProcessingId(null);
+      setLoadingDetail(false);
     }
   };
 
   useEffect(() => {
     fetchData();
-    fetchPayoutRequests();
   }, []);
 
   const copyToClipboard = (text: string, id: string) => {
@@ -161,33 +145,51 @@ export default function AdminPayoutsPage() {
 
   const formatEarningType = (type: string) => {
     const types: Record<string, string> = {
-      MEDIA_UNLOCK: "Media",
+      MEDIA_UNLOCK: "Media Sales",
       TIP: "Tips",
-      PPV: "PPV",
-      SUBSCRIPTION: "Subs",
+      PPV: "PPV Messages",
+      SUBSCRIPTION: "Subscriptions",
     };
     return types[type] || type;
   };
 
-  // Export to CSV
+  const getTypeIcon = (type: string) => {
+    switch (type) {
+      case "MEDIA_UNLOCK":
+        return <Image className="w-4 h-4" />;
+      case "TIP":
+        return <Gift className="w-4 h-4" />;
+      case "PPV":
+        return <MessageCircle className="w-4 h-4" />;
+      case "SUBSCRIPTION":
+        return <CreditCard className="w-4 h-4" />;
+      default:
+        return <DollarSign className="w-4 h-4" />;
+    }
+  };
+
   const exportCSV = () => {
-    const headers = ["Creator", "Slug", "Pending (EUR)", "Total Earned (EUR)", "Total Paid (EUR)", "Wallet ETH", "Wallet BTC"];
-    const rows = creators.map(c => [
-      c.displayName,
-      c.slug,
-      c.pendingBalance.toFixed(2),
-      c.totalEarned.toFixed(2),
-      c.totalPaid.toFixed(2),
-      c.walletEth || "",
-      c.walletBtc || "",
-    ]);
+    const headers = ["Creator", "Slug", "Pending", "Total Earned", "Total Paid", "Commission", "Wallet ETH", "Wallet BTC"];
+    const rows = creators.map(c => {
+      const commission = c.totalEarned - (c.totalEarned * 0.95);
+      return [
+        c.displayName,
+        c.slug,
+        c.pendingBalance.toFixed(2),
+        c.totalEarned.toFixed(2),
+        c.totalPaid.toFixed(2),
+        commission.toFixed(2),
+        c.walletEth || "",
+        c.walletBtc || "",
+      ];
+    });
 
     const csv = [headers, ...rows].map(row => row.join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `payouts-${new Date().toISOString().split("T")[0]}.csv`;
+    a.download = `creator-revenues-${new Date().toISOString().split("T")[0]}.csv`;
     a.click();
   };
 
@@ -196,8 +198,8 @@ export default function AdminPayoutsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-white">Creator Payouts</h1>
-          <p className="text-sm sm:text-base text-white/50">Accounting dashboard</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-white">Creator Revenues</h1>
+          <p className="text-sm sm:text-base text-white/50">Earnings, commissions & payouts</p>
         </div>
         <div className="flex gap-2">
           <Button
@@ -222,19 +224,6 @@ export default function AdminPayoutsPage() {
         </div>
       </div>
 
-      {/* Info banner */}
-      <div className="p-3 sm:p-4 rounded-xl bg-blue-500/10 border border-blue-500/30">
-        <div className="flex items-start gap-2 sm:gap-3">
-          <FileSpreadsheet className="w-4 h-4 sm:w-5 sm:h-5 text-blue-400 mt-0.5 flex-shrink-0" />
-          <div>
-            <p className="text-sm sm:text-base text-blue-400 font-medium">Accounting View Only</p>
-            <p className="text-xs sm:text-sm text-blue-400/70">
-              View pending balances. Use secure payout service to process.
-            </p>
-          </div>
-        </div>
-      </div>
-
       {/* Stats Cards */}
       {totals && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
@@ -244,7 +233,7 @@ export default function AdminPayoutsPage() {
                 <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-500" />
               </div>
               <div>
-                <p className="text-[10px] sm:text-sm text-white/50">Pending</p>
+                <p className="text-[10px] sm:text-sm text-white/50">Pending Payouts</p>
                 <p className="text-base sm:text-xl font-bold text-yellow-500">
                   {totals.pending.net.toFixed(0)}€
                 </p>
@@ -258,7 +247,7 @@ export default function AdminPayoutsPage() {
                 <Check className="w-4 h-4 sm:w-5 sm:h-5 text-green-500" />
               </div>
               <div>
-                <p className="text-[10px] sm:text-sm text-white/50">Paid</p>
+                <p className="text-[10px] sm:text-sm text-white/50">Total Paid</p>
                 <p className="text-base sm:text-xl font-bold text-green-500">
                   {totals.paid.net.toFixed(0)}€
                 </p>
@@ -272,7 +261,7 @@ export default function AdminPayoutsPage() {
                 <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-purple-500" />
               </div>
               <div>
-                <p className="text-[10px] sm:text-sm text-white/50">Commission</p>
+                <p className="text-[10px] sm:text-sm text-white/50">Your Commission</p>
                 <p className="text-base sm:text-xl font-bold text-purple-500">
                   {(totals.pending.commission + totals.paid.commission).toFixed(0)}€
                 </p>
@@ -286,7 +275,7 @@ export default function AdminPayoutsPage() {
                 <Users className="w-4 h-4 sm:w-5 sm:h-5 text-blue-500" />
               </div>
               <div>
-                <p className="text-[10px] sm:text-sm text-white/50">To Pay</p>
+                <p className="text-[10px] sm:text-sm text-white/50">Creators to Pay</p>
                 <p className="text-base sm:text-xl font-bold text-white">
                   {creators.filter((c) => c.pendingBalance > 0).length}
                 </p>
@@ -296,207 +285,11 @@ export default function AdminPayoutsPage() {
         </div>
       )}
 
-      {/* Payout Requests Section */}
-      <Card>
-        <div className="p-3 sm:p-4 border-b border-white/10 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <h2 className="text-base sm:text-lg font-semibold text-white">Payout Requests</h2>
-            {requestsTotals && requestsTotals.pendingCount > 0 && (
-              <span className="px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-500 text-xs font-medium">
-                {requestsTotals.pendingCount} pending
-              </span>
-            )}
-          </div>
-          {requestsTotals && requestsTotals.pendingAmount > 0 && (
-            <span className="text-sm font-bold text-yellow-500">
-              {requestsTotals.pendingAmount.toFixed(0)}€ total
-            </span>
-          )}
-        </div>
-
-        {loadingRequests ? (
-          <div className="p-10 flex items-center justify-center">
-            <Loader2 className="w-8 h-8 animate-spin text-[var(--gold)]" />
-          </div>
-        ) : payoutRequests.filter(r => r.status === "PENDING").length === 0 ? (
-          <div className="p-10 text-center text-white/50 text-sm sm:text-base">
-            No pending payout requests
-          </div>
-        ) : (
-          <div className="divide-y divide-white/5">
-            {payoutRequests
-              .filter(r => r.status === "PENDING")
-              .map((request) => (
-                <div key={request.id} className="p-4">
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-                    {/* Creator info */}
-                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                      {request.creator?.avatar ? (
-                        <img
-                          src={request.creator.avatar}
-                          alt={request.creator.displayName}
-                          className="w-10 h-10 rounded-full object-cover flex-shrink-0"
-                        />
-                      ) : (
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[var(--gold)] to-amber-600 flex items-center justify-center text-black font-bold flex-shrink-0">
-                          {request.creator?.displayName?.charAt(0) || "?"}
-                        </div>
-                      )}
-                      <div className="min-w-0">
-                        <p className="font-medium text-white truncate">
-                          {request.creator?.displayName || request.creatorSlug}
-                        </p>
-                        <p className="text-xs text-white/50">
-                          {new Date(request.createdAt).toLocaleDateString()} • {request.walletType}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Amount */}
-                    <div className="flex items-center gap-4">
-                      <div className="text-right">
-                        <p className="text-lg font-bold text-yellow-500">{request.amount.toFixed(2)}€</p>
-                        <button
-                          onClick={() => copyToClipboard(request.walletAddress, `req-${request.id}`)}
-                          className="flex items-center gap-1 text-xs text-white/50 hover:text-white/70"
-                        >
-                          {request.walletAddress.slice(0, 8)}...{request.walletAddress.slice(-6)}
-                          {copiedWallet === `req-${request.id}` ? (
-                            <Check className="w-3 h-3 text-green-500" />
-                          ) : (
-                            <Copy className="w-3 h-3" />
-                          )}
-                        </button>
-                      </div>
-
-                      {/* Actions */}
-                      <div className="flex items-center gap-2">
-                        {/* View ID button */}
-                        {request.verification && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setViewingDoc(request)}
-                            className="gap-1.5"
-                          >
-                            <Eye className="w-4 h-4" />
-                            <span className="hidden sm:inline">View ID</span>
-                          </Button>
-                        )}
-
-                        {/* Mark as paid button */}
-                        <Button
-                          size="sm"
-                          onClick={() => handleMarkAsPaid(request.id)}
-                          disabled={processingId === request.id}
-                          className="gap-1.5 bg-green-600 hover:bg-green-700"
-                        >
-                          {processingId === request.id ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                          ) : (
-                            <CheckCircle className="w-4 h-4" />
-                          )}
-                          <span className="hidden sm:inline">Mark Paid</span>
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Verification status warning */}
-                  {!request.verification && (
-                    <div className="mt-3 flex items-center gap-2 text-xs text-yellow-500/70">
-                      <AlertCircle className="w-4 h-4" />
-                      No ID verification on file
-                    </div>
-                  )}
-                </div>
-              ))}
-          </div>
-        )}
-      </Card>
-
-      {/* ID Document Modal */}
-      {viewingDoc && viewingDoc.verification && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80">
-          <div className="bg-[var(--surface)] rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-4 border-b border-white/10 flex items-center justify-between">
-              <div>
-                <h3 className="font-semibold text-white">
-                  ID Verification - {viewingDoc.creator?.displayName}
-                </h3>
-                <p className="text-sm text-white/50">
-                  {viewingDoc.verification.documentType} • {viewingDoc.verification.fullName || "Name not extracted"}
-                </p>
-              </div>
-              <button
-                onClick={() => setViewingDoc(null)}
-                className="p-2 rounded-lg hover:bg-white/10"
-              >
-                <X className="w-5 h-5 text-white/50" />
-              </button>
-            </div>
-            <div className="p-4 space-y-4">
-              {/* Document Front */}
-              <div>
-                <p className="text-sm text-white/50 mb-2">Document Front</p>
-                <img
-                  src={viewingDoc.verification.documentFrontUrl}
-                  alt="Document front"
-                  className="w-full rounded-lg border border-white/10"
-                />
-              </div>
-
-              {/* Document Back */}
-              {viewingDoc.verification.documentBackUrl && (
-                <div>
-                  <p className="text-sm text-white/50 mb-2">Document Back</p>
-                  <img
-                    src={viewingDoc.verification.documentBackUrl}
-                    alt="Document back"
-                    className="w-full rounded-lg border border-white/10"
-                  />
-                </div>
-              )}
-
-              {/* Selfie */}
-              <div>
-                <p className="text-sm text-white/50 mb-2">Selfie with Document</p>
-                <img
-                  src={viewingDoc.verification.selfieUrl}
-                  alt="Selfie"
-                  className="w-full rounded-lg border border-white/10"
-                />
-              </div>
-
-              {/* Verification Status */}
-              <div className={cn(
-                "p-3 rounded-lg flex items-center gap-2",
-                viewingDoc.verification.status === "APPROVED"
-                  ? "bg-green-500/10 text-green-400"
-                  : viewingDoc.verification.status === "REJECTED"
-                  ? "bg-red-500/10 text-red-400"
-                  : "bg-yellow-500/10 text-yellow-400"
-              )}>
-                {viewingDoc.verification.status === "APPROVED" ? (
-                  <CheckCircle className="w-5 h-5" />
-                ) : viewingDoc.verification.status === "REJECTED" ? (
-                  <X className="w-5 h-5" />
-                ) : (
-                  <Clock className="w-5 h-5" />
-                )}
-                <span className="font-medium">
-                  Verification Status: {viewingDoc.verification.status}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Creators List */}
       <Card>
         <div className="p-3 sm:p-4 border-b border-white/10">
-          <h2 className="text-base sm:text-lg font-semibold text-white">Creator Balances</h2>
+          <h2 className="text-base sm:text-lg font-semibold text-white">All Creators</h2>
+          <p className="text-xs text-white/50">Click on a creator to see detailed stats</p>
         </div>
 
         {loading ? (
@@ -508,202 +301,299 @@ export default function AdminPayoutsPage() {
             No creator earnings yet
           </div>
         ) : (
-          <>
-            {/* Mobile Card Layout */}
-            <div className="sm:hidden divide-y divide-white/5">
-              {creators.map((creator) => (
-                <div key={creator.id} className="p-3">
-                  {/* Creator header */}
-                  <div className="flex items-center gap-3 mb-3">
-                    {creator.avatar ? (
-                      <img
-                        src={creator.avatar}
-                        alt={creator.displayName}
-                        className="w-10 h-10 rounded-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[var(--gold)] to-amber-600 flex items-center justify-center text-black font-bold text-sm">
-                        {creator.displayName.charAt(0)}
-                      </div>
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-white text-sm truncate">{creator.displayName}</p>
-                      <p className="text-xs text-white/50">@{creator.slug}</p>
+          <div className="divide-y divide-white/5">
+            {creators.map((creator) => (
+              <motion.div
+                key={creator.id}
+                className="p-4 hover:bg-white/5 cursor-pointer transition-colors"
+                onClick={() => fetchCreatorDetail(creator.slug)}
+                whileHover={{ x: 4 }}
+              >
+                <div className="flex items-center gap-4">
+                  {/* Avatar */}
+                  {creator.avatar ? (
+                    <img
+                      src={creator.avatar}
+                      alt={creator.displayName}
+                      className="w-12 h-12 rounded-full object-cover flex-shrink-0"
+                    />
+                  ) : (
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[var(--gold)] to-amber-600 flex items-center justify-center text-black font-bold flex-shrink-0">
+                      {creator.displayName.charAt(0)}
                     </div>
-                    <div className="text-right">
-                      <p className={cn(
-                        "text-base font-bold",
-                        creator.pendingBalance > 0 ? "text-yellow-500" : "text-white/30"
-                      )}>
-                        {creator.pendingBalance.toFixed(0)}€
-                      </p>
-                      <p className="text-[10px] text-white/40">pending</p>
+                  )}
+
+                  {/* Info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium text-white truncate">{creator.displayName}</p>
+                      <span className="text-xs text-white/40">@{creator.slug}</span>
+                    </div>
+                    <div className="flex items-center gap-3 text-xs text-white/50 mt-1">
+                      <span>Earned: <span className="text-white">{creator.totalEarned.toFixed(0)}€</span></span>
+                      <span>Paid: <span className="text-green-500">{creator.totalPaid.toFixed(0)}€</span></span>
+                      {creator.earningsBreakdown.length > 0 && (
+                        <span className="hidden sm:inline">
+                          {creator.earningsBreakdown.map(e => `${formatEarningType(e.type)}: ${e.count}`).join(", ")}
+                        </span>
+                      )}
                     </div>
                   </div>
 
-                  {/* Stats row */}
-                  <div className="flex items-center justify-between text-xs mb-2">
-                    <div className="flex items-center gap-3">
-                      <span className="text-white/50">Earned: <span className="text-white">{creator.totalEarned.toFixed(0)}€</span></span>
-                      <span className="text-white/50">Paid: <span className="text-green-500">{creator.totalPaid.toFixed(0)}€</span></span>
+                  {/* Pending Balance */}
+                  <div className="text-right flex-shrink-0">
+                    <p className={cn(
+                      "text-lg font-bold",
+                      creator.pendingBalance > 0 ? "text-yellow-500" : "text-white/30"
+                    )}>
+                      {creator.pendingBalance.toFixed(0)}€
+                    </p>
+                    <p className="text-[10px] text-white/40">pending</p>
+                  </div>
+
+                  {/* Arrow */}
+                  <ChevronRight className="w-5 h-5 text-white/30 flex-shrink-0" />
+                </div>
+
+                {/* Wallets */}
+                {(creator.walletEth || creator.walletBtc) && (
+                  <div className="mt-3 flex items-center gap-2 ml-16">
+                    {creator.walletEth && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); copyToClipboard(creator.walletEth!, `eth-${creator.id}`); }}
+                        className="flex items-center gap-1 px-2 py-1 bg-white/5 rounded text-[10px] text-white/70 hover:bg-white/10"
+                      >
+                        ETH: {creator.walletEth.slice(0, 6)}...{creator.walletEth.slice(-4)}
+                        {copiedWallet === `eth-${creator.id}` ? (
+                          <Check className="w-3 h-3 text-green-500" />
+                        ) : (
+                          <Copy className="w-3 h-3" />
+                        )}
+                      </button>
+                    )}
+                    {creator.walletBtc && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); copyToClipboard(creator.walletBtc!, `btc-${creator.id}`); }}
+                        className="flex items-center gap-1 px-2 py-1 bg-white/5 rounded text-[10px] text-white/70 hover:bg-white/10"
+                      >
+                        BTC: {creator.walletBtc.slice(0, 6)}...{creator.walletBtc.slice(-4)}
+                        {copiedWallet === `btc-${creator.id}` ? (
+                          <Check className="w-3 h-3 text-green-500" />
+                        ) : (
+                          <Copy className="w-3 h-3" />
+                        )}
+                      </button>
+                    )}
+                  </div>
+                )}
+              </motion.div>
+            ))}
+          </div>
+        )}
+      </Card>
+
+      {/* Creator Detail Modal */}
+      {selectedCreator && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-[var(--surface)] rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+          >
+            {loadingDetail ? (
+              <div className="p-20 flex items-center justify-center">
+                <Loader2 className="w-8 h-8 animate-spin text-[var(--gold)]" />
+              </div>
+            ) : creatorDetail ? (
+              <>
+                {/* Header */}
+                <div className="p-4 border-b border-white/10 flex items-center justify-between sticky top-0 bg-[var(--surface)] z-10">
+                  <div className="flex items-center gap-4">
+                    {creatorDetail.creator.avatar ? (
+                      <img
+                        src={creatorDetail.creator.avatar}
+                        alt={creatorDetail.creator.displayName}
+                        className="w-12 h-12 rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[var(--gold)] to-amber-600 flex items-center justify-center text-black font-bold">
+                        {creatorDetail.creator.displayName.charAt(0)}
+                      </div>
+                    )}
+                    <div>
+                      <h3 className="font-semibold text-white text-lg">{creatorDetail.creator.displayName}</h3>
+                      <p className="text-sm text-white/50">@{creatorDetail.creator.slug} • {creatorDetail.creator.email}</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => { setSelectedCreator(null); setCreatorDetail(null); }}
+                    className="p-2 rounded-lg hover:bg-white/10"
+                  >
+                    <X className="w-5 h-5 text-white/50" />
+                  </button>
+                </div>
+
+                {/* Content */}
+                <div className="p-4 space-y-6">
+                  {/* Summary Stats */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div className="p-3 rounded-lg bg-white/5">
+                      <p className="text-xs text-white/50">Total Gross</p>
+                      <p className="text-xl font-bold text-white">{creatorDetail.stats.totalGross.toFixed(0)}€</p>
+                    </div>
+                    <div className="p-3 rounded-lg bg-white/5">
+                      <p className="text-xs text-white/50">Creator Net</p>
+                      <p className="text-xl font-bold text-green-500">{creatorDetail.stats.totalNet.toFixed(0)}€</p>
+                    </div>
+                    <div className="p-3 rounded-lg bg-purple-500/10">
+                      <p className="text-xs text-white/50">Your Commission</p>
+                      <p className="text-xl font-bold text-purple-500">{creatorDetail.stats.totalCommission.toFixed(0)}€</p>
+                      <p className="text-[10px] text-white/40">{creatorDetail.stats.commissionRate}% rate</p>
+                    </div>
+                    <div className="p-3 rounded-lg bg-yellow-500/10">
+                      <p className="text-xs text-white/50">Pending</p>
+                      <p className="text-xl font-bold text-yellow-500">{creatorDetail.creator.pendingBalance.toFixed(0)}€</p>
+                    </div>
+                  </div>
+
+                  {/* Earnings by Type */}
+                  <div>
+                    <h4 className="text-sm font-semibold text-white mb-3">Earnings by Type</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                      {creatorDetail.earnings.byType.map((earning) => (
+                        <div key={earning.type} className="flex items-center justify-between p-3 rounded-lg bg-white/5">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-lg bg-[var(--gold)]/20 flex items-center justify-center text-[var(--gold)]">
+                              {getTypeIcon(earning.type)}
+                            </div>
+                            <div>
+                              <p className="font-medium text-white">{formatEarningType(earning.type)}</p>
+                              <p className="text-xs text-white/50">{earning.count} transactions</p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-bold text-white">{earning.grossAmount.toFixed(0)}€</p>
+                            <p className="text-xs text-purple-400">-{earning.commission.toFixed(0)}€ comm.</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Content Stats */}
+                  <div>
+                    <h4 className="text-sm font-semibold text-white mb-3">Content Stats</h4>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      <div className="p-3 rounded-lg bg-white/5 text-center">
+                        <Image className="w-5 h-5 mx-auto mb-1 text-blue-400" />
+                        <p className="text-lg font-bold text-white">{creatorDetail.stats.totalMedia}</p>
+                        <p className="text-xs text-white/50">Total Media</p>
+                      </div>
+                      <div className="p-3 rounded-lg bg-white/5 text-center">
+                        <DollarSign className="w-5 h-5 mx-auto mb-1 text-yellow-400" />
+                        <p className="text-lg font-bold text-white">{creatorDetail.stats.ppvMedia}</p>
+                        <p className="text-xs text-white/50">PPV Media</p>
+                      </div>
+                      <div className="p-3 rounded-lg bg-white/5 text-center">
+                        <Gift className="w-5 h-5 mx-auto mb-1 text-green-400" />
+                        <p className="text-lg font-bold text-white">{creatorDetail.stats.freeMedia}</p>
+                        <p className="text-xs text-white/50">Free Media</p>
+                      </div>
+                      <div className="p-3 rounded-lg bg-white/5 text-center">
+                        <Users className="w-5 h-5 mx-auto mb-1 text-purple-400" />
+                        <p className="text-lg font-bold text-white">{creatorDetail.stats.subscriberCount}</p>
+                        <p className="text-xs text-white/50">Active Subs</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Message Payments (PPV & Tips) */}
+                  {creatorDetail.messagePayments.length > 0 && (
+                    <div>
+                      <h4 className="text-sm font-semibold text-white mb-3">Message Payments</h4>
+                      <div className="grid grid-cols-2 gap-3">
+                        {creatorDetail.messagePayments.map((mp) => (
+                          <div key={mp.type} className="p-3 rounded-lg bg-white/5">
+                            <div className="flex items-center gap-2 mb-1">
+                              {mp.type === "TIP" ? <Gift className="w-4 h-4 text-pink-400" /> : <MessageCircle className="w-4 h-4 text-blue-400" />}
+                              <span className="text-sm text-white">{mp.type === "TIP" ? "Tips" : "PPV Unlocks"}</span>
+                            </div>
+                            <p className="text-lg font-bold text-white">{mp.amount.toFixed(0)}€</p>
+                            <p className="text-xs text-white/50">{mp.count} transactions</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Recent Earnings */}
+                  <div>
+                    <h4 className="text-sm font-semibold text-white mb-3">Recent Earnings</h4>
+                    <div className="space-y-2 max-h-60 overflow-y-auto">
+                      {creatorDetail.earnings.recent.map((earning) => (
+                        <div key={earning.id} className="flex items-center justify-between p-2 rounded bg-white/5 text-sm">
+                          <div className="flex items-center gap-2">
+                            <span className={cn(
+                              "px-2 py-0.5 rounded text-xs",
+                              earning.status === "PENDING" ? "bg-yellow-500/20 text-yellow-400" : "bg-green-500/20 text-green-400"
+                            )}>
+                              {earning.status}
+                            </span>
+                            <span className="text-white/70">{formatEarningType(earning.type)}</span>
+                          </div>
+                          <div className="text-right">
+                            <span className="text-white font-medium">{earning.grossAmount.toFixed(2)}€</span>
+                            <span className="text-xs text-white/40 ml-2">
+                              {new Date(earning.createdAt).toLocaleDateString()}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
 
                   {/* Wallets */}
-                  {(creator.walletEth || creator.walletBtc) && (
-                    <div className="flex items-center gap-2 flex-wrap">
-                      {creator.walletEth && (
-                        <button
-                          onClick={() => copyToClipboard(creator.walletEth!, `eth-${creator.id}`)}
-                          className="flex items-center gap-1 px-2 py-1 bg-white/5 rounded text-[10px] text-white/70"
-                        >
-                          ETH: {creator.walletEth.slice(0, 6)}...
-                          {copiedWallet === `eth-${creator.id}` ? (
-                            <Check className="w-3 h-3 text-green-500" />
-                          ) : (
-                            <Copy className="w-3 h-3" />
-                          )}
-                        </button>
-                      )}
-                      {creator.walletBtc && (
-                        <button
-                          onClick={() => copyToClipboard(creator.walletBtc!, `btc-${creator.id}`)}
-                          className="flex items-center gap-1 px-2 py-1 bg-white/5 rounded text-[10px] text-white/70"
-                        >
-                          BTC: {creator.walletBtc.slice(0, 6)}...
-                          {copiedWallet === `btc-${creator.id}` ? (
-                            <Check className="w-3 h-3 text-green-500" />
-                          ) : (
-                            <Copy className="w-3 h-3" />
-                          )}
-                        </button>
-                      )}
+                  {(creatorDetail.creator.walletEth || creatorDetail.creator.walletBtc) && (
+                    <div>
+                      <h4 className="text-sm font-semibold text-white mb-3">Payout Wallets</h4>
+                      <div className="space-y-2">
+                        {creatorDetail.creator.walletEth && (
+                          <div className="flex items-center justify-between p-3 rounded-lg bg-white/5">
+                            <span className="text-white/70">ETH Wallet</span>
+                            <button
+                              onClick={() => copyToClipboard(creatorDetail.creator.walletEth!, "detail-eth")}
+                              className="flex items-center gap-2 text-white font-mono text-sm"
+                            >
+                              {creatorDetail.creator.walletEth}
+                              {copiedWallet === "detail-eth" ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4 text-white/50" />}
+                            </button>
+                          </div>
+                        )}
+                        {creatorDetail.creator.walletBtc && (
+                          <div className="flex items-center justify-between p-3 rounded-lg bg-white/5">
+                            <span className="text-white/70">BTC Wallet</span>
+                            <button
+                              onClick={() => copyToClipboard(creatorDetail.creator.walletBtc!, "detail-btc")}
+                              className="flex items-center gap-2 text-white font-mono text-sm"
+                            >
+                              {creatorDetail.creator.walletBtc}
+                              {copiedWallet === "detail-btc" ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4 text-white/50" />}
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>
-              ))}
-            </div>
-
-            {/* Desktop Table Layout */}
-            <div className="hidden sm:block overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-white/10">
-                    <th className="text-left p-4 text-white/50 font-medium text-sm">Creator</th>
-                    <th className="text-right p-4 text-white/50 font-medium text-sm">Pending</th>
-                    <th className="text-right p-4 text-white/50 font-medium text-sm">Earned</th>
-                    <th className="text-right p-4 text-white/50 font-medium text-sm">Paid</th>
-                    <th className="text-left p-4 text-white/50 font-medium text-sm">Wallet ETH</th>
-                    <th className="text-left p-4 text-white/50 font-medium text-sm">Wallet BTC</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {creators.map((creator) => (
-                    <tr
-                      key={creator.id}
-                      className="border-b border-white/5 hover:bg-white/5 transition-colors"
-                    >
-                      {/* Creator info */}
-                      <td className="p-4">
-                        <div className="flex items-center gap-3">
-                          {creator.avatar ? (
-                            <img
-                              src={creator.avatar}
-                              alt={creator.displayName}
-                              className="w-10 h-10 rounded-full object-cover"
-                            />
-                          ) : (
-                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[var(--gold)] to-amber-600 flex items-center justify-center text-black font-bold">
-                              {creator.displayName.charAt(0)}
-                            </div>
-                          )}
-                          <div>
-                            <p className="font-medium text-white">{creator.displayName}</p>
-                            <p className="text-sm text-white/50">@{creator.slug}</p>
-                          </div>
-                        </div>
-                      </td>
-
-                      {/* Pending */}
-                      <td className="p-4 text-right">
-                        <span className={cn(
-                          "text-lg font-bold",
-                          creator.pendingBalance > 0 ? "text-yellow-500" : "text-white/30"
-                        )}>
-                          {creator.pendingBalance.toFixed(2)}€
-                        </span>
-                        {creator.pendingEarningsCount > 0 && (
-                          <p className="text-xs text-white/40">{creator.pendingEarningsCount} transactions</p>
-                        )}
-                      </td>
-
-                      {/* Earned */}
-                      <td className="p-4 text-right">
-                        <span className="text-white font-medium">
-                          {creator.totalEarned.toFixed(2)}€
-                        </span>
-                      </td>
-
-                      {/* Paid */}
-                      <td className="p-4 text-right">
-                        <span className="text-green-500 font-medium">
-                          {creator.totalPaid.toFixed(2)}€
-                        </span>
-                      </td>
-
-                      {/* Wallet ETH */}
-                      <td className="p-4">
-                        {creator.walletEth ? (
-                          <div className="flex items-center gap-2">
-                            <code className="text-xs text-white/70 bg-white/5 px-2 py-1 rounded max-w-[120px] truncate">
-                              {creator.walletEth}
-                            </code>
-                            <button
-                              onClick={() => copyToClipboard(creator.walletEth!, `eth-${creator.id}`)}
-                              className="p-1.5 rounded hover:bg-white/10 transition-colors"
-                            >
-                              {copiedWallet === `eth-${creator.id}` ? (
-                                <Check className="w-3.5 h-3.5 text-green-500" />
-                              ) : (
-                                <Copy className="w-3.5 h-3.5 text-white/50" />
-                              )}
-                            </button>
-                          </div>
-                        ) : (
-                          <span className="text-white/30 text-sm">-</span>
-                        )}
-                      </td>
-
-                      {/* Wallet BTC */}
-                      <td className="p-4">
-                        {creator.walletBtc ? (
-                          <div className="flex items-center gap-2">
-                            <code className="text-xs text-white/70 bg-white/5 px-2 py-1 rounded max-w-[120px] truncate">
-                              {creator.walletBtc}
-                            </code>
-                            <button
-                              onClick={() => copyToClipboard(creator.walletBtc!, `btc-${creator.id}`)}
-                              className="p-1.5 rounded hover:bg-white/10 transition-colors"
-                            >
-                              {copiedWallet === `btc-${creator.id}` ? (
-                                <Check className="w-3.5 h-3.5 text-green-500" />
-                              ) : (
-                                <Copy className="w-3.5 h-3.5 text-white/50" />
-                              )}
-                            </button>
-                          </div>
-                        ) : (
-                          <span className="text-white/30 text-sm">-</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </>
-        )}
-      </Card>
+              </>
+            ) : (
+              <div className="p-20 text-center text-white/50">
+                Failed to load creator details
+              </div>
+            )}
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }

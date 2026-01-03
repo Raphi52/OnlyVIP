@@ -36,7 +36,7 @@ import { cn } from "@/lib/utils";
 export default function CreatorSettingsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const { selectedCreator, refreshCreator } = useAdminCreator();
+  const { selectedCreator, refreshCreator, refreshAgency } = useAdminCreator();
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -356,7 +356,8 @@ export default function CreatorSettingsPage() {
 
       if (res.ok) {
         setSaved(true);
-        refreshCreator(); // Refresh context
+        refreshCreator(); // Refresh creator context
+        refreshAgency(); // Refresh sidebar dropdown
         setTimeout(() => setSaved(false), 3000);
       } else {
         const data = await res.json();

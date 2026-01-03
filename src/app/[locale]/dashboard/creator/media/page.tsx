@@ -29,6 +29,9 @@ import {
   Bot,
   Unlock,
   Coins,
+  CheckSquare,
+  Square,
+  Folder,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAdminCreator } from "@/components/providers/AdminCreatorContext";
@@ -110,6 +113,23 @@ export default function CreatorMediaPage() {
   const [editTagVIP, setEditTagVIP] = useState(false);
   const [editPpvPriceCredits, setEditPpvPriceCredits] = useState("");
 
+  // Selection mode states
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [isBulkActionLoading, setIsBulkActionLoading] = useState(false);
+  const [showBulkEditModal, setShowBulkEditModal] = useState(false);
+
+  // Bulk edit states
+  const [bulkTagGallery, setBulkTagGallery] = useState<boolean | null>(null);
+  const [bulkTagPPV, setBulkTagPPV] = useState<boolean | null>(null);
+  const [bulkTagAI, setBulkTagAI] = useState<boolean | null>(null);
+  const [bulkTagFree, setBulkTagFree] = useState<boolean | null>(null);
+  const [bulkTagVIP, setBulkTagVIP] = useState<boolean | null>(null);
+  const [bulkPpvPriceCredits, setBulkPpvPriceCredits] = useState("");
+
+  // Multi-upload states
+  const [uploadMode, setUploadMode] = useState<"files" | "folder">("files");
+
   const isCreatorUser = (session?.user as any)?.isCreator === true;
 
   // Redirect if not creator
@@ -154,7 +174,24 @@ export default function CreatorMediaPage() {
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
-      setFiles(Array.from(e.target.files));
+      const allFiles = Array.from(e.target.files);
+
+      // Filter for valid media files
+      const validExtensions = [
+        // Images
+        '.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp',
+        // Videos
+        '.mp4', '.mov', '.avi', '.webm', '.mkv',
+        // Audio
+        '.mp3', '.wav', '.aac', '.ogg', '.m4a'
+      ];
+
+      const mediaFiles = allFiles.filter(file => {
+        const ext = '.' + file.name.split('.').pop()?.toLowerCase();
+        return validExtensions.includes(ext);
+      });
+
+      setFiles(mediaFiles);
     }
   };
 
@@ -376,6 +413,151 @@ export default function CreatorMediaPage() {
     }
   };
 
+  // Toggle selection for an item
+  const toggleSelection = (id: string) => {
+    setSelectedIds((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+  };
+
+  // Select all filtered items
+  const selectAll = () => {
+    setSelectedIds(new Set(filteredMedia.map((m) => m.id)));
+  };
+
+  // Clear selection
+  const clearSelection = () => {
+    setSelectedIds(new Set());
+    setSelectionMode(false);
+  };
+
+  // Bulk action handler
+  const handleBulkAction = async (action: "delete" | "publish" | "unpublish") => {
+    if (selectedIds.size === 0) return;
+
+    if (action === "delete" && !confirm(`Delete ${selectedIds.size} items?`)) {
+      return;
+    }
+
+    setIsBulkActionLoading(true);
+    try {
+      const res = await fetch("/api/media/bulk", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action,
+          ids: Array.from(selectedIds),
+        }),
+      });
+
+      if (res.ok) {
+        const result = await res.json();
+        if (action === "delete") {
+          setMedia((prev) => prev.filter((m) => !selectedIds.has(m.id)));
+        } else if (action === "publish") {
+          setMedia((prev) =>
+            prev.map((m) =>
+              selectedIds.has(m.id) ? { ...m, isPublished: true } : m
+            )
+          );
+        } else if (action === "unpublish") {
+          setMedia((prev) =>
+            prev.map((m) =>
+              selectedIds.has(m.id) ? { ...m, isPublished: false } : m
+            )
+          );
+        }
+        clearSelection();
+      } else {
+        alert("Failed to perform action");
+      }
+    } catch (error) {
+      console.error("Bulk action error:", error);
+      alert("Failed to perform action");
+    } finally {
+      setIsBulkActionLoading(false);
+    }
+  };
+
+  // Open bulk edit modal
+  const openBulkEditModal = () => {
+    // Reset bulk edit states
+    setBulkTagGallery(null);
+    setBulkTagPPV(null);
+    setBulkTagAI(null);
+    setBulkTagFree(null);
+    setBulkTagVIP(null);
+    setBulkPpvPriceCredits("");
+    setShowBulkEditModal(true);
+  };
+
+  // Handle bulk edit save
+  const handleBulkEditSave = async () => {
+    if (selectedIds.size === 0) return;
+
+    const data: any = {};
+    if (bulkTagGallery !== null) data.tagGallery = bulkTagGallery;
+    if (bulkTagPPV !== null) data.tagPPV = bulkTagPPV;
+    if (bulkTagAI !== null) data.tagAI = bulkTagAI;
+    if (bulkTagFree !== null) data.tagFree = bulkTagFree;
+    if (bulkTagVIP !== null) data.tagVIP = bulkTagVIP;
+    if (bulkTagPPV === true && bulkPpvPriceCredits) {
+      data.ppvPriceCredits = parseInt(bulkPpvPriceCredits);
+    }
+
+    if (Object.keys(data).length === 0) {
+      alert("No changes to apply");
+      return;
+    }
+
+    setIsBulkActionLoading(true);
+    try {
+      const res = await fetch("/api/media/bulk", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "update",
+          ids: Array.from(selectedIds),
+          data,
+        }),
+      });
+
+      if (res.ok) {
+        // Update local state
+        setMedia((prev) =>
+          prev.map((m) =>
+            selectedIds.has(m.id)
+              ? {
+                  ...m,
+                  ...(bulkTagGallery !== null && { tagGallery: bulkTagGallery }),
+                  ...(bulkTagPPV !== null && { tagPPV: bulkTagPPV }),
+                  ...(bulkTagAI !== null && { tagAI: bulkTagAI }),
+                  ...(bulkTagFree !== null && { tagFree: bulkTagFree }),
+                  ...(bulkTagVIP !== null && { tagVIP: bulkTagVIP }),
+                  ...(bulkTagPPV === true && bulkPpvPriceCredits && { ppvPriceCredits: parseInt(bulkPpvPriceCredits) }),
+                }
+              : m
+          )
+        );
+        setShowBulkEditModal(false);
+        clearSelection();
+      } else {
+        alert("Failed to update items");
+      }
+    } catch (error) {
+      console.error("Bulk edit error:", error);
+      alert("Failed to update items");
+    } finally {
+      setIsBulkActionLoading(false);
+    }
+  };
+
   if (status === "loading" || creatorsLoading) {
     return (
       <div className="p-8 flex items-center justify-center min-h-[50vh]">
@@ -417,10 +599,33 @@ export default function CreatorMediaPage() {
           <Button variant="ghost" size="icon" onClick={fetchMedia}>
             <RefreshCw className="w-5 h-5" />
           </Button>
-          <Button variant="premium" onClick={() => setShowUploadModal(true)}>
-            <Plus className="w-5 h-5 mr-2" />
-            Upload Media
-          </Button>
+          {selectionMode ? (
+            <>
+              <span className="text-sm text-[var(--muted)]">
+                {selectedIds.size} selected
+              </span>
+              <Button variant="outline" size="sm" onClick={selectAll}>
+                Select All
+              </Button>
+              <Button variant="ghost" size="sm" onClick={clearSelection}>
+                Cancel
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button
+                variant="outline"
+                onClick={() => setSelectionMode(true)}
+              >
+                <CheckSquare className="w-5 h-5 mr-2" />
+                Select
+              </Button>
+              <Button variant="premium" onClick={() => setShowUploadModal(true)}>
+                <Plus className="w-5 h-5 mr-2" />
+                Upload Media
+              </Button>
+            </>
+          )}
         </div>
       </motion.div>
 
@@ -580,11 +785,49 @@ export default function CreatorMediaPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.05 }}
             >
-              <Card variant="luxury" hover className="overflow-hidden p-0">
+              <Card
+                variant="luxury"
+                hover
+                className={cn(
+                  "overflow-hidden p-0 transition-all",
+                  selectedIds.has(item.id) && "ring-2 ring-[var(--gold)]"
+                )}
+              >
                 <div
                   className="relative aspect-[4/5] cursor-pointer group"
-                  onClick={() => setPreviewItem(item)}
+                  onClick={() => {
+                    if (selectionMode) {
+                      toggleSelection(item.id);
+                    } else {
+                      setPreviewItem(item);
+                    }
+                  }}
                 >
+                  {/* Selection checkbox */}
+                  {selectionMode && (
+                    <div
+                      className="absolute top-3 left-3 z-20"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleSelection(item.id);
+                      }}
+                    >
+                      <div
+                        className={cn(
+                          "w-7 h-7 rounded-lg flex items-center justify-center transition-all",
+                          selectedIds.has(item.id)
+                            ? "bg-[var(--gold)] text-[var(--background)]"
+                            : "bg-black/50 text-white hover:bg-black/70"
+                        )}
+                      >
+                        {selectedIds.has(item.id) ? (
+                          <Check className="w-5 h-5" />
+                        ) : (
+                          <Square className="w-5 h-5" />
+                        )}
+                      </div>
+                    </div>
+                  )}
                   {item.thumbnailUrl ? (
                     <img
                       src={item.thumbnailUrl}
@@ -613,8 +856,11 @@ export default function CreatorMediaPage() {
                     </div>
                   )}
 
-                  {/* Status badges - based on tags */}
-                  <div className="absolute top-3 left-3 flex flex-wrap gap-1.5 max-w-[80%]">
+                  {/* Status badges - based on tags (hidden in selection mode) */}
+                  <div className={cn(
+                    "absolute top-3 left-3 flex flex-wrap gap-1.5 max-w-[80%]",
+                    selectionMode && "hidden"
+                  )}>
                     {item.tagPPV && (
                       <Badge className="bg-orange-500/20 text-orange-400">
                         <Coins className="w-3 h-3 mr-1" />
@@ -829,9 +1075,43 @@ export default function CreatorMediaPage() {
 
                 {/* File Upload */}
                 <div className="mb-6">
-                  <label className="block text-sm font-medium text-[var(--foreground)] mb-3">
-                    Upload Files
-                  </label>
+                  <div className="flex items-center justify-between mb-3">
+                    <label className="block text-sm font-medium text-[var(--foreground)]">
+                      Upload Files
+                    </label>
+                    <div className="flex items-center gap-2 bg-[var(--surface)] rounded-lg p-1">
+                      <button
+                        onClick={() => {
+                          setUploadMode("files");
+                          setFiles([]);
+                        }}
+                        className={cn(
+                          "px-3 py-1.5 rounded-md text-sm font-medium transition-all flex items-center gap-2",
+                          uploadMode === "files"
+                            ? "bg-[var(--gold)] text-[var(--background)]"
+                            : "text-[var(--muted)] hover:text-[var(--foreground)]"
+                        )}
+                      >
+                        <Upload className="w-4 h-4" />
+                        Files
+                      </button>
+                      <button
+                        onClick={() => {
+                          setUploadMode("folder");
+                          setFiles([]);
+                        }}
+                        className={cn(
+                          "px-3 py-1.5 rounded-md text-sm font-medium transition-all flex items-center gap-2",
+                          uploadMode === "folder"
+                            ? "bg-[var(--gold)] text-[var(--background)]"
+                            : "text-[var(--muted)] hover:text-[var(--foreground)]"
+                        )}
+                      >
+                        <Folder className="w-4 h-4" />
+                        Folder
+                      </button>
+                    </div>
+                  </div>
                   <div
                     className={cn(
                       "border-2 border-dashed rounded-xl p-8 text-center transition-colors",
@@ -840,43 +1120,72 @@ export default function CreatorMediaPage() {
                         : "border-[var(--border)] hover:border-[var(--gold)]/50"
                     )}
                   >
-                    <input
-                      type="file"
-                      multiple
-                      accept={
-                        selectedType === "PHOTO"
-                          ? "image/*"
-                          : selectedType === "VIDEO"
-                          ? "video/*"
-                          : selectedType === "AUDIO"
-                          ? "audio/*"
-                          : "*/*"
-                      }
-                      onChange={handleFileSelect}
-                      className="hidden"
-                      id="file-upload"
-                    />
-                    <label htmlFor="file-upload" className="cursor-pointer">
-                      <Upload className="w-12 h-12 text-[var(--muted)] mx-auto mb-4" />
+                    {uploadMode === "folder" ? (
+                      <input
+                        type="file"
+                        // @ts-ignore - webkitdirectory is not in types
+                        webkitdirectory=""
+                        directory=""
+                        multiple
+                        onChange={handleFileSelect}
+                        className="hidden"
+                        id="folder-upload"
+                      />
+                    ) : (
+                      <input
+                        type="file"
+                        multiple
+                        accept={
+                          selectedType === "PHOTO"
+                            ? "image/*"
+                            : selectedType === "VIDEO"
+                            ? "video/*"
+                            : selectedType === "AUDIO"
+                            ? "audio/*"
+                            : "*/*"
+                        }
+                        onChange={handleFileSelect}
+                        className="hidden"
+                        id="file-upload"
+                      />
+                    )}
+                    <label htmlFor={uploadMode === "folder" ? "folder-upload" : "file-upload"} className="cursor-pointer">
+                      {uploadMode === "folder" ? (
+                        <Folder className="w-12 h-12 text-[var(--muted)] mx-auto mb-4" />
+                      ) : (
+                        <Upload className="w-12 h-12 text-[var(--muted)] mx-auto mb-4" />
+                      )}
                       {files.length > 0 ? (
-                        <div className="space-y-2">
-                          {files.map((file, i) => (
+                        <div className="space-y-1 max-h-32 overflow-y-auto">
+                          <p className="text-[var(--gold)] font-medium mb-2">
+                            {files.length} file{files.length > 1 ? "s" : ""} selected
+                          </p>
+                          {files.slice(0, 5).map((file, i) => (
                             <div
                               key={i}
-                              className="flex items-center justify-center gap-2 text-[var(--gold)]"
+                              className="flex items-center justify-center gap-2 text-[var(--foreground)] text-sm"
                             >
-                              <Check className="w-4 h-4" />
-                              <span>{file.name}</span>
+                              <Check className="w-3 h-3 text-emerald-400" />
+                              <span className="truncate max-w-[200px]">{file.name}</span>
                             </div>
                           ))}
+                          {files.length > 5 && (
+                            <p className="text-[var(--muted)] text-sm">
+                              +{files.length - 5} more files...
+                            </p>
+                          )}
                         </div>
                       ) : (
                         <>
                           <p className="text-[var(--foreground)] font-medium mb-1">
-                            Drop files here or click to upload
+                            {uploadMode === "folder"
+                              ? "Click to select a folder"
+                              : "Drop files here or click to upload"}
                           </p>
                           <p className="text-[var(--muted)] text-sm">
-                            Supports JPG, PNG, MP4, MP3
+                            {uploadMode === "folder"
+                              ? "All media files in the folder will be uploaded"
+                              : "Supports JPG, PNG, MP4, MP3"}
                           </p>
                         </>
                       )}
@@ -1322,6 +1631,314 @@ export default function CreatorMediaPage() {
                   )}
                 </div>
               </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Floating Action Bar */}
+      <AnimatePresence>
+        {selectedIds.size > 0 && (
+          <motion.div
+            initial={{ y: 100, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 100, opacity: 0 }}
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40"
+          >
+            <div className="flex items-center gap-3 px-6 py-4 bg-[var(--surface)] border border-[var(--border)] rounded-2xl shadow-2xl">
+              <div className="flex items-center gap-2 pr-4 border-r border-[var(--border)]">
+                <CheckSquare className="w-5 h-5 text-[var(--gold)]" />
+                <span className="font-medium text-[var(--foreground)]">
+                  {selectedIds.size} selected
+                </span>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={openBulkEditModal}
+                disabled={isBulkActionLoading}
+              >
+                <Tag className="w-4 h-4 mr-2" />
+                Edit Tags
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleBulkAction("publish")}
+                disabled={isBulkActionLoading}
+              >
+                <Eye className="w-4 h-4 mr-2" />
+                Publish
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleBulkAction("unpublish")}
+                disabled={isBulkActionLoading}
+              >
+                <EyeOff className="w-4 h-4 mr-2" />
+                Unpublish
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleBulkAction("delete")}
+                disabled={isBulkActionLoading}
+                className="text-red-400 hover:text-red-300 hover:border-red-500/50"
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Delete
+              </Button>
+              <button
+                onClick={clearSelection}
+                className="p-2 text-[var(--muted)] hover:text-[var(--foreground)]"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Bulk Edit Modal */}
+      <AnimatePresence>
+        {showBulkEditModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="w-full max-w-md"
+            >
+              <Card variant="luxury" className="p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-xl font-bold text-[var(--foreground)]">
+                    Edit {selectedIds.size} Items
+                  </h2>
+                  <button
+                    onClick={() => setShowBulkEditModal(false)}
+                    className="p-2 text-[var(--muted)] hover:text-[var(--foreground)]"
+                  >
+                    <X className="w-6 h-6" />
+                  </button>
+                </div>
+
+                <p className="text-sm text-[var(--muted)] mb-4">
+                  Set tags for all selected items. Leave unchanged to keep current values.
+                </p>
+
+                <div className="space-y-3">
+                  {/* Gallery */}
+                  <div className="flex items-center justify-between p-3 rounded-xl bg-[var(--background)]">
+                    <div className="flex items-center gap-3">
+                      <LayoutGrid className="w-5 h-5 text-purple-400" />
+                      <span className="font-medium">Gallery</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setBulkTagGallery(bulkTagGallery === true ? null : true)}
+                        className={cn(
+                          "px-3 py-1 rounded-lg text-sm font-medium transition-all",
+                          bulkTagGallery === true
+                            ? "bg-emerald-500 text-white"
+                            : "bg-[var(--surface)] text-[var(--muted)]"
+                        )}
+                      >
+                        On
+                      </button>
+                      <button
+                        onClick={() => setBulkTagGallery(bulkTagGallery === false ? null : false)}
+                        className={cn(
+                          "px-3 py-1 rounded-lg text-sm font-medium transition-all",
+                          bulkTagGallery === false
+                            ? "bg-red-500 text-white"
+                            : "bg-[var(--surface)] text-[var(--muted)]"
+                        )}
+                      >
+                        Off
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Free */}
+                  <div className="flex items-center justify-between p-3 rounded-xl bg-[var(--background)]">
+                    <div className="flex items-center gap-3">
+                      <Unlock className="w-5 h-5 text-emerald-400" />
+                      <span className="font-medium">Free</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => {
+                          setBulkTagFree(bulkTagFree === true ? null : true);
+                          if (bulkTagFree !== true) setBulkTagPPV(null);
+                        }}
+                        className={cn(
+                          "px-3 py-1 rounded-lg text-sm font-medium transition-all",
+                          bulkTagFree === true
+                            ? "bg-emerald-500 text-white"
+                            : "bg-[var(--surface)] text-[var(--muted)]"
+                        )}
+                      >
+                        On
+                      </button>
+                      <button
+                        onClick={() => setBulkTagFree(bulkTagFree === false ? null : false)}
+                        className={cn(
+                          "px-3 py-1 rounded-lg text-sm font-medium transition-all",
+                          bulkTagFree === false
+                            ? "bg-red-500 text-white"
+                            : "bg-[var(--surface)] text-[var(--muted)]"
+                        )}
+                      >
+                        Off
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* VIP */}
+                  <div className="flex items-center justify-between p-3 rounded-xl bg-[var(--background)]">
+                    <div className="flex items-center gap-3">
+                      <Crown className="w-5 h-5 text-[var(--gold)]" />
+                      <span className="font-medium">VIP Only</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setBulkTagVIP(bulkTagVIP === true ? null : true)}
+                        className={cn(
+                          "px-3 py-1 rounded-lg text-sm font-medium transition-all",
+                          bulkTagVIP === true
+                            ? "bg-emerald-500 text-white"
+                            : "bg-[var(--surface)] text-[var(--muted)]"
+                        )}
+                      >
+                        On
+                      </button>
+                      <button
+                        onClick={() => setBulkTagVIP(bulkTagVIP === false ? null : false)}
+                        className={cn(
+                          "px-3 py-1 rounded-lg text-sm font-medium transition-all",
+                          bulkTagVIP === false
+                            ? "bg-red-500 text-white"
+                            : "bg-[var(--surface)] text-[var(--muted)]"
+                        )}
+                      >
+                        Off
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* AI */}
+                  <div className="flex items-center justify-between p-3 rounded-xl bg-[var(--background)]">
+                    <div className="flex items-center gap-3">
+                      <Bot className="w-5 h-5 text-blue-400" />
+                      <span className="font-medium">AI Chat</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setBulkTagAI(bulkTagAI === true ? null : true)}
+                        className={cn(
+                          "px-3 py-1 rounded-lg text-sm font-medium transition-all",
+                          bulkTagAI === true
+                            ? "bg-emerald-500 text-white"
+                            : "bg-[var(--surface)] text-[var(--muted)]"
+                        )}
+                      >
+                        On
+                      </button>
+                      <button
+                        onClick={() => setBulkTagAI(bulkTagAI === false ? null : false)}
+                        className={cn(
+                          "px-3 py-1 rounded-lg text-sm font-medium transition-all",
+                          bulkTagAI === false
+                            ? "bg-red-500 text-white"
+                            : "bg-[var(--surface)] text-[var(--muted)]"
+                        )}
+                      >
+                        Off
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* PPV */}
+                  <div className="p-3 rounded-xl bg-[var(--background)]">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <Coins className="w-5 h-5 text-orange-400" />
+                        <span className="font-medium">PPV</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => {
+                            setBulkTagPPV(bulkTagPPV === true ? null : true);
+                            if (bulkTagPPV !== true) setBulkTagFree(null);
+                          }}
+                          className={cn(
+                            "px-3 py-1 rounded-lg text-sm font-medium transition-all",
+                            bulkTagPPV === true
+                              ? "bg-emerald-500 text-white"
+                              : "bg-[var(--surface)] text-[var(--muted)]"
+                          )}
+                        >
+                          On
+                        </button>
+                        <button
+                          onClick={() => setBulkTagPPV(bulkTagPPV === false ? null : false)}
+                          className={cn(
+                            "px-3 py-1 rounded-lg text-sm font-medium transition-all",
+                            bulkTagPPV === false
+                              ? "bg-red-500 text-white"
+                              : "bg-[var(--surface)] text-[var(--muted)]"
+                          )}
+                        >
+                          Off
+                        </button>
+                      </div>
+                    </div>
+                    {bulkTagPPV === true && (
+                      <div className="mt-3">
+                        <Input
+                          label="Price (credits)"
+                          type="number"
+                          value={bulkPpvPriceCredits}
+                          onChange={(e) => setBulkPpvPriceCredits(e.target.value)}
+                          placeholder="1000"
+                          leftIcon={<Coins className="w-4 h-4" />}
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-4 mt-6">
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowBulkEditModal(false)}
+                    className="flex-1"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="premium"
+                    onClick={handleBulkEditSave}
+                    disabled={isBulkActionLoading}
+                    className="flex-1"
+                  >
+                    {isBulkActionLoading ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                      <>
+                        <Check className="w-5 h-5 mr-2" />
+                        Apply to {selectedIds.size} items
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </Card>
             </motion.div>
           </motion.div>
         )}

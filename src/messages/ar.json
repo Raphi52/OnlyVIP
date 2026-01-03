@@ -188,6 +188,8 @@
     "exploreMore": "استكشف المزيد"
   },
   "pricing": {
+    "basicPlan": "أساسي",
+    "vipPlan": "VIP",
     "accessBasicContent": "الوصول للمحتوى الأساسي والرسائل",
     "directMessaging": "رسائل مباشرة",
     "supportCreator": "دعم صانع المحتوى",
@@ -358,6 +360,8 @@
     "privateName": "اسم خاص",
     "instantAccess": "وصول فوري",
     "noWaiting": "بدون انتظار",
+    "cancelAnytime": "إلغاء في أي وقت",
+    "noCommitment": "بدون التزام",
     "members": "أعضاء",
     "ratingLabel": "التقييم",
     "satisfaction": "الرضا"

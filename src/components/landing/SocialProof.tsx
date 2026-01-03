@@ -2,12 +2,15 @@
 
 import { motion } from "framer-motion";
 import { Shield, Clock, Heart } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 export function SocialProof() {
+  const t = useTranslations("testimonials");
+
   const trustBadges = [
-    { icon: Shield, text: "Secure Payments", subtext: "256-bit SSL" },
-    { icon: Clock, text: "Instant Access", subtext: "No waiting" },
-    { icon: Heart, text: "Cancel Anytime", subtext: "No commitment" },
+    { icon: Shield, text: t("securePayments"), subtext: t("ssl256") },
+    { icon: Clock, text: t("instantAccess"), subtext: t("noWaiting") },
+    { icon: Heart, text: t("cancelAnytime"), subtext: t("noCommitment") },
   ];
 
   return (

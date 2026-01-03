@@ -188,6 +188,8 @@
     "exploreMore": "और खोजें"
   },
   "pricing": {
+    "basicPlan": "बेसिक",
+    "vipPlan": "VIP",
     "accessBasicContent": "बेसिक कंटेंट और मैसेज का एक्सेस",
     "directMessaging": "डायरेक्ट मैसेजिंग",
     "supportCreator": "क्रिएटर को सपोर्ट करें",
@@ -358,6 +360,8 @@
     "privateName": "निजी नाम",
     "instantAccess": "तुरंत पहुंच",
     "noWaiting": "कोई प्रतीक्षा नहीं",
+    "cancelAnytime": "कभी भी रद्द करें",
+    "noCommitment": "कोई प्रतिबद्धता नहीं",
     "members": "सदस्य",
     "ratingLabel": "रेटिंग",
     "satisfaction": "संतुष्टि"

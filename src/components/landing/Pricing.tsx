@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
@@ -17,38 +17,27 @@ interface PricingProps {
 // 100 credits = $1
 const CREDITS_PER_DOLLAR = 100;
 
-// Membership tiers - prices in credits
-const membershipTiers = [
+// Membership tiers - prices in credits (translations added in component)
+const membershipTiersConfig = [
   {
     id: "basic",
-    name: "Basic",
-    description: "Access basic content & messaging",
+    nameKey: "basicPlan",
+    descriptionKey: "accessBasicContent",
     monthlyCredits: 999, // ~$9.99
     annualCredits: 9588, // ~$95.88 (save 20%)
-    features: [
-      "Access to basic gallery",
-      "Direct messaging",
-      "Support the creator",
-    ],
+    featureKeys: ["basicGallery", "directMessaging", "supportCreator"],
     gradient: "from-blue-500 to-cyan-500",
     iconBg: "bg-blue-500/20",
     iconColor: "text-blue-400",
   },
   {
     id: "vip",
-    name: "VIP",
-    description: "Full access & maximum perks",
+    nameKey: "vipPlan",
+    descriptionKey: "fullAccess",
     monthlyCredits: 2999, // ~$29.99
     annualCredits: 28788, // ~$287.88 (save 20%)
     isPopular: true,
-    features: [
-      "Full gallery access",
-      "VIP-only content",
-      "Priority messaging",
-      "Early access to new content",
-      "Behind-the-scenes access",
-      "Exclusive VIP badge",
-    ],
+    featureKeys: ["fullGallery", "vipContent", "priorityMessaging", "earlyAccess", "behindTheScenes", "exclusiveBadge"],
     gradient: "from-[var(--gold)] to-yellow-500",
     iconBg: "bg-[var(--gold)]/20",
     iconColor: "text-[var(--gold)]",
@@ -70,10 +59,27 @@ export function Pricing({ creatorSlug = "miacosta" }: PricingProps) {
   const { data: session } = useSession();
   const router = useRouter();
   const t = useTranslations("pricingSection");
+  const tPricing = useTranslations("pricing");
   const tCommon = useTranslations("common");
   const [isAnnual, setIsAnnual] = useState(false);
-  const [plans, setPlans] = useState(membershipTiers);
+
+  // Build translated membership tiers
+  const membershipTiers = useMemo(() => membershipTiersConfig.map((tier) => ({
+    ...tier,
+    name: tPricing(tier.nameKey),
+    description: tPricing(tier.descriptionKey),
+    features: tier.featureKeys.map((key) => tPricing(key)),
+  })), [tPricing]);
+
+  const [plans, setPlans] = useState<typeof membershipTiers>([]);
   const [isLoadingPlans, setIsLoadingPlans] = useState(true);
+
+  // Initialize plans with translated tiers when component mounts or translations change
+  useEffect(() => {
+    if (membershipTiers.length > 0) {
+      setPlans(membershipTiers);
+    }
+  }, [membershipTiers]);
   const [userBalance, setUserBalance] = useState(0);
   const [isLoadingBalance, setIsLoadingBalance] = useState(true);
   const [isPurchasing, setIsPurchasing] = useState<string | null>(null);

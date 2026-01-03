@@ -188,6 +188,8 @@
     "exploreMore": "探索更多"
   },
   "pricing": {
+    "basicPlan": "基础版",
+    "vipPlan": "VIP",
     "accessBasicContent": "访问基础内容和消息",
     "directMessaging": "直接消息",
     "supportCreator": "支持创作者",
@@ -308,6 +310,8 @@
     "privateName": "私密名称",
     "instantAccess": "即时访问",
     "noWaiting": "无需等待",
+    "cancelAnytime": "随时取消",
+    "noCommitment": "无需承诺",
     "members": "会员",
     "ratingLabel": "评分",
     "satisfaction": "满意度"

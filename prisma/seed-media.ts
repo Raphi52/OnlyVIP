@@ -98,8 +98,8 @@ async function seedCreatorMedia(creatorSlug: string, files: string[]) {
     const url = `/uploads/media/${mainFile}`;
 
     // Check if already exists
-    const existing = await prisma.media.findFirst({
-      where: { url, creatorSlug },
+    const existing = await prisma.mediaContent.findFirst({
+      where: { contentUrl: url, creatorSlug },
     });
 
     if (existing) {
@@ -113,7 +113,7 @@ async function seedCreatorMedia(creatorSlug: string, files: string[]) {
     const price = isPremium ? Math.floor(Math.random() * 15) + 5 : null;
 
     // Create media entry
-    await prisma.media.create({
+    await prisma.mediaContent.create({
       data: {
         creatorSlug,
         type,

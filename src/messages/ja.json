@@ -188,6 +188,8 @@
     "exploreMore": "もっと探索"
   },
   "pricing": {
+    "basicPlan": "ベーシック",
+    "vipPlan": "VIP",
     "accessBasicContent": "基本コンテンツとメッセージへのアクセス",
     "directMessaging": "ダイレクトメッセージ",
     "supportCreator": "クリエイターをサポート",
@@ -308,6 +310,8 @@
     "privateName": "プライベート名",
     "instantAccess": "即時アクセス",
     "noWaiting": "待ち時間なし",
+    "cancelAnytime": "いつでも解約可能",
+    "noCommitment": "契約縛りなし",
     "members": "メンバー",
     "ratingLabel": "評価",
     "satisfaction": "満足度"

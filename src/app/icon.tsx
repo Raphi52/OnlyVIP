@@ -24,12 +24,17 @@ export default function Icon() {
         }}
       >
         <svg
-          width="24"
-          height="24"
+          width="22"
+          height="22"
           viewBox="0 0 24 24"
-          fill="#D4AF37"
+          fill="none"
+          stroke="#D4AF37"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
         >
-          <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" />
+          <path d="m2 4 3 12h14l3-12-6 7-4-7-4 7-6-7z" />
+          <path d="M5 20h14" />
         </svg>
       </div>
     ),

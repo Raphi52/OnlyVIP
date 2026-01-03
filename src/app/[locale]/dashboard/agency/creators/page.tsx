@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { Card, Button, Badge } from "@/components/ui";
 import { cn } from "@/lib/utils";
+import { useAdminCreator } from "@/components/providers/AdminCreatorContext";
 
 interface Creator {
   id: string;
@@ -68,6 +69,9 @@ export default function AgencyCreatorsPage() {
   const [createError, setCreateError] = useState<string | null>(null);
 
   const isAgencyOwner = (session?.user as any)?.isAgencyOwner === true;
+
+  // Get refreshAgency from context to update sidebar dropdown
+  const { refreshAgency } = useAdminCreator();
 
   useEffect(() => {
     if (status === "authenticated" && !isAgencyOwner) {
@@ -120,6 +124,8 @@ export default function AgencyCreatorsPage() {
           setCreators((prev) => [...prev, { ...creator, agencyId: agency.id }]);
           setAvailableCreators((prev) => prev.filter((c) => c.id !== creatorId));
         }
+        // Refresh sidebar dropdown
+        refreshAgency();
       }
     } catch (error) {
       console.error("Error adding creator:", error);
@@ -145,6 +151,8 @@ export default function AgencyCreatorsPage() {
           setAvailableCreators((prev) => [...prev, { ...creator, agencyId: null }]);
           setCreators((prev) => prev.filter((c) => c.id !== creatorId));
         }
+        // Refresh sidebar dropdown
+        refreshAgency();
       }
     } catch (error) {
       console.error("Error removing creator:", error);
@@ -208,6 +216,8 @@ export default function AgencyCreatorsPage() {
         setSlugStatus("idle");
         setIsModalOpen(false);
         setModalTab("add");
+        // Refresh sidebar dropdown
+        refreshAgency();
       } else {
         setCreateError(data.error || "Failed to create creator");
       }

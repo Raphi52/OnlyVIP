@@ -188,6 +188,8 @@
     "exploreMore": "더 알아보기"
   },
   "pricing": {
+    "basicPlan": "베이직",
+    "vipPlan": "VIP",
     "accessBasicContent": "기본 콘텐츠 및 메시지 접근",
     "directMessaging": "다이렉트 메시지",
     "supportCreator": "크리에이터 지원",
@@ -308,6 +310,8 @@
     "privateName": "비공개 이름",
     "instantAccess": "즉시 접근",
     "noWaiting": "대기 없음",
+    "cancelAnytime": "언제든 해지 가능",
+    "noCommitment": "약정 없음",
     "members": "멤버",
     "ratingLabel": "평점",
     "satisfaction": "만족도"
