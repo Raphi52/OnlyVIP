@@ -126,28 +126,31 @@ export function CreditBalance({ variant = "navbar" }: CreditBalanceProps) {
     );
   }
 
-  // Default navbar variant with rotating border
+  // Default navbar variant with animated border
   return (
     <Link href="/credits">
       <motion.div
         whileHover={{ scale: 1.05 }}
-        className="relative rounded-full p-[2px] overflow-hidden"
+        className="relative"
       >
-        {/* Rotating gradient border */}
+        {/* Animated glowing border */}
         <motion.div
-          className="absolute -inset-[100%]"
-          style={{
-            background: "conic-gradient(from 0deg, rgba(139, 92, 246, 0.9) 0%, rgba(16, 185, 129, 0.9) 25%, rgba(139, 92, 246, 0.9) 50%, rgba(16, 185, 129, 0.9) 75%, rgba(139, 92, 246, 0.9) 100%)",
+          className="absolute inset-0 rounded-full"
+          animate={{
+            boxShadow: [
+              "inset 0 0 0 2px rgba(139, 92, 246, 0.9), 0 0 12px rgba(139, 92, 246, 0.4)",
+              "inset 0 0 0 2px rgba(16, 185, 129, 0.9), 0 0 12px rgba(16, 185, 129, 0.4)",
+              "inset 0 0 0 2px rgba(139, 92, 246, 0.9), 0 0 12px rgba(139, 92, 246, 0.4)",
+            ]
           }}
-          animate={{ rotate: [0, 360] }}
-          transition={{ repeat: Infinity, duration: 3, ease: "linear" }}
+          transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
         />
 
         {/* Inner content */}
         <div className={`relative flex items-center gap-2 px-3 py-1.5 rounded-full ${
           bonusCredits > 0
-            ? "bg-gradient-to-r from-purple-950/90 to-emerald-950/90"
-            : "bg-purple-950/90"
+            ? "bg-gradient-to-r from-purple-950 to-emerald-950"
+            : "bg-purple-950"
         }`}>
           <Coins className="w-4 h-4 text-purple-400" />
           <span className="text-sm font-medium text-purple-300">

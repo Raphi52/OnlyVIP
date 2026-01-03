@@ -4,7 +4,7 @@ import { useRef, useState, useEffect } from "react";
 import { motion, useScroll, useTransform, useSpring } from "framer-motion";
 import Link from "next/link";
 import Image from "next/image";
-import { Lock, Play, Crown, Sparkles, Eye, Star, Coins } from "lucide-react";
+import { Lock, Play, Crown, Sparkles, Eye, Star, Coins, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui";
 
 interface ContentShowcaseProps {
@@ -230,7 +230,32 @@ export function ContentShowcase({ creatorSlug = "miacosta" }: ContentShowcasePro
   }
 
   return (
-    <section ref={containerRef} className="py-24 relative overflow-hidden bg-black">
+    <section ref={containerRef} className="pt-8 pb-24 relative overflow-hidden bg-black">
+      {/* Scroll indicator - moved from Hero */}
+      <motion.div
+        className="flex justify-center mb-8"
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        viewport={{ once: true }}
+      >
+        <motion.div
+          animate={{ y: [0, 10, 0] }}
+          transition={{ duration: 2, repeat: Infinity }}
+          className="flex flex-col items-center gap-2 cursor-pointer group"
+        >
+          <span className="text-xs uppercase tracking-[0.2em] text-gray-500 group-hover:text-[var(--gold)] transition-colors">
+            Explore More
+          </span>
+          <div className="w-6 h-10 rounded-full border-2 border-gray-600 group-hover:border-[var(--gold)] transition-colors flex justify-center pt-2">
+            <motion.div
+              className="w-1.5 h-1.5 rounded-full bg-[var(--gold)]"
+              animate={{ y: [0, 12, 0], opacity: [1, 0.5, 1] }}
+              transition={{ duration: 1.5, repeat: Infinity }}
+            />
+          </div>
+        </motion.div>
+      </motion.div>
+
       {/* Background effects */}
       <div className="absolute inset-0">
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-[var(--gold)]/5 rounded-full blur-3xl" />
