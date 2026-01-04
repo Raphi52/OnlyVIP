@@ -36,7 +36,6 @@ export async function GET(
           subscribers: dbCreator.subscriberCount,
         },
         // AI Settings (for authenticated creators)
-        aiEnabled: dbCreator.aiEnabled,
         aiResponseDelay: dbCreator.aiResponseDelay,
         aiPersonality: dbCreator.aiPersonality,
         // AI Provider Settings

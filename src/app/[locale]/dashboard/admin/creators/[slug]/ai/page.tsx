@@ -101,7 +101,6 @@ export default function CreatorAiSettingsPage({
 
   // Creator data
   const [creatorName, setCreatorName] = useState("");
-  const [aiEnabled, setAiEnabled] = useState(false);
   const [responseDelay, setResponseDelay] = useState(120);
 
   // Personality
@@ -141,7 +140,6 @@ export default function CreatorAiSettingsPage({
       if (res.ok) {
         const data = await res.json();
         setCreatorName(data.displayName || data.name);
-        setAiEnabled(data.aiEnabled || false);
         setResponseDelay(data.aiResponseDelay || 120);
 
         if (data.aiPersonality) {
@@ -180,7 +178,6 @@ export default function CreatorAiSettingsPage({
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          aiEnabled,
           aiResponseDelay: responseDelay,
           aiPersonality: JSON.stringify(personality),
         }),
@@ -333,45 +330,30 @@ export default function CreatorAiSettingsPage({
         </div>
       </motion.div>
 
-      {/* Main Toggle */}
+      {/* AI Status Header */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
       >
         <Card className="p-6 mb-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${aiEnabled ? "bg-purple-500/20" : "bg-gray-500/20"}`}>
-                <Zap className={`w-6 h-6 ${aiEnabled ? "text-purple-400" : "text-gray-400"}`} />
-              </div>
-              <div>
-                <h2 className="text-lg font-semibold text-[var(--foreground)]">
-                  AI Girlfriend Mode
-                </h2>
-                <p className="text-sm text-[var(--muted)]">
-                  When enabled, AI will automatically respond to fan messages
-                </p>
-              </div>
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-purple-500/20">
+              <Zap className="w-6 h-6 text-purple-400" />
             </div>
-            <button
-              onClick={() => setAiEnabled(!aiEnabled)}
-              className={`relative w-14 h-7 rounded-full transition-colors ${
-                aiEnabled ? "bg-purple-500" : "bg-gray-600"
-              }`}
-            >
-              <div
-                className={`absolute top-1 left-1 w-5 h-5 rounded-full bg-white transition-transform ${
-                  aiEnabled ? "translate-x-7" : ""
-                }`}
-              />
-            </button>
+            <div>
+              <h2 className="text-lg font-semibold text-[var(--foreground)]">
+                AI Girlfriend Mode
+              </h2>
+              <p className="text-sm text-[var(--muted)]">
+                AI will automatically respond to fan messages
+              </p>
+            </div>
           </div>
         </Card>
       </motion.div>
 
-      {aiEnabled && (
-        <>
+      <>
           {/* Response Delay */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -695,7 +677,6 @@ export default function CreatorAiSettingsPage({
             </Card>
           </motion.div>
         </>
-      )}
 
       {/* Save Button */}
       <motion.div

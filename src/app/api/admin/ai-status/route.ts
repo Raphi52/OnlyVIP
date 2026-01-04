@@ -10,12 +10,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Check creators with AI enabled
+    // Check creators
     const creators = await prisma.creator.findMany({
       select: {
         slug: true,
         displayName: true,
-        aiEnabled: true,
         aiResponseDelay: true,
         aiLastActive: true,
       },
@@ -84,7 +83,6 @@ export async function GET(request: NextRequest) {
       creators: creators.map((c) => ({
         slug: c.slug,
         name: c.displayName,
-        aiEnabled: c.aiEnabled,
         delay: c.aiResponseDelay,
         lastActive: c.aiLastActive,
       })),
@@ -97,7 +95,6 @@ export async function GET(request: NextRequest) {
         recentCompleted: recentCompleted,
       },
       instructions: {
-        enableAI: "Set aiEnabled=true on Creator model",
         cronJob: "Call GET /api/ai/process-queue every 30s with x-cron-secret header",
         testManually: "POST /api/ai/process-queue with {messageId, creatorSlug, conversationId}",
       },

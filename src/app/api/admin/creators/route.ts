@@ -276,12 +276,10 @@ export async function PATCH(request: NextRequest) {
       const instagram = formData.get("instagram") as string;
       const twitter = formData.get("twitter") as string;
       const tiktok = formData.get("tiktok") as string;
-      const aiEnabled = formData.get("aiEnabled") as string;
 
       if (name) updateData.name = name;
       if (displayName) updateData.displayName = displayName;
       if (bio !== undefined) updateData.bio = bio || null;
-      if (aiEnabled !== null) updateData.aiEnabled = aiEnabled === "true";
 
       if (instagram !== undefined || twitter !== undefined || tiktok !== undefined) {
         updateData.socialLinks = JSON.stringify({ instagram, twitter, tiktok });

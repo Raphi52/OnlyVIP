@@ -216,13 +216,6 @@ export async function handleFanOnline(
 
   if (!conversation) return;
 
-  // Check if AI is enabled for this creator
-  const creator = await prisma.creator.findUnique({
-    where: { slug: creatorSlug },
-  });
-
-  if (!creator?.aiEnabled) return;
-
   // Check if there was recent activity (don't bump if they were active recently)
   const recentMessage = await prisma.message.findFirst({
     where: {

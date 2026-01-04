@@ -100,4 +100,19 @@ export async function triggerMessageRead(
   }
 }
 
+// Generic pusher event trigger
+export async function triggerPusherEvent(
+  channel: string,
+  event: string,
+  data: unknown
+) {
+  if (!isPusherConfigured()) return;
+
+  try {
+    await pusherServer.trigger(channel, event, data);
+  } catch (error) {
+    console.error("Pusher trigger error:", error);
+  }
+}
+
 export default pusherServer;

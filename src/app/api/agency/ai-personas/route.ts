@@ -6,9 +6,9 @@ import prisma from "@/lib/prisma";
 async function verifyAgencyOwnership(userId: string, agencyId: string) {
   const agency = await prisma.agency.findUnique({
     where: { id: agencyId },
-    select: { ownerId: true, aiEnabled: true },
+    select: { ownerId: true },
   });
-  return { isOwner: agency?.ownerId === userId, aiEnabled: agency?.aiEnabled };
+  return { isOwner: agency?.ownerId === userId };
 }
 
 // GET /api/agency/ai-personas - List AI personalities for an agency
@@ -30,21 +30,14 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Verify ownership and AI enabled
-    const { isOwner, aiEnabled } = await verifyAgencyOwnership(
+    // Verify ownership
+    const { isOwner } = await verifyAgencyOwnership(
       session.user.id,
       agencyId
     );
 
     if (!isOwner) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
-    if (!aiEnabled) {
-      return NextResponse.json(
-        { error: "AI is not enabled for this agency. Contact admin." },
-        { status: 403 }
-      );
     }
 
     const whereClause: any = { agencyId };
@@ -147,21 +140,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify ownership and AI enabled
-    const { isOwner, aiEnabled } = await verifyAgencyOwnership(
+    // Verify ownership
+    const { isOwner } = await verifyAgencyOwnership(
       session.user.id,
       agencyId
     );
 
     if (!isOwner) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
-    if (!aiEnabled) {
-      return NextResponse.json(
-        { error: "AI is not enabled for this agency. Contact admin." },
-        { status: 403 }
-      );
     }
 
     // Verify creator belongs to agency
@@ -252,20 +238,13 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    const { isOwner, aiEnabled } = await verifyAgencyOwnership(
+    const { isOwner } = await verifyAgencyOwnership(
       session.user.id,
       existingPersonality.agencyId
     );
 
     if (!isOwner) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
-    if (!aiEnabled) {
-      return NextResponse.json(
-        { error: "AI is not enabled for this agency" },
-        { status: 403 }
-      );
     }
 
     const updateData: any = {};

@@ -37,7 +37,6 @@ model Agency {
   yearsInBusiness Int?
 
   // Settings (controlled by Admin)
-  aiEnabled   Boolean @default(false) // AI disabled by default
   platformFee Float   @default(0.10) // 10% platform commission
 
   // AI Provider Settings (agency-wide defaults)
@@ -623,8 +622,7 @@ model Creator {
   // Category tags (JSON array of strings)
   categories String @default("[]")
 
-  // AI Girlfriend Mode (legacy - for non-agency creators)
-  aiEnabled       Boolean   @default(false)
+  // AI Girlfriend Mode
   aiPersonality   String? // JSON: name, age, traits, interests, style
   aiResponseDelay Int       @default(120) // Average delay in seconds (2min default)
   aiLastActive    DateTime?

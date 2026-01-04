@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, ownerEmail, aiEnabled, platformFee } = body;
+    const { name, ownerEmail, platformFee } = body;
 
     if (!name || !ownerEmail) {
       return NextResponse.json(
@@ -118,7 +118,6 @@ export async function POST(request: NextRequest) {
         name,
         slug,
         ownerId: owner.id,
-        aiEnabled: aiEnabled || false,
         platformFee: platformFee || 0.1,
       },
       include: {
@@ -153,7 +152,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { id, aiEnabled, platformFee, status } = body;
+    const { id, platformFee, status } = body;
 
     if (!id) {
       return NextResponse.json(
@@ -163,7 +162,6 @@ export async function PATCH(request: NextRequest) {
     }
 
     const updateData: any = {};
-    if (aiEnabled !== undefined) updateData.aiEnabled = aiEnabled;
     if (platformFee !== undefined) updateData.platformFee = platformFee;
     if (status !== undefined) updateData.status = status;
 

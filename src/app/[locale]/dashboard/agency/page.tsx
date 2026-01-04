@@ -30,7 +30,6 @@ interface Agency {
   id: string;
   name: string;
   slug: string;
-  aiEnabled: boolean;
   creators: {
     slug: string;
     name: string;
@@ -475,7 +474,6 @@ export default function AgencyDashboardPage() {
       label: "AI Personalities",
       count: selectedAgency.stats.aiPersonalitiesCount,
       color: "text-purple-400",
-      disabled: !selectedAgency.aiEnabled,
     },
     {
       href: "/dashboard/agency/scripts",
@@ -514,11 +512,6 @@ export default function AgencyDashboardPage() {
             </p>
           </div>
         </div>
-        {!selectedAgency.aiEnabled && (
-          <div className="px-4 py-2 rounded-lg bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 text-sm">
-            AI features disabled - Contact admin
-          </div>
-        )}
       </motion.div>
 
       {/* Stats Grid */}
@@ -553,10 +546,7 @@ export default function AgencyDashboardPage() {
         {quickLinks.map((link, index) => (
           <Link
             key={index}
-            href={link.disabled ? "#" : link.href}
-            className={cn(
-              link.disabled && "pointer-events-none opacity-50"
-            )}
+            href={link.href}
           >
             <Card variant="default" className="p-5 hover:border-purple-500/30 transition-colors group">
               <div className="flex items-center justify-between mb-3">
@@ -566,9 +556,6 @@ export default function AgencyDashboardPage() {
               <p className="font-semibold text-[var(--foreground)]">{link.label}</p>
               {link.count !== null && (
                 <p className="text-sm text-[var(--muted)]">{link.count}</p>
-              )}
-              {link.disabled && (
-                <p className="text-xs text-yellow-400 mt-1">Requires AI access</p>
               )}
             </Card>
           </Link>

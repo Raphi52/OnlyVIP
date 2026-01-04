@@ -49,11 +49,11 @@ const userLinks = [
 // Navigation pour les créateurs (en plus des liens user)
 const creatorLinks = [
   { href: "/dashboard/creator", icon: Crown, label: "Creator Dashboard" },
-  { href: "/dashboard/creator/verification", icon: Shield, label: "Verification" },
   { href: "/dashboard/creator/media", icon: Upload, label: "Media Library" },
   { href: "/dashboard/creator/members", icon: Users, label: "Members" },
   { href: "/dashboard/creator/earnings", icon: DollarSign, label: "Earnings" },
   { href: "/dashboard/creator/analytics", icon: BarChart3, label: "Analytics" },
+  { href: "/dashboard/creator/ai", icon: Bot, label: "AI Girlfriend" },
   { href: "/dashboard/find-agency", icon: Search, label: "Find Agency" },
   { href: "/dashboard/creator/settings", icon: Settings, label: "Creator Settings" },
 ];
@@ -460,16 +460,6 @@ export function Sidebar() {
                 badge={undefined}
               />
             ))}
-            {/* AI Girlfriend - only show if enabled for this creator */}
-            {selectedCreator?.aiEnabled && (
-              <NavLink
-                href="/dashboard/creator/ai"
-                icon={Bot}
-                label="AI Girlfriend"
-                index={creatorLinks.length + (isAdmin ? adminLinks.length : 0) + (isAgencyOwner ? agencyLinks.length : 0)}
-                badge={undefined}
-              />
-            )}
             <div className="h-4" />
           </>
         )}

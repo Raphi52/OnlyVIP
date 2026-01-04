@@ -41,7 +41,6 @@ interface Creator {
     subscribers: number;
   };
   isActive: boolean;
-  aiEnabled: boolean;
   createdAt: string;
 }
 
@@ -220,32 +219,6 @@ export default function AdminCreatorsPage() {
     }
   };
 
-  const toggleAI = async (creator: Creator) => {
-    try {
-      const formData = new FormData();
-      formData.append("id", creator.id);
-      formData.append("aiEnabled", (!creator.aiEnabled).toString());
-
-      const res = await fetch("/api/admin/creators", {
-        method: "PATCH",
-        body: formData,
-      });
-
-      if (res.ok) {
-        // Update local state immediately
-        setCreators(prev => prev.map(c =>
-          c.id === creator.id ? { ...c, aiEnabled: !c.aiEnabled } : c
-        ));
-      } else {
-        const error = await res.json();
-        alert(error.error || "Failed to toggle AI");
-      }
-    } catch (error) {
-      console.error("Error toggling AI:", error);
-      alert("Failed to toggle AI");
-    }
-  };
-
   return (
     <div className="p-8">
       {/* Header */}
@@ -411,35 +384,6 @@ export default function AdminCreatorsPage() {
                         )}
                       </div>
                     )}
-
-                    {/* AI Toggle */}
-                    <div className="flex items-center justify-between mb-4 p-3 rounded-xl bg-[var(--surface)]">
-                      <div className="flex items-center gap-2">
-                        <Bot className={cn(
-                          "w-5 h-5",
-                          creator.aiEnabled ? "text-[var(--gold)]" : "text-[var(--muted)]"
-                        )} />
-                        <span className="text-sm font-medium text-[var(--foreground)]">
-                          AI Girlfriend
-                        </span>
-                      </div>
-                      <button
-                        onClick={() => toggleAI(creator)}
-                        className={cn(
-                          "relative w-12 h-6 rounded-full transition-colors",
-                          creator.aiEnabled
-                            ? "bg-[var(--gold)]"
-                            : "bg-[var(--border)]"
-                        )}
-                      >
-                        <span
-                          className={cn(
-                            "absolute top-1 w-4 h-4 rounded-full bg-white transition-transform",
-                            creator.aiEnabled ? "left-7" : "left-1"
-                          )}
-                        />
-                      </button>
-                    </div>
 
                     {/* Actions */}
                     <div className="flex items-center gap-2">

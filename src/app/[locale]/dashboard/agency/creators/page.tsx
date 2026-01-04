@@ -36,7 +36,6 @@ interface Creator {
   displayName: string;
   avatar: string | null;
   isActive: boolean;
-  aiEnabled: boolean;
   subscriberCount: number;
   photoCount: number;
   videoCount: number;
@@ -458,11 +457,9 @@ export default function AgencyCreatorsPage() {
                         >
                           {creator.isActive ? "Active" : "Inactive"}
                         </Badge>
-                        {creator.aiEnabled && (
-                          <Badge className="bg-purple-500/20 text-purple-400">
-                            AI
-                          </Badge>
-                        )}
+                        <Badge className="bg-purple-500/20 text-purple-400">
+                          AI
+                        </Badge>
                       </div>
                       <p className="text-sm text-[var(--muted)]">@{creator.slug}</p>
                     </div>

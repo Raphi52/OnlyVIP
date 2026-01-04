@@ -27,7 +27,6 @@ import {
   Building2,
   BarChart3,
   UserPlus,
-  Bot,
   Handshake,
   Heart,
 } from "lucide-react";
@@ -521,7 +520,7 @@ export default function HomePage() {
                 { icon: Users, title: t("home.multipleCreators"), desc: t("home.multipleCreatorsDesc") },
                 { icon: BarChart3, title: t("home.performanceTracking"), desc: t("home.performanceTrackingDesc") },
                 { icon: UserPlus, title: t("home.teamManagement"), desc: t("home.teamManagementDesc") },
-                { icon: Bot, title: t("home.aiAssistant"), desc: t("home.aiAssistantDesc") },
+                { icon: DollarSign, title: t("home.revenueSharing"), desc: t("home.revenueSharingDesc") },
               ].map((feature, i) => (
                 <motion.div
                   key={i}
@@ -579,7 +578,7 @@ export default function HomePage() {
                     {[
                       t("home.multipleCreators"),
                       t("home.performanceTracking"),
-                      t("home.aiAssistant"),
+                      t("home.revenueSharing"),
                       t("home.realtimeAnalytics"),
                     ].map((benefit, i) => (
                       <div key={i} className="flex items-center gap-3">
@@ -601,6 +600,152 @@ export default function HomePage() {
               </div>
             </motion.div>
           </div>
+        </div>
+      </section>
+
+      {/* Divider */}
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        <div className="h-px bg-gradient-to-r from-transparent via-blue-500/30 to-transparent" />
+      </div>
+
+      {/* Protection Mutuelle Section */}
+      <section className="py-16 px-4">
+        <div className="max-w-6xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center mb-12"
+          >
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-sm font-medium mb-6">
+              <Shield className="w-4 h-4" />
+              {t("home.protectionBadge")}
+            </div>
+            <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
+              {t("home.protectionTitle")}
+            </h2>
+            <p className="text-gray-400 max-w-2xl mx-auto">
+              {t("home.protectionDesc")}
+            </p>
+          </motion.div>
+
+          <div className="grid md:grid-cols-2 gap-8">
+            {/* Pour les Créateurs */}
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+            >
+              <Card className="p-8 h-full hover:border-[var(--gold)]/30 transition-all">
+                <div className="flex items-center gap-4 mb-6">
+                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[var(--gold)] to-yellow-600 flex items-center justify-center">
+                    <Crown className="w-7 h-7 text-black" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-white">{t("home.protectionCreatorsTitle")}</h3>
+                    <p className="text-sm text-[var(--gold)]">{t("home.protectionCreatorsSubtitle")}</p>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="flex items-start gap-3">
+                    <div className="w-6 h-6 rounded-full bg-[var(--gold)]/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <Check className="w-3.5 h-3.5 text-[var(--gold)]" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-white">{t("home.protectionCreators1")}</p>
+                      <p className="text-sm text-gray-400">{t("home.protectionCreators1Desc")}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className="w-6 h-6 rounded-full bg-[var(--gold)]/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <Check className="w-3.5 h-3.5 text-[var(--gold)]" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-white">{t("home.protectionCreators2")}</p>
+                      <p className="text-sm text-gray-400">{t("home.protectionCreators2Desc")}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className="w-6 h-6 rounded-full bg-[var(--gold)]/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <Check className="w-3.5 h-3.5 text-[var(--gold)]" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-white">{t("home.protectionCreators3")}</p>
+                      <p className="text-sm text-gray-400">{t("home.protectionCreators3Desc")}</p>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            </motion.div>
+
+            {/* Pour les Agences */}
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+            >
+              <Card className="p-8 h-full hover:border-purple-500/30 transition-all">
+                <div className="flex items-center gap-4 mb-6">
+                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                    <Building2 className="w-7 h-7 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-white">{t("home.protectionAgenciesTitle")}</h3>
+                    <p className="text-sm text-purple-400">{t("home.protectionAgenciesSubtitle")}</p>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="flex items-start gap-3">
+                    <div className="w-6 h-6 rounded-full bg-purple-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <Check className="w-3.5 h-3.5 text-purple-400" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-white">{t("home.protectionAgencies1")}</p>
+                      <p className="text-sm text-gray-400">{t("home.protectionAgencies1Desc")}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className="w-6 h-6 rounded-full bg-purple-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <Check className="w-3.5 h-3.5 text-purple-400" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-white">{t("home.protectionAgencies2")}</p>
+                      <p className="text-sm text-gray-400">{t("home.protectionAgencies2Desc")}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className="w-6 h-6 rounded-full bg-purple-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <Check className="w-3.5 h-3.5 text-purple-400" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-white">{t("home.protectionAgencies3")}</p>
+                      <p className="text-sm text-gray-400">{t("home.protectionAgencies3Desc")}</p>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            </motion.div>
+          </div>
+
+          {/* Trust Badge */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="mt-12 text-center"
+          >
+            <div className="inline-flex items-center gap-4 px-6 py-4 rounded-2xl bg-gradient-to-r from-[var(--gold)]/10 via-blue-500/10 to-purple-500/10 border border-white/10">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center">
+                <Shield className="w-5 h-5 text-white" />
+              </div>
+              <div className="text-left">
+                <p className="font-semibold text-white">{t("home.protectionTrustTitle")}</p>
+                <p className="text-sm text-gray-400">{t("home.protectionTrustDesc")}</p>
+              </div>
+            </div>
+          </motion.div>
         </div>
       </section>
 

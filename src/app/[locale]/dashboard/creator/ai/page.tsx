@@ -435,20 +435,6 @@ export default function CreatorAiPage() {
     );
   }
 
-  if (!selectedCreator?.aiEnabled) {
-    return (
-      <div className="p-8 pt-20 lg:pt-8 flex items-center justify-center min-h-[50vh]">
-        <Card className="p-8 text-center max-w-md">
-          <Bot className="w-16 h-16 text-gray-500 mx-auto mb-4" />
-          <h2 className="text-xl font-bold text-white mb-2">AI Not Enabled</h2>
-          <p className="text-gray-400">
-            Contact the platform admin to enable AI Girlfriend mode for your profile.
-          </p>
-        </Card>
-      </div>
-    );
-  }
-
   return (
     <div className="p-4 pt-20 sm:p-6 sm:pt-20 lg:p-8 lg:pt-8 max-w-4xl mx-auto">
       {/* Header */}

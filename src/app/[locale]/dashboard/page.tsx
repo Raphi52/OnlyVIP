@@ -18,6 +18,7 @@ import {
   Calendar,
   ExternalLink,
   Bell,
+  Compass,
 } from "lucide-react";
 import { Button, Card, Badge } from "@/components/ui";
 import { RecentMessagesWidget } from "@/components/dashboard/RecentMessagesWidget";
@@ -209,13 +210,13 @@ export default function DashboardPage() {
             </div>
           </Card>
         </Link>
-        <Link href="/miacosta/membership">
+        <Link href="/creators">
           <Card className="p-3 sm:p-4 hover:border-[var(--gold)]/50 active:scale-[0.98] transition-all cursor-pointer h-full">
             <div className="flex flex-col items-center text-center gap-1.5 sm:gap-2">
               <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-[var(--gold)]/20 flex items-center justify-center">
-                <Crown className="w-4 h-4 sm:w-5 sm:h-5 text-[var(--gold)]" />
+                <Compass className="w-4 h-4 sm:w-5 sm:h-5 text-[var(--gold)]" />
               </div>
-              <span className="text-xs sm:text-sm text-gray-300">Subscribe</span>
+              <span className="text-xs sm:text-sm text-gray-300">Discover</span>
             </div>
           </Card>
         </Link>

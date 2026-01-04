@@ -28,7 +28,6 @@ interface Agency {
     name: string | null;
     email: string;
   };
-  aiEnabled: boolean;
   platformFee: number;
   status: string;
   totalRevenue: number;
@@ -54,7 +53,6 @@ export default function AdminAgenciesPage() {
   const [formOwnerEmail, setFormOwnerEmail] = useState("");
 
   // Settings form state
-  const [settingsAiEnabled, setSettingsAiEnabled] = useState(false);
   const [settingsPlatformFee, setSettingsPlatformFee] = useState(10);
 
   const fetchAgencies = async () => {
@@ -84,7 +82,6 @@ export default function AdminAgenciesPage() {
 
   const openSettingsModal = (agency: Agency) => {
     setSelectedAgency(agency);
-    setSettingsAiEnabled(agency.aiEnabled);
     setSettingsPlatformFee(agency.platformFee * 100);
     setShowSettingsModal(true);
   };
@@ -128,7 +125,6 @@ export default function AdminAgenciesPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           id: selectedAgency.id,
-          aiEnabled: settingsAiEnabled,
           platformFee: settingsPlatformFee / 100,
         }),
       });
@@ -145,29 +141,6 @@ export default function AdminAgenciesPage() {
       alert("Failed to update agency");
     } finally {
       setIsSaving(false);
-    }
-  };
-
-  const toggleAI = async (agency: Agency) => {
-    try {
-      const res = await fetch("/api/admin/agencies", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          id: agency.id,
-          aiEnabled: !agency.aiEnabled,
-        }),
-      });
-
-      if (res.ok) {
-        setAgencies((prev) =>
-          prev.map((a) =>
-            a.id === agency.id ? { ...a, aiEnabled: !a.aiEnabled } : a
-          )
-        );
-      }
-    } catch (error) {
-      console.error("Error toggling AI:", error);
     }
   };
 
@@ -298,25 +271,6 @@ export default function AdminAgenciesPage() {
 
                     {/* Desktop Actions */}
                     <div className="hidden lg:flex items-center gap-3">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-[var(--muted)]">AI</span>
-                        <button
-                          onClick={() => toggleAI(agency)}
-                          className={cn(
-                            "relative w-12 h-6 rounded-full transition-colors",
-                            agency.aiEnabled
-                              ? "bg-[var(--gold)]"
-                              : "bg-[var(--border)]"
-                          )}
-                        >
-                          <span
-                            className={cn(
-                              "absolute top-1 w-4 h-4 rounded-full bg-white transition-transform",
-                              agency.aiEnabled ? "left-7" : "left-1"
-                            )}
-                          />
-                        </button>
-                      </div>
                       <Button
                         variant="ghost"
                         size="icon"
@@ -392,26 +346,7 @@ export default function AdminAgenciesPage() {
                   </div>
 
                   {/* Mobile Actions Row */}
-                  <div className="flex lg:hidden items-center justify-between pt-2 border-t border-[var(--border)]">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-[var(--muted)]">AI</span>
-                      <button
-                        onClick={() => toggleAI(agency)}
-                        className={cn(
-                          "relative w-10 h-5 rounded-full transition-colors",
-                          agency.aiEnabled
-                            ? "bg-[var(--gold)]"
-                            : "bg-[var(--border)]"
-                        )}
-                      >
-                        <span
-                          className={cn(
-                            "absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform",
-                            agency.aiEnabled ? "left-5" : "left-0.5"
-                          )}
-                        />
-                      </button>
-                    </div>
+                  <div className="flex lg:hidden items-center justify-end pt-2 border-t border-[var(--border)]">
                     <Button
                       variant="ghost"
                       size="sm"
@@ -539,34 +474,6 @@ export default function AdminAgenciesPage() {
                 </div>
 
                 <div className="space-y-4 mb-5 sm:mb-6">
-                  {/* AI Toggle */}
-                  <div className="flex items-center justify-between p-4 bg-[var(--surface)] rounded-xl">
-                    <div>
-                      <p className="font-medium text-[var(--foreground)]">
-                        AI Enabled
-                      </p>
-                      <p className="text-xs text-[var(--muted)]">
-                        Allow AI personalities
-                      </p>
-                    </div>
-                    <button
-                      onClick={() => setSettingsAiEnabled(!settingsAiEnabled)}
-                      className={cn(
-                        "relative w-12 h-6 rounded-full transition-colors",
-                        settingsAiEnabled
-                          ? "bg-[var(--gold)]"
-                          : "bg-[var(--border)]"
-                      )}
-                    >
-                      <span
-                        className={cn(
-                          "absolute top-1 w-4 h-4 rounded-full bg-white transition-transform",
-                          settingsAiEnabled ? "left-7" : "left-1"
-                        )}
-                      />
-                    </button>
-                  </div>
-
                   <Input
                     label="Platform Fee (%)"
                     type="number"

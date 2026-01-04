@@ -331,21 +331,19 @@ export async function POST(
     });
 
     if (!senderUser?.isCreator && conversation.creatorSlug) {
-      // Check if the creator has AI enabled
+      // Get the creator's AI settings
       const creator = await prisma.creator.findUnique({
         where: { slug: conversation.creatorSlug },
-        select: { aiEnabled: true, aiResponseDelay: true },
+        select: { aiResponseDelay: true },
       });
 
-      if (creator?.aiEnabled) {
-        // Schedule AI response with the creator's configured delay
-        await scheduleAiResponse(
-          message.id,
-          conversationId,
-          conversation.creatorSlug,
-          creator.aiResponseDelay || 120
-        );
-      }
+      // Schedule AI response with the creator's configured delay
+      await scheduleAiResponse(
+        message.id,
+        conversationId,
+        conversation.creatorSlug,
+        creator?.aiResponseDelay || 120
+      );
     }
 
     return NextResponse.json(transformedMessage);

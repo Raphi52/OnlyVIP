@@ -204,6 +204,7 @@ export function Navbar({ creatorSlug = "miacosta" }: NavbarProps) {
                     fill
                     sizes="44px"
                     className="rounded-full object-cover"
+                    unoptimized
                   />
                 </div>
                 {/* Online indicator */}
@@ -283,6 +284,7 @@ export function Navbar({ creatorSlug = "miacosta" }: NavbarProps) {
                         sizes="32px"
                         className="object-cover"
                         referrerPolicy="no-referrer"
+                        unoptimized
                       />
                     </div>
                   ) : (

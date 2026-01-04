@@ -27,7 +27,6 @@ export interface Creator {
     subscribers: number;
   };
   isActive?: boolean;
-  aiEnabled?: boolean;
 }
 
 export interface Agency {

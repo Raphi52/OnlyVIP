@@ -198,7 +198,6 @@ export async function POST(request: NextRequest) {
         slug,
         logo: logo || null,
         ownerId: session.user.id,
-        aiEnabled: false, // Disabled by default, admin must enable
       },
     });
 

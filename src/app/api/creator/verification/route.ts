@@ -23,7 +23,7 @@ export async function GET() {
     }
 
     // Get verification status
-    const verification = await prisma.creatorVerification.findUnique({
+    const verification = await prisma.creatorVerification.findFirst({
       where: { creatorId: creator.id },
     });
 
@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if already verified
-    const existingVerification = await prisma.creatorVerification.findUnique({
+    const existingVerification = await prisma.creatorVerification.findFirst({
       where: { creatorId: creator.id },
     });
 
@@ -128,30 +128,36 @@ export async function POST(request: NextRequest) {
     const selfieUrl = await saveFile(selfie, "selfie");
 
     // Create or update verification record
-    const verification = await prisma.creatorVerification.upsert({
-      where: { creatorId: creator.id },
-      create: {
-        creatorId: creator.id,
-        creatorSlug: creator.slug,
-        documentType,
-        documentFrontUrl,
-        documentBackUrl,
-        selfieUrl,
-        fullName,
-        dateOfBirth: dob,
-        status: "PENDING",
-      },
-      update: {
-        documentType,
-        documentFrontUrl,
-        documentBackUrl,
-        selfieUrl,
-        fullName,
-        dateOfBirth: dob,
-        status: "PENDING",
-        rejectionReason: null,
-      },
-    });
+    let verification;
+    if (existingVerification) {
+      verification = await prisma.creatorVerification.update({
+        where: { id: existingVerification.id },
+        data: {
+          documentType,
+          documentFrontUrl,
+          documentBackUrl,
+          selfieUrl,
+          fullName,
+          dateOfBirth: dob,
+          status: "PENDING",
+          rejectionReason: null,
+        },
+      });
+    } else {
+      verification = await prisma.creatorVerification.create({
+        data: {
+          creatorId: creator.id,
+          creatorSlug: creator.slug,
+          documentType,
+          documentFrontUrl,
+          documentBackUrl,
+          selfieUrl,
+          fullName,
+          dateOfBirth: dob,
+          status: "PENDING",
+        },
+      });
+    }
 
     // TODO: Send notification to admin about new verification request
     // TODO: Optionally integrate with verification service like Jumio or Veriff

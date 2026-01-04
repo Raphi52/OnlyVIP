@@ -32,7 +32,6 @@ interface Agency {
   slug: string;
   logo: string | null;
   website: string | null;
-  aiEnabled: boolean;
   // AI Provider Settings
   aiProvider: string;
   aiModel: string;
@@ -516,7 +515,7 @@ export default function AgencySettingsPage() {
         </motion.div>
 
         {/* AI Provider Settings Card */}
-        {agency?.aiEnabled && (
+        {agency && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -787,9 +786,6 @@ export default function AgencySettingsPage() {
                 <p className="text-2xl font-bold text-[var(--foreground)]">
                   {agency.stats.aiPersonalitiesCount}
                 </p>
-                {!agency.aiEnabled && (
-                  <p className="text-xs text-amber-400 mt-1">AI disabled</p>
-                )}
               </div>
             </div>
           </Card>

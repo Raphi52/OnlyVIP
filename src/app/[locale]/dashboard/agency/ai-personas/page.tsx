@@ -57,7 +57,6 @@ interface AiPersonality {
 interface Agency {
   id: string;
   name: string;
-  aiEnabled: boolean;
   creators: { slug: string; displayName: string }[];
 }
 
@@ -104,12 +103,10 @@ export default function AiPersonasPage() {
             const ag = agencyData.agencies[0];
             setAgency(ag);
 
-            if (ag.aiEnabled) {
-              const personasRes = await fetch(`/api/agency/ai-personas?agencyId=${ag.id}`);
-              if (personasRes.ok) {
-                const personasData = await personasRes.json();
-                setPersonalities(personasData.personalities || []);
-              }
+            const personasRes = await fetch(`/api/agency/ai-personas?agencyId=${ag.id}`);
+            if (personasRes.ok) {
+              const personasData = await personasRes.json();
+              setPersonalities(personasData.personalities || []);
             }
           }
         }
@@ -288,25 +285,6 @@ export default function AiPersonasPage() {
     );
   }
 
-  // AI not enabled
-  if (!agency?.aiEnabled) {
-    return (
-      <div className="p-4 sm:p-8">
-        <div className="max-w-lg mx-auto text-center py-12 sm:py-20 px-4">
-          <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-yellow-500/20 flex items-center justify-center mx-auto mb-4 sm:mb-6">
-            <AlertTriangle className="w-10 h-10 sm:w-12 sm:h-12 text-yellow-500" />
-          </div>
-          <h2 className="text-xl sm:text-2xl font-bold text-[var(--foreground)] mb-2 sm:mb-3">
-            AI Features Disabled
-          </h2>
-          <p className="text-sm sm:text-base text-[var(--muted)]">
-            AI personalities are not enabled for your agency.
-            Contact the platform admin to enable this feature.
-          </p>
-        </div>
-      </div>
-    );
-  }
 
   const toneOptions = [
     { value: "flirty", label: "Flirty", emoji: "💋" },

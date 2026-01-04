@@ -28,7 +28,7 @@ export async function PATCH(request: NextRequest) {
     // Verify the user owns this agency
     const agency = await prisma.agency.findUnique({
       where: { id: agencyId },
-      select: { ownerId: true, aiEnabled: true },
+      select: { ownerId: true },
     });
 
     if (!agency) {
@@ -37,11 +37,6 @@ export async function PATCH(request: NextRequest) {
 
     if (agency.ownerId !== session.user.id) {
       return NextResponse.json({ error: "You can only update your own agency" }, { status: 403 });
-    }
-
-    // Only allow updating AI settings if AI is enabled for this agency
-    if (!agency.aiEnabled) {
-      return NextResponse.json({ error: "AI is not enabled for this agency" }, { status: 403 });
     }
 
     // Build update data

@@ -38,9 +38,9 @@ export async function GET(request: NextRequest) {
       handoffsExpired: 0,
     };
 
-    // Get all creators with AI enabled
+    // Get all active creators
     const creators = await prisma.creator.findMany({
-      where: { aiEnabled: true },
+      where: { isActive: true },
       select: { slug: true },
     });
 

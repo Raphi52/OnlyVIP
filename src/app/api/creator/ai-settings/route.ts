@@ -36,7 +36,7 @@ export async function PATCH(request: NextRequest) {
     // Verify the user owns this creator
     const creator = await prisma.creator.findUnique({
       where: { slug: creatorSlug },
-      select: { userId: true, aiEnabled: true },
+      select: { userId: true },
     });
 
     if (!creator) {
@@ -45,11 +45,6 @@ export async function PATCH(request: NextRequest) {
 
     if (creator.userId !== session.user.id) {
       return NextResponse.json({ error: "You can only update your own creators" }, { status: 403 });
-    }
-
-    // Only allow updating AI settings if AI is enabled for this creator
-    if (!creator.aiEnabled) {
-      return NextResponse.json({ error: "AI is not enabled for this creator" }, { status: 403 });
     }
 
     // Build update data
@@ -93,7 +88,7 @@ export async function PATCH(request: NextRequest) {
       updateData.aiUseCustomKey = true;
     }
 
-    // Update AI settings (but NOT aiEnabled - that's admin only)
+    // Update AI settings
     const updated = await prisma.creator.update({
       where: { slug: creatorSlug },
       data: updateData,

@@ -41,7 +41,6 @@ export async function GET(req: NextRequest) {
         displayName: true,
         avatar: true,
         isActive: true,
-        aiEnabled: true,
         agencyId: true,
       },
     });
@@ -59,7 +58,6 @@ export async function GET(req: NextRequest) {
         displayName: true,
         avatar: true,
         isActive: true,
-        aiEnabled: true,
         agencyId: true,
       },
     });
@@ -110,7 +108,6 @@ export async function GET(req: NextRequest) {
         displayName: creator.displayName,
         avatar: creator.avatar,
         isActive: creator.isActive,
-        aiEnabled: creator.aiEnabled,
         agencyId: creator.agencyId,
         subscriberCount: subCountMap.get(creator.slug) || 0,
         photoCount: media.photo,
@@ -242,7 +239,6 @@ export async function POST(req: NextRequest) {
           displayName: result.displayName,
           avatar: result.avatar,
           isActive: result.isActive,
-          aiEnabled: result.aiEnabled,
           agencyId: result.agencyId,
           subscriberCount: 0,
           photoCount: 0,

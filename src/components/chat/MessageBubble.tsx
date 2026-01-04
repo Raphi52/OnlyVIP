@@ -302,6 +302,7 @@ export const MessageBubble = memo(function MessageBubble({
                         fill
                         sizes="300px"
                         className="object-cover blur-2xl scale-150 opacity-40"
+                        unoptimized
                       />
                     ) : null}
 
@@ -499,6 +500,7 @@ export const MessageBubble = memo(function MessageBubble({
                       className="object-cover transition-transform duration-300 hover:scale-105 pointer-events-none select-none"
                       draggable={false}
                       onContextMenu={(e) => e.preventDefault()}
+                      unoptimized
                     />
                     {/* Protection overlay */}
                     <div

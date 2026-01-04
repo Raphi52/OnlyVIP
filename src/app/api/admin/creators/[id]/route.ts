@@ -94,7 +94,6 @@ export async function PATCH(
     }
 
     // AI Girlfriend Mode fields
-    if (body.aiEnabled !== undefined) updateData.aiEnabled = body.aiEnabled;
     if (body.aiResponseDelay !== undefined) updateData.aiResponseDelay = body.aiResponseDelay;
     if (body.aiPersonality !== undefined) updateData.aiPersonality = body.aiPersonality;
 
