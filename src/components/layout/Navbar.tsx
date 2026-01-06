@@ -76,7 +76,7 @@ export function Navbar({ creatorSlug = "miacosta" }: NavbarProps) {
     fetchUserCreatorInfo();
   }, [session?.user?.id, isAdmin, isCreator]);
 
-  // Check VIP subscription status
+  // Check VIP subscription status for this specific creator
   useEffect(() => {
     const checkVipAccess = async () => {
       setIsCheckingVip(true);
@@ -95,14 +95,20 @@ export function Navbar({ creatorSlug = "miacosta" }: NavbarProps) {
       }
 
       try {
-        const res = await fetch("/api/user/subscription");
+        // Check subscription for this specific creator
+        const res = await fetch(`/api/user/subscription?creatorSlug=${creatorSlug}`);
         if (res.ok) {
           const data = await res.json();
           // Check if subscription exists and has proper access
-          const hasAccess =
-            data.subscription?.plan?.canMessage ||
-            ["BASIC", "PREMIUM", "VIP"].includes(data.subscription?.plan?.accessTier) ||
-            data.subscription?.status === "ACTIVE";
+          // User has access if they have an active subscription for this creator
+          const hasAccess = !!(
+            data.subscription &&
+            (data.subscription.status === "ACTIVE" || data.subscription.status === "TRIALING") &&
+            (
+              data.subscription.plan?.canMessage === true ||
+              ["BASIC", "PREMIUM", "VIP"].includes(data.subscription.plan?.accessTier)
+            )
+          );
           setHasVipAccess(hasAccess);
         }
       } catch (error) {
@@ -113,7 +119,7 @@ export function Navbar({ creatorSlug = "miacosta" }: NavbarProps) {
     };
 
     checkVipAccess();
-  }, [session?.user?.id, isAdmin, isCreator]);
+  }, [session?.user?.id, isAdmin, isCreator, creatorSlug]);
 
   // Handle Send Message click
   const handleSendMessage = async () => {

@@ -22,10 +22,13 @@ async function main() {
 
   console.log("Created admin user:", adminUser);
 
-  // Create subscription plans
+  // Create subscription plans - Both Basic and VIP can message
   const basicPlan = await prisma.subscriptionPlan.upsert({
     where: { slug: "basic" },
-    update: {},
+    update: {
+      canMessage: true, // Ensure messaging is enabled
+      accessTier: "BASIC",
+    },
     create: {
       name: "BASIC",
       slug: "basic",
@@ -34,9 +37,10 @@ async function main() {
       annualPrice: 95.88,
       currency: "USD",
       accessTier: "BASIC",
-      canMessage: false,
+      canMessage: true, // Both Basic and VIP can message
       features: JSON.stringify([
         "Access to basic content library",
+        "Direct messaging",
         "Weekly new content",
         "HD quality downloads",
         "Email support",
@@ -49,7 +53,10 @@ async function main() {
 
   const vipPlan = await prisma.subscriptionPlan.upsert({
     where: { slug: "vip" },
-    update: {},
+    update: {
+      canMessage: true, // Ensure messaging is enabled
+      accessTier: "VIP",
+    },
     create: {
       name: "VIP",
       slug: "vip",
