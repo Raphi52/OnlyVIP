@@ -760,12 +760,10 @@ export function Pricing({ creatorSlug = "miacosta" }: PricingProps) {
             {/* Litecoin */}
             <motion.div
               whileHover={{ scale: 1.1, y: -2 }}
-              className="group relative w-14 h-10 sm:w-16 sm:h-12 rounded-xl bg-gradient-to-br from-[#345D9D]/20 to-[#345D9D]/5 border border-[#345D9D]/30 hover:border-[#345D9D]/60 flex items-center justify-center transition-all cursor-pointer overflow-hidden"
+              className="group relative w-14 h-10 sm:w-16 sm:h-12 rounded-xl bg-gradient-to-br from-[#A6A9AA]/20 to-[#A6A9AA]/5 border border-[#A6A9AA]/30 hover:border-[#A6A9AA]/60 flex items-center justify-center transition-all cursor-pointer overflow-hidden"
             >
-              <div className="absolute inset-0 bg-gradient-to-t from-[#345D9D]/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-              <svg className="w-6 h-6 sm:w-7 sm:h-7 text-[#345D9D] relative z-10" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm-.958 17.792l-.903 2.479H6.056l.903-2.479H5.25l.505-1.384h1.709l1.087-2.984H6.842l.505-1.385h1.709l1.264-3.472h3.282l-.903 2.479h1.807l-.505 1.385h-1.807l-.601 1.652h2.012l-.505 1.385h-2.012l-1.087 2.984h3.186l-.903 2.479h-3.186l-.903 2.479h3.186z"/>
-              </svg>
+              <div className="absolute inset-0 bg-gradient-to-t from-[#A6A9AA]/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+              <span className="text-[#A6A9AA] font-bold text-lg sm:text-xl relative z-10">Ł</span>
             </motion.div>
 
             {/* Visa */}
@@ -774,7 +772,7 @@ export function Pricing({ creatorSlug = "miacosta" }: PricingProps) {
               className="group relative w-14 h-10 sm:w-16 sm:h-12 rounded-xl bg-gradient-to-br from-[#1A1F71]/40 to-[#1A1F71]/20 border border-[#1A1F71]/50 hover:border-[#1A1F71]/80 flex items-center justify-center transition-all cursor-pointer overflow-hidden"
             >
               <div className="absolute inset-0 bg-gradient-to-t from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-              <span className="text-[#1A1F71] font-bold text-lg sm:text-xl italic relative z-10 tracking-tight">VISA</span>
+              <span className="text-white font-bold text-lg sm:text-xl italic relative z-10 tracking-tight">VISA</span>
             </motion.div>
 
             {/* Mastercard */}
