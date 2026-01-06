@@ -300,8 +300,16 @@ export function ChatWindow({
     setTimeout(scrollToBottom, 300);
   }, [conversationId]);
 
-  // Scroll on new messages
+  // Track previous message count to detect new messages
+  const prevMessageCount = useRef(messages.length);
+
+  // Scroll on new messages (only when messages.length actually increases)
   useEffect(() => {
+    const isNewMessage = messages.length > prevMessageCount.current;
+    prevMessageCount.current = messages.length;
+
+    if (!isNewMessage) return;
+
     if (isAtBottom) {
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     } else {
@@ -311,7 +319,7 @@ export function ChatWindow({
         setNewMessagesCount((prev) => prev + 1);
       }
     }
-  }, [messages, isAtBottom, currentUserId]);
+  }, [messages.length, isAtBottom, currentUserId]);
 
   // Mark messages as read (batch approach - call once when at bottom with unread messages)
   useEffect(() => {
@@ -368,6 +376,18 @@ export function ChatWindow({
     setVideoThumbnails({});
     setIsPPV(false);
     setReplyTo(null);
+
+    // Scroll to bottom and mark as read after sending
+    setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      setShowNewMessages(false);
+      setNewMessagesCount(0);
+    }, 100);
+
+    // Mark all messages as read when sending
+    if (onMarkAsRead) {
+      onMarkAsRead();
+    }
   };
 
   // Handle file selection

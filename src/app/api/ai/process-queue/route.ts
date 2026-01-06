@@ -586,7 +586,7 @@ export async function GET(request: NextRequest) {
         // Check if fan is expressing objection (too expensive, maybe later, etc.)
         const objectionResult = detectObjection(originalMessage.text || "");
 
-        let responseText: string = "";
+        let responseText: string | null = "";
 
         if (objectionResult) {
           console.log(`[AI] Objection detected: ${objectionResult.patternName} (${objectionResult.strategy})`);
@@ -702,6 +702,17 @@ export async function GET(request: NextRequest) {
               }
             );
           }
+        }
+
+        // ===== SKIP IF NO RESPONSE GENERATED (no fallback) =====
+        if (!responseText) {
+          console.log(`[AI] No response generated for message ${queueItem.messageId}, skipping (no fallback)`);
+          await prisma.aiResponseQueue.update({
+            where: { id: queueItem.id },
+            data: { status: "SKIPPED", processedAt: new Date() },
+          });
+          results.push({ id: queueItem.id, status: "SKIPPED_NO_RESPONSE" });
+          continue;
         }
 
         // ===== EXTRACT MEMORIES FROM FAN MESSAGE (async, non-blocking) =====

@@ -193,7 +193,7 @@ MEDIA INSTRUCTIONS:
 - The media will be attached automatically to your message`;
   }
 
-  return `You are ${personality.name}, a ${personality.age}-year-old FEMALE content creator. You are a WOMAN. You share exclusive photos and videos on your platform.
+  let basePrompt = `You are ${personality.name}, a ${personality.age}-year-old FEMALE content creator. You are a WOMAN. You share exclusive photos and videos on your platform.
 
 LANGUAGE: ${languageInstruction}
 
@@ -407,7 +407,7 @@ export async function generateAiResponse(
   personality: AiPersonality,
   suggestedMedia: ScoredMedia["media"] | null,
   options: GenerateAiOptions = {}
-): Promise<string> {
+): Promise<string | null> {
   // Get provider settings (defaults to anthropic/haiku)
   const provider = options.provider || "anthropic";
   const model = options.model || "claude-haiku-4-5-20241022";
@@ -473,8 +473,8 @@ export async function generateAiResponse(
     console.log(`[AI-GF] Raw response (${aiResponse?.length || 0} chars): "${aiResponse?.substring(0, 100)}..."`);
 
     if (!aiResponse) {
-      console.warn(`[AI-GF] Empty response from AI, using fallback`);
-      return getFallbackResponse(personality, suggestedMedia);
+      console.warn(`[AI-GF] Empty response from AI, skipping (no fallback)`);
+      return null;
     }
 
     // Clean up AI model artifacts (special tokens that sometimes leak through)
@@ -490,16 +490,18 @@ export async function generateAiResponse(
       .replace(/\s+/g, ' ')              // Normalize whitespace after removals
       .trim();
 
-    // If cleaned response is empty, use fallback
+    // If cleaned response is empty, skip (no fallback)
     if (!aiResponse) {
-      return getFallbackResponse(personality, suggestedMedia);
+      console.warn(`[AI-GF] Cleaned response is empty, skipping`);
+      return null;
     }
 
     return aiResponse;
   } catch (error: any) {
     console.error("[AI-GF] AI generation error:", error?.message || error);
     console.error("[AI-GF] Stack:", error?.stack);
-    return getFallbackResponse(personality, suggestedMedia);
+    // No fallback - return null so no message is sent
+    return null;
   }
 }
 

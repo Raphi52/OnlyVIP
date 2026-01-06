@@ -99,7 +99,9 @@ function ParallaxImage({
             <div className="w-full h-full rounded-[14px] bg-gradient-to-br from-yellow-400/90 via-amber-500/90 to-yellow-600/90" />
           </motion.div>
         )}
-        <div className={`relative ${size} rounded-2xl overflow-hidden border ${shouldBlur ? "border-transparent z-[1]" : "border-white/10 hover:border-[var(--gold)]/50"} transition-all duration-500 cursor-pointer`}>
+        <div
+          className={`relative ${size} rounded-2xl overflow-hidden border ${shouldBlur ? "border-transparent z-[1]" : "border-white/10 hover:border-[var(--gold)]/50"} transition-all duration-500 cursor-pointer`}
+        >
           {/* ✨ Interior holographic effects for locked content */}
           {shouldBlur && (
             <>
@@ -137,7 +139,7 @@ function ParallaxImage({
             fill
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
             className={`object-cover transition-all duration-500 scale-105 group-hover:scale-100 ${
-              shouldBlur ? "blur-sm group-hover:blur-[3px]" : ""
+              shouldBlur ? "blur-[10px] group-hover:blur-[3px]" : ""
             }`}
           />
 

@@ -484,12 +484,14 @@ export default function GalleryPage() {
                         </>
                       )}
 
-                      <div className={cn(
-                        "relative overflow-hidden rounded-2xl border transition-all duration-300 z-[1]",
-                        !canAccess ? "border-transparent" : "border-white/10",
-                        isHovered && canAccess && "border-[var(--gold)]/50 shadow-xl shadow-[var(--gold)]/10",
-                        isGridView ? "aspect-[3/4]" : "aspect-video"
-                      )}>
+                      <div
+                        className={cn(
+                          "relative overflow-hidden rounded-2xl border transition-all duration-300 z-[1]",
+                          !canAccess ? "border-transparent" : "border-white/10",
+                          isHovered && canAccess && "border-[var(--gold)]/50 shadow-xl shadow-[var(--gold)]/10",
+                          isGridView ? "aspect-[3/4]" : "aspect-video"
+                        )}
+                      >
                         {/* ✨ Interior holographic effects for locked content */}
                         {!canAccess && (
                           <>
@@ -540,7 +542,7 @@ export default function GalleryPage() {
                             sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
                             className={cn(
                               "object-cover transition-all duration-500 group-hover:scale-105 pointer-events-none select-none",
-                              !canAccess && "blur-sm group-hover:blur-[3px] scale-[1.02]"
+                              !canAccess && "blur-[10px] group-hover:blur-[3px] scale-[1.02]"
                             )}
                             draggable={false}
                             onContextMenu={(e) => e.preventDefault()}
@@ -755,7 +757,7 @@ export default function GalleryPage() {
                           sizes="(max-width: 1024px) 100vw, 80vw"
                           className={cn(
                             "object-cover pointer-events-none select-none transition-all duration-500",
-                            !canAccess && "blur-sm hover:blur-[3px] scale-[1.02]"
+                            !canAccess && "blur-[10px] hover:blur-[3px] scale-[1.02]"
                           )}
                           draggable={false}
                           onContextMenu={(e) => e.preventDefault()}
