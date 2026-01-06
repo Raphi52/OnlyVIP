@@ -98,6 +98,7 @@ export default function MessagesPage() {
   const isCreator = (session?.user as any)?.isCreator;
   const isAdmin = (session?.user as any)?.role === "ADMIN";
   const [isAgencyOwner, setIsAgencyOwner] = useState(false);
+  const [isCheckingSubscription, setIsCheckingSubscription] = useState(true);
 
   // For creators: get selected creator profile for PPV functionality
   const { selectedCreator } = useAdminCreator();
@@ -105,11 +106,15 @@ export default function MessagesPage() {
   // Check subscription status - Creators, Admins, and Agency owners can always message
   useEffect(() => {
     const checkSubscription = async () => {
-      if (!userId) return;
+      if (!userId) {
+        setIsCheckingSubscription(false);
+        return;
+      }
 
       // Creators and Admins can always message
       if (isCreator || isAdmin) {
         setHasSubscription(true);
+        setIsCheckingSubscription(false);
         return;
       }
 
@@ -121,6 +126,7 @@ export default function MessagesPage() {
           if (agencyData.agency) {
             setIsAgencyOwner(true);
             setHasSubscription(true);
+            setIsCheckingSubscription(false);
             return;
           }
         }
@@ -142,6 +148,8 @@ export default function MessagesPage() {
         }
       } catch (error) {
         console.error("Error checking subscription:", error);
+      } finally {
+        setIsCheckingSubscription(false);
       }
     };
 
@@ -713,8 +721,8 @@ export default function MessagesPage() {
     })),
   })), [messages, userId]);
 
-  // Loading state
-  if (status === "loading" || isLoading) {
+  // Loading state - show loading while session, conversations, or subscription is being checked
+  if (status === "loading" || isLoading || isCheckingSubscription) {
     return (
       <div className="h-screen pt-16 lg:pt-0 flex items-center justify-center bg-gradient-to-b from-[#0a0a0a] to-[#0f0f0f] px-4">
         <motion.div

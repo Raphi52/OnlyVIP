@@ -190,12 +190,35 @@ export function Pricing({ creatorSlug = "miacosta" }: PricingProps) {
 
       // Success!
       setUserBalance(data.newBalance);
-      setSuccessMessage(`Welcome to ${plan.name}! Your subscription is now active.`);
+      setSuccessMessage(`Welcome to ${plan.name}! Starting your conversation...`);
 
-      // Redirect to dashboard after a delay
-      setTimeout(() => {
-        router.push("/dashboard");
-      }, 3000);
+      // Create conversation and redirect to messages
+      try {
+        const convRes = await fetch("/api/conversations/start", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ creatorSlug }),
+        });
+
+        if (convRes.ok) {
+          const convData = await convRes.json();
+          // Redirect to messages with conversation open
+          setTimeout(() => {
+            router.push(`/dashboard/messages?conversation=${convData.conversationId}`);
+          }, 1500);
+        } else {
+          // Fallback to messages page
+          setTimeout(() => {
+            router.push("/dashboard/messages");
+          }, 1500);
+        }
+      } catch (convError) {
+        console.error("Error creating conversation:", convError);
+        // Fallback to messages page
+        setTimeout(() => {
+          router.push("/dashboard/messages");
+        }, 1500);
+      }
     } catch (error) {
       console.error("Subscription error:", error);
       setErrorMessage("Something went wrong. Please try again.");
