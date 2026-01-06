@@ -251,17 +251,12 @@ export async function GET(request: NextRequest) {
       else if (isVIPOnly && isVIP) hasAccess = true;
       else if (!isPPV && !isVIPOnly && userTierIndex >= mediaTierIndex) hasAccess = true;
 
-      // For photos, thumbnail IS the content - must hide both for locked content
-      // For videos, thumbnail is a separate generated frame - still need to protect for PPV
-      const isPhoto = item.type === "PHOTO";
-      const shouldHideThumbnail = !hasAccess && (isPhoto || isPPV || isVIPOnly);
-
-      // Only return real URLs if user has access
+      // Show thumbnail for preview (client applies blur) - only hide full contentUrl
       return {
         ...item,
         contentUrl: hasAccess ? item.contentUrl : null,
-        thumbnailUrl: shouldHideThumbnail ? LOCKED_PLACEHOLDER : item.thumbnailUrl,
-        previewUrl: shouldHideThumbnail ? LOCKED_PLACEHOLDER : item.previewUrl,
+        thumbnailUrl: item.thumbnailUrl,
+        previewUrl: item.previewUrl,
         hasAccess,
         hasPurchased: isPurchased,
       };

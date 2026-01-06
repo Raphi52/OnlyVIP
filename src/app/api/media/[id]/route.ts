@@ -93,12 +93,8 @@ export async function GET(
     const LOCKED_PLACEHOLDER = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' style='stop-color:%23d4af37'/%3E%3Cstop offset='50%25' style='stop-color:%23b8860b'/%3E%3Cstop offset='100%25' style='stop-color:%23996515'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect fill='url(%23g)' width='400' height='400'/%3E%3C/svg%3E";
 
     const userHasAccess = hasAccess || hasPurchased;
-    const isPhoto = media.type === "PHOTO";
-    const isPPV = media.tagPPV === true;
-    const isVIPOnly = media.tagVIP === true;
-    const shouldHideThumbnail = !userHasAccess && !isAdmin && (isPhoto || isPPV || isVIPOnly);
 
-    // Prepare response
+    // Prepare response - show thumbnail for preview (client applies blur)
     const response: any = {
       id: media.id,
       title: media.title,
@@ -106,8 +102,8 @@ export async function GET(
       description: media.description,
       type: media.type,
       accessTier: media.accessTier,
-      thumbnailUrl: shouldHideThumbnail ? LOCKED_PLACEHOLDER : media.thumbnailUrl,
-      previewUrl: shouldHideThumbnail ? LOCKED_PLACEHOLDER : media.previewUrl,
+      thumbnailUrl: media.thumbnailUrl,
+      previewUrl: media.previewUrl,
       isPurchaseable: media.isPurchaseable,
       price: media.price,
       viewCount: media.viewCount,

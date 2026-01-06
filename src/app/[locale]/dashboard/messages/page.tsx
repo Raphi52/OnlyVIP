@@ -157,14 +157,18 @@ export default function MessagesPage() {
   }, [userId, isCreator, isAdmin]);
 
   // Fetch conversations (filtered by selected creator if any)
+  // Don't filter when coming from a direct conversation link
   const fetchConversations = useCallback(async () => {
     if (!userId) return;
 
     try {
-      // Build URL with optional creator filter
-      const url = selectedCreator?.slug
-        ? `/api/conversations?creator=${selectedCreator.slug}`
-        : "/api/conversations";
+      // If we have a conversation ID from URL, don't filter - we need to find that conversation
+      // Otherwise, filter by selected creator if any
+      const url = conversationIdFromUrl
+        ? "/api/conversations"
+        : selectedCreator?.slug
+          ? `/api/conversations?creator=${selectedCreator.slug}`
+          : "/api/conversations";
 
       const res = await fetch(url);
       if (res.ok) {
@@ -176,7 +180,7 @@ export default function MessagesPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [userId, selectedCreator?.slug]);
+  }, [userId, selectedCreator?.slug, conversationIdFromUrl]);
 
   useEffect(() => {
     if (userId && hasSubscription) {
