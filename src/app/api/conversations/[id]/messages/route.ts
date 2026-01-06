@@ -120,6 +120,9 @@ export async function GET(
       });
     }
 
+    // Security: Locked placeholder for PPV content - never expose real URLs
+    const LOCKED_PLACEHOLDER = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' style='stop-color:%23d4af37'/%3E%3Cstop offset='50%25' style='stop-color:%23b8860b'/%3E%3Cstop offset='100%25' style='stop-color:%23996515'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect fill='url(%23g)' width='400' height='400'/%3E%3C/svg%3E";
+
     // Transform messages for frontend
     const transformedMessages = messages.map((msg) => {
       // Group reactions by emoji and count
@@ -162,14 +165,24 @@ export async function GET(
           let url = m.url;
           let previewUrl = m.previewUrl;
 
-          if (msg.isPPV && sourceMedia) {
+          if (msg.isPPV) {
             if (isUnlocked) {
               // User has unlocked - show actual content
-              url = sourceMedia.contentUrl || m.url;
+              url = sourceMedia?.contentUrl || m.url;
+              previewUrl = sourceMedia?.thumbnailUrl || m.previewUrl;
             } else {
-              // Not unlocked - show preview/thumbnail
-              url = sourceMedia.previewUrl || sourceMedia.thumbnailUrl || m.url;
-              previewUrl = sourceMedia.thumbnailUrl || m.previewUrl;
+              // SECURITY: Not unlocked - use locked placeholder
+              // For photos, thumbnail = content so we MUST hide both
+              // For videos, we can show video thumbnail frame
+              const isPhoto = m.type === "PHOTO";
+              if (isPhoto) {
+                url = LOCKED_PLACEHOLDER;
+                previewUrl = LOCKED_PLACEHOLDER;
+              } else {
+                // Videos: generated thumbnail frames are safe to show
+                url = LOCKED_PLACEHOLDER;
+                previewUrl = sourceMedia?.thumbnailUrl || m.previewUrl || LOCKED_PLACEHOLDER;
+              }
             }
           }
 
@@ -193,8 +206,9 @@ export async function GET(
     return NextResponse.json(transformedMessages);
   } catch (error) {
     console.error("Error fetching messages:", error);
+    console.error("Error stack:", error instanceof Error ? error.stack : "No stack");
     return NextResponse.json(
-      { error: "Failed to fetch messages" },
+      { error: "Failed to fetch messages", details: error instanceof Error ? error.message : String(error) },
       { status: 500 }
     );
   }

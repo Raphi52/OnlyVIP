@@ -88,6 +88,7 @@ export async function PATCH(
     if (body.coverImage !== undefined) updateData.coverImage = body.coverImage;
     if (body.cardImage !== undefined) updateData.cardImage = body.cardImage;
     if (body.isActive !== undefined) updateData.isActive = body.isActive;
+    if (body.isFeatured !== undefined) updateData.isFeatured = body.isFeatured;
     if (body.sortOrder !== undefined) updateData.sortOrder = body.sortOrder;
     if (body.socialLinks !== undefined) {
       updateData.socialLinks = JSON.stringify(body.socialLinks);

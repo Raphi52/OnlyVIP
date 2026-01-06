@@ -323,7 +323,7 @@ export default function ChatterChatWindow({
                           alt=""
                           width={300}
                           height={200}
-                          className={`rounded-lg max-w-full ${message.isPPV ? "blur-xl" : ""}`}
+                          className="rounded-lg max-w-full"
                         />
                       </div>
                     ))}

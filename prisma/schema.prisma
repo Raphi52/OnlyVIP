@@ -716,8 +716,9 @@ model Creator {
   subscriberCount Int @default(0)
 
   // Status
-  isActive  Boolean @default(true)
-  sortOrder Int     @default(0)
+  isActive   Boolean @default(true)
+  isFeatured Boolean @default(false) // Show on homepage
+  sortOrder  Int     @default(0)
 
   // Category tags (JSON array of strings)
   categories String @default("[]")

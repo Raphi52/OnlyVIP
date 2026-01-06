@@ -87,7 +87,7 @@ export default function HomePage() {
   useEffect(() => {
     async function fetchCreators() {
       try {
-        const res = await fetch("/api/creators", {
+        const res = await fetch("/api/creators?featured=true", {
           cache: "no-store",
           headers: { "Cache-Control": "no-cache" },
         });

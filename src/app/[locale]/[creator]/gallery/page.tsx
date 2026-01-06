@@ -468,14 +468,17 @@ export default function GalleryPage() {
                         isHovered && "border-[var(--gold)]/50 shadow-xl shadow-[var(--gold)]/10",
                         isGridView ? "aspect-[3/4]" : "aspect-video"
                       )}>
-                        {/* Image */}
+                        {/* Image - blur when locked (thumbnail is low-quality preview, contentUrl is protected by API) */}
                         {item.thumbnailUrl ? (
                           <NextImage
                             src={item.thumbnailUrl}
                             alt={item.title}
                             fill
                             sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                            className="object-cover transition-transform duration-700 group-hover:scale-110 pointer-events-none select-none"
+                            className={cn(
+                              "object-cover transition-transform duration-700 group-hover:scale-110 pointer-events-none select-none",
+                              !canAccess && "blur-xl scale-110"
+                            )}
                             draggable={false}
                             onContextMenu={(e) => e.preventDefault()}
                           />

@@ -221,7 +221,10 @@ export async function GET(request: NextRequest) {
       prisma.mediaContent.count({ where: { ...where, type: "VIDEO" } }),
     ]);
 
-    // Filter contentUrl based on access - NEVER expose contentUrl for locked content
+    // Filter contentUrl AND thumbnailUrl based on access - NEVER expose real URLs for locked content
+    // Security: For photos, thumbnailUrl = contentUrl so we MUST hide both
+    const LOCKED_PLACEHOLDER = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' style='stop-color:%23d4af37'/%3E%3Cstop offset='50%25' style='stop-color:%23b8860b'/%3E%3Cstop offset='100%25' style='stop-color:%23996515'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect fill='url(%23g)' width='400' height='400'/%3E%3C/svg%3E";
+
     const media = mediaRaw.map(item => {
       const isPurchased = purchasedMediaIds.has(item.id);
       const isFree = item.tagFree === true;
@@ -236,10 +239,17 @@ export async function GET(request: NextRequest) {
       else if (isVIPOnly && isVIP) hasAccess = true;
       else if (!isPPV && !isVIPOnly && userTierIndex >= mediaTierIndex) hasAccess = true;
 
-      // Only return contentUrl if user has access
+      // For photos, thumbnail IS the content - must hide both for locked content
+      // For videos, thumbnail is a separate generated frame - still need to protect for PPV
+      const isPhoto = item.type === "PHOTO";
+      const shouldHideThumbnail = !hasAccess && (isPhoto || isPPV || isVIPOnly);
+
+      // Only return real URLs if user has access
       return {
         ...item,
         contentUrl: hasAccess ? item.contentUrl : null,
+        thumbnailUrl: shouldHideThumbnail ? LOCKED_PLACEHOLDER : item.thumbnailUrl,
+        previewUrl: shouldHideThumbnail ? LOCKED_PLACEHOLDER : item.previewUrl,
         hasAccess,
         hasPurchased: isPurchased,
       };

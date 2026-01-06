@@ -255,6 +255,43 @@ export default function ScriptsPage() {
     });
   };
 
+  // Select all scripts from a specific creator
+  const selectAllFromCreator = (creatorSlug: string) => {
+    const creatorData = otherCreatorsScripts.find(c => c.creatorSlug === creatorSlug);
+    if (!creatorData) return;
+
+    setSelectedImportScripts(prev => {
+      const newSet = new Set(prev);
+      const allSelected = creatorData.scripts.every(s => newSet.has(s.id));
+
+      if (allSelected) {
+        // Deselect all from this creator
+        creatorData.scripts.forEach(s => newSet.delete(s.id));
+      } else {
+        // Select all from this creator
+        creatorData.scripts.forEach(s => newSet.add(s.id));
+      }
+      return newSet;
+    });
+  };
+
+  // Select all scripts from all creators
+  const selectAllScripts = () => {
+    const allScriptIds = otherCreatorsScripts.flatMap(c => c.scripts.map(s => s.id));
+    const allSelected = allScriptIds.every(id => selectedImportScripts.has(id));
+
+    if (allSelected) {
+      // Deselect all
+      setSelectedImportScripts(new Set());
+    } else {
+      // Select all
+      setSelectedImportScripts(new Set(allScriptIds));
+    }
+  };
+
+  // Get total scripts count
+  const totalAvailableScripts = otherCreatorsScripts.reduce((sum, c) => sum + c.scripts.length, 0);
+
   const importSelectedScripts = async () => {
     if (!selectedCreator?.slug || selectedImportScripts.size === 0) return;
 
@@ -615,57 +652,98 @@ export default function ScriptsPage() {
                   </div>
                 ) : (
                   <div className="space-y-6">
-                    {otherCreatorsScripts.map((creatorScripts) => (
-                      <div key={creatorScripts.creatorSlug}>
-                        <h3 className="text-sm font-medium text-white mb-3 flex items-center gap-2">
-                          <span className="w-6 h-6 rounded-full bg-purple-500/20 flex items-center justify-center text-xs text-purple-400">
-                            {creatorScripts.creatorName[0].toUpperCase()}
-                          </span>
-                          {creatorScripts.creatorName}
-                          <span className="text-gray-500">({creatorScripts.scripts.length} scripts)</span>
-                        </h3>
-                        <div className="space-y-2">
-                          {creatorScripts.scripts.map((script) => (
+                    {/* Select All Button */}
+                    {totalAvailableScripts > 0 && (
+                      <div className="flex items-center justify-between pb-4 border-b border-white/10">
+                        <span className="text-sm text-gray-400">
+                          {totalAvailableScripts} scripts available from {otherCreatorsScripts.length} creator{otherCreatorsScripts.length > 1 ? "s" : ""}
+                        </span>
+                        <button
+                          onClick={selectAllScripts}
+                          className={cn(
+                            "px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2",
+                            selectedImportScripts.size === totalAvailableScripts
+                              ? "bg-purple-500 text-white"
+                              : "bg-white/10 text-gray-300 hover:bg-white/20"
+                          )}
+                        >
+                          <Check className="w-4 h-4" />
+                          {selectedImportScripts.size === totalAvailableScripts ? "Deselect All" : "Select All"}
+                        </button>
+                      </div>
+                    )}
+
+                    {otherCreatorsScripts.map((creatorScripts) => {
+                      const allCreatorScriptsSelected = creatorScripts.scripts.every(s => selectedImportScripts.has(s.id));
+                      const someCreatorScriptsSelected = creatorScripts.scripts.some(s => selectedImportScripts.has(s.id));
+
+                      return (
+                        <div key={creatorScripts.creatorSlug}>
+                          <div className="flex items-center justify-between mb-3">
+                            <h3 className="text-sm font-medium text-white flex items-center gap-2">
+                              <span className="w-6 h-6 rounded-full bg-purple-500/20 flex items-center justify-center text-xs text-purple-400">
+                                {creatorScripts.creatorName[0].toUpperCase()}
+                              </span>
+                              {creatorScripts.creatorName}
+                              <span className="text-gray-500">({creatorScripts.scripts.length} scripts)</span>
+                            </h3>
                             <button
-                              key={script.id}
-                              onClick={() => toggleImportScript(script.id)}
+                              onClick={() => selectAllFromCreator(creatorScripts.creatorSlug)}
                               className={cn(
-                                "w-full p-3 rounded-xl border text-left transition-all flex items-start gap-3",
-                                selectedImportScripts.has(script.id)
-                                  ? "bg-purple-500/20 border-purple-500/50"
-                                  : "bg-white/5 border-white/10 hover:bg-white/10"
+                                "px-3 py-1 rounded-lg text-xs font-medium transition-all",
+                                allCreatorScriptsSelected
+                                  ? "bg-purple-500/30 text-purple-300"
+                                  : someCreatorScriptsSelected
+                                    ? "bg-purple-500/20 text-purple-400"
+                                    : "bg-white/5 text-gray-400 hover:bg-white/10"
                               )}
                             >
-                              <div className={cn(
-                                "w-5 h-5 rounded-md border flex-shrink-0 flex items-center justify-center transition-colors mt-0.5",
-                                selectedImportScripts.has(script.id)
-                                  ? "bg-purple-500 border-purple-500"
-                                  : "border-white/30"
-                              )}>
-                                {selectedImportScripts.has(script.id) && (
-                                  <Check className="w-3 h-3 text-white" />
+                              {allCreatorScriptsSelected ? "Deselect all" : "Select all"}
+                            </button>
+                          </div>
+                          <div className="space-y-2">
+                            {creatorScripts.scripts.map((script) => (
+                              <button
+                                key={script.id}
+                                onClick={() => toggleImportScript(script.id)}
+                                className={cn(
+                                  "w-full p-3 rounded-xl border text-left transition-all flex items-start gap-3",
+                                  selectedImportScripts.has(script.id)
+                                    ? "bg-purple-500/20 border-purple-500/50"
+                                    : "bg-white/5 border-white/10 hover:bg-white/10"
                                 )}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <span className="font-medium text-white truncate">
-                                    {script.name}
-                                  </span>
-                                  {script.intent && (
-                                    <span className="px-2 py-0.5 rounded-full text-xs bg-white/10 text-gray-400">
-                                      {script.intent.replace(/_/g, " ")}
-                                    </span>
+                              >
+                                <div className={cn(
+                                  "w-5 h-5 rounded-md border flex-shrink-0 flex items-center justify-center transition-colors mt-0.5",
+                                  selectedImportScripts.has(script.id)
+                                    ? "bg-purple-500 border-purple-500"
+                                    : "border-white/30"
+                                )}>
+                                  {selectedImportScripts.has(script.id) && (
+                                    <Check className="w-3 h-3 text-white" />
                                   )}
                                 </div>
-                                <p className="text-sm text-gray-400 line-clamp-1">
-                                  {script.content}
-                                </p>
-                              </div>
-                            </button>
-                          ))}
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <span className="font-medium text-white truncate">
+                                      {script.name}
+                                    </span>
+                                    {script.intent && (
+                                      <span className="px-2 py-0.5 rounded-full text-xs bg-white/10 text-gray-400">
+                                        {script.intent.replace(/_/g, " ")}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <p className="text-sm text-gray-400 line-clamp-1">
+                                    {script.content}
+                                  </p>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>

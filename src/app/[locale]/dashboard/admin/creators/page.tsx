@@ -21,6 +21,7 @@ import {
   Upload,
   Bot,
   Settings,
+  Star,
 } from "lucide-react";
 import { Button, Card, Badge } from "@/components/ui";
 import { useAdminCreator } from "@/components/providers/AdminCreatorContext";
@@ -33,6 +34,7 @@ interface Creator {
   avatar: string | null;
   coverImage: string | null;
   isActive: boolean;
+  isFeatured: boolean;
   subscriberCount: number;
   photoCount: number;
   videoCount: number;
@@ -114,6 +116,25 @@ export default function AdminCreatorsPage() {
         setCreators((prev) =>
           prev.map((c) =>
             c.id === creator.id ? { ...c, isActive: !c.isActive } : c
+          )
+        );
+      }
+    } catch (error) {
+      console.error("Error updating creator:", error);
+    }
+  };
+
+  const handleToggleFeatured = async (creator: Creator) => {
+    try {
+      const res = await fetch(`/api/admin/creators/${creator.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isFeatured: !creator.isFeatured }),
+      });
+      if (res.ok) {
+        setCreators((prev) =>
+          prev.map((c) =>
+            c.id === creator.id ? { ...c, isFeatured: !c.isFeatured } : c
           )
         );
       }
@@ -404,6 +425,12 @@ export default function AdminCreatorsPage() {
                         >
                           {creator.isActive ? "Active" : "Off"}
                         </Badge>
+                        {creator.isFeatured && (
+                          <Badge className="text-[10px] px-1.5 py-0.5 bg-[var(--gold)]/20 text-[var(--gold)]">
+                            <Star className="w-2.5 h-2.5 mr-0.5" fill="currentColor" />
+                            Featured
+                          </Badge>
+                        )}
                       </div>
                       <p className="text-xs text-[var(--muted)]">@{creator.slug}</p>
                     </div>
@@ -439,19 +466,25 @@ export default function AdminCreatorsPage() {
                       variant="outline"
                       size="sm"
                       onClick={() => router.push(`/${creator.slug}`)}
-                      className="flex-1 text-xs py-2"
+                      className="text-xs py-2"
                     >
-                      <Eye className="w-3.5 h-3.5 mr-1" />
-                      View
+                      <Eye className="w-3.5 h-3.5" />
                     </Button>
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => openEditModal(creator)}
-                      className="flex-1 text-xs py-2"
+                      className="text-xs py-2"
                     >
-                      <Edit className="w-3.5 h-3.5 mr-1" />
-                      Edit
+                      <Edit className="w-3.5 h-3.5" />
+                    </Button>
+                    <Button
+                      variant={creator.isFeatured ? "premium" : "outline"}
+                      size="sm"
+                      onClick={() => handleToggleFeatured(creator)}
+                      className="text-xs py-2"
+                    >
+                      <Star className="w-3.5 h-3.5" fill={creator.isFeatured ? "currentColor" : "none"} />
                     </Button>
                     <Button
                       variant="outline"
@@ -498,6 +531,12 @@ export default function AdminCreatorsPage() {
                       >
                         {creator.isActive ? "Active" : "Inactive"}
                       </Badge>
+                      {creator.isFeatured && (
+                        <Badge className="bg-[var(--gold)]/20 text-[var(--gold)]">
+                          <Star className="w-3 h-3 mr-1" fill="currentColor" />
+                          Featured
+                        </Badge>
+                      )}
                     </div>
                     <p className="text-sm text-[var(--muted)] mb-2">
                       @{creator.slug}
@@ -540,6 +579,14 @@ export default function AdminCreatorsPage() {
                     >
                       <Edit className="w-4 h-4 mr-2" />
                       Edit
+                    </Button>
+                    <Button
+                      variant={creator.isFeatured ? "premium" : "outline"}
+                      size="sm"
+                      onClick={() => handleToggleFeatured(creator)}
+                    >
+                      <Star className="w-4 h-4 mr-2" fill={creator.isFeatured ? "currentColor" : "none"} />
+                      {creator.isFeatured ? "Featured" : "Feature"}
                     </Button>
                     <Button
                       variant="outline"

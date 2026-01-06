@@ -62,11 +62,37 @@ export default function PerformancePage() {
   useEffect(() => {
     async function fetchData() {
       try {
-        const agencyRes = await fetch("/api/agency");
+        // Fetch agency data and earnings in parallel
+        const [agencyRes, earningsRes] = await Promise.all([
+          fetch("/api/agency"),
+          fetch("/api/agency/earnings?limit=1000"),
+        ]);
+
         if (agencyRes.ok) {
           const agencyData = await agencyRes.json();
           if (agencyData.agencies?.[0]) {
             const agency = agencyData.agencies[0];
+
+            // Get earnings breakdown by creator
+            let earningsByCreator: Record<string, { total: number; chatter: number; ai: number }> = {};
+
+            if (earningsRes.ok) {
+              const earningsData = await earningsRes.json();
+              // Group earnings by creator
+              for (const earning of earningsData.earnings || []) {
+                const slug = earning.creatorSlug;
+                if (!earningsByCreator[slug]) {
+                  earningsByCreator[slug] = { total: 0, chatter: 0, ai: 0 };
+                }
+                earningsByCreator[slug].total += earning.netAmount || 0;
+                // Determine if AI or chatter based on type
+                if (earning.type?.includes("AI")) {
+                  earningsByCreator[slug].ai += earning.netAmount || 0;
+                } else {
+                  earningsByCreator[slug].chatter += earning.netAmount || 0;
+                }
+              }
+            }
 
             setData({
               revenue30d: agency.stats.revenue30d,
@@ -81,10 +107,10 @@ export default function PerformancePage() {
               creatorBreakdown: agency.creators.map((c: any) => ({
                 slug: c.slug,
                 displayName: c.displayName,
-                revenue: 0,
-                chatterRevenue: 0,
-                aiRevenue: 0,
-              })),
+                revenue: earningsByCreator[c.slug]?.total || 0,
+                chatterRevenue: earningsByCreator[c.slug]?.chatter || 0,
+                aiRevenue: earningsByCreator[c.slug]?.ai || 0,
+              })).sort((a: any, b: any) => b.revenue - a.revenue),
             });
           }
         }

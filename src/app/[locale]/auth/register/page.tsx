@@ -23,6 +23,7 @@ export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState(false);
   const [agreeTerms, setAgreeTerms] = useState(false);
 
   const passwordRequirements = [
@@ -66,18 +67,8 @@ export default function RegisterPage() {
         return;
       }
 
-      // Auto sign in after registration
-      const result = await signIn("credentials", {
-        email: formData.email,
-        password: formData.password,
-        redirect: false,
-      });
-
-      if (result?.error) {
-        router.push("/auth/login");
-      } else {
-        router.push("/dashboard");
-      }
+      // Show success message - user needs to verify email before logging in
+      setSuccess(true);
     } catch (err) {
       setError(tErrors("tryAgain"));
     } finally {
@@ -110,6 +101,26 @@ export default function RegisterPage() {
         </div>
 
         <Card variant="luxury" className="p-8">
+          {success ? (
+            <div className="text-center py-8">
+              <div className="w-16 h-16 rounded-full bg-[var(--success)]/10 flex items-center justify-center mx-auto mb-6">
+                <Mail className="w-8 h-8 text-[var(--success)]" />
+              </div>
+              <h2 className="text-2xl font-semibold text-[var(--foreground)] mb-3">
+                Check your email
+              </h2>
+              <p className="text-[var(--muted)] mb-6">
+                We sent a verification link to <span className="text-[var(--foreground)]">{formData.email}</span>.
+                Please click the link to verify your account.
+              </p>
+              <Link href="/auth/login">
+                <Button variant="gold-outline" size="lg">
+                  Go to Login
+                </Button>
+              </Link>
+            </div>
+          ) : (
+          <>
           <div className="text-center mb-6">
             <h1 className="text-2xl font-semibold text-[var(--foreground)] mb-2">
               {t("signupTitle")}
@@ -291,6 +302,8 @@ export default function RegisterPage() {
               {t("signIn")}
             </Link>
           </p>
+          </>
+          )}
         </Card>
       </motion.div>
     </div>

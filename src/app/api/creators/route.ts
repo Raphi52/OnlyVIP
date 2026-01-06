@@ -4,9 +4,13 @@ import { prisma } from "@/lib/prisma";
 // GET /api/creators - List all active creators
 export async function GET(request: NextRequest) {
   try {
+    const { searchParams } = new URL(request.url);
+    const featuredOnly = searchParams.get("featured") === "true";
+
     const creatorsRaw = await prisma.creator.findMany({
       where: {
         isActive: true,
+        ...(featuredOnly && { isFeatured: true }),
       },
       select: {
         id: true,
