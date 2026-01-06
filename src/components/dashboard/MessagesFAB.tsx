@@ -1,44 +1,19 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { MessageCircle } from "lucide-react";
+import { useUnreadCountSimple } from "@/hooks/useUnreadCount";
 
 export function MessagesFAB() {
   const pathname = usePathname();
   const router = useRouter();
-  const [unreadCount, setUnreadCount] = useState(0);
+
+  // Use shared hook - no polling, updates via Pusher only
+  const unreadCount = useUnreadCountSimple();
 
   // Don't show FAB on messages page
   const isMessagesPage = pathname?.includes("/messages");
-
-  // Fetch unread count
-  const fetchUnreadCount = useCallback(async () => {
-    try {
-      const res = await fetch("/api/messages/unread-count");
-      if (res.ok) {
-        const data = await res.json();
-        setUnreadCount(data.count || 0);
-      }
-    } catch (error) {
-      console.error("Error fetching unread count:", error);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchUnreadCount();
-    const interval = setInterval(fetchUnreadCount, 30000);
-
-    // Listen for unread count updates
-    const handleUpdate = () => fetchUnreadCount();
-    window.addEventListener("unread-count-updated", handleUpdate);
-
-    return () => {
-      clearInterval(interval);
-      window.removeEventListener("unread-count-updated", handleUpdate);
-    };
-  }, [fetchUnreadCount]);
 
   if (isMessagesPage) return null;
 

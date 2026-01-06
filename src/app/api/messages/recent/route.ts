@@ -37,6 +37,7 @@ export async function GET() {
         conversation: {
           select: {
             id: true,
+            creatorSlug: true,
           },
         },
       },
@@ -52,17 +53,39 @@ export async function GET() {
       },
     });
 
-    // Format messages
-    const formattedMessages = messages.map((msg) => ({
-      id: msg.id,
-      conversationId: msg.conversation.id,
-      text: msg.text || "[Media]",
-      createdAt: msg.createdAt.toISOString(),
-      senderId: msg.sender.id,
-      senderName: msg.sender.name || "User",
-      senderAvatar: msg.sender.image,
-      isRead: msg.isRead,
-    }));
+    // Format messages - use creator profile if sender is a creator
+    const formattedMessages = await Promise.all(
+      messages.map(async (msg) => {
+        let senderName = msg.sender.name || "User";
+        let senderAvatar = msg.sender.image;
+
+        // Check if sender has a creator profile (for this conversation's creatorSlug)
+        // If sender is the creator owner, show creator displayName instead of user name
+        if (msg.conversation.creatorSlug) {
+          const creatorProfile = await prisma.creator.findUnique({
+            where: { slug: msg.conversation.creatorSlug },
+            select: { userId: true, displayName: true, avatar: true },
+          });
+
+          // If sender is the creator owner, use creator's displayName and avatar
+          if (creatorProfile && creatorProfile.userId === msg.sender.id) {
+            senderName = creatorProfile.displayName || senderName;
+            senderAvatar = creatorProfile.avatar || senderAvatar;
+          }
+        }
+
+        return {
+          id: msg.id,
+          conversationId: msg.conversation.id,
+          text: msg.text || "[Media]",
+          createdAt: msg.createdAt.toISOString(),
+          senderId: msg.sender.id,
+          senderName,
+          senderAvatar,
+          isRead: msg.isRead,
+        };
+      })
+    );
 
     return NextResponse.json({
       messages: formattedMessages,

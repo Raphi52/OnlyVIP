@@ -70,25 +70,8 @@ export function useUnreadCount({
     };
   }, []);
 
-  // Fetch initial count on mount
-  useEffect(() => {
-    if (!userId) return;
-
-    const fetchInitialCount = async () => {
-      try {
-        const res = await fetch("/api/messages/unread-count");
-        if (res.ok) {
-          const data = await res.json();
-          globalUnreadCount = data.count || 0;
-          notifyListeners();
-        }
-      } catch (error) {
-        console.error("[UnreadCount] Error fetching initial count:", error);
-      }
-    };
-
-    fetchInitialCount();
-  }, [userId]);
+  // No initial fetch - count starts at 0 and increments via Pusher notifications only
+  // This avoids polling and 503 errors
 
   // Subscribe to Pusher for real-time updates
   useEffect(() => {

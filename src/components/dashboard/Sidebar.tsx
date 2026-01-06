@@ -39,6 +39,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAdminCreator, Creator, Agency } from "@/components/providers/AdminCreatorContext";
+import { useUnreadCountSimple } from "@/hooks/useUnreadCount";
 
 // Navigation link definitions with translation keys
 const userLinksDef = [
@@ -93,7 +94,7 @@ export function Sidebar() {
   const router = useRouter();
   const t = useTranslations("dashboard");
   const [isMobileOpen, setIsMobileOpen] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0);
+  const unreadCount = useUnreadCountSimple(); // No polling - updates via Pusher
   const [pendingPayoutsCount, setPendingPayoutsCount] = useState(0);
   const [pendingApplicationsCount, setPendingApplicationsCount] = useState(0);
   const [isCreatorDropdownOpen, setIsCreatorDropdownOpen] = useState(false);
@@ -140,19 +141,6 @@ export function Sidebar() {
   // Get avatar and name from selected creator
   const creatorAvatar = selectedCreator?.avatar || null;
   const creatorName = selectedCreator?.displayName || null;
-
-  // Fetch unread message count
-  const fetchUnreadCount = useCallback(async () => {
-    try {
-      const res = await fetch("/api/messages/unread-count");
-      if (res.ok) {
-        const data = await res.json();
-        setUnreadCount(data.count || 0);
-      }
-    } catch (error) {
-      console.error("Error fetching unread count:", error);
-    }
-  }, []);
 
   // Fetch pending payouts count (admin only)
   const fetchPendingPayoutsCount = useCallback(async () => {
@@ -212,27 +200,18 @@ export function Sidebar() {
   }, [fetchCreatorPermissions]);
 
   useEffect(() => {
-    fetchUnreadCount();
     fetchPendingPayoutsCount();
     fetchPendingApplicationsCount();
-    // Refresh every 30 seconds
+    // Refresh admin counts every 60 seconds (less aggressive)
     const interval = setInterval(() => {
-      fetchUnreadCount();
       fetchPendingPayoutsCount();
       fetchPendingApplicationsCount();
-    }, 30000);
-
-    // Listen for custom event when messages are read
-    const handleUnreadUpdate = () => {
-      fetchUnreadCount();
-    };
-    window.addEventListener("unread-count-updated", handleUnreadUpdate);
+    }, 60000);
 
     return () => {
       clearInterval(interval);
-      window.removeEventListener("unread-count-updated", handleUnreadUpdate);
     };
-  }, [fetchUnreadCount, fetchPendingPayoutsCount, fetchPendingApplicationsCount]);
+  }, [fetchPendingPayoutsCount, fetchPendingApplicationsCount]);
 
   const NavLink = ({
     href,
