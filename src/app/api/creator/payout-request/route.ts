@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { isCreatorAgencyManaged } from "@/lib/agency-permissions";
 
 const MINIMUM_PAYOUT = 100; // Minimum 100€ to request payout
 const COOLDOWN_HOURS = 24; // 1 request per 24 hours
@@ -28,6 +29,9 @@ export async function GET() {
       return NextResponse.json({ error: "Creator not found" }, { status: 404 });
     }
 
+    // Check if creator is agency-managed
+    const isManaged = await isCreatorAgencyManaged(creator.slug);
+
     // Get latest payout request
     const latestRequest = await prisma.payoutRequest.findFirst({
       where: { creatorSlug: creator.slug },
@@ -43,11 +47,14 @@ export async function GET() {
     const cooldownPassed = !latestRequest ||
       new Date().getTime() - latestRequest.createdAt.getTime() > COOLDOWN_HOURS * 60 * 60 * 1000;
 
+    const hasWallet = !!(creator.walletEth || creator.walletBtc);
+
     return NextResponse.json({
       pendingBalance: creator.pendingBalance,
       minimumPayout: MINIMUM_PAYOUT,
       walletEth: creator.walletEth,
       walletBtc: creator.walletBtc,
+      hasWallet,
       latestRequest: latestRequest ? {
         id: latestRequest.id,
         amount: latestRequest.amount,
@@ -57,9 +64,11 @@ export async function GET() {
         createdAt: latestRequest.createdAt,
         paidAt: latestRequest.paidAt,
       } : null,
-      canRequest: canRequest && cooldownPassed && creator.pendingBalance >= MINIMUM_PAYOUT,
+      // Agency-managed creators cannot request payouts
+      canRequest: !isManaged && canRequest && cooldownPassed && creator.pendingBalance >= MINIMUM_PAYOUT,
       cooldownPassed,
       hasEnoughBalance: creator.pendingBalance >= MINIMUM_PAYOUT,
+      isAgencyManaged: isManaged,
     });
   } catch (error) {
     console.error("Error fetching payout request:", error);
@@ -79,7 +88,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { walletType, walletAddress } = body;
+    const { walletType, walletAddress, businessNumber } = body;
 
     // Validate wallet info
     if (!walletType || !walletAddress) {
@@ -92,6 +101,14 @@ export async function POST(request: NextRequest) {
     if (!["ETH", "BTC"].includes(walletType)) {
       return NextResponse.json(
         { error: "Invalid wallet type. Use ETH or BTC" },
+        { status: 400 }
+      );
+    }
+
+    // Validate business number
+    if (!businessNumber || !businessNumber.trim()) {
+      return NextResponse.json(
+        { error: "Business registration number required" },
         { status: 400 }
       );
     }
@@ -109,6 +126,15 @@ export async function POST(request: NextRequest) {
 
     if (!creator) {
       return NextResponse.json({ error: "Creator not found" }, { status: 404 });
+    }
+
+    // Check if creator is agency-managed (restricted from requesting payouts)
+    const isManaged = await isCreatorAgencyManaged(creator.slug);
+    if (isManaged) {
+      return NextResponse.json(
+        { error: "Payout requests are handled by your agency. Contact your agency manager." },
+        { status: 403 }
+      );
     }
 
     // Check minimum balance
@@ -154,6 +180,7 @@ export async function POST(request: NextRequest) {
         amount: creator.pendingBalance,
         walletType,
         walletAddress,
+        businessNumber: businessNumber.trim(),
         status: "PENDING",
       },
     });

@@ -503,13 +503,12 @@ export function ChatWindow({
                 {otherUser.name.charAt(0)}
               </motion.div>
             )}
-            {otherUser.isOnline && (
-              <motion.span
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                className="absolute bottom-0 right-0 w-3 h-3 sm:w-3.5 sm:h-3.5 bg-emerald-500 rounded-full border-2 border-[#0a0a0a] shadow-lg shadow-emerald-500/50"
-              />
-            )}
+            {/* Always show online indicator for creators */}
+            <motion.span
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              className="absolute bottom-0 right-0 w-3 h-3 sm:w-3.5 sm:h-3.5 bg-emerald-500 rounded-full border-2 border-[#0a0a0a] shadow-lg shadow-emerald-500/50"
+            />
           </div>
 
           {/* Info */}
@@ -541,7 +540,7 @@ export function ChatWindow({
                   exit={{ opacity: 0, y: -5 }}
                   className="text-xs text-white/40"
                 >
-                  {otherUser.isOnline ? "Online now" : "Offline"}
+                  Online
                 </motion.p>
               )}
             </AnimatePresence>
@@ -1075,7 +1074,6 @@ export function ChatWindow({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
-            onClick={() => setShowTipModal(null)}
           >
             {/* Backdrop with blur */}
             <motion.div

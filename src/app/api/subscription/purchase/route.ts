@@ -47,10 +47,9 @@ export async function POST(request: NextRequest) {
     });
 
     // Default pricing in credits
-    // bonusCredits are BONUS type - only usable for PPV catalog media
     const defaultPricing = {
-      basic: { monthlyCredits: 999, annualCredits: 9588, bonusCredits: 500 },
-      vip: { monthlyCredits: 2999, annualCredits: 28788, bonusCredits: 1000 }, // 1000 bonus, not 2000
+      basic: { monthlyCredits: 999, annualCredits: 9588 },
+      vip: { monthlyCredits: 2999, annualCredits: 28788 },
     };
 
     let pricing = defaultPricing;
@@ -67,14 +66,12 @@ export async function POST(request: NextRequest) {
             pricing.basic = {
               monthlyCredits: basicPlan.monthlyCredits || defaultPricing.basic.monthlyCredits,
               annualCredits: basicPlan.annualCredits || defaultPricing.basic.annualCredits,
-              bonusCredits: basicPlan.bonusCredits || defaultPricing.basic.bonusCredits,
             };
           }
           if (vipPlan) {
             pricing.vip = {
               monthlyCredits: vipPlan.monthlyCredits || defaultPricing.vip.monthlyCredits,
               annualCredits: vipPlan.annualCredits || defaultPricing.vip.annualCredits,
-              bonusCredits: vipPlan.bonusCredits || defaultPricing.vip.bonusCredits,
             };
           }
         }
@@ -87,7 +84,6 @@ export async function POST(request: NextRequest) {
     const creditsRequired = interval === "annual"
       ? selectedPlan.annualCredits
       : selectedPlan.monthlyCredits;
-    const bonusCredits = selectedPlan.bonusCredits;
 
     // Check if user has enough PAID credits - subscriptions require paid credits only
     const balances = await getCreditBalances(userId);
@@ -165,15 +161,6 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Add bonus credits to user as BONUS type (only usable for PPV catalog media)
-    if (bonusCredits > 0) {
-      await addCredits(userId, bonusCredits, "SUBSCRIPTION_BONUS", {
-        creditType: "BONUS", // Subscription bonus = BONUS credits (PPV catalog only)
-        description: `Bonus credits for ${planId.toUpperCase()} subscription (PPV catalog only)`,
-        subscriptionId: subscription.id,
-      });
-    }
-
     // Record creator earning - all spent credits are paid since allowBonus=false
     if (spendResult.paidSpent > 0) {
       try {
@@ -197,8 +184,7 @@ export async function POST(request: NextRequest) {
         endDate: endDate.toISOString(),
       },
       creditsSpent: creditsRequired,
-      bonusCreditsAdded: bonusCredits,
-      newBalance: spendResult.newBalance + bonusCredits,
+      newBalance: spendResult.newBalance,
     });
   } catch (error: any) {
     console.error("Error purchasing subscription:", error);

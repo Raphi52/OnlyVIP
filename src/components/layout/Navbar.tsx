@@ -389,16 +389,24 @@ export function Navbar({ creatorSlug = "miacosta" }: NavbarProps) {
             )}
           </div>
 
-          {/* Mobile: Send Message Button (replaces menu) */}
-          <button
-            type="button"
-            className="md:hidden flex items-center gap-2 px-4 py-2.5 rounded-full bg-gradient-to-r from-[var(--gold)] to-yellow-600 text-black font-bold text-sm active:scale-95 transition-transform disabled:opacity-50"
-            onClick={handleSendMessage}
-            disabled={isStartingChat || status === "loading" || isCheckingVip}
-          >
-            <MessageCircle className={`w-4 h-4 ${isStartingChat || isCheckingVip ? "animate-pulse" : ""}`} />
-            <span>{(status === "loading" || isCheckingVip) ? "..." : tCreator("message")}</span>
-          </button>
+          {/* Mobile: Credits + Send Message */}
+          <div className="md:hidden flex items-center gap-2">
+            {/* Mobile Credit Balance - Ultra compact */}
+            {session && (
+              <CreditBalance variant="compact" />
+            )}
+
+            {/* Send Message Button */}
+            <button
+              type="button"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-full bg-gradient-to-r from-[var(--gold)] to-yellow-600 text-black font-bold text-sm active:scale-95 transition-transform disabled:opacity-50 flex-shrink-0"
+              onClick={handleSendMessage}
+              disabled={isStartingChat || status === "loading" || isCheckingVip}
+            >
+              <MessageCircle className={`w-4 h-4 ${isStartingChat || isCheckingVip ? "animate-pulse" : ""}`} />
+              <span className="hidden xs:inline">{(status === "loading" || isCheckingVip) ? "..." : tCreator("message")}</span>
+            </button>
+          </div>
         </div>
       </div>
 

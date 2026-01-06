@@ -1,4 +1,5 @@
 import prisma from "@/lib/prisma";
+import { detectLanguage, detectLanguageFromMessages } from "./language-detection";
 
 // Supported tones for conversation detection
 export const CONVERSATION_TONES = {
@@ -128,12 +129,14 @@ const MIN_MESSAGES_FOR_TONE = 3;
 
 /**
  * Select a personality for a new conversation using weighted random based on trafficShare
+ * If a language is provided, it will prefer personalities matching that language
  */
 export async function selectPersonalityForConversation(
-  creatorSlug: string
+  creatorSlug: string,
+  options?: { language?: string | null }
 ): Promise<string | null> {
   // Get all active personalities for this creator
-  const personalities = await prisma.agencyAiPersonality.findMany({
+  const personalities = await prisma.creatorAiPersonality.findMany({
     where: {
       creatorSlug,
       isActive: true,
@@ -144,11 +147,43 @@ export async function selectPersonalityForConversation(
     return null; // No personality = AI disabled
   }
 
+  // If language is provided, try to find matching personalities first
+  if (options?.language) {
+    const languageMatchingPersonalities = personalities.filter(
+      (p) => p.language === options.language
+    );
+
+    if (languageMatchingPersonalities.length > 0) {
+      // Use weighted random among language-matching personalities
+      return selectFromPersonalities(languageMatchingPersonalities);
+    }
+
+    // Fallback to personalities with no specific language (universal)
+    const universalPersonalities = personalities.filter((p) => !p.language);
+    if (universalPersonalities.length > 0) {
+      return selectFromPersonalities(universalPersonalities);
+    }
+  }
+
+  // Default: weighted random from all personalities
+  return selectFromPersonalities(personalities);
+}
+
+/**
+ * Helper function to select from a list of personalities using weighted random
+ */
+function selectFromPersonalities(
+  personalities: Array<{ id: string; trafficShare: number }>
+): string | null {
+  if (personalities.length === 0) {
+    return null;
+  }
+
   // Calculate total traffic share
   const totalShare = personalities.reduce((sum, p) => sum + p.trafficShare, 0);
 
   if (totalShare === 0) {
-    return null;
+    return personalities[0].id;
   }
 
   // Weighted random selection
@@ -164,6 +199,140 @@ export async function selectPersonalityForConversation(
 
   // Fallback to first personality
   return personalities[0].id;
+}
+
+/**
+ * Find the best personality for a given language
+ */
+export async function findPersonalityForLanguage(
+  creatorSlug: string,
+  language: string
+): Promise<string | null> {
+  // First try exact language match
+  const matchingPersonality = await prisma.creatorAiPersonality.findFirst({
+    where: {
+      creatorSlug,
+      isActive: true,
+      language,
+    },
+    orderBy: {
+      trafficShare: "desc",
+    },
+  });
+
+  if (matchingPersonality) {
+    return matchingPersonality.id;
+  }
+
+  // Fallback to universal personality (no language set)
+  const universalPersonality = await prisma.creatorAiPersonality.findFirst({
+    where: {
+      creatorSlug,
+      isActive: true,
+      language: null,
+    },
+    orderBy: {
+      trafficShare: "desc",
+    },
+  });
+
+  return universalPersonality?.id || null;
+}
+
+/**
+ * Detect language from fan messages and update fan profile
+ */
+export async function detectAndStoreFanLanguage(
+  fanUserId: string,
+  creatorSlug: string,
+  messages: string[]
+): Promise<string | null> {
+  // Detect language from multiple messages for better accuracy
+  const detectedLanguage = detectLanguageFromMessages(messages);
+
+  if (detectedLanguage) {
+    // Update fan profile with detected language
+    await prisma.fanProfile.upsert({
+      where: {
+        fanUserId_creatorSlug: { fanUserId, creatorSlug },
+      },
+      update: {
+        language: detectedLanguage,
+      },
+      create: {
+        fanUserId,
+        creatorSlug,
+        language: detectedLanguage,
+      },
+    });
+  }
+
+  return detectedLanguage;
+}
+
+/**
+ * Check if conversation should switch personality based on language
+ */
+export async function checkForLanguageSwitch(
+  conversationId: string,
+  messages: Array<{ text: string | null; senderId: string }>,
+  fanUserId: string
+): Promise<string | null> {
+  // Get conversation details
+  const conversation = await prisma.conversation.findUnique({
+    where: { id: conversationId },
+    select: {
+      creatorSlug: true,
+      aiPersonalityId: true,
+      aiPersonality: {
+        select: { language: true },
+      },
+    },
+  });
+
+  if (!conversation || !conversation.aiPersonalityId) {
+    return null;
+  }
+
+  // Get last 5 fan messages for language detection
+  const fanMessages = messages
+    .filter((m) => m.senderId === fanUserId && m.text)
+    .slice(-5)
+    .map((m) => m.text!);
+
+  if (fanMessages.length < 2) {
+    return null; // Need at least 2 messages for detection
+  }
+
+  // Detect language
+  const detectedLanguage = detectLanguageFromMessages(fanMessages);
+
+  if (!detectedLanguage) {
+    return null;
+  }
+
+  // Store in fan profile
+  await detectAndStoreFanLanguage(fanUserId, conversation.creatorSlug, fanMessages);
+
+  // Check if current personality matches the language
+  const currentPersonalityLanguage = conversation.aiPersonality?.language;
+
+  // If current personality is universal (no language) or matches, no need to switch
+  if (!currentPersonalityLanguage || currentPersonalityLanguage === detectedLanguage) {
+    return null;
+  }
+
+  // Find a personality matching the detected language
+  const newPersonalityId = await findPersonalityForLanguage(
+    conversation.creatorSlug,
+    detectedLanguage
+  );
+
+  if (!newPersonalityId || newPersonalityId === conversation.aiPersonalityId) {
+    return null;
+  }
+
+  return newPersonalityId;
 }
 
 /**
@@ -238,7 +407,7 @@ export async function findPersonalityForTone(
   tone: ConversationTone
 ): Promise<string | null> {
   // First, try to find a personality with matching primaryTone
-  const matchingPersonality = await prisma.agencyAiPersonality.findFirst({
+  const matchingPersonality = await prisma.creatorAiPersonality.findFirst({
     where: {
       creatorSlug,
       isActive: true,
@@ -254,7 +423,7 @@ export async function findPersonalityForTone(
   }
 
   // Fallback: search in toneKeywords
-  const personalities = await prisma.agencyAiPersonality.findMany({
+  const personalities = await prisma.creatorAiPersonality.findMany({
     where: {
       creatorSlug,
       isActive: true,
@@ -282,9 +451,10 @@ export async function findPersonalityForTone(
 export async function switchPersonality(
   conversationId: string,
   toPersonalityId: string,
-  reason: "auto_tone" | "manual" | "initial_assignment",
+  reason: "auto_tone" | "auto_language" | "manual" | "initial_assignment",
   options?: {
     detectedTone?: string;
+    detectedLanguage?: string;
     triggeredBy?: string;
   }
 ): Promise<void> {

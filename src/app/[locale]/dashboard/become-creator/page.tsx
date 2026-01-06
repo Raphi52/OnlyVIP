@@ -433,7 +433,7 @@ export default function BecomeCreatorPage() {
 
   // DEFAULT STATE - Show application form
   return (
-    <div className="min-h-screen py-8 px-4">
+    <div className="min-h-screen px-4 pt-20 sm:pt-20 lg:pt-8 pb-8">
       <div className="max-w-2xl mx-auto">
         <Link
           href="/dashboard"

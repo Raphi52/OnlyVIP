@@ -14,19 +14,15 @@ import {
   Users,
   Sparkles,
   ArrowRight,
-  Filter,
   TrendingUp,
   Clock,
   Star,
   X,
-  SlidersHorizontal,
   Grid3X3,
   LayoutGrid,
   Loader2,
-  Heart,
-  MessageCircle,
 } from "lucide-react";
-import { Button, Card, Badge } from "@/components/ui";
+import { Button, Card } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { CREATOR_CATEGORIES, getCategoryById, getCategoriesFromJson } from "@/lib/categories";
 
@@ -361,7 +357,7 @@ function CreatorsPageContent() {
             >
               All
             </button>
-            {CREATOR_CATEGORIES.slice(0, 15).map((cat) => (
+            {CREATOR_CATEGORIES.map((cat) => (
               <button
                 key={cat.id}
                 onClick={() => setSelectedCategory(cat.id)}
@@ -508,14 +504,17 @@ function CreatorCard({ creator, size }: { creator: Creator; size: GridSize }) {
 
   return (
     <Link href={`/${creator.slug}`}>
-      <Card
-        className={cn(
-          "group overflow-hidden hover:border-[var(--gold)]/50 transition-all duration-500",
-          isHovered && "scale-[1.02] shadow-xl shadow-[var(--gold)]/10"
-        )}
+      <div
+        className="relative group"
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
+        <Card
+          className={cn(
+            "relative overflow-hidden transition-all duration-300 border border-white/10 hover:border-[var(--gold)]/50",
+            isHovered && "scale-[1.02]"
+          )}
+        >
         {/* Image */}
         <div className={cn(
           "relative overflow-hidden",
@@ -545,23 +544,6 @@ function CreatorCard({ creator, size }: { creator: Creator; size: GridSize }) {
             "absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent transition-opacity duration-300",
             isHovered ? "opacity-90" : "opacity-70"
           )} />
-
-          {/* Hover overlay content */}
-          <motion.div
-            className="absolute inset-0 flex flex-col justify-end p-4"
-            initial={false}
-            animate={{ opacity: isHovered ? 1 : 0 }}
-          >
-            <div className="flex items-center gap-2 mb-3">
-              <Button variant="premium" size="sm" className="gap-1 text-xs">
-                <Crown className="w-3 h-3" />
-                Subscribe
-              </Button>
-              <button className="p-2 rounded-full bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-colors">
-                <Heart className="w-4 h-4 text-white" />
-              </button>
-            </div>
-          </motion.div>
 
           {/* Content overlay */}
           <div className="absolute bottom-0 left-0 right-0 p-4">
@@ -629,7 +611,8 @@ function CreatorCard({ creator, size }: { creator: Creator; size: GridSize }) {
             })}
           </div>
         </div>
-      </Card>
+        </Card>
+      </div>
     </Link>
   );
 }

@@ -5,68 +5,123 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import {
-  Eye,
+  DollarSign,
   Users,
-  MousePointer,
-  Monitor,
-  Smartphone,
-  Tablet,
-  Globe,
+  Crown,
+  CreditCard,
   TrendingUp,
   RefreshCw,
   Loader2,
-  DollarSign,
-  Crown,
-  Image as ImageIcon,
-  MessageSquare,
+  Globe,
+  Clock,
+  Monitor,
+  Smartphone,
+  Tablet,
+  FileText,
+  Link2,
+  MapPin,
 } from "lucide-react";
 import { Button, Card } from "@/components/ui";
+import { RevenueKpiCard } from "@/components/charts/RevenueKpiCard";
+import { RevenueChart } from "@/components/charts/RevenueChart";
+import { RevenueBreakdown } from "@/components/charts/RevenueBreakdown";
+import { UserGrowthChart } from "@/components/charts/UserGrowthChart";
+import { AiPerformanceChart } from "@/components/charts/AiPerformanceChart";
+import { ConversionFunnel } from "@/components/charts/ConversionFunnel";
+import { TopCreatorsChart } from "@/components/charts/TopCreatorsChart";
+import { formatDistanceToNow } from "date-fns";
+import type { Period } from "@/components/charts/PeriodSelector";
 
-interface AnalyticsData {
-  summary: {
-    totalViews: number;
-    uniqueVisitors: number;
-    uniqueSessions: number;
-    avgViewsPerVisitor: string | number;
+interface AdminAnalytics {
+  kpis: {
+    totalRevenue: number;
+    revenueChange: number;
+    totalUsers: number;
+    usersChange: number;
+    totalCreators: number;
+    creatorsChange: number;
+    activeSubscriptions: number;
+    subscriptionsChange: number;
+    avgRevenuePerUser: number;
+    conversionRate: number;
   };
-  topPages: { path: string; views: number }[];
-  topReferrers: { source: string; views: number }[];
-  deviceStats: Record<string, number>;
-  browserStats: Record<string, number>;
-  chartData: { date: string; views: number; visitors: number }[];
-  recentViews: {
+  revenueChart: {
+    date: string;
+    revenue: number;
+    subscriptions: number;
+    ppv: number;
+    tips: number;
+    media: number;
+  }[];
+  revenueBreakdown: {
+    type: string;
+    amount: number;
+    percentage: number;
+  }[];
+  userGrowth: {
+    date: string;
+    newUsers: number;
+    totalUsers: number;
+    newCreators: number;
+  }[];
+  aiPerformance: {
+    date: string;
+    aiRevenue: number;
+    aiMessages: number;
+    chatterRevenue: number;
+    chatterMessages: number;
+  }[];
+  aiSummary: {
+    totalAiRevenue: number;
+    totalChatterRevenue: number;
+    aiConversionRate: number;
+    chatterConversionRate: number;
+  };
+  topCreators: {
+    slug: string;
+    name: string;
+    avatar: string | null;
+    revenue: number;
+    subscribers: number;
+  }[];
+  funnel: {
+    visitors: number;
+    signups: number;
+    subscribers: number;
+    spenders: number;
+  };
+  recentPayments: {
     id: string;
-    path: string;
-    device: string;
-    browser: string;
-    referrer: string | null;
+    type: string;
+    amount: number;
+    user: string;
+    userImage: string | null;
+    creator: string;
     createdAt: string;
   }[];
-}
-
-interface SiteStats {
-  totalUsers: number;
-  totalCreators: number;
-  totalMedia: number;
-  totalMessages: number;
-  totalPageViews: number;
-  totalRevenue: number;
+  trafficAnalytics: {
+    totalPageViews: number;
+    uniqueVisitors: number;
+    topPages: { path: string; views: number }[];
+    referrerSources: { source: string; visits: number }[];
+    deviceBreakdown: { device: string; count: number }[];
+    countryBreakdown: { country: string; visits: number }[];
+  };
 }
 
 const periods = [
-  { value: "24h", label: "24h" },
   { value: "7d", label: "7 days" },
   { value: "30d", label: "30 days" },
   { value: "90d", label: "90 days" },
+  { value: "1y", label: "1 year" },
 ];
 
 export default function AdminAnalyticsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [data, setData] = useState<AnalyticsData | null>(null);
-  const [siteStats, setSiteStats] = useState<SiteStats | null>(null);
+  const [data, setData] = useState<AdminAnalytics | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [period, setPeriod] = useState("7d");
+  const [period, setPeriod] = useState<Period>("30d");
   const [error, setError] = useState<string | null>(null);
 
   const isAdmin = (session?.user as any)?.role === "ADMIN";
@@ -82,39 +137,15 @@ export default function AdminAnalyticsPage() {
 
   useEffect(() => {
     if (isAdmin) {
-      fetchAnalytics();
+      fetchData();
     }
   }, [period, isAdmin]);
 
   const fetchData = async () => {
-    try {
-      const [analyticsRes, statsRes] = await Promise.all([
-        fetch(`/api/analytics/stats?period=${period}`),
-        fetch("/api/admin/site-stats"),
-      ]);
-
-      if (analyticsRes.ok) {
-        const analyticsData = await analyticsRes.json();
-        setData(analyticsData);
-      }
-
-      if (statsRes.ok) {
-        const statsData = await statsRes.json();
-        setSiteStats(statsData);
-      }
-    } catch (err) {
-      setError("Error loading analytics");
-      console.error(err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const fetchAnalytics = async () => {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch(`/api/analytics/stats?period=${period}`);
+      const response = await fetch(`/api/admin/analytics?period=${period}`);
       if (!response.ok) throw new Error("Failed to fetch analytics");
       const result = await response.json();
       setData(result);
@@ -126,20 +157,19 @@ export default function AdminAnalyticsPage() {
     }
   };
 
-  const getDeviceIcon = (device: string) => {
-    switch (device.toLowerCase()) {
-      case "mobile":
-        return <Smartphone className="w-4 h-4" />;
-      case "tablet":
-        return <Tablet className="w-4 h-4" />;
-      default:
-        return <Monitor className="w-4 h-4" />;
-    }
-  };
-
-  const formatPath = (path: string) => {
-    if (path === "/") return "Home";
-    return path.replace(/^\//, "").replace(/-/g, " ").replace(/\//g, " > ");
+  const getPaymentTypeBadge = (type: string) => {
+    const types: Record<string, { bg: string; text: string; label: string }> = {
+      SUBSCRIPTION: { bg: "bg-purple-500/20", text: "text-purple-400", label: "Sub" },
+      PPV: { bg: "bg-amber-500/20", text: "text-amber-400", label: "PPV" },
+      TIP: { bg: "bg-pink-500/20", text: "text-pink-400", label: "Tip" },
+      MEDIA_UNLOCK: { bg: "bg-cyan-500/20", text: "text-cyan-400", label: "Media" },
+    };
+    const style = types[type] || types.PPV;
+    return (
+      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${style.bg} ${style.text}`}>
+        {style.label}
+      </span>
+    );
   };
 
   if (status === "loading" || (isLoading && !data)) {
@@ -154,14 +184,19 @@ export default function AdminAnalyticsPage() {
     return null;
   }
 
+  // Prepare sparkline data for KPI cards
+  const revenueSparkline = data?.revenueChart.slice(-7).map((d) => d.revenue) || [];
+  const usersSparkline = data?.userGrowth.slice(-7).map((d) => d.newUsers) || [];
+  const subscriptionsSparkline = data?.revenueChart.slice(-7).map((d) => d.subscriptions) || [];
+
   return (
-    <div className="min-h-screen p-6 lg:p-8">
+    <div className="min-h-screen p-4 pt-20 sm:p-6 sm:pt-20 lg:p-8 lg:pt-8">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-[var(--foreground)]">Site Analytics</h1>
-            <p className="text-[var(--muted)] mt-1">Platform-wide statistics and metrics</p>
+            <h1 className="text-3xl font-bold text-[var(--foreground)]">Analytics Dashboard</h1>
+            <p className="text-[var(--muted)] mt-1">Platform-wide statistics and insights</p>
           </div>
 
           <div className="flex items-center gap-3">
@@ -170,7 +205,7 @@ export default function AdminAnalyticsPage() {
               {periods.map((p) => (
                 <button
                   key={p.value}
-                  onClick={() => setPeriod(p.value)}
+                  onClick={() => setPeriod(p.value as Period)}
                   className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
                     period === p.value
                       ? "bg-[var(--gold)] text-[var(--background)]"
@@ -199,347 +234,387 @@ export default function AdminAnalyticsPage() {
           </div>
         )}
 
-        {/* Site-wide Stats */}
-        {siteStats && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mb-8"
-          >
-            <Card variant="luxury" className="p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <Users className="w-4 h-4 text-blue-400" />
-                <span className="text-xs text-[var(--muted)]">Users</span>
-              </div>
-              <p className="text-2xl font-bold text-[var(--foreground)]">
-                {siteStats.totalUsers.toLocaleString()}
-              </p>
-            </Card>
-            <Card variant="luxury" className="p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <Crown className="w-4 h-4 text-[var(--gold)]" />
-                <span className="text-xs text-[var(--muted)]">Creators</span>
-              </div>
-              <p className="text-2xl font-bold text-[var(--foreground)]">
-                {siteStats.totalCreators.toLocaleString()}
-              </p>
-            </Card>
-            <Card variant="luxury" className="p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <ImageIcon className="w-4 h-4 text-purple-400" />
-                <span className="text-xs text-[var(--muted)]">Media</span>
-              </div>
-              <p className="text-2xl font-bold text-[var(--foreground)]">
-                {siteStats.totalMedia.toLocaleString()}
-              </p>
-            </Card>
-            <Card variant="luxury" className="p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <MessageSquare className="w-4 h-4 text-cyan-400" />
-                <span className="text-xs text-[var(--muted)]">Messages</span>
-              </div>
-              <p className="text-2xl font-bold text-[var(--foreground)]">
-                {siteStats.totalMessages.toLocaleString()}
-              </p>
-            </Card>
-            <Card variant="luxury" className="p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <Eye className="w-4 h-4 text-pink-400" />
-                <span className="text-xs text-[var(--muted)]">Page Views</span>
-              </div>
-              <p className="text-2xl font-bold text-[var(--foreground)]">
-                {siteStats.totalPageViews.toLocaleString()}
-              </p>
-            </Card>
-            <Card variant="luxury" className="p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <DollarSign className="w-4 h-4 text-emerald-400" />
-                <span className="text-xs text-[var(--muted)]">Revenue</span>
-              </div>
-              <p className="text-2xl font-bold text-[var(--foreground)]">
-                ${siteStats.totalRevenue.toLocaleString()}
-              </p>
-            </Card>
-          </motion.div>
-        )}
-
         {data && (
           <>
-            {/* Traffic Summary */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6"
-              >
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center">
-                    <Eye className="w-5 h-5 text-blue-400" />
-                  </div>
-                  <span className="text-[var(--muted)] text-sm">Total Views</span>
-                </div>
-                <p className="text-3xl font-bold text-[var(--foreground)]">
-                  {data.summary.totalViews.toLocaleString()}
-                </p>
-              </motion.div>
-
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 }}
-                className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6"
-              >
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 rounded-xl bg-green-500/20 flex items-center justify-center">
-                    <Users className="w-5 h-5 text-green-400" />
-                  </div>
-                  <span className="text-[var(--muted)] text-sm">Unique Visitors</span>
-                </div>
-                <p className="text-3xl font-bold text-[var(--foreground)]">
-                  {data.summary.uniqueVisitors.toLocaleString()}
-                </p>
-              </motion.div>
-
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-                className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6"
-              >
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center">
-                    <MousePointer className="w-5 h-5 text-purple-400" />
-                  </div>
-                  <span className="text-[var(--muted)] text-sm">Sessions</span>
-                </div>
-                <p className="text-3xl font-bold text-[var(--foreground)]">
-                  {data.summary.uniqueSessions.toLocaleString()}
-                </p>
-              </motion.div>
-
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 }}
-                className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6"
-              >
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 rounded-xl bg-[var(--gold)]/20 flex items-center justify-center">
-                    <TrendingUp className="w-5 h-5 text-[var(--gold)]" />
-                  </div>
-                  <span className="text-[var(--muted)] text-sm">Views/Visitor</span>
-                </div>
-                <p className="text-3xl font-bold text-[var(--foreground)]">
-                  {data.summary.avgViewsPerVisitor}
-                </p>
-              </motion.div>
+            {/* KPI Cards Row */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
+              <RevenueKpiCard
+                title="Total Revenue"
+                value={data.kpis.totalRevenue}
+                change={data.kpis.revenueChange}
+                sparklineData={revenueSparkline}
+                icon={DollarSign}
+                color="yellow"
+                delay={0}
+              />
+              <RevenueKpiCard
+                title="Total Users"
+                value={data.kpis.totalUsers}
+                change={data.kpis.usersChange}
+                sparklineData={usersSparkline}
+                icon={Users}
+                color="cyan"
+                formatter={(v) => v.toLocaleString()}
+                delay={0.1}
+              />
+              <RevenueKpiCard
+                title="Creators"
+                value={data.kpis.totalCreators}
+                change={data.kpis.creatorsChange}
+                sparklineData={[]}
+                icon={Crown}
+                color="amber"
+                formatter={(v) => v.toLocaleString()}
+                delay={0.2}
+              />
+              <RevenueKpiCard
+                title="Active Subs"
+                value={data.kpis.activeSubscriptions}
+                change={data.kpis.subscriptionsChange}
+                sparklineData={subscriptionsSparkline}
+                icon={CreditCard}
+                color="purple"
+                formatter={(v) => v.toLocaleString()}
+                delay={0.3}
+              />
             </div>
 
-            {/* Chart */}
-            {data.chartData.length > 0 && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4 }}
-                className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6 mb-8"
-              >
-                <h2 className="text-lg font-semibold text-[var(--foreground)] mb-6">
-                  Traffic Over Time
-                </h2>
-                <div className="relative">
-                  {/* Chart area */}
-                  <div className="h-48 flex items-end gap-1 mb-8">
-                    {data.chartData.map((day) => {
-                      const maxViews = Math.max(...data.chartData.map((d) => d.views), 1);
-                      const height = (day.views / maxViews) * 100;
-                      return (
-                        <div
-                          key={day.date}
-                          className="flex-1 flex flex-col items-center justify-end h-full group"
-                        >
-                          <span className="text-xs text-[var(--muted)] mb-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            {day.views}
-                          </span>
-                          <div
-                            className="w-full bg-[var(--gold)]/80 rounded-t transition-all hover:bg-[var(--gold)] min-h-[4px]"
-                            style={{ height: `${Math.max(height, 2)}%` }}
-                            title={`${day.views} views, ${day.visitors} visitors`}
-                          />
-                        </div>
-                      );
-                    })}
-                  </div>
-                  {/* Date labels */}
-                  <div className="flex gap-1">
-                    {data.chartData.map((day, index) => (
-                      <div key={day.date} className="flex-1 text-center">
-                        {index % Math.ceil(data.chartData.length / 7) === 0 && (
-                          <span className="text-xs text-[var(--muted)]">
-                            {new Date(day.date).toLocaleDateString("en-US", {
-                              day: "numeric",
-                              month: "short",
-                            })}
-                          </span>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </motion.div>
-            )}
+            {/* Revenue Charts Row */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+              <div className="lg:col-span-2">
+                <RevenueChart
+                  data={data.revenueChart}
+                  period={period}
+                  onPeriodChange={setPeriod}
+                  total={data.kpis.totalRevenue}
+                  change={data.kpis.revenueChange}
+                  avgDaily={data.kpis.totalRevenue / (period === "7d" ? 7 : period === "30d" ? 30 : period === "90d" ? 90 : 365)}
+                  isLoading={isLoading}
+                  title="Revenue Over Time"
+                />
+              </div>
+              <RevenueBreakdown
+                data={data.revenueBreakdown}
+                total={data.kpis.totalRevenue}
+                isLoading={isLoading}
+              />
+            </div>
 
+            {/* User Growth & AI Performance Row */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-              {/* Top Pages */}
+              <UserGrowthChart data={data.userGrowth} isLoading={isLoading} />
+              <AiPerformanceChart
+                data={data.aiPerformance}
+                summary={data.aiSummary}
+                isLoading={isLoading}
+              />
+            </div>
+
+            {/* Funnel & Top Creators Row */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+              <ConversionFunnel data={data.funnel} isLoading={isLoading} />
+              <TopCreatorsChart data={data.topCreators} isLoading={isLoading} />
+            </div>
+
+            {/* Recent Payments & Traffic Sources Row */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Recent Payments */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.5 }}
-                className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6"
               >
-                <h2 className="text-lg font-semibold text-[var(--foreground)] mb-4">
-                  Top Pages
-                </h2>
-                <div className="space-y-3">
-                  {data.topPages.length > 0 ? (
-                    data.topPages.map((page, index) => (
-                      <div
-                        key={page.path}
-                        className="flex items-center justify-between"
-                      >
-                        <div className="flex items-center gap-3">
-                          <span className="w-6 h-6 rounded-full bg-[var(--gold)]/20 text-[var(--gold)] text-xs flex items-center justify-center font-medium">
-                            {index + 1}
-                          </span>
-                          <span className="text-[var(--foreground)] text-sm truncate max-w-[200px]">
-                            {formatPath(page.path)}
-                          </span>
-                        </div>
-                        <span className="text-[var(--muted)] text-sm">
-                          {page.views} views
-                        </span>
+                <Card className="relative overflow-hidden">
+                  <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-emerald-500/5 via-transparent to-pink-500/5 pointer-events-none" />
+                  <div className="relative p-4 sm:p-6">
+                    <div className="flex items-center justify-between mb-6">
+                      <div>
+                        <h3 className="text-sm font-medium text-gray-400 mb-1">Recent Payments</h3>
+                        <p className="text-xs text-gray-500">Last 24 hours</p>
                       </div>
-                    ))
-                  ) : (
-                    <p className="text-[var(--muted)] text-sm">No data</p>
-                  )}
-                </div>
+                      <Clock className="w-4 h-4 text-gray-500" />
+                    </div>
+
+                    <div className="space-y-3">
+                      {data.recentPayments.length === 0 ? (
+                        <p className="text-gray-500 text-sm text-center py-4">No recent payments</p>
+                      ) : (
+                        data.recentPayments.map((payment) => (
+                          <div
+                            key={payment.id}
+                            className="flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 transition-colors"
+                          >
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-medium text-white truncate">
+                                  {payment.user}
+                                </span>
+                                {getPaymentTypeBadge(payment.type)}
+                              </div>
+                              <p className="text-xs text-gray-500">
+                                to {payment.creator} • {formatDistanceToNow(new Date(payment.createdAt), { addSuffix: true })}
+                              </p>
+                            </div>
+                            <span className="text-sm font-bold text-[var(--gold)]">
+                              €{payment.amount}
+                            </span>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </Card>
               </motion.div>
 
-              {/* Top Referrers */}
+              {/* Traffic Sources (placeholder for now) */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.6 }}
-                className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6"
               >
-                <h2 className="text-lg font-semibold text-[var(--foreground)] mb-4">
-                  Traffic Sources
-                </h2>
-                <div className="space-y-3">
-                  {data.topReferrers.length > 0 ? (
-                    data.topReferrers.map((ref, index) => (
-                      <div
-                        key={ref.source}
-                        className="flex items-center justify-between"
-                      >
-                        <div className="flex items-center gap-3">
-                          <Globe className="w-4 h-4 text-[var(--muted)]" />
-                          <span className="text-[var(--foreground)] text-sm truncate max-w-[200px]">
-                            {ref.source}
-                          </span>
-                        </div>
-                        <span className="text-[var(--muted)] text-sm">
-                          {ref.views} visits
-                        </span>
+                <Card className="relative overflow-hidden">
+                  <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-blue-500/5 via-transparent to-indigo-500/5 pointer-events-none" />
+                  <div className="relative p-4 sm:p-6">
+                    <div className="flex items-center justify-between mb-6">
+                      <div>
+                        <h3 className="text-sm font-medium text-gray-400 mb-1">Quick Stats</h3>
+                        <p className="text-xs text-gray-500">Key metrics at a glance</p>
                       </div>
-                    ))
-                  ) : (
-                    <p className="text-[var(--muted)] text-sm">No data</p>
-                  )}
-                </div>
+                      <Globe className="w-4 h-4 text-gray-500" />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="p-4 bg-white/5 rounded-xl">
+                        <p className="text-xs text-gray-400 mb-1">Avg Revenue/User</p>
+                        <p className="text-xl font-bold text-white">
+                          €{data.kpis.avgRevenuePerUser.toFixed(2)}
+                        </p>
+                      </div>
+                      <div className="p-4 bg-white/5 rounded-xl">
+                        <p className="text-xs text-gray-400 mb-1">AI Revenue</p>
+                        <p className="text-xl font-bold text-purple-400">
+                          €{data.aiSummary.totalAiRevenue.toLocaleString()}
+                        </p>
+                      </div>
+                      <div className="p-4 bg-white/5 rounded-xl">
+                        <p className="text-xs text-gray-400 mb-1">Chatter Revenue</p>
+                        <p className="text-xl font-bold text-cyan-400">
+                          €{data.aiSummary.totalChatterRevenue.toLocaleString()}
+                        </p>
+                      </div>
+                      <div className="p-4 bg-white/5 rounded-xl">
+                        <p className="text-xs text-gray-400 mb-1">Active Visitors</p>
+                        <p className="text-xl font-bold text-blue-400">
+                          {data.funnel.visitors.toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </Card>
               </motion.div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Device Stats */}
+            {/* Traffic Analytics Row */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
+              {/* Top Pages */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.7 }}
-                className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6"
               >
-                <h2 className="text-lg font-semibold text-[var(--foreground)] mb-4">
-                  Devices
-                </h2>
-                <div className="space-y-4">
-                  {Object.entries(data.deviceStats).map(([device, count]) => {
-                    const total = Object.values(data.deviceStats).reduce(
-                      (a, b) => a + b,
-                      0
-                    );
-                    const percentage = total > 0 ? (count / total) * 100 : 0;
-                    return (
-                      <div key={device}>
-                        <div className="flex items-center justify-between mb-1">
-                          <div className="flex items-center gap-2">
-                            {getDeviceIcon(device)}
-                            <span className="text-[var(--foreground)] text-sm capitalize">
-                              {device}
+                <Card className="relative overflow-hidden">
+                  <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-violet-500/5 via-transparent to-purple-500/5 pointer-events-none" />
+                  <div className="relative p-4 sm:p-6">
+                    <div className="flex items-center justify-between mb-6">
+                      <div>
+                        <h3 className="text-sm font-medium text-gray-400 mb-1">Top Pages</h3>
+                        <p className="text-xs text-gray-500">{data.trafficAnalytics.totalPageViews.toLocaleString()} total views</p>
+                      </div>
+                      <FileText className="w-4 h-4 text-gray-500" />
+                    </div>
+
+                    <div className="space-y-2">
+                      {data.trafficAnalytics.topPages.length === 0 ? (
+                        <p className="text-gray-500 text-sm text-center py-4">No page views recorded</p>
+                      ) : (
+                        data.trafficAnalytics.topPages.slice(0, 8).map((page, index) => (
+                          <div
+                            key={page.path}
+                            className="flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 transition-colors"
+                          >
+                            <span className="text-xs text-gray-500 w-4">{index + 1}</span>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm text-white truncate font-mono">
+                                {page.path}
+                              </p>
+                            </div>
+                            <span className="text-sm font-medium text-[var(--gold)]">
+                              {page.views.toLocaleString()}
                             </span>
                           </div>
-                          <span className="text-[var(--muted)] text-sm">
-                            {percentage.toFixed(1)}%
-                          </span>
-                        </div>
-                        <div className="h-2 bg-[var(--background)] rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-[var(--gold)] rounded-full transition-all"
-                            style={{ width: `${percentage}%` }}
-                          />
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </Card>
               </motion.div>
 
-              {/* Browser Stats */}
+              {/* Traffic Sources */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.8 }}
-                className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6"
               >
-                <h2 className="text-lg font-semibold text-[var(--foreground)] mb-4">
-                  Browsers
-                </h2>
-                <div className="space-y-4">
-                  {Object.entries(data.browserStats).map(([browser, count]) => {
-                    const total = Object.values(data.browserStats).reduce(
-                      (a, b) => a + b,
-                      0
-                    );
-                    const percentage = total > 0 ? (count / total) * 100 : 0;
-                    return (
-                      <div key={browser}>
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-[var(--foreground)] text-sm">
-                            {browser}
-                          </span>
-                          <span className="text-[var(--muted)] text-sm">
-                            {percentage.toFixed(1)}%
-                          </span>
-                        </div>
-                        <div className="h-2 bg-[var(--background)] rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-purple-500 rounded-full transition-all"
-                            style={{ width: `${percentage}%` }}
-                          />
-                        </div>
+                <Card className="relative overflow-hidden">
+                  <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-teal-500/5 via-transparent to-cyan-500/5 pointer-events-none" />
+                  <div className="relative p-4 sm:p-6">
+                    <div className="flex items-center justify-between mb-6">
+                      <div>
+                        <h3 className="text-sm font-medium text-gray-400 mb-1">Traffic Sources</h3>
+                        <p className="text-xs text-gray-500">{data.trafficAnalytics.uniqueVisitors.toLocaleString()} unique visitors</p>
                       </div>
-                    );
-                  })}
-                </div>
+                      <Link2 className="w-4 h-4 text-gray-500" />
+                    </div>
+
+                    <div className="space-y-2">
+                      {data.trafficAnalytics.referrerSources.length === 0 ? (
+                        <p className="text-gray-500 text-sm text-center py-4">No referrer data</p>
+                      ) : (
+                        data.trafficAnalytics.referrerSources.map((source) => {
+                          const totalVisits = data.trafficAnalytics.referrerSources.reduce((sum, s) => sum + s.visits, 0);
+                          const percentage = totalVisits > 0 ? (source.visits / totalVisits) * 100 : 0;
+                          return (
+                            <div
+                              key={source.source}
+                              className="flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 transition-colors"
+                            >
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between mb-1">
+                                  <p className="text-sm text-white truncate">
+                                    {source.source}
+                                  </p>
+                                  <span className="text-sm font-medium text-cyan-400">
+                                    {source.visits.toLocaleString()}
+                                  </span>
+                                </div>
+                                <div className="w-full bg-white/10 rounded-full h-1.5">
+                                  <div
+                                    className="bg-cyan-500 h-1.5 rounded-full transition-all"
+                                    style={{ width: `${percentage}%` }}
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                </Card>
+              </motion.div>
+            </div>
+
+            {/* Device & Country Analytics Row */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+              {/* Device Breakdown */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.9 }}
+              >
+                <Card className="relative overflow-hidden">
+                  <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-orange-500/5 via-transparent to-amber-500/5 pointer-events-none" />
+                  <div className="relative p-4 sm:p-6">
+                    <div className="flex items-center justify-between mb-6">
+                      <div>
+                        <h3 className="text-sm font-medium text-gray-400 mb-1">Device Breakdown</h3>
+                        <p className="text-xs text-gray-500">By device type</p>
+                      </div>
+                      <Monitor className="w-4 h-4 text-gray-500" />
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-4">
+                      {data.trafficAnalytics.deviceBreakdown.length === 0 ? (
+                        <p className="text-gray-500 text-sm text-center py-4 col-span-3">No device data</p>
+                      ) : (
+                        data.trafficAnalytics.deviceBreakdown.map((device) => {
+                          const Icon = device.device === "mobile" ? Smartphone :
+                                       device.device === "tablet" ? Tablet : Monitor;
+                          const total = data.trafficAnalytics.deviceBreakdown.reduce((sum, d) => sum + d.count, 0);
+                          const percentage = total > 0 ? ((device.count / total) * 100).toFixed(1) : 0;
+                          return (
+                            <div
+                              key={device.device}
+                              className="p-4 bg-white/5 rounded-xl text-center"
+                            >
+                              <Icon className="w-6 h-6 mx-auto mb-2 text-amber-400" />
+                              <p className="text-lg font-bold text-white">
+                                {device.count.toLocaleString()}
+                              </p>
+                              <p className="text-xs text-gray-400 capitalize">{device.device}</p>
+                              <p className="text-xs text-gray-500">{percentage}%</p>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                </Card>
+              </motion.div>
+
+              {/* Country Breakdown */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 1 }}
+              >
+                <Card className="relative overflow-hidden">
+                  <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-rose-500/5 via-transparent to-pink-500/5 pointer-events-none" />
+                  <div className="relative p-4 sm:p-6">
+                    <div className="flex items-center justify-between mb-6">
+                      <div>
+                        <h3 className="text-sm font-medium text-gray-400 mb-1">Top Countries</h3>
+                        <p className="text-xs text-gray-500">By visitor location</p>
+                      </div>
+                      <MapPin className="w-4 h-4 text-gray-500" />
+                    </div>
+
+                    <div className="space-y-2">
+                      {data.trafficAnalytics.countryBreakdown.length === 0 ? (
+                        <p className="text-gray-500 text-sm text-center py-4">No country data</p>
+                      ) : (
+                        data.trafficAnalytics.countryBreakdown.slice(0, 6).map((country, index) => {
+                          const total = data.trafficAnalytics.countryBreakdown.reduce((sum, c) => sum + c.visits, 0);
+                          const percentage = total > 0 ? (country.visits / total) * 100 : 0;
+                          return (
+                            <div
+                              key={country.country}
+                              className="flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 transition-colors"
+                            >
+                              <span className="text-xs text-gray-500 w-4">{index + 1}</span>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between mb-1">
+                                  <p className="text-sm text-white">
+                                    {country.country}
+                                  </p>
+                                  <span className="text-sm font-medium text-pink-400">
+                                    {country.visits.toLocaleString()}
+                                  </span>
+                                </div>
+                                <div className="w-full bg-white/10 rounded-full h-1.5">
+                                  <div
+                                    className="bg-pink-500 h-1.5 rounded-full transition-all"
+                                    style={{ width: `${percentage}%` }}
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                </Card>
               </motion.div>
             </div>
           </>

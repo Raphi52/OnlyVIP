@@ -5,9 +5,9 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
-import { Crown, MessageSquare, DollarSign, FileText, LogOut, User, ChevronDown } from "lucide-react";
+import { Crown, MessageSquare, DollarSign, FileText, LogOut, User, ChevronDown, BarChart3 } from "lucide-react";
 
-export function ChatterNav() {
+export default function ChatterNav() {
   const { data: session } = useSession();
   const pathname = usePathname();
   const [showDropdown, setShowDropdown] = useState(false);
@@ -16,6 +16,7 @@ export function ChatterNav() {
     { href: "/chatter/dashboard", label: "Inbox", icon: MessageSquare },
     { href: "/chatter/earnings", label: "Earnings", icon: DollarSign },
     { href: "/chatter/scripts", label: "Scripts", icon: FileText },
+    { href: "/chatter/analytics", label: "Analytics", icon: BarChart3 },
   ];
 
   return (

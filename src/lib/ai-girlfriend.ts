@@ -174,7 +174,6 @@ export async function selectRelevantMedia(
   const aiMedia = await prisma.mediaContent.findMany({
     where: {
       creatorSlug,
-      isPublished: true,
       tagAI: true, // Only media the creator has marked for AI use
     },
     select: {
@@ -658,7 +657,6 @@ export async function selectMediaForContext(
   // Build query based on type
   const whereClause: any = {
     creatorSlug,
-    isPublished: true,
     tagAI: true,
     id: { notIn: excludeMediaIds },
   };

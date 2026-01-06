@@ -455,46 +455,202 @@ export function Pricing({ creatorSlug = "miacosta" }: PricingProps) {
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto mb-16"
+          className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto mb-16 pt-4"
         >
           {creditPackages.map((pkg, index) => (
             <Link key={pkg.id} href={`/credits?package=${pkg.id}`}>
               <motion.div
-                whileHover={{ scale: 1.02 }}
-                className={cn(
-                  "relative p-5 rounded-2xl border cursor-pointer transition-all",
-                  pkg.popular
-                    ? "bg-purple-500/10 border-purple-500/30 hover:border-purple-500/50"
-                    : pkg.bestValue
-                    ? "bg-[var(--gold)]/10 border-[var(--gold)]/30 hover:border-[var(--gold)]/50"
-                    : "bg-white/5 border-white/10 hover:border-white/20"
-                )}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: 0.1 + index * 0.05 }}
+                whileHover={{ scale: 1.03, y: -5 }}
+                whileTap={{ scale: 0.98 }}
+                className="relative group cursor-pointer"
               >
+                {/* Glow effect on hover - silver for regular */}
+                {!(pkg.popular || pkg.bestValue) && (
+                  <div className="absolute -inset-[1px] rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-sm bg-gradient-to-r from-gray-400/50 via-white/50 to-gray-400/50" />
+                )}
+
+                {/* ✨ ULTRA PREMIUM HOLOGRAPHIC EFFECT for featured packages */}
+                {(pkg.popular || pkg.bestValue) && (
+                  <>
+                    {/* Layer 1: Outer glow pulse */}
+                    <motion.div
+                      className="absolute -inset-3 rounded-3xl opacity-40"
+                      style={{
+                        background: 'radial-gradient(ellipse at center, rgba(255,215,0,0.4) 0%, transparent 70%)',
+                      }}
+                      animate={{
+                        scale: [1, 1.1, 1],
+                        opacity: [0.3, 0.5, 0.3]
+                      }}
+                      transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                    />
+
+                    {/* Layer 2: Animated rainbow border */}
+                    <motion.div
+                      className="absolute -inset-[2px] rounded-2xl"
+                      style={{
+                        background: 'linear-gradient(90deg, #ff0080, #ff8c00, #ffef00, #00ff80, #00bfff, #8000ff, #ff0080)',
+                        backgroundSize: '300% 100%',
+                      }}
+                      animate={{
+                        backgroundPosition: ['0% 0%', '100% 0%', '0% 0%'],
+                      }}
+                      transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+                    />
+
+                    {/* Layer 3: Inner gold border */}
+                    <div className="absolute -inset-[1px] rounded-2xl bg-gradient-to-br from-yellow-300 via-amber-400 to-yellow-500" />
+
+                    {/* Layer 4: Sparkle particles */}
+                    {[...Array(6)].map((_, i) => (
+                      <motion.div
+                        key={i}
+                        className="absolute w-1 h-1 bg-white rounded-full"
+                        style={{
+                          left: `${15 + i * 15}%`,
+                          top: `${10 + (i % 3) * 35}%`,
+                          boxShadow: '0 0 6px 2px rgba(255,255,255,0.8)',
+                        }}
+                        animate={{
+                          opacity: [0, 1, 0],
+                          scale: [0, 1.5, 0],
+                        }}
+                        transition={{
+                          duration: 2,
+                          repeat: Infinity,
+                          delay: i * 0.4,
+                          ease: "easeInOut",
+                        }}
+                      />
+                    ))}
+                  </>
+                )}
+
+                {/* Badge - Outside overflow-hidden container */}
                 {pkg.popular && (
-                  <Badge className="absolute -top-2 left-1/2 -translate-x-1/2 bg-purple-500 text-white border-0 text-xs">
-                    {t("popular")}
-                  </Badge>
+                  <div className="absolute -top-4 left-1/2 -translate-x-1/2 z-20">
+                    <motion.div
+                      className="relative"
+                      animate={{ y: [0, -2, 0] }}
+                      transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                    >
+                      {/* Badge glow */}
+                      <div className="absolute inset-0 bg-gradient-to-r from-yellow-400 to-amber-500 rounded-full blur-md opacity-60" />
+                      <div className="relative flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-gradient-to-r from-yellow-300 via-yellow-400 to-amber-500 text-black text-xs font-bold shadow-xl">
+                        <Sparkles className="w-3.5 h-3.5" />
+                        {t("popular")}
+                      </div>
+                    </motion.div>
+                  </div>
                 )}
                 {pkg.bestValue && (
-                  <Badge className="absolute -top-2 left-1/2 -translate-x-1/2 bg-[var(--gold)] text-black border-0 text-xs">
-                    {t("bestValue")}
-                  </Badge>
-                )}
-                <div className="text-center">
-                  <div className="flex items-center justify-center gap-1 mb-1">
-                    <Coins className="w-4 h-4 text-emerald-400" />
-                    <span className="text-xl font-bold text-white">
-                      {pkg.credits.toLocaleString()}
-                    </span>
+                  <div className="absolute -top-4 left-1/2 -translate-x-1/2 z-20">
+                    <motion.div
+                      className="relative"
+                      animate={{ y: [0, -2, 0] }}
+                      transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                    >
+                      {/* Badge glow */}
+                      <div className="absolute inset-0 bg-gradient-to-r from-yellow-400 to-amber-500 rounded-full blur-md opacity-60" />
+                      <div className="relative flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-gradient-to-r from-yellow-300 via-yellow-400 to-amber-500 text-black text-xs font-bold shadow-xl">
+                        <Crown className="w-3.5 h-3.5" />
+                        {t("bestValue")}
+                      </div>
+                    </motion.div>
                   </div>
-                  {pkg.bonus && pkg.bonus > 0 && (
-                    <p className="text-xs text-purple-400 mb-2">
-                      +{pkg.bonus.toLocaleString()} {t("bonus")}
-                    </p>
+                )}
+
+                <div className={cn(
+                  "relative rounded-2xl border-0 p-5 transition-all overflow-hidden",
+                  pkg.popular || pkg.bestValue
+                    ? "bg-gradient-to-br from-gray-950 via-black to-gray-950 pt-6"
+                    : "bg-gradient-to-br from-gray-900 to-black border border-white/10 group-hover:border-white/30"
+                )}>
+                  {/* ✨ Interior holographic effects - CSS animations for mobile compatibility */}
+                  {(pkg.popular || pkg.bestValue) && (
+                    <>
+                      {/* Primary prismatic sweep - CSS animation from globals.css */}
+                      <div
+                        className="absolute inset-0 animate-holographic-sweep"
+                        style={{
+                          background: 'linear-gradient(125deg, transparent 0%, rgba(255,0,128,0.25) 15%, rgba(0,255,255,0.25) 30%, rgba(255,255,0,0.18) 45%, rgba(128,0,255,0.25) 60%, rgba(0,255,128,0.18) 75%, transparent 100%)',
+                          backgroundSize: '300% 300%',
+                        }}
+                      />
+
+                      {/* Secondary reverse sweep - CSS animation from globals.css */}
+                      <div
+                        className="absolute inset-0 animate-holographic-sweep-reverse"
+                        style={{
+                          background: 'linear-gradient(-45deg, transparent 0%, rgba(0,200,255,0.2) 25%, rgba(255,100,200,0.2) 50%, rgba(100,255,150,0.2) 75%, transparent 100%)',
+                          backgroundSize: '250% 250%',
+                        }}
+                      />
+                    </>
                   )}
-                  <p className="text-lg font-bold text-white">
-                    ${pkg.price}
-                  </p>
+
+                  {/* Shimmer on hover - diagonal, extended to cover full card */}
+                  <motion.div
+                    className="absolute -inset-[100%] -translate-x-[200%] group-hover:translate-x-[100%] transition-transform duration-1000 pointer-events-none"
+                    style={{
+                      background: pkg.popular || pkg.bestValue
+                        ? 'linear-gradient(125deg, transparent 0%, transparent 45%, rgba(255,255,255,0.4) 50%, transparent 55%, transparent 100%)'
+                        : 'linear-gradient(125deg, transparent 0%, transparent 45%, rgba(255,255,255,0.2) 50%, transparent 55%, transparent 100%)',
+                    }}
+                  />
+
+                  <div className="text-center relative z-10">
+                    {/* Credits amount */}
+                    <div className="flex items-center justify-center gap-2 mb-1">
+                      <Coins className="w-5 h-5 text-yellow-400" />
+                      <span className="text-2xl font-bold bg-gradient-to-r from-yellow-200 to-amber-400 bg-clip-text text-transparent">
+                        {pkg.credits.toLocaleString()}
+                      </span>
+                    </div>
+                    <p className="text-xs text-yellow-500/70 mb-2">paid credits</p>
+
+                    {/* Bonus - Silver Shine */}
+                    {pkg.bonus && pkg.bonus > 0 && (
+                      <motion.div
+                        className="relative flex items-center justify-center gap-1.5 text-xs mb-3 mx-auto w-fit"
+                        animate={{ scale: [1, 1.02, 1] }}
+                        transition={{ duration: 2, repeat: Infinity }}
+                      >
+                        {/* Silver glow border */}
+                        <motion.div
+                          className="absolute -inset-[1px] rounded-full bg-gradient-to-r from-gray-400 via-slate-300 to-gray-400 blur-[2px]"
+                          animate={{ opacity: [0.4, 0.7, 0.4] }}
+                          transition={{ duration: 1.5, repeat: Infinity }}
+                        />
+                        <div className="relative flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r from-gray-800 via-slate-900 to-gray-800 border border-gray-400/30">
+                          <Gift className="w-3 h-3 text-gray-300 drop-shadow-[0_0_4px_rgba(203,213,225,0.8)]" />
+                          <span className="font-semibold bg-gradient-to-r from-gray-200 via-white to-gray-200 bg-clip-text text-transparent">
+                            +{pkg.bonus.toLocaleString()} {t("bonus")}
+                          </span>
+                        </div>
+                      </motion.div>
+                    )}
+
+                    {/* Price */}
+                    <div className="text-3xl font-bold text-white mb-1">
+                      ${pkg.price}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      ${((pkg.price / pkg.credits) * 100).toFixed(2)} per 100
+                    </div>
+
+                    {/* Buy indicator */}
+                    <motion.div
+                      className="mt-4 py-2 rounded-xl bg-gradient-to-r from-yellow-500/20 to-amber-500/20 border border-yellow-500/30 text-yellow-400 text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity"
+                      whileHover={{ scale: 1.02 }}
+                    >
+                      {t("clickToBuy") || "Click to Buy"}
+                    </motion.div>
+                  </div>
                 </div>
               </motion.div>
             </Link>

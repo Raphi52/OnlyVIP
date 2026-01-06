@@ -184,6 +184,8 @@ export function AdminCreatorProvider({ children }: { children: ReactNode }) {
         setSelectedCreatorState(data);
         // Also update in creators list
         setCreators(prev => prev.map(c => c.slug === data.slug ? data : c));
+        // Also update in agencyCreators list if present
+        setAgencyCreators(prev => prev.map(c => c.slug === data.slug ? { ...c, avatar: data.avatar, displayName: data.displayName } : c));
       }
     } catch (error) {
       console.error("Error refreshing creator:", error);

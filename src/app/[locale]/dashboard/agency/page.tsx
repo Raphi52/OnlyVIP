@@ -492,7 +492,7 @@ export default function AgencyDashboardPage() {
   ];
 
   return (
-    <div className="p-8">
+    <div className="p-4 pt-20 sm:p-6 sm:pt-20 lg:p-8 lg:pt-8">
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -576,7 +576,7 @@ export default function AgencyDashboardPage() {
                 Creators ({selectedAgency.stats.creatorsCount})
               </h2>
             </div>
-            <Link href="/dashboard/admin/creators">
+            <Link href="/dashboard/agency/creators">
               <Button variant="ghost" size="sm">
                 <Plus className="w-4 h-4 mr-1" />
                 Add Creator
@@ -589,7 +589,7 @@ export default function AgencyDashboardPage() {
               <Crown className="w-12 h-12 text-[var(--muted)] mx-auto mb-3" />
               <p className="text-[var(--muted)]">No creators in this agency yet</p>
               <p className="text-sm text-[var(--muted)]">
-                Add creators from the admin panel
+                Click &quot;Add Creator&quot; to add creators to your agency
               </p>
             </div>
           ) : (

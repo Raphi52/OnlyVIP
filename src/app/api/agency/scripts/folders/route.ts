@@ -92,11 +92,11 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { agencyId, name, description, color, icon, parentId } = body;
+    const { agencyId, creatorSlug, name, description, color, icon, parentId } = body;
 
-    if (!agencyId || !name) {
+    if (!agencyId || !creatorSlug || !name) {
       return NextResponse.json(
-        { error: "Agency ID and name are required" },
+        { error: "Agency ID, creator slug, and name are required" },
         { status: 400 }
       );
     }
@@ -129,6 +129,7 @@ export async function POST(request: NextRequest) {
 
     const folder = await prisma.scriptFolder.create({
       data: {
+        creatorSlug,
         agencyId,
         name,
         description: description || null,
@@ -187,7 +188,7 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: "Folder not found" }, { status: 404 });
     }
 
-    if (!(await verifyAgencyOwnership(session.user.id, folder.agencyId))) {
+    if (!folder.agencyId || !(await verifyAgencyOwnership(session.user.id, folder.agencyId))) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -261,7 +262,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "Folder not found" }, { status: 404 });
     }
 
-    if (!(await verifyAgencyOwnership(session.user.id, folder.agencyId))) {
+    if (!folder.agencyId || !(await verifyAgencyOwnership(session.user.id, folder.agencyId))) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

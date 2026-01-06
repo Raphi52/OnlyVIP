@@ -166,6 +166,7 @@ export function CryptoPaymentModal({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
+          onClick={onClose}
           className="absolute inset-0 bg-black/70 backdrop-blur-xl"
         />
 
@@ -174,12 +175,89 @@ export function CryptoPaymentModal({
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: "100%", opacity: 0 }}
           transition={{ type: "spring", damping: 30, stiffness: 400 }}
+          onClick={(e) => e.stopPropagation()}
           className="relative w-full sm:max-w-md overflow-hidden"
         >
-          {/* Glow effect */}
-          <div className="absolute -inset-[1px] bg-gradient-to-b from-orange-500/20 via-purple-500/20 to-transparent rounded-t-3xl sm:rounded-3xl blur-sm" />
+          {/* ✨ HOLOGRAPHIC EFFECT for modal */}
+          {/* Outer glow pulse */}
+          <motion.div
+            className="absolute -inset-4 rounded-[2rem] opacity-40 pointer-events-none"
+            style={{
+              background: 'radial-gradient(ellipse at center, rgba(255,215,0,0.3) 0%, transparent 70%)',
+            }}
+            animate={{
+              scale: [1, 1.05, 1],
+              opacity: [0.25, 0.4, 0.25]
+            }}
+            transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+          />
 
-          <div className="relative bg-[#0a0a0c]/95 border border-white/10 rounded-t-3xl sm:rounded-3xl overflow-hidden backdrop-blur-2xl">
+          {/* Animated rainbow border */}
+          <motion.div
+            className="absolute -inset-[2px] rounded-t-3xl sm:rounded-3xl pointer-events-none"
+            style={{
+              background: 'linear-gradient(90deg, #ff0080, #ff8c00, #ffef00, #00ff80, #00bfff, #8000ff, #ff0080)',
+              backgroundSize: '300% 100%',
+            }}
+            animate={{
+              backgroundPosition: ['0% 0%', '100% 0%', '0% 0%'],
+            }}
+            transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+          />
+
+          {/* Inner gold border */}
+          <div className="absolute -inset-[1px] rounded-t-3xl sm:rounded-3xl bg-gradient-to-br from-yellow-300 via-amber-400 to-yellow-500 pointer-events-none" />
+
+          {/* Sparkle particles */}
+          {[...Array(5)].map((_, i) => (
+            <motion.div
+              key={i}
+              className="absolute w-1 h-1 bg-white rounded-full z-10 pointer-events-none"
+              style={{
+                left: `${15 + i * 18}%`,
+                top: `${8 + (i % 3) * 15}%`,
+                boxShadow: '0 0 6px 2px rgba(255,255,255,0.8)',
+              }}
+              animate={{
+                opacity: [0, 1, 0],
+                scale: [0, 1.5, 0],
+              }}
+              transition={{
+                duration: 2,
+                repeat: Infinity,
+                delay: i * 0.4,
+                ease: "easeInOut",
+              }}
+            />
+          ))}
+
+          <div className="relative bg-[#0a0a0c]/98 rounded-t-3xl sm:rounded-3xl overflow-hidden backdrop-blur-2xl">
+            {/* Holographic interior effect */}
+            <motion.div
+              className="absolute inset-0 opacity-30 pointer-events-none"
+              style={{
+                background: 'linear-gradient(125deg, transparent 0%, rgba(255,0,128,0.12) 15%, rgba(0,255,255,0.12) 30%, rgba(255,255,0,0.08) 45%, rgba(128,0,255,0.12) 60%, rgba(0,255,128,0.08) 75%, transparent 100%)',
+                backgroundSize: '300% 300%',
+              }}
+              animate={{
+                backgroundPosition: ['0% 0%', '100% 100%', '0% 0%'],
+              }}
+              transition={{ duration: 6, repeat: Infinity, ease: "linear" }}
+            />
+
+            {/* Secondary sweep */}
+            <motion.div
+              className="absolute inset-0 opacity-20 pointer-events-none"
+              style={{
+                background: 'linear-gradient(-45deg, transparent 0%, rgba(0,200,255,0.1) 25%, rgba(255,100,200,0.1) 50%, rgba(100,255,150,0.1) 75%, transparent 100%)',
+                backgroundSize: '250% 250%',
+              }}
+              animate={{
+                backgroundPosition: ['100% 0%', '0% 100%', '100% 0%'],
+              }}
+              transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+            />
+
             {/* Drag indicator for mobile */}
             <div className="sm:hidden flex justify-center pt-3">
               <div className="w-10 h-1 rounded-full bg-white/20" />

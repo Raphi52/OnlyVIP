@@ -275,7 +275,7 @@ export default function AgencyCreatorsPage() {
   }
 
   return (
-    <div className="p-4 md:p-8">
+    <div className="p-4 pt-20 sm:p-6 sm:pt-20 lg:p-8 lg:pt-8">
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}

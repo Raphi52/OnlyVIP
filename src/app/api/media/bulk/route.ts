@@ -82,27 +82,6 @@ export async function POST(request: NextRequest) {
         });
         break;
 
-      case "publish":
-        const publishResult = await prisma.mediaContent.updateMany({
-          where: whereClause,
-          data: {
-            isPublished: true,
-            publishedAt: new Date(),
-          },
-        });
-        updated = publishResult.count;
-        break;
-
-      case "unpublish":
-        const unpublishResult = await prisma.mediaContent.updateMany({
-          where: whereClause,
-          data: {
-            isPublished: false,
-          },
-        });
-        updated = unpublishResult.count;
-        break;
-
       case "update":
         if (!data || typeof data !== "object") {
           return NextResponse.json(

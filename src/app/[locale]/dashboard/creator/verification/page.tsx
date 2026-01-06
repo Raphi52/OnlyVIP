@@ -159,7 +159,7 @@ export default function CreatorVerificationPage() {
   return (
     <div className="flex min-h-screen bg-black">
       <Sidebar />
-      <main className="flex-1 p-6 lg:p-8">
+      <main className="flex-1 p-4 pt-20 sm:p-6 sm:pt-20 lg:p-8 lg:pt-8">
         <div className="max-w-3xl mx-auto">
           {/* Header */}
           <div className="mb-8">

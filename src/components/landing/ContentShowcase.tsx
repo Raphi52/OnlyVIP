@@ -6,6 +6,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Lock, Play, Crown, Sparkles, Eye, Star, Coins, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui";
+import { useTranslations } from "next-intl";
 
 interface ContentShowcaseProps {
   creatorSlug?: string;
@@ -39,10 +40,12 @@ function ParallaxImage({
   media,
   index,
   basePath,
+  t,
 }: {
   media: MediaItem;
   index: number;
   basePath: string;
+  t: ReturnType<typeof useTranslations<"gallery">>;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({
@@ -158,24 +161,24 @@ function ParallaxImage({
               {isFree ? (
                 <>
                   <Eye className="w-4 h-4 text-white" />
-                  <span className="text-sm text-white font-medium">View Now</span>
+                  <span className="text-sm text-white font-medium">{t("viewNow")}</span>
                 </>
               ) : isPPV ? (
                 <>
                   <Coins className="w-4 h-4 text-white" />
                   <span className="text-sm text-white font-medium">
-                    Unlock for {media.ppvPriceCredits || 1000} credits
+                    {t("unlockFor", { credits: media.ppvPriceCredits || 1000 })}
                   </span>
                 </>
               ) : isVip ? (
                 <>
                   <Crown className="w-4 h-4 text-[var(--gold)]" />
-                  <span className="text-sm text-white font-medium">VIP Only</span>
+                  <span className="text-sm text-white font-medium">{t("vipOnly")}</span>
                 </>
               ) : (
                 <>
                   <Lock className="w-4 h-4 text-[var(--gold)]" />
-                  <span className="text-sm text-white font-medium">Subscribe to View</span>
+                  <span className="text-sm text-white font-medium">{t("subscribeToView")}</span>
                 </>
               )}
             </div>
@@ -192,6 +195,7 @@ export function ContentShowcase({ creatorSlug = "miacosta" }: ContentShowcasePro
   const [media, setMedia] = useState<MediaItem[]>([]);
   const [stats, setStats] = useState({ photos: 0, videos: 0 });
   const [isLoading, setIsLoading] = useState(true);
+  const t = useTranslations("gallery");
 
   useEffect(() => {
     async function fetchMedia() {
@@ -244,7 +248,7 @@ export function ContentShowcase({ creatorSlug = "miacosta" }: ContentShowcasePro
           className="flex flex-col items-center gap-2 cursor-pointer group"
         >
           <span className="text-xs uppercase tracking-[0.2em] text-gray-500 group-hover:text-[var(--gold)] transition-colors">
-            Explore More
+            {t("exploreMore")}
           </span>
           <div className="w-6 h-10 rounded-full border-2 border-gray-600 group-hover:border-[var(--gold)] transition-colors flex justify-center pt-2">
             <motion.div
@@ -275,7 +279,7 @@ export function ContentShowcase({ creatorSlug = "miacosta" }: ContentShowcasePro
             className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[var(--gold)]/10 border border-[var(--gold)]/20 text-[var(--gold)] text-sm font-medium mb-6"
           >
             <Sparkles className="w-4 h-4" />
-            Premium Content
+            {t("premiumContent")}
           </motion.span>
 
           <motion.h2
@@ -285,9 +289,9 @@ export function ContentShowcase({ creatorSlug = "miacosta" }: ContentShowcasePro
             transition={{ delay: 0.1 }}
             className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-4"
           >
-            Discover{" "}
-            <span className="gradient-gold-text">Exclusive</span>
-            <br />Photos & Videos
+            {t("discoverExclusive")}{" "}
+            <span className="gradient-gold-text"></span>
+            <br />{t("photosVideos")}
           </motion.h2>
 
           <motion.p
@@ -297,8 +301,7 @@ export function ContentShowcase({ creatorSlug = "miacosta" }: ContentShowcasePro
             transition={{ delay: 0.2 }}
             className="text-gray-400 text-lg max-w-2xl mx-auto mb-8"
           >
-            Get instant access to my private collection.
-            VIP members see everything unblurred.
+            {t("instantAccess")}
           </motion.p>
 
           {/* Stats row - clickable filters */}
@@ -317,7 +320,7 @@ export function ContentShowcase({ creatorSlug = "miacosta" }: ContentShowcasePro
                 >
                   <Eye className="w-5 h-5 text-[var(--gold)] group-hover:scale-110 transition-transform" />
                   <span className="text-gray-400 group-hover:text-white transition-colors">
-                    <span className="text-white font-semibold">{stats.photos}</span> Photos
+                    <span className="text-white font-semibold">{stats.photos}</span> {t("photos")}
                   </span>
                 </Link>
               )}
@@ -328,14 +331,14 @@ export function ContentShowcase({ creatorSlug = "miacosta" }: ContentShowcasePro
                 >
                   <Play className="w-5 h-5 text-[var(--gold)] group-hover:scale-110 transition-transform" />
                   <span className="text-gray-400 group-hover:text-white transition-colors">
-                    <span className="text-white font-semibold">{stats.videos}</span> Videos
+                    <span className="text-white font-semibold">{stats.videos}</span> {t("videos")}
                   </span>
                 </Link>
               )}
               <div className="flex items-center gap-2">
                 <Star className="w-5 h-5 text-[var(--gold)]" />
                 <span className="text-gray-400">
-                  <span className="text-white font-semibold">New</span> Updates
+                  {t("newUpdates")}
                 </span>
               </div>
             </motion.div>
@@ -363,6 +366,7 @@ export function ContentShowcase({ creatorSlug = "miacosta" }: ContentShowcasePro
                 media={item}
                 index={index}
                 basePath={basePath}
+                t={t}
               />
             ))}
           </div>
@@ -378,10 +382,10 @@ export function ContentShowcase({ creatorSlug = "miacosta" }: ContentShowcasePro
           <div className="inline-flex flex-col sm:flex-row items-center gap-4 p-6 rounded-2xl bg-white/5 border border-white/10">
             <div className="text-left">
               <p className="text-white font-semibold text-lg mb-1">
-                Want to see more?
+                {t("wantMore")}
               </p>
               <p className="text-gray-400 text-sm">
-                Unlock all content with VIP membership
+                {t("unlockAllVip")}
               </p>
             </div>
             <Link href={`${basePath}/membership`}>
@@ -391,7 +395,7 @@ export function ContentShowcase({ creatorSlug = "miacosta" }: ContentShowcasePro
                 className="gap-2 px-8 shadow-lg shadow-[var(--gold)]/20"
               >
                 <Crown className="w-5 h-5" />
-                Unlock Everything
+                {t("unlockEverything")}
               </Button>
             </Link>
           </div>

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { canEditCreator } from "@/lib/agency-permissions";
 
 // GET /api/creator/settings?creator=slug - Get creator settings
 export async function GET(request: NextRequest) {
@@ -26,10 +27,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Creator not found" }, { status: 404 });
     }
 
-    // Check if user owns this creator profile or is admin
+    // Check if user can edit this creator (handles agency permissions)
     const user = session.user as { id: string; role?: string };
     const isAdmin = user.role === "ADMIN";
-    if (creator.userId !== session.user.id && !isAdmin) {
+    const canEdit = await canEditCreator(creatorSlug, session.user.id, isAdmin);
+
+    if (!canEdit) {
       return NextResponse.json({ error: "Not authorized" }, { status: 403 });
     }
 
@@ -126,11 +129,13 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "Creator not found" }, { status: 404 });
     }
 
-    // Check if user owns this creator profile or is admin
+    // Check if user can edit this creator (handles agency permissions)
     const user = session.user as { id: string; role?: string };
     const isAdmin = user.role === "ADMIN";
-    if (creator.userId !== session.user.id && !isAdmin) {
-      return NextResponse.json({ error: "Not authorized" }, { status: 403 });
+    const canEdit = await canEditCreator(creatorSlug, session.user.id, isAdmin);
+
+    if (!canEdit) {
+      return NextResponse.json({ error: "Not authorized to edit this creator" }, { status: 403 });
     }
 
     // Check if new slug is available

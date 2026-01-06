@@ -119,7 +119,7 @@ export async function GET(request: NextRequest) {
       .map((s) => s.aiPersonalityId)
       .filter((id): id is string => id !== null);
 
-    const personalities = await prisma.agencyAiPersonality.findMany({
+    const personalities = await prisma.creatorAiPersonality.findMany({
       where: { id: { in: personalityIds } },
       select: { id: true, name: true },
     });

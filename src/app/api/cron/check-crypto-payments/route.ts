@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getPaymentStatus, mapPaymentStatus } from "@/lib/nowpayments";
-import { getMixPayPaymentResult, mapMixPayStatus } from "@/lib/mixpay";
 import { addCredits } from "@/lib/credits";
 
 // This endpoint should be called by a cron job every 30-60 seconds
-// to check for any missed webhooks from NOWPayments and MixPay
+// to check for any missed webhooks from NOWPayments
 
 export async function GET(request: NextRequest) {
   try {
@@ -17,11 +16,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Find pending payments from the last 24 hours (both providers)
+    // Find pending payments from the last 24 hours
     const pendingPayments = await prisma.payment.findMany({
       where: {
         status: "PENDING",
-        provider: { in: ["NOWPAYMENTS", "MIXPAY"] },
+        provider: "NOWPAYMENTS",
         createdAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
       },
       take: 20, // Process max 20 at a time
@@ -37,42 +36,18 @@ export async function GET(request: NextRequest) {
     for (const payment of pendingPayments) {
       try {
         const existingMetadata = payment.metadata ? JSON.parse(payment.metadata) : {};
-        let mappedStatus: string;
-        let updateData: Record<string, any> = {};
 
-        if (payment.provider === "MIXPAY") {
-          // Check MixPay payment
-          const { orderId, traceId } = existingMetadata;
-          if (!orderId && !traceId) {
-            results.push({ id: payment.id, provider: "MIXPAY", status: "error", action: "missing_ids" });
-            continue;
-          }
-
-          const result = await getMixPayPaymentResult(orderId, traceId);
-          if (!result.success) {
-            results.push({ id: payment.id, provider: "MIXPAY", status: "error", action: "api_failed" });
-            continue;
-          }
-
-          mappedStatus = mapMixPayStatus(result.data.status);
-          updateData = {
-            mixpayStatus: result.data.status,
-            txid: result.data.txid,
-            settlementAmount: result.data.settlementAmount,
-          };
-        } else {
-          // Check NOWPayments payment
-          if (!payment.providerTxId) {
-            results.push({ id: payment.id, provider: "NOWPAYMENTS", status: "error", action: "missing_txid" });
-            continue;
-          }
-
-          const status = await getPaymentStatus(payment.providerTxId);
-          mappedStatus = mapPaymentStatus(status.payment_status);
-          updateData = {
-            actuallyPaid: status.actually_paid,
-          };
+        // Check NOWPayments payment status
+        if (!payment.providerTxId) {
+          results.push({ id: payment.id, provider: "NOWPAYMENTS", status: "error", action: "missing_txid" });
+          continue;
         }
+
+        const status = await getPaymentStatus(payment.providerTxId);
+        const mappedStatus = mapPaymentStatus(status.payment_status);
+        const updateData = {
+          actuallyPaid: status.actually_paid,
+        };
 
         if (mappedStatus === payment.status) {
           results.push({ id: payment.id, provider: payment.provider, status: mappedStatus, action: "no_change" });

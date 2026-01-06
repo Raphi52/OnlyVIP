@@ -2,19 +2,24 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { motion } from "framer-motion";
 import { Home, Image, MessageCircle, CreditCard } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const navItems = [
-  { href: "/dashboard", icon: Home, label: "Home" },
-  { href: "/dashboard/library", icon: Image, label: "Library" },
-  { href: "/dashboard/messages", icon: MessageCircle, label: "Messages" },
-  { href: "/dashboard/billing", icon: CreditCard, label: "Billing" },
+const navItemsDef = [
+  { href: "/dashboard", icon: Home, labelKey: "nav.dashboard" },
+  { href: "/dashboard/library", icon: Image, labelKey: "nav.myLibrary" },
+  { href: "/dashboard/messages", icon: MessageCircle, labelKey: "nav.messages" },
+  { href: "/dashboard/billing", icon: CreditCard, labelKey: "nav.billing" },
 ];
 
 export function MobileNav() {
   const pathname = usePathname();
+  const t = useTranslations("dashboard");
+
+  // Create translated nav items
+  const navItems = navItemsDef.map(item => ({ ...item, label: t(item.labelKey) }));
 
   return (
     <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-black/95 backdrop-blur-xl border-t border-white/10 safe-bottom">

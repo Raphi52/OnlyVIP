@@ -90,7 +90,9 @@ services:
     command: >
       -c 'apk add --no-cache curl && while true; do
         echo "[$(date)] Processing AI queue...";
-        curl -s -H "x-cron-secret: $${CRON_SECRET}" "$${APP_URL}/api/ai/process-queue" || echo "Request failed";
+        curl -s -H "x-cron-secret: $${CRON_SECRET}" "$${APP_URL}/api/ai/process-queue" || echo "AI queue failed";
+        curl -s "$${APP_URL}/api/cron/follow-ups?secret=$${CRON_SECRET}" || echo "Follow-ups failed";
+        curl -s "$${APP_URL}/api/cron/process-bumps?secret=$${CRON_SECRET}" || echo "Bumps failed";
         sleep 30;
       done'
 

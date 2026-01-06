@@ -17,6 +17,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTranslations } from "next-intl";
 
 interface Script {
   id: string;
@@ -43,8 +44,19 @@ const CATEGORY_CONFIG: Record<string, { icon: string; color: string; bg: string;
   CUSTOM: { icon: "✨", color: "text-pink-400", bg: "bg-pink-500/20", border: "border-pink-500/30" },
 };
 
+// Category label translations mapping
+const CATEGORY_LABELS: Record<string, Record<string, string>> = {
+  GREETING: { en: "Greeting", fr: "Salutation", es: "Saludo", de: "Begrüßung", it: "Saluto", pt: "Saudação" },
+  PPV_PITCH: { en: "PPV Pitch", fr: "Pitch PPV", es: "Pitch PPV", de: "PPV Pitch", it: "Pitch PPV", pt: "Pitch PPV" },
+  FOLLOW_UP: { en: "Follow Up", fr: "Relance", es: "Seguimiento", de: "Nachfassen", it: "Follow Up", pt: "Acompanhamento" },
+  CLOSING: { en: "Closing", fr: "Conclusion", es: "Cierre", de: "Abschluss", it: "Chiusura", pt: "Fechamento" },
+  CUSTOM: { en: "Custom", fr: "Personnalisé", es: "Personalizado", de: "Benutzerdefiniert", it: "Personalizzato", pt: "Personalizado" },
+  OBJECTION: { en: "Objection", fr: "Objection", es: "Objeción", de: "Einwand", it: "Obiezione", pt: "Objeção" },
+};
+
 export default function ChatterScriptsPage() {
   const { data: session } = useSession();
+  const t = useTranslations("chatterScripts");
   const [scripts, setScripts] = useState<Script[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -52,6 +64,11 @@ export default function ChatterScriptsPage() {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const locale = typeof window !== "undefined" ? window.location.pathname.split("/")[1] : "en";
+
+  const getCategoryLabel = (cat: string) => {
+    return CATEGORY_LABELS[cat]?.[locale] || CATEGORY_LABELS[cat]?.en || cat.replace(/_/g, " ");
+  };
 
   useEffect(() => {
     const fetchScripts = async () => {
@@ -105,10 +122,10 @@ export default function ChatterScriptsPage() {
           <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center">
             <FileText className="w-4 h-4 text-white" />
           </div>
-          <h1 className="text-xl font-bold text-white">Scripts Library</h1>
+          <h1 className="text-xl font-bold text-white">{t("title")}</h1>
         </div>
         <p className="text-sm text-gray-400">
-          Quick-copy messages for better conversions
+          {t("subtitle")}
         </p>
       </motion.div>
 
@@ -125,7 +142,7 @@ export default function ChatterScriptsPage() {
               <FileText className="w-5 h-5 text-purple-400" />
             </div>
             <div>
-              <p className="text-xs text-gray-500">Total</p>
+              <p className="text-xs text-gray-500">{t("total")}</p>
               <p className="text-lg font-bold text-white">{scripts.length}</p>
             </div>
           </div>
@@ -140,7 +157,7 @@ export default function ChatterScriptsPage() {
                   <span className="text-xl">{config.icon}</span>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500">{cat.label}</p>
+                  <p className="text-xs text-gray-500">{getCategoryLabel(cat.value)}</p>
                   <p className="text-lg font-bold text-white">{cat.count}</p>
                 </div>
               </div>
@@ -162,7 +179,7 @@ export default function ChatterScriptsPage() {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search scripts..."
+            placeholder={t("searchPlaceholder")}
             className="w-full pl-10 pr-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder:text-gray-500 focus:outline-none focus:border-purple-500/50 focus:bg-white/10 transition-all"
           />
         </div>
@@ -185,7 +202,7 @@ export default function ChatterScriptsPage() {
           )}
         >
           <Sparkles className="w-3.5 h-3.5" />
-          All
+          {t("all")}
         </button>
         {categories.map((cat) => {
           const config = getCategoryConfig(cat.value);
@@ -201,7 +218,7 @@ export default function ChatterScriptsPage() {
               )}
             >
               <span>{config.icon}</span>
-              {cat.label}
+              {getCategoryLabel(cat.value)}
             </button>
           );
         })}
@@ -222,12 +239,12 @@ export default function ChatterScriptsPage() {
             <FileText className="w-10 h-10 text-purple-400" />
           </div>
           <h2 className="text-lg font-semibold text-white mb-2 text-center">
-            No scripts found
+            {t("noScriptsFound")}
           </h2>
           <p className="text-sm text-gray-400 text-center max-w-xs">
             {search
-              ? "Try a different search term"
-              : "Your agency hasn't added any scripts yet"}
+              ? t("tryDifferentSearch")
+              : t("noScriptsYet")}
           </p>
         </motion.div>
       ) : (
@@ -262,7 +279,7 @@ export default function ChatterScriptsPage() {
                             config.bg, config.color
                           )}>
                             <span>{config.icon}</span>
-                            {script.category.replace(/_/g, " ")}
+                            {getCategoryLabel(script.category)}
                           </span>
                           {script.creatorSlug && (
                             <span className="px-2 py-0.5 rounded-full text-xs bg-white/10 text-gray-400">
@@ -347,12 +364,12 @@ export default function ChatterScriptsPage() {
                             {isCopied ? (
                               <>
                                 <Check className="w-4 h-4" />
-                                Copied!
+                                {t("copied")}
                               </>
                             ) : (
                               <>
                                 <Copy className="w-4 h-4" />
-                                Copy
+                                {t("copy")}
                               </>
                             )}
                           </motion.button>
@@ -394,7 +411,7 @@ export default function ChatterScriptsPage() {
                         ) : (
                           <Copy className="w-4 h-4" />
                         )}
-                        <span className="hidden sm:inline">{isCopied ? "Copied!" : "Copy"}</span>
+                        <span className="hidden sm:inline">{isCopied ? t("copied") : t("copy")}</span>
                       </motion.button>
                     </div>
                   )}

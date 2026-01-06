@@ -16,11 +16,11 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { agencyId, languages = ["fr"], overwrite = false } = body;
+    const { agencyId, creatorSlug, languages = ["fr"], overwrite = false } = body;
 
-    if (!agencyId) {
+    if (!agencyId || !creatorSlug) {
       return NextResponse.json(
-        { error: "Agency ID is required" },
+        { error: "Agency ID and creator slug are required" },
         { status: 400 }
       );
     }
@@ -85,6 +85,7 @@ export async function POST(request: NextRequest) {
 
       const script = await prisma.script.create({
         data: {
+          creatorSlug,
           agencyId,
           name: scriptData.name,
           content: scriptData.content,

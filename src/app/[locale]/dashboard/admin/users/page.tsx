@@ -265,7 +265,7 @@ export default function AdminUsersPage() {
   }
 
   return (
-    <div className="p-4 sm:p-8">
+    <div className="p-4 pt-20 sm:p-6 sm:pt-20 lg:p-8 lg:pt-8">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -798,7 +798,6 @@ export default function AdminUsersPage() {
         <>
           <div
             className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50"
-            onClick={() => setCreditsModal(null)}
           />
           <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4">
             <motion.div
@@ -830,12 +829,12 @@ export default function AdminUsersPage() {
                   <p className="text-[10px] sm:text-xs text-[var(--muted)] mb-1.5 sm:mb-2">Current Balance</p>
                   <div className="flex items-center gap-3 sm:gap-4">
                     <div className="flex items-center gap-1.5">
-                      <div className="w-2 h-2 rounded-full bg-emerald-400"></div>
-                      <span className="text-xs sm:text-sm text-emerald-400">{creditsModal.paidCredits.toLocaleString()} paid</span>
+                      <div className="w-2 h-2 rounded-full bg-yellow-400 shadow-[0_0_6px_rgba(250,204,21,0.6)]"></div>
+                      <span className="text-xs sm:text-sm text-yellow-400">{creditsModal.paidCredits.toLocaleString()} paid</span>
                     </div>
                     <div className="flex items-center gap-1.5">
-                      <div className="w-2 h-2 rounded-full bg-purple-400"></div>
-                      <span className="text-xs sm:text-sm text-purple-400">{creditsModal.bonusCredits.toLocaleString()} bonus</span>
+                      <div className="w-2 h-2 rounded-full bg-gray-400 shadow-[0_0_6px_rgba(156,163,175,0.6)]"></div>
+                      <span className="text-xs sm:text-sm text-gray-300">{creditsModal.bonusCredits.toLocaleString()} bonus</span>
                     </div>
                   </div>
                 </div>
@@ -850,8 +849,8 @@ export default function AdminUsersPage() {
                       onClick={() => setCreditType("PAID")}
                       className={`flex-1 py-2.5 sm:py-3 rounded-xl border transition-all ${
                         creditType === "PAID"
-                          ? "bg-emerald-500/20 border-emerald-500 text-emerald-400"
-                          : "bg-[var(--background)] border-[var(--border)] text-[var(--muted)] hover:border-emerald-500/50"
+                          ? "bg-yellow-500/20 border-yellow-500 text-yellow-400 shadow-[0_0_10px_rgba(250,204,21,0.2)]"
+                          : "bg-[var(--background)] border-[var(--border)] text-[var(--muted)] hover:border-yellow-500/50"
                       }`}
                     >
                       <div className="text-center">
@@ -863,8 +862,8 @@ export default function AdminUsersPage() {
                       onClick={() => setCreditType("BONUS")}
                       className={`flex-1 py-2.5 sm:py-3 rounded-xl border transition-all ${
                         creditType === "BONUS"
-                          ? "bg-purple-500/20 border-purple-500 text-purple-400"
-                          : "bg-[var(--background)] border-[var(--border)] text-[var(--muted)] hover:border-purple-500/50"
+                          ? "bg-gray-500/20 border-gray-400 text-gray-300 shadow-[0_0_10px_rgba(156,163,175,0.2)]"
+                          : "bg-[var(--background)] border-[var(--border)] text-[var(--muted)] hover:border-gray-400/50"
                       }`}
                     >
                       <div className="text-center">
@@ -899,8 +898,8 @@ export default function AdminUsersPage() {
                       onClick={() => setCreditsAmount(amount.toString())}
                       className={`py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors ${
                         creditType === "PAID"
-                          ? "bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20"
-                          : "bg-purple-500/10 text-purple-400 hover:bg-purple-500/20"
+                          ? "bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20 border border-yellow-500/20"
+                          : "bg-gray-500/10 text-gray-300 hover:bg-gray-500/20 border border-gray-500/20"
                       }`}
                     >
                       {amount >= 1000 ? `${amount/1000}k` : amount}
@@ -920,8 +919,11 @@ export default function AdminUsersPage() {
                     Cancel
                   </Button>
                   <Button
-                    variant="premium"
-                    className={`flex-1 text-sm ${creditType === "BONUS" ? "!bg-purple-500 hover:!bg-purple-600" : ""}`}
+                    className={`flex-1 text-sm font-bold ${
+                      creditType === "PAID"
+                        ? "bg-gradient-to-r from-yellow-400 to-amber-500 hover:from-yellow-500 hover:to-amber-600 text-black shadow-[0_0_15px_rgba(250,204,21,0.3)]"
+                        : "bg-gradient-to-r from-gray-400 to-slate-500 hover:from-gray-500 hover:to-slate-600 text-black shadow-[0_0_15px_rgba(156,163,175,0.3)]"
+                    }`}
                     onClick={handleGiveCredits}
                     disabled={isGivingCredits || !creditsAmount}
                   >
@@ -930,7 +932,7 @@ export default function AdminUsersPage() {
                     ) : (
                       <>
                         <Coins className="w-4 h-4 mr-1.5" />
-                        Give
+                        Give {creditType === "PAID" ? "Paid" : "Bonus"}
                       </>
                     )}
                   </Button>
@@ -946,7 +948,6 @@ export default function AdminUsersPage() {
         <>
           <div
             className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50"
-            onClick={() => setDeleteModal(null)}
           />
           <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4">
             <motion.div

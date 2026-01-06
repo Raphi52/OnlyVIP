@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { Metadata } from "next";
 import { auth } from "@/lib/auth";
-import { ChatterNav } from "@/components/chatter/ChatterNav";
+import ChatterNav from "@/components/chatter/ChatterNav";
 import { ShiftWarningBanner } from "@/components/chatter/ShiftWarningBanner";
 
 // Prevent chatter pages from being indexed

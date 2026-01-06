@@ -6,10 +6,10 @@ export async function GET() {
   try {
     const [photoCount, videoCount, userCount] = await Promise.all([
       prisma.mediaContent.count({
-        where: { type: "PHOTO", isPublished: true },
+        where: { type: "PHOTO" },
       }),
       prisma.mediaContent.count({
-        where: { type: "VIDEO", isPublished: true },
+        where: { type: "VIDEO" },
       }),
       prisma.user.count(),
     ]);

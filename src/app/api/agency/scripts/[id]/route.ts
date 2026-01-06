@@ -61,8 +61,8 @@ export async function GET(
       return NextResponse.json({ error: "Script not found" }, { status: 404 });
     }
 
-    // Verify access
-    if (!(await verifyAgencyOwnership(session.user.id, script.agencyId))) {
+    // Verify access - script must have an agencyId for this agency API
+    if (!script.agencyId || !(await verifyAgencyOwnership(session.user.id, script.agencyId))) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -105,20 +105,20 @@ export async function POST(
       return NextResponse.json({ error: "Script not found" }, { status: 404 });
     }
 
-    // Verify ownership
-    if (!(await verifyAgencyOwnership(session.user.id, original.agencyId))) {
+    // Verify ownership - script must have an agencyId for this agency API
+    if (!original.agencyId || !(await verifyAgencyOwnership(session.user.id, original.agencyId))) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     // Create duplicate
     const duplicate = await prisma.script.create({
       data: {
+        creatorSlug: original.creatorSlug,
         agencyId: original.agencyId,
         name: name || `${original.name} (Copy)`,
         content: original.content,
         category: original.category,
         folderId: original.folderId,
-        creatorSlug: original.creatorSlug,
         authorId: session.user.id,
         status: "APPROVED", // Duplicates are auto-approved
         approvedById: session.user.id,

@@ -150,7 +150,7 @@ export default function AdminVerificationsPage() {
   const pendingCount = verifications.filter((v) => v.status === "PENDING").length;
 
   return (
-    <div className="min-h-screen bg-[var(--background)] p-6">
+    <div className="min-h-screen bg-[var(--background)] p-4 pt-20 sm:p-6 sm:pt-20 lg:p-8 lg:pt-8">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
@@ -367,7 +367,6 @@ export default function AdminVerificationsPage() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4"
-              onClick={() => setSelectedVerification(null)}
             >
               <motion.div
                 initial={{ scale: 0.9, opacity: 0 }}

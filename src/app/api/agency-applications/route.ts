@@ -195,7 +195,7 @@ export async function PATCH(request: NextRequest) {
         data: { status },
       });
 
-      // If ACCEPTED, link creator to agency
+      // If ACCEPTED, link creator to agency AND enable agency management
       if (status === "ACCEPTED" && application.modelListingId) {
         const listing = await tx.modelListing.findUnique({
           where: { id: application.modelListingId },
@@ -203,14 +203,25 @@ export async function PATCH(request: NextRequest) {
         });
 
         if (listing) {
-          // Assign creator to agency
+          // Get creator's current user ID for audit trail
+          const existingCreator = await tx.creator.findUnique({
+            where: { id: listing.creatorId },
+            select: { userId: true },
+          });
+
+          // Assign creator to agency AND enable agency-managed mode
           await tx.creator.update({
             where: { id: listing.creatorId },
-            data: { agencyId: application.agencyId },
+            data: {
+              agencyId: application.agencyId,
+              isAgencyManaged: true,
+              agencyManagedAt: new Date(),
+              originalOwnerId: existingCreator?.userId || null,
+            },
           });
 
           console.log(
-            `[Application] Creator ${listing.creatorId} joined agency ${application.agencyId}`
+            `[Application] Creator ${listing.creatorId} joined agency ${application.agencyId} (agency-managed mode enabled)`
           );
         }
       }

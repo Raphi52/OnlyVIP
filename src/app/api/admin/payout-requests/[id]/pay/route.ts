@@ -13,13 +13,8 @@ export async function POST(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Check if user is admin
-    const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      select: { role: true },
-    });
-
-    if (user?.role !== "ADMIN") {
+    const isAdmin = (session.user as { role?: string })?.role === "ADMIN";
+    if (!isAdmin) {
       return NextResponse.json({ error: "Admin access required" }, { status: 403 });
     }
 
@@ -30,6 +25,15 @@ export async function POST(
     // Get the payout request
     const payoutRequest = await prisma.payoutRequest.findUnique({
       where: { id },
+      include: {
+        creator: {
+          select: {
+            slug: true,
+            pendingBalance: true,
+            totalPaid: true,
+          },
+        },
+      },
     });
 
     if (!payoutRequest) {
@@ -37,13 +41,13 @@ export async function POST(
     }
 
     if (payoutRequest.status === "PAID") {
-      return NextResponse.json({ error: "Payout already processed" }, { status: 400 });
+      return NextResponse.json({ error: "Payout already marked as paid" }, { status: 400 });
     }
 
-    // Use transaction to update everything atomically
+    // Use transaction to update payout and creator balance
     const result = await prisma.$transaction(async (tx) => {
-      // 1. Mark payout request as paid
-      const updatedRequest = await tx.payoutRequest.update({
+      // Mark payout as paid
+      const updatedPayout = await tx.payoutRequest.update({
         where: { id },
         data: {
           status: "PAID",
@@ -53,24 +57,20 @@ export async function POST(
         },
       });
 
-      // 2. Update creator balances
-      const creator = await tx.creator.findUnique({
+      // Deduct from creator's pending balance and add to totalPaid
+      await tx.creator.update({
         where: { slug: payoutRequest.creatorSlug },
-        select: { pendingBalance: true, totalPaid: true },
+        data: {
+          pendingBalance: {
+            decrement: payoutRequest.amount,
+          },
+          totalPaid: {
+            increment: payoutRequest.amount,
+          },
+        },
       });
 
-      if (creator) {
-        await tx.creator.update({
-          where: { slug: payoutRequest.creatorSlug },
-          data: {
-            pendingBalance: Math.max(0, creator.pendingBalance - payoutRequest.amount),
-            totalPaid: creator.totalPaid + payoutRequest.amount,
-          },
-        });
-      }
-
-      // 3. Mark all PENDING CreatorEarnings as PAID (up to the payout amount)
-      // This marks earnings that were accumulated up to this payout
+      // Mark all PENDING creator earnings as PAID
       await tx.creatorEarning.updateMany({
         where: {
           creatorSlug: payoutRequest.creatorSlug,
@@ -79,26 +79,21 @@ export async function POST(
         data: {
           status: "PAID",
           paidAt: new Date(),
-          payoutTxId: txHash || updatedRequest.id,
+          payoutTxId: txHash || updatedPayout.id,
         },
       });
 
-      return updatedRequest;
+      return updatedPayout;
     });
 
     return NextResponse.json({
       success: true,
-      request: {
-        id: result.id,
-        status: result.status,
-        paidAt: result.paidAt,
-        txHash: result.txHash,
-      },
+      payoutRequest: result,
     });
   } catch (error) {
-    console.error("Error processing payout:", error);
+    console.error("Error marking payout as paid:", error);
     return NextResponse.json(
-      { error: "Failed to process payout" },
+      { error: "Failed to mark payout as paid" },
       { status: 500 }
     );
   }

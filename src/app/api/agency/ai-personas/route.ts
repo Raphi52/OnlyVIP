@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
     const whereClause: any = { agencyId };
     if (creatorSlug) whereClause.creatorSlug = creatorSlug;
 
-    const personalities = await prisma.agencyAiPersonality.findMany({
+    const personalities = await prisma.creatorAiPersonality.findMany({
       where: whereClause,
       orderBy: [{ creatorSlug: "asc" }, { createdAt: "desc" }],
     });
@@ -90,6 +90,8 @@ export async function GET(request: NextRequest) {
         return {
           ...personality,
           personality: JSON.parse(personality.personality || "{}"),
+          toneKeywords: personality.toneKeywords ? JSON.parse(personality.toneKeywords) : [],
+          handoffKeywords: personality.handoffKeywords ? JSON.parse(personality.handoffKeywords) : [],
           stats: {
             revenue30d: earnings._sum.grossAmount || 0,
             sales30d: earnings._count,
@@ -127,10 +129,21 @@ export async function POST(request: NextRequest) {
       personality,
       trafficShare,
       primaryTone,
+      toneKeywords,
+      language, // Language targeting for this persona
       aiMediaEnabled,
       aiMediaFrequency,
       aiPPVRatio,
       aiTeasingEnabled,
+      // Handoff settings
+      autoHandoffEnabled,
+      handoffSpendThreshold,
+      handoffOnHighIntent,
+      handoffKeywords,
+      // Give-up settings
+      giveUpOnNonPaying,
+      giveUpMessageThreshold,
+      giveUpAction,
     } = body;
 
     if (!agencyId || !creatorSlug || !name) {
@@ -163,7 +176,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create personality
-    const aiPersonality = await prisma.agencyAiPersonality.create({
+    const aiPersonality = await prisma.creatorAiPersonality.create({
       data: {
         agencyId,
         creatorSlug,
@@ -171,10 +184,21 @@ export async function POST(request: NextRequest) {
         personality: JSON.stringify(personality || {}),
         trafficShare: trafficShare ?? 100,
         primaryTone: primaryTone || null,
+        toneKeywords: toneKeywords ? JSON.stringify(toneKeywords) : null,
+        language: language || null, // Language targeting
         aiMediaEnabled: aiMediaEnabled ?? true,
         aiMediaFrequency: aiMediaFrequency ?? 4,
         aiPPVRatio: aiPPVRatio ?? 30,
         aiTeasingEnabled: aiTeasingEnabled ?? true,
+        // Handoff settings
+        autoHandoffEnabled: autoHandoffEnabled ?? true,
+        handoffSpendThreshold: handoffSpendThreshold ?? 40,
+        handoffOnHighIntent: handoffOnHighIntent ?? true,
+        handoffKeywords: handoffKeywords ? JSON.stringify(handoffKeywords) : null,
+        // Give-up settings
+        giveUpOnNonPaying: giveUpOnNonPaying ?? false,
+        giveUpMessageThreshold: giveUpMessageThreshold ?? 20,
+        giveUpAction: giveUpAction ?? "stop",
       },
     });
 
@@ -183,6 +207,8 @@ export async function POST(request: NextRequest) {
         personality: {
           ...aiPersonality,
           personality: JSON.parse(aiPersonality.personality),
+          toneKeywords: aiPersonality.toneKeywords ? JSON.parse(aiPersonality.toneKeywords) : [],
+          handoffKeywords: aiPersonality.handoffKeywords ? JSON.parse(aiPersonality.handoffKeywords) : [],
         },
       },
       { status: 201 }
@@ -212,10 +238,21 @@ export async function PATCH(request: NextRequest) {
       trafficShare,
       isActive,
       primaryTone,
+      toneKeywords,
+      language, // Language targeting for this persona
       aiMediaEnabled,
       aiMediaFrequency,
       aiPPVRatio,
       aiTeasingEnabled,
+      // Handoff settings
+      autoHandoffEnabled,
+      handoffSpendThreshold,
+      handoffOnHighIntent,
+      handoffKeywords,
+      // Give-up settings
+      giveUpOnNonPaying,
+      giveUpMessageThreshold,
+      giveUpAction,
     } = body;
 
     if (!id) {
@@ -225,10 +262,10 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    // Get personality and verify agency ownership
-    const existingPersonality = await prisma.agencyAiPersonality.findUnique({
+    // Get personality and verify ownership
+    const existingPersonality = await prisma.creatorAiPersonality.findUnique({
       where: { id },
-      select: { agencyId: true },
+      select: { agencyId: true, creatorSlug: true },
     });
 
     if (!existingPersonality) {
@@ -238,13 +275,25 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    const { isOwner } = await verifyAgencyOwnership(
-      session.user.id,
-      existingPersonality.agencyId
-    );
+    // Verify agency ownership if this persona belongs to an agency
+    if (existingPersonality.agencyId) {
+      const { isOwner } = await verifyAgencyOwnership(
+        session.user.id,
+        existingPersonality.agencyId
+      );
 
-    if (!isOwner) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      if (!isOwner) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
+    } else {
+      // For personas without agency, verify creator ownership
+      const creator = await prisma.creator.findFirst({
+        where: { slug: existingPersonality.creatorSlug },
+        select: { userId: true },
+      });
+      if (creator?.userId !== session.user.id) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
     }
 
     const updateData: any = {};
@@ -254,12 +303,25 @@ export async function PATCH(request: NextRequest) {
     if (trafficShare !== undefined) updateData.trafficShare = trafficShare;
     if (isActive !== undefined) updateData.isActive = isActive;
     if (primaryTone !== undefined) updateData.primaryTone = primaryTone || null;
+    if (toneKeywords !== undefined)
+      updateData.toneKeywords = toneKeywords ? JSON.stringify(toneKeywords) : null;
+    if (language !== undefined) updateData.language = language || null;
     if (aiMediaEnabled !== undefined) updateData.aiMediaEnabled = aiMediaEnabled;
     if (aiMediaFrequency !== undefined) updateData.aiMediaFrequency = aiMediaFrequency;
     if (aiPPVRatio !== undefined) updateData.aiPPVRatio = aiPPVRatio;
     if (aiTeasingEnabled !== undefined) updateData.aiTeasingEnabled = aiTeasingEnabled;
+    // Handoff settings
+    if (autoHandoffEnabled !== undefined) updateData.autoHandoffEnabled = autoHandoffEnabled;
+    if (handoffSpendThreshold !== undefined) updateData.handoffSpendThreshold = handoffSpendThreshold;
+    if (handoffOnHighIntent !== undefined) updateData.handoffOnHighIntent = handoffOnHighIntent;
+    if (handoffKeywords !== undefined)
+      updateData.handoffKeywords = handoffKeywords ? JSON.stringify(handoffKeywords) : null;
+    // Give-up settings
+    if (giveUpOnNonPaying !== undefined) updateData.giveUpOnNonPaying = giveUpOnNonPaying;
+    if (giveUpMessageThreshold !== undefined) updateData.giveUpMessageThreshold = giveUpMessageThreshold;
+    if (giveUpAction !== undefined) updateData.giveUpAction = giveUpAction;
 
-    const updatedPersonality = await prisma.agencyAiPersonality.update({
+    const updatedPersonality = await prisma.creatorAiPersonality.update({
       where: { id },
       data: updateData,
     });
@@ -268,6 +330,8 @@ export async function PATCH(request: NextRequest) {
       personality: {
         ...updatedPersonality,
         personality: JSON.parse(updatedPersonality.personality),
+        toneKeywords: updatedPersonality.toneKeywords ? JSON.parse(updatedPersonality.toneKeywords) : [],
+        handoffKeywords: updatedPersonality.handoffKeywords ? JSON.parse(updatedPersonality.handoffKeywords) : [],
       },
     });
   } catch (error) {
@@ -297,10 +361,10 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    // Get personality and verify agency ownership
-    const personality = await prisma.agencyAiPersonality.findUnique({
+    // Get personality and verify ownership
+    const personality = await prisma.creatorAiPersonality.findUnique({
       where: { id },
-      select: { agencyId: true },
+      select: { agencyId: true, creatorSlug: true },
     });
 
     if (!personality) {
@@ -310,16 +374,28 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    const { isOwner } = await verifyAgencyOwnership(
-      session.user.id,
-      personality.agencyId
-    );
+    // Verify agency ownership if this persona belongs to an agency
+    if (personality.agencyId) {
+      const { isOwner } = await verifyAgencyOwnership(
+        session.user.id,
+        personality.agencyId
+      );
 
-    if (!isOwner) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      if (!isOwner) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
+    } else {
+      // For personas without agency, verify creator ownership
+      const creator = await prisma.creator.findFirst({
+        where: { slug: personality.creatorSlug },
+        select: { userId: true },
+      });
+      if (creator?.userId !== session.user.id) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
     }
 
-    await prisma.agencyAiPersonality.delete({ where: { id } });
+    await prisma.creatorAiPersonality.delete({ where: { id } });
 
     return NextResponse.json({ success: true });
   } catch (error) {

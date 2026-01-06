@@ -91,6 +91,9 @@ export default function ProtectedMedia({
     };
   }, []);
 
+  // Placeholder gradient for locked content - never expose real URL
+  const lockedPlaceholder = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' style='stop-color:%23d4af37'/%3E%3Cstop offset='50%25' style='stop-color:%23b8860b'/%3E%3Cstop offset='100%25' style='stop-color:%23996515'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect fill='url(%23g)' width='400' height='400'/%3E%3C/svg%3E";
+
   if (isLocked) {
     return (
       <div
@@ -99,26 +102,17 @@ export default function ProtectedMedia({
         onContextMenu={handleContextMenu}
         onDragStart={handleDragStart}
       >
-        {/* Blurred preview */}
+        {/* Secure placeholder - real URL is NEVER in DOM when locked */}
         <div className="absolute inset-0 blur-xl scale-110">
-          {type === "image" ? (
-            <Image
-              src={src}
-              alt=""
-              fill
-              sizes="100vw"
-              className="object-cover"
-              draggable={false}
-            />
-          ) : (
-            <video
-              src={src}
-              poster={poster}
-              className="w-full h-full object-cover"
-              muted
-              playsInline
-            />
-          )}
+          <Image
+            src={lockedPlaceholder}
+            alt=""
+            fill
+            sizes="100vw"
+            className="object-cover"
+            draggable={false}
+            unoptimized
+          />
         </div>
 
         {/* Lock overlay */}

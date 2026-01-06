@@ -23,9 +23,19 @@ import {
   Send,
   Copy,
   Check,
+  Users,
+  Upload,
+  Shield,
+  X,
 } from "lucide-react";
 import { Button, Card, Input } from "@/components/ui";
 import { cn } from "@/lib/utils";
+import {
+  RevenueChart,
+  RevenueBreakdown,
+  RevenueKpiCard,
+  type Period,
+} from "@/components/charts";
 
 interface Earning {
   id: string;
@@ -98,6 +108,34 @@ interface AgencyPayoutData {
   payoutHistory: PayoutRequest[];
 }
 
+interface ChartData {
+  period: Period;
+  summary: {
+    total: number;
+    change: number;
+    avgDaily: number;
+  };
+  daily: {
+    date: string;
+    revenue: number;
+    subscriptions: number;
+    ppv: number;
+    tips: number;
+    media: number;
+  }[];
+  breakdown: {
+    type: string;
+    amount: number;
+    percentage: number;
+  }[];
+  byCreator: {
+    slug: string;
+    name: string;
+    amount: number;
+    percentage: number;
+  }[];
+}
+
 export default function AgencyEarningsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -106,6 +144,11 @@ export default function AgencyEarningsPage() {
   const [page, setPage] = useState(1);
   const [typeFilter, setTypeFilter] = useState<string>("");
 
+  // Chart state
+  const [chartPeriod, setChartPeriod] = useState<Period>("30d");
+  const [chartData, setChartData] = useState<ChartData | null>(null);
+  const [isLoadingChart, setIsLoadingChart] = useState(true);
+
   // Payout state
   const [agencyId, setAgencyId] = useState<string | null>(null);
   const [payoutData, setPayoutData] = useState<AgencyPayoutData | null>(null);
@@ -113,6 +156,8 @@ export default function AgencyEarningsPage() {
   const [walletAddress, setWalletAddress] = useState("");
   const [isRequesting, setIsRequesting] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [idPhoto, setIdPhoto] = useState<File | null>(null);
+  const [idPhotoPreview, setIdPhotoPreview] = useState<string | null>(null);
 
   const isAgencyOwner = (session?.user as any)?.isAgencyOwner === true;
 
@@ -150,6 +195,29 @@ export default function AgencyEarningsPage() {
     fetchPayoutData();
   }, [agencyId]);
 
+  // Fetch chart data
+  const fetchChartData = useCallback(async () => {
+    if (!session?.user || !isAgencyOwner) return;
+    setIsLoadingChart(true);
+    try {
+      const res = await fetch(`/api/agency/earnings/chart?period=${chartPeriod}`);
+      if (res.ok) {
+        const result = await res.json();
+        setChartData(result);
+      }
+    } catch (error) {
+      console.error("Error fetching chart data:", error);
+    } finally {
+      setIsLoadingChart(false);
+    }
+  }, [session?.user, isAgencyOwner, chartPeriod]);
+
+  useEffect(() => {
+    if (session?.user && isAgencyOwner) {
+      fetchChartData();
+    }
+  }, [session?.user, isAgencyOwner, chartPeriod, fetchChartData]);
+
   const fetchPayoutData = async () => {
     try {
       const res = await fetch(`/api/agency/payout-request?agencyId=${agencyId}`);
@@ -169,16 +237,48 @@ export default function AgencyEarningsPage() {
     }
   };
 
+  const handleIdPhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setIdPhoto(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setIdPhotoPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handlePayoutRequest = async () => {
-    if (!agencyId || !walletAddress) return;
+    if (!agencyId || !walletAddress || !idPhoto) return;
     setIsRequesting(true);
     try {
+      // First upload ID photo
+      const formData = new FormData();
+      formData.append("file", idPhoto);
+      formData.append("type", "id-verification");
+
+      const uploadRes = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!uploadRes.ok) {
+        alert("Failed to upload ID photo");
+        return;
+      }
+
+      const { url: idPhotoUrl } = await uploadRes.json();
+
+      // Then create payout request with ID photo
       const res = await fetch("/api/agency/payout-request", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ agencyId, walletType, walletAddress }),
+        body: JSON.stringify({ agencyId, walletType, walletAddress, idPhotoUrl }),
       });
       if (res.ok) {
+        setIdPhoto(null);
+        setIdPhotoPreview(null);
         fetchPayoutData();
       } else {
         const data = await res.json();
@@ -308,11 +408,124 @@ export default function AgencyEarningsPage() {
         </div>
       </motion.div>
 
-      {/* Stats Cards - 2x2 grid on mobile */}
+      {/* Revenue Chart */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
+        className="mb-2 sm:mb-3"
+      >
+        <RevenueChart
+          data={chartData?.daily || []}
+          period={chartPeriod}
+          onPeriodChange={setChartPeriod}
+          total={chartData?.summary.total || 0}
+          change={chartData?.summary.change || 0}
+          avgDaily={chartData?.summary.avgDaily || 0}
+          isLoading={isLoadingChart}
+          title="Agency Revenue"
+        />
+      </motion.div>
+
+      {/* KPI Cards with Sparklines */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.15 }}
+        className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 mb-2 sm:mb-3"
+      >
+        <RevenueKpiCard
+          title="Subscriptions"
+          value={chartData?.breakdown.find(b => b.type === "subscription")?.amount || 0}
+          change={0}
+          sparklineData={chartData?.daily.map(d => d.subscriptions) || []}
+          icon={CreditCard}
+          color="purple"
+          delay={0.1}
+        />
+        <RevenueKpiCard
+          title="PPV Sales"
+          value={chartData?.breakdown.find(b => b.type === "ppv")?.amount || 0}
+          change={0}
+          sparklineData={chartData?.daily.map(d => d.ppv) || []}
+          icon={MessageSquare}
+          color="amber"
+          delay={0.15}
+        />
+        <RevenueKpiCard
+          title="Tips"
+          value={chartData?.breakdown.find(b => b.type === "tip")?.amount || 0}
+          change={0}
+          sparklineData={chartData?.daily.map(d => d.tips) || []}
+          icon={Gift}
+          color="pink"
+          delay={0.2}
+        />
+        <RevenueKpiCard
+          title="Media Unlocks"
+          value={chartData?.breakdown.find(b => b.type === "media_unlock")?.amount || 0}
+          change={0}
+          sparklineData={chartData?.daily.map(d => d.media) || []}
+          icon={ImageIcon}
+          color="cyan"
+          delay={0.25}
+        />
+      </motion.div>
+
+      {/* Revenue Breakdown & Creator Performance */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+        className="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-3 sm:mb-4"
+      >
+        <RevenueBreakdown
+          data={chartData?.breakdown || []}
+          total={chartData?.summary.total || 0}
+        />
+
+        {/* Creator Performance Card */}
+        <Card className="p-4 sm:p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Users className="w-4 h-4 text-purple-400" />
+            <h3 className="text-sm font-medium text-gray-400">Creator Performance</h3>
+          </div>
+          <div className="space-y-3">
+            {chartData?.byCreator?.length ? (
+              chartData.byCreator.slice(0, 5).map((creator, idx) => (
+                <div key={creator.slug} className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500/30 to-purple-700/30 flex items-center justify-center text-xs font-bold text-purple-400">
+                      {idx + 1}
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-white">{creator.name}</p>
+                      <p className="text-xs text-gray-500">@{creator.slug}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-bold text-purple-400">
+                      {new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" }).format(creator.amount)}
+                    </p>
+                    <p className="text-xs text-gray-500">{creator.percentage.toFixed(1)}%</p>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="text-center py-6">
+                <Users className="w-8 h-8 text-gray-600 mx-auto mb-2" />
+                <p className="text-sm text-gray-500">No creator data yet</p>
+              </div>
+            )}
+          </div>
+        </Card>
+      </motion.div>
+
+      {/* Stats Cards - 2x2 grid on mobile */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.25 }}
         className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3"
       >
         {stats.map((stat, index) => (
@@ -403,6 +616,48 @@ export default function AgencyEarningsPage() {
                 className="bg-black/30 border-white/10 text-sm h-9"
               />
 
+              {/* ID Photo Upload */}
+              <div className="space-y-2">
+                <label className="text-xs text-gray-400">ID Document (required)</label>
+                {idPhotoPreview ? (
+                  <div className="relative">
+                    <img
+                      src={idPhotoPreview}
+                      alt="ID Preview"
+                      className="w-full h-24 object-cover rounded-lg border border-white/10"
+                    />
+                    <button
+                      onClick={() => {
+                        setIdPhoto(null);
+                        setIdPhotoPreview(null);
+                      }}
+                      className="absolute top-1 right-1 w-6 h-6 bg-black/70 rounded-full flex items-center justify-center hover:bg-black/90 transition-colors"
+                    >
+                      <X className="w-3 h-3 text-white" />
+                    </button>
+                  </div>
+                ) : (
+                  <label className="flex flex-col items-center justify-center h-24 rounded-lg border-2 border-dashed border-white/10 hover:border-purple-500/50 cursor-pointer transition-colors bg-black/20">
+                    <Upload className="w-5 h-5 text-gray-500 mb-1" />
+                    <span className="text-xs text-gray-500">Upload ID photo</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleIdPhotoChange}
+                      className="hidden"
+                    />
+                  </label>
+                )}
+              </div>
+
+              {/* GDPR Notice */}
+              <div className="flex items-start gap-2 p-2 rounded-lg bg-blue-500/10 border border-blue-500/20">
+                <Shield className="w-3.5 h-3.5 text-blue-400 flex-shrink-0 mt-0.5" />
+                <p className="text-[10px] text-blue-300 leading-relaxed">
+                  Your ID document will be automatically deleted 24 hours after verification, in compliance with GDPR regulations.
+                </p>
+              </div>
+
               {/* Request Button */}
               <div className="flex items-center justify-between gap-3">
                 <div className="text-[10px] text-gray-400">
@@ -413,7 +668,7 @@ export default function AgencyEarningsPage() {
                 </div>
                 <Button
                   onClick={handlePayoutRequest}
-                  disabled={!payoutData.canRequest || !walletAddress || isRequesting}
+                  disabled={!payoutData.canRequest || !walletAddress || !idPhoto || isRequesting}
                   size="sm"
                   className="bg-purple-600 hover:bg-purple-700 text-xs h-8 px-3"
                 >

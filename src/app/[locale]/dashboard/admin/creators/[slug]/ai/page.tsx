@@ -300,7 +300,7 @@ export default function CreatorAiSettingsPage({
   }
 
   return (
-    <div className="p-8 max-w-4xl mx-auto">
+    <div className="p-4 pt-20 sm:p-6 sm:pt-20 lg:p-8 lg:pt-8 max-w-4xl mx-auto">
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}

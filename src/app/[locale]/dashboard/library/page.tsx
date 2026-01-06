@@ -86,7 +86,7 @@ export default function LibraryPage() {
   };
 
   return (
-    <div className="p-6 lg:p-8">
+    <div className="p-4 pt-20 sm:p-6 sm:pt-20 lg:p-8 lg:pt-8">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -276,7 +276,6 @@ export default function LibraryPage() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm p-4"
-            onClick={() => setSelectedContent(null)}
           >
             <button
               className="absolute top-6 right-6 p-2 text-white/60 hover:text-white z-10"

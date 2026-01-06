@@ -402,7 +402,7 @@ export async function recordEarningDistribution(
       });
 
       // Update AI personality stats
-      await tx.agencyAiPersonality.update({
+      await tx.creatorAiPersonality.update({
         where: { id: aiPersonalityId },
         data: {
           totalEarnings: { increment: grossAmountEur },

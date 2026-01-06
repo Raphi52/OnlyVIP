@@ -11,8 +11,11 @@ import {
 } from "@/lib/ai-girlfriend";
 import {
   checkForToneSwitch,
+  checkForLanguageSwitch,
   switchPersonality,
+  selectPersonalityForConversation,
 } from "@/lib/ai-personality-selector";
+import { detectLanguageFromMessages } from "@/lib/language-detection";
 import { shouldHandoff, createHandoff } from "@/lib/handoff-manager";
 import { detectObjection, handleObjection } from "@/lib/objection-handler";
 import { getLeadScore } from "@/lib/lead-scoring";
@@ -107,6 +110,70 @@ export async function GET(request: NextRequest) {
           continue;
         }
 
+        // ===== CHECK GIVE-UP ON NON-PAYING FANS =====
+        // Get the AI personality settings to check give-up configuration
+        const personalityForGiveUp = await prisma.creatorAiPersonality.findFirst({
+          where: { creatorSlug: queueItem.creatorSlug, isActive: true },
+          orderBy: { trafficShare: "desc" },
+          select: {
+            giveUpOnNonPaying: true,
+            giveUpMessageThreshold: true,
+            giveUpAction: true,
+          },
+        });
+
+        if (personalityForGiveUp?.giveUpOnNonPaying) {
+          // Check fan profile for spending and message count
+          const fanProfileForGiveUp = await prisma.fanProfile.findUnique({
+            where: {
+              fanUserId_creatorSlug: { fanUserId, creatorSlug: queueItem.creatorSlug },
+            },
+            select: { totalSpent: true, totalMessages: true },
+          });
+
+          const totalSpent = fanProfileForGiveUp?.totalSpent || 0;
+          const totalMessages = fanProfileForGiveUp?.totalMessages || 0;
+          const threshold = personalityForGiveUp.giveUpMessageThreshold || 20;
+          const action = personalityForGiveUp.giveUpAction || "stop";
+
+          if (totalSpent === 0 && totalMessages >= threshold) {
+            console.log(`[AI] Give-up triggered for ${queueItem.conversationId}: ${totalMessages} messages, €0 spent (threshold: ${threshold})`);
+
+            if (action === "stop") {
+              // Stop responding entirely
+              await prisma.aiResponseQueue.update({
+                where: { id: queueItem.id },
+                data: {
+                  status: "FAILED",
+                  error: `Give-up: Non-paying fan (${totalMessages} msgs, €0 spent)`,
+                  processedAt: new Date(),
+                },
+              });
+
+              results.push({ id: queueItem.id, status: "GIVE_UP", error: "Non-paying fan" });
+              continue;
+            } else if (action === "minimal") {
+              // For "minimal" mode, we'll only respond to 1 in 5 messages (20% chance)
+              const shouldRespond = Math.random() < 0.2;
+              if (!shouldRespond) {
+                console.log(`[AI] Minimal mode - skipping response for non-paying fan`);
+                await prisma.aiResponseQueue.update({
+                  where: { id: queueItem.id },
+                  data: {
+                    status: "FAILED",
+                    error: `Give-up (minimal): Skipped response`,
+                    processedAt: new Date(),
+                  },
+                });
+
+                results.push({ id: queueItem.id, status: "GIVE_UP_MINIMAL", error: "Skipped (minimal mode)" });
+                continue;
+              }
+              console.log(`[AI] Minimal mode - responding to non-paying fan (lucky roll)`);
+            }
+          }
+        }
+
         // ===== CHECK IF CREATOR USES CUSTOM API KEY =====
         // First, get creator's API key settings to determine if we need to check credits
         const creatorKeySettings = await prisma.creator.findUnique({
@@ -151,7 +218,7 @@ export async function GET(request: NextRequest) {
         }
 
         // Get conversation with AI personality assignment (including media settings)
-        const conversation = await prisma.conversation.findUnique({
+        let conversation = await prisma.conversation.findUnique({
           where: { id: queueItem.conversationId },
           select: {
             id: true,
@@ -174,8 +241,12 @@ export async function GET(request: NextRequest) {
           },
         });
 
+        if (!conversation) {
+          throw new Error("Conversation not found");
+        }
+
         // Check if AI is disabled for this conversation
-        if (conversation?.aiMode === "disabled") {
+        if (conversation.aiMode === "disabled") {
           console.log(`[AI] AI disabled for conversation ${queueItem.conversationId}`);
           await prisma.aiResponseQueue.update({
             where: { id: queueItem.id },
@@ -189,19 +260,62 @@ export async function GET(request: NextRequest) {
           continue;
         }
 
-        // Check if AI is enabled for this conversation
-        if (!conversation?.aiPersonalityId) {
-          console.log(`[AI] No personality assigned to conversation ${queueItem.conversationId} - AI disabled`);
-          await prisma.aiResponseQueue.update({
-            where: { id: queueItem.id },
-            data: {
-              status: "FAILED",
-              error: "AI disabled - no personality assigned",
-              processedAt: new Date(),
-            },
-          });
-          results.push({ id: queueItem.id, status: "SKIPPED", error: "AI disabled" });
-          continue;
+        // Check if AI personality is assigned, auto-assign if not
+        if (!conversation.aiPersonalityId) {
+          console.log(`[AI] No personality assigned to conversation ${queueItem.conversationId} - attempting auto-assignment`);
+
+          // Try to auto-assign a personality
+          const autoPersonalityId = await selectPersonalityForConversation(queueItem.creatorSlug);
+
+          if (autoPersonalityId) {
+            // Assign the personality to the conversation
+            await prisma.conversation.update({
+              where: { id: queueItem.conversationId },
+              data: { aiPersonalityId: autoPersonalityId },
+            });
+
+            console.log(`[AI] Auto-assigned personality ${autoPersonalityId} to conversation ${queueItem.conversationId}`);
+
+            // Refresh conversation data with the new personality
+            const updatedConversation = await prisma.conversation.findUnique({
+              where: { id: queueItem.conversationId },
+              select: {
+                id: true,
+                aiPersonalityId: true,
+                autoToneSwitch: true,
+                aiMode: true,
+                assignedChatterId: true,
+                aiPersonality: {
+                  select: {
+                    id: true,
+                    name: true,
+                    personality: true,
+                    aiMediaEnabled: true,
+                    aiMediaFrequency: true,
+                    aiPPVRatio: true,
+                    aiTeasingEnabled: true,
+                  },
+                },
+              },
+            });
+
+            if (updatedConversation) {
+              conversation = updatedConversation;
+            }
+          } else {
+            // No personality available for this creator
+            console.log(`[AI] No active personality found for creator ${queueItem.creatorSlug} - AI disabled`);
+            await prisma.aiResponseQueue.update({
+              where: { id: queueItem.id },
+              data: {
+                status: "FAILED",
+                error: "AI disabled - no personality available for creator",
+                processedAt: new Date(),
+              },
+            });
+            results.push({ id: queueItem.id, status: "SKIPPED", error: "No personality available" });
+            continue;
+          }
         }
 
         // Check if mode is "assisted" - create suggestion instead of sending directly
@@ -263,6 +377,54 @@ export async function GET(request: NextRequest) {
           }
         }
 
+        // Check for auto language switch (language-based persona routing)
+        const messagesForLanguage = conversationMessages.map((m) => ({
+          text: m.text,
+          senderId: m.senderId,
+        }));
+        const languagePersonalityId = await checkForLanguageSwitch(
+          queueItem.conversationId,
+          messagesForLanguage,
+          originalMessage.senderId
+        );
+
+        if (languagePersonalityId && languagePersonalityId !== conversation.aiPersonalityId) {
+          // Detect language for logging
+          const fanMessagesText = conversationMessages
+            .filter((m) => m.senderId === originalMessage.senderId && m.text)
+            .slice(-5)
+            .map((m) => m.text!);
+          const detectedLang = detectLanguageFromMessages(fanMessagesText);
+
+          console.log(`[AI] Auto-switching personality for language: ${detectedLang} (${conversation.aiPersonalityId} -> ${languagePersonalityId})`);
+          await switchPersonality(
+            queueItem.conversationId,
+            languagePersonalityId,
+            "auto_language",
+            { detectedLanguage: detectedLang || undefined }
+          );
+          // Refresh conversation personality
+          const updatedConv = await prisma.conversation.findUnique({
+            where: { id: queueItem.conversationId },
+            select: {
+              aiPersonality: {
+                select: {
+                  id: true,
+                  name: true,
+                  personality: true,
+                  aiMediaEnabled: true,
+                  aiMediaFrequency: true,
+                  aiPPVRatio: true,
+                  aiTeasingEnabled: true,
+                },
+              },
+            },
+          });
+          if (updatedConv?.aiPersonality) {
+            conversation.aiPersonality = updatedConv.aiPersonality;
+          }
+        }
+
         // Get creator info including AI provider settings
         const creator = await prisma.creator.findUnique({
           where: { slug: queueItem.creatorSlug },
@@ -281,7 +443,7 @@ export async function GET(request: NextRequest) {
           throw new Error("Creator not found or has no user account");
         }
 
-        // Parse personality from AgencyAiPersonality
+        // Parse personality from CreatorAiPersonality
         const personality = parsePersonality(conversation.aiPersonality?.personality || null);
         console.log(`[AI] Using personality: ${conversation.aiPersonality?.name || "default"}`);
 

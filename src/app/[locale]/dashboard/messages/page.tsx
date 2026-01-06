@@ -7,9 +7,11 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Crown, Lock, Loader2, MessageCircle, Search, ArrowLeft,
   Sparkles, Bell, BellOff, Pin, Trash2, MoreVertical,
-  Circle, CheckCheck, Image, X
+  Circle, CheckCheck, Image, X, PanelLeftClose, PanelRightClose,
+  User, ChevronLeft, ChevronRight
 } from "lucide-react";
 import { ChatWindow } from "@/components/chat";
+import { CreatorChatSidebar } from "@/components/chat/CreatorChatSidebar";
 import { Button, Card } from "@/components/ui";
 import Link from "next/link";
 import { usePusherChat } from "@/hooks/usePusher";
@@ -80,6 +82,8 @@ export default function MessagesPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [showConversationMenu, setShowConversationMenu] = useState<string | null>(null);
   const [autoSelectDone, setAutoSelectDone] = useState(false);
+  const [showLeftPanel, setShowLeftPanel] = useState(true);
+  const [showRightPanel, setShowRightPanel] = useState(true); // Open by default on desktop
 
   const userId = session?.user?.id;
   const isCreator = (session?.user as any)?.isCreator;
@@ -140,11 +144,9 @@ export default function MessagesPage() {
     if (!userId) return;
 
     try {
-      // If user is a creator, filter by their selected creator profile
-      const url = isCreator && selectedCreator?.slug
-        ? `/api/conversations?creator=${selectedCreator.slug}`
-        : "/api/conversations";
-      const res = await fetch(url);
+      // Fetch all conversations where user is a participant
+      // This includes both fan conversations (user as fan) and creator conversations (user as creator)
+      const res = await fetch("/api/conversations");
       if (res.ok) {
         const data = await res.json();
         setConversations(data.conversations || []);
@@ -154,7 +156,7 @@ export default function MessagesPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [userId, isCreator, selectedCreator?.slug]);
+  }, [userId]);
 
   useEffect(() => {
     if (userId && hasSubscription) {
@@ -163,14 +165,6 @@ export default function MessagesPage() {
       setIsLoading(false);
     }
   }, [userId, hasSubscription, fetchConversations, status]);
-
-  // Reset selected conversation when creator changes
-  useEffect(() => {
-    if (isCreator && selectedCreator?.slug) {
-      setSelectedConversation(null);
-      setMessages([]);
-    }
-  }, [selectedCreator?.slug, isCreator]);
 
   // Auto-select conversation from URL param (by conversation ID)
   useEffect(() => {
@@ -719,8 +713,8 @@ export default function MessagesPage() {
     );
   }
 
-  // Not logged in
-  if (!session) {
+  // Not logged in - only show when explicitly confirmed as unauthenticated
+  if (status === "unauthenticated") {
     return (
       <div className="min-h-screen pt-16 lg:pt-0 flex items-center justify-center p-4 sm:p-6 bg-gradient-to-b from-[#0a0a0a] to-[#0f0f0f]">
         <motion.div
@@ -803,46 +797,77 @@ export default function MessagesPage() {
 
   return (
     <div className="h-screen pt-16 lg:pt-0 flex bg-gradient-to-b from-[#0a0a0a] to-[#0f0f0f]">
-      {/* Conversation List */}
-      <motion.div
-        initial={{ x: -20, opacity: 0 }}
-        animate={{ x: 0, opacity: 1 }}
-        className={cn(
-          "w-full lg:w-96 border-r border-white/5 flex flex-col bg-[#0a0a0a]",
-          selectedConversation && "hidden lg:flex"
+      {/* Left Panel Toggle (when collapsed on desktop) - only show when a conversation is selected */}
+      <AnimatePresence>
+        {!showLeftPanel && selectedConversation && (
+          <motion.button
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            onClick={() => setShowLeftPanel(true)}
+            className="hidden lg:flex items-center justify-center w-10 h-full border-r border-white/5 bg-[#0a0a0a] hover:bg-white/5 transition-colors"
+          >
+            <ChevronRight className="w-5 h-5 text-gray-400" />
+          </motion.button>
         )}
-      >
-        {/* Header */}
-        <div className="p-3 sm:p-4 border-b border-white/5">
-          <div className="flex items-center justify-between mb-3 sm:mb-4">
-            <h1 className="text-xl sm:text-2xl font-bold text-white">Messages</h1>
-            {isConnected && (
-              <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                className="w-2 h-2 rounded-full bg-emerald-500"
-                title="Connected"
-              />
+      </AnimatePresence>
+
+      {/* Conversation List */}
+      <AnimatePresence>
+        {(showLeftPanel || !selectedConversation) && (
+          <motion.div
+            initial={{ width: 0, opacity: 0 }}
+            animate={{ width: "auto", opacity: 1 }}
+            exit={{ width: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className={cn(
+              "w-full lg:w-96 border-r border-white/5 flex flex-col bg-[#0a0a0a] overflow-hidden",
+              selectedConversation && "hidden lg:flex"
             )}
-          </div>
+          >
+            {/* Header */}
+            <div className="p-3 sm:p-4 border-b border-white/5">
+              <div className="flex items-center justify-between mb-3 sm:mb-4">
+                <h1 className="text-xl sm:text-2xl font-bold text-white">Messages</h1>
+                <div className="flex items-center gap-2">
+                  {isConnected && (
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      className="w-2 h-2 rounded-full bg-emerald-500"
+                      title="Connected"
+                    />
+                  )}
+                  {/* Collapse button - desktop only, only when a conversation is selected */}
+                  {selectedConversation && (
+                    <button
+                      onClick={() => setShowLeftPanel(false)}
+                      className="hidden lg:flex p-1.5 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
+                      title="Collapse panel"
+                    >
+                      <PanelLeftClose className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+              </div>
 
-          {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
-            <input
-              type="text"
-              placeholder="Search..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 sm:pl-11 pr-3 sm:pr-4 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl bg-white/5 border border-white/5 text-sm sm:text-base text-white placeholder:text-white/30 focus:outline-none focus:border-[var(--gold)]/50 focus:bg-white/[0.07] transition-all"
-            />
-          </div>
-        </div>
+              {/* Search */}
+              <div className="relative">
+                <Search className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+                <input
+                  type="text"
+                  placeholder="Search..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-10 sm:pl-11 pr-3 sm:pr-4 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl bg-white/5 border border-white/5 text-sm sm:text-base text-white placeholder:text-white/30 focus:outline-none focus:border-[var(--gold)]/50 focus:bg-white/[0.07] transition-all"
+                />
+              </div>
+            </div>
 
-        {/* Conversation List */}
-        <div className="flex-1 overflow-y-auto">
-          {filteredConversations.length === 0 ? (
-            <motion.div
+            {/* Conversation List */}
+            <div className="flex-1 overflow-y-auto">
+              {filteredConversations.length === 0 ? (
+                <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               className="flex flex-col items-center justify-center h-full p-6 sm:p-8 text-center"
@@ -1004,7 +1029,9 @@ export default function MessagesPage() {
             </div>
           )}
         </div>
-      </motion.div>
+        </motion.div>
+      )}
+      </AnimatePresence>
 
       {/* Chat Window */}
       <div className={cn(
@@ -1035,16 +1062,16 @@ export default function MessagesPage() {
                 slug: selectedConversation.otherUser.slug,
               }}
               messages={transformedMessages}
-              isAdmin={isCreator}
+              isAdmin={isCreator || !!selectedCreator}
               isMuted={selectedConversation.isMuted}
               onSendMessage={handleSendMessage}
               onUnlockPPV={handleUnlockPPV}
               onSendTip={handleSendTip}
               onReact={handleReact}
               onMarkAsRead={handleMarkAsRead}
-              onAISuggest={isCreator ? handleAISuggest : undefined}
-              creatorSlug={isCreator ? selectedCreator?.slug : undefined}
-              onSendPPVFromLibrary={isCreator && selectedCreator?.slug ? handleSendPPVFromLibrary : undefined}
+              onAISuggest={(isCreator || selectedCreator) ? handleAISuggest : undefined}
+              creatorSlug={selectedCreator?.slug || undefined}
+              onSendPPVFromLibrary={selectedCreator?.slug ? handleSendPPVFromLibrary : undefined}
               onMute={(muted) => handleMuteConversation(selectedConversation.id, muted)}
               onDelete={() => handleDeleteConversation(selectedConversation.id)}
               isSending={isSending}
@@ -1089,6 +1116,39 @@ export default function MessagesPage() {
           </motion.div>
         )}
       </div>
+
+      {/* Right Panel Toggle (when collapsed on desktop) */}
+      <AnimatePresence>
+        {!showRightPanel && selectedConversation && (isCreator || !!selectedCreator) && (
+          <motion.button
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 20 }}
+            onClick={() => setShowRightPanel(true)}
+            className="hidden lg:flex items-center justify-center w-10 h-full border-l border-white/5 bg-[#0a0a0a] hover:bg-white/5 transition-colors"
+          >
+            <ChevronLeft className="w-5 h-5 text-gray-400" />
+          </motion.button>
+        )}
+      </AnimatePresence>
+
+      {/* Right Panel - Fan Context */}
+      <AnimatePresence>
+        {showRightPanel && selectedConversation && (isCreator || !!selectedCreator) && (
+          <motion.div
+            initial={{ width: 0, opacity: 0 }}
+            animate={{ width: 320, opacity: 1 }}
+            exit={{ width: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="hidden lg:flex flex-col border-l border-white/5 bg-[#0a0a0a] overflow-hidden"
+          >
+            <CreatorChatSidebar
+              conversationId={selectedConversation.id}
+              onClose={() => setShowRightPanel(false)}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Click outside to close menu */}
       {showConversationMenu && (

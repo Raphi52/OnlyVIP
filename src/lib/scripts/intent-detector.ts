@@ -253,3 +253,167 @@ export function isObjection(message: string): boolean {
 export function getIntentDescription(intent: IntentType): string {
   return SCRIPT_INTENTS[intent]?.description || "Unknown intent";
 }
+
+// ============= RESPONSE OUTCOME DETECTION =============
+
+export type ResponseOutcome = "positive" | "negative" | "neutral";
+
+interface OutcomePattern {
+  keywords: string[];
+  patterns: RegExp[];
+  weight: number;
+}
+
+const POSITIVE_SIGNALS: OutcomePattern = {
+  keywords: [
+    // Purchase intent
+    "ok", "d'accord", "oui", "yes", "yeah", "yep", "ouais", "deal", "marché",
+    "je prends", "i'll take", "send it", "envoie", "achète", "buy", "paid", "payé",
+    // Enthusiasm
+    "love", "j'adore", "amazing", "incroyable", "parfait", "perfect", "wow", "omg",
+    "magnifique", "trop bien", "génial", "great", "awesome", "super",
+    // Interest
+    "more", "encore", "plus", "show me", "montre", "j'ai hâte", "can't wait",
+    "intéressé", "interested", "curious", "curieux",
+    // Positive emotional
+    "haha", "lol", "mdr", "hihi", "😍", "🥰", "😘", "❤️", "🔥", "💕",
+    "tu me plais", "i like you", "you're amazing", "t'es géniale",
+  ],
+  patterns: [
+    /^(ok|oui|yes|yeah|ouais|d'?acc|deal|yep|yup)$/i,
+    /(je\s+prends|i'?ll\s+take|i'?ll\s+buy)/i,
+    /(send|envoie)\s+(it|le|la|moi)/i,
+    /(c'?est|it'?s)\s+(parfait|perfect|génial|great|amazing)/i,
+    /(j'?adore|i\s+love|trop\s+bien)/i,
+    /(trop|really)\s+(sexy|hot|belle|beautiful)/i,
+    /^(wow|omg|damn|putain|oh\s*my)/i,
+    /(je\s+veux|i\s+want)\s+(voir|see|ça|this|it)/i,
+    /(combien|how\s+much)\s*(pour|for)?/i, // Asking price = interest
+    /(show|montre)\s+(me|moi)/i,
+  ],
+  weight: 1.0,
+};
+
+const NEGATIVE_SIGNALS: OutcomePattern = {
+  keywords: [
+    // Direct rejection
+    "non", "no", "nope", "pas", "never", "jamais", "no thanks", "non merci",
+    "not interested", "pas intéressé", "pass", "passe",
+    // Price objection
+    "trop cher", "expensive", "can't afford", "pas les moyens", "broke",
+    "too much", "c'est cher",
+    // Timing objection
+    "plus tard", "later", "maybe", "peut-être", "not now", "pas maintenant",
+    "demain", "tomorrow", "une autre fois", "another time",
+    // Trust objection
+    "fake", "scam", "arnaque", "faux", "bot", "pas vraie", "not real",
+    // Seen before
+    "déjà vu", "already seen", "same", "même", "boring", "ennuyeux",
+    // Disinterest
+    "bof", "meh", "whatever", "peu importe", "m'en fiche", "don't care",
+  ],
+  patterns: [
+    /^(non|no|nope|nah|nan)$/i,
+    /(no|non)\s+(thanks|merci)/i,
+    /(not|pas)\s+(interested|intéressé)/i,
+    /(trop|too)\s+(cher|expensive|much)/i,
+    /(pas|no|can'?t)\s+(les\s+)?(moyens|afford|money)/i,
+    /(plus\s+tard|later|maybe|peut-?être)/i,
+    /(not|pas)\s+(now|maintenant)/i,
+    /(fake|scam|arnaque|bot)/i,
+    /(déjà|already)\s+(vu|seen|have)/i,
+    /^(bof|meh|ok\.{3,}|hmm\.{3,})$/i,
+    /(je|i)\s+(sais|know)\s+(pas|not)/i,
+  ],
+  weight: 1.0,
+};
+
+/**
+ * Detect if fan response is positive, negative, or neutral
+ * Used for flow branching (nextScriptOnSuccess vs nextScriptOnReject)
+ */
+export function detectResponseOutcome(message: string): {
+  outcome: ResponseOutcome;
+  confidence: number;
+  signals: string[];
+} {
+  const messageLower = message.toLowerCase().trim();
+
+  let positiveScore = 0;
+  let negativeScore = 0;
+  const signals: string[] = [];
+
+  // Check positive keywords
+  for (const keyword of POSITIVE_SIGNALS.keywords) {
+    if (messageLower.includes(keyword.toLowerCase())) {
+      positiveScore += 0.15 * POSITIVE_SIGNALS.weight;
+      signals.push(`+keyword:${keyword}`);
+    }
+  }
+
+  // Check positive patterns
+  for (const pattern of POSITIVE_SIGNALS.patterns) {
+    if (pattern.test(message)) {
+      positiveScore += 0.3 * POSITIVE_SIGNALS.weight;
+      signals.push(`+pattern`);
+    }
+  }
+
+  // Check negative keywords
+  for (const keyword of NEGATIVE_SIGNALS.keywords) {
+    if (messageLower.includes(keyword.toLowerCase())) {
+      negativeScore += 0.15 * NEGATIVE_SIGNALS.weight;
+      signals.push(`-keyword:${keyword}`);
+    }
+  }
+
+  // Check negative patterns
+  for (const pattern of NEGATIVE_SIGNALS.patterns) {
+    if (pattern.test(message)) {
+      negativeScore += 0.3 * NEGATIVE_SIGNALS.weight;
+      signals.push(`-pattern`);
+    }
+  }
+
+  // Normalize scores
+  positiveScore = Math.min(1, positiveScore);
+  negativeScore = Math.min(1, negativeScore);
+
+  // Determine outcome
+  const diff = positiveScore - negativeScore;
+
+  if (diff >= 0.2) {
+    return {
+      outcome: "positive",
+      confidence: Math.min(1, positiveScore),
+      signals,
+    };
+  } else if (diff <= -0.2) {
+    return {
+      outcome: "negative",
+      confidence: Math.min(1, negativeScore),
+      signals,
+    };
+  }
+
+  // Neutral if no clear signal
+  return {
+    outcome: "neutral",
+    confidence: Math.max(positiveScore, negativeScore, 0.3),
+    signals,
+  };
+}
+
+/**
+ * Check if fan responded to a PPV/sale pitch
+ * Returns true if they seem interested in buying
+ */
+export function isPurchaseIntent(message: string): boolean {
+  const detected = detectIntent(message);
+  const outcome = detectResponseOutcome(message);
+
+  return (
+    detected.intent === "CLOSING_READY" ||
+    (outcome.outcome === "positive" && outcome.confidence >= 0.5)
+  );
+}

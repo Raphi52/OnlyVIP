@@ -115,13 +115,11 @@ export async function GET(request: NextRequest) {
     const type = searchParams.get("type");
     const tier = searchParams.get("tier");
     const search = searchParams.get("search");
-    const published = searchParams.get("published");
     const creatorSlug = searchParams.get("creator");
-    const gallery = searchParams.get("gallery"); // Filter by showInGallery (legacy)
     const page = parseInt(searchParams.get("page") || "1");
     const limit = parseInt(searchParams.get("limit") || "50");
 
-    // New tag filters
+    // Tag filters
     const tagGallery = searchParams.get("tagGallery");
     const tagPPV = searchParams.get("tagPPV");
     const tagAI = searchParams.get("tagAI");
@@ -133,25 +131,6 @@ export async function GET(request: NextRequest) {
     // Filter by creator
     if (creatorSlug) {
       where.creatorSlug = creatorSlug;
-    }
-
-    // Check if user is a creator and has access to this creator's media
-    let hasCreatorAccess = false;
-    if (creator.isCreator && creatorSlug) {
-      // Check if this creator profile belongs to the logged-in user
-      const creatorProfile = await prisma.creator.findFirst({
-        where: { slug: creatorSlug, userId: creator.userId },
-      });
-      hasCreatorAccess = !!creatorProfile;
-    }
-
-    // Public users can only see published content
-    // Creators can see all their own content
-    // Admins can see everything
-    if (!admin && !hasCreatorAccess) {
-      where.isPublished = true;
-    } else if (published !== null && (admin || hasCreatorAccess)) {
-      where.isPublished = published === "true";
     }
 
     if (type && type !== "all") {
@@ -169,18 +148,7 @@ export async function GET(request: NextRequest) {
       };
     }
 
-    // Filter by gallery visibility (legacy)
-    // gallery=true -> only showInGallery=true
-    // gallery=false -> only showInGallery=false (hidden)
-    // gallery=all or not set -> show all (for admins/creators)
-    if (gallery === "true") {
-      where.showInGallery = true;
-    } else if (gallery === "false") {
-      where.showInGallery = false;
-    }
-    // If gallery=all or not specified, don't filter (show all)
-
-    // New tag filters
+    // Tag filters
     if (tagGallery === "true") {
       where.tagGallery = true;
     } else if (tagGallery === "false") {
@@ -211,7 +179,34 @@ export async function GET(request: NextRequest) {
       where.tagVIP = false;
     }
 
-    const [media, total, photosCount, videosCount] = await Promise.all([
+    // Get current user session for access control
+    const session = await auth();
+    const currentUserId = session?.user?.id;
+
+    // Get user's subscription tier and purchases if logged in
+    let userTier = "FREE";
+    let purchasedMediaIds: Set<string> = new Set();
+
+    if (currentUserId) {
+      const [subscription, purchases] = await Promise.all([
+        prisma.subscription.findFirst({
+          where: { userId: currentUserId, status: "ACTIVE" },
+          include: { plan: { select: { accessTier: true } } },
+        }),
+        prisma.mediaPurchase.findMany({
+          where: { userId: currentUserId },
+          select: { mediaId: true },
+        }),
+      ]);
+      userTier = subscription?.plan?.accessTier || "FREE";
+      purchasedMediaIds = new Set(purchases.map(p => p.mediaId));
+    }
+
+    const tierOrder = ["FREE", "BASIC", "VIP"];
+    const userTierIndex = tierOrder.indexOf(userTier);
+    const isVIP = userTier === "VIP";
+
+    const [mediaRaw, total, photosCount, videosCount] = await Promise.all([
       prisma.mediaContent.findMany({
         where,
         orderBy: { createdAt: "desc" },
@@ -225,6 +220,30 @@ export async function GET(request: NextRequest) {
       prisma.mediaContent.count({ where: { ...where, type: "PHOTO" } }),
       prisma.mediaContent.count({ where: { ...where, type: "VIDEO" } }),
     ]);
+
+    // Filter contentUrl based on access - NEVER expose contentUrl for locked content
+    const media = mediaRaw.map(item => {
+      const isPurchased = purchasedMediaIds.has(item.id);
+      const isFree = item.tagFree === true;
+      const isPPV = item.tagPPV === true;
+      const isVIPOnly = item.tagVIP === true;
+      const mediaTierIndex = tierOrder.indexOf(item.accessTier);
+
+      // Determine if user has access
+      let hasAccess = false;
+      if (isFree) hasAccess = true;
+      else if (isPurchased) hasAccess = true;
+      else if (isVIPOnly && isVIP) hasAccess = true;
+      else if (!isPPV && !isVIPOnly && userTierIndex >= mediaTierIndex) hasAccess = true;
+
+      // Only return contentUrl if user has access
+      return {
+        ...item,
+        contentUrl: hasAccess ? item.contentUrl : null,
+        hasAccess,
+        hasPurchased: isPurchased,
+      };
+    });
 
     return NextResponse.json({
       media,
@@ -277,8 +296,6 @@ export async function POST(request: NextRequest) {
       const accessTier = formData.get("accessTier") as string || "FREE";
       const isPurchaseable = formData.get("isPurchaseable") === "true";
       const price = formData.get("price") as string | null;
-      const isPublished = formData.get("isPublished") !== "false";
-      const showInGallery = formData.get("showInGallery") !== "false"; // Default true (legacy)
       const creatorSlug = formData.get("creatorSlug") as string || "miacosta";
       const files = formData.getAll("files") as File[];
 
@@ -362,9 +379,6 @@ export async function POST(request: NextRequest) {
           accessTier: accessTier as any,
           isPurchaseable,
           price: isPurchaseable && price ? parseFloat(price) : null,
-          isPublished,
-          showInGallery,
-          publishedAt: isPublished ? new Date() : null,
           thumbnailUrl,
           previewUrl: thumbnailUrl,
           contentUrl,
@@ -384,8 +398,8 @@ export async function POST(request: NextRequest) {
 
       console.log("[Media POST] Media created:", media.id);
 
-      // Send notification emails to followers if content is published
-      if (isPublished && creatorSlug) {
+      // Send notification emails to followers for new content with tagGallery
+      if (tagGallery && creatorSlug) {
         // Run in background, don't block the response
         notifyFollowersOfNewContent(
           creatorSlug,
@@ -414,8 +428,7 @@ export async function POST(request: NextRequest) {
       contentUrl,
       isPurchaseable,
       price,
-      isPublished,
-      // New tag fields
+      // Tag fields
       tagGallery,
       tagPPV,
       tagAI,
@@ -450,10 +463,8 @@ export async function POST(request: NextRequest) {
         contentUrl,
         isPurchaseable: isPurchaseable || false,
         price: isPurchaseable ? price : null,
-        isPublished: isPublished || false,
-        publishedAt: isPublished ? new Date() : null,
         creatorSlug: creatorSlug || "miacosta",
-        // New tag fields
+        // Tag fields
         tagGallery: tagGallery || false,
         tagPPV: tagPPV || false,
         tagAI: tagAI || false,
@@ -521,37 +532,10 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: "Media ID required" }, { status: 400 });
     }
 
-    // Get current state to check if we're publishing
-    const currentMedia = await prisma.mediaContent.findUnique({
-      where: { id },
-      select: { isPublished: true, creatorSlug: true, title: true, type: true, thumbnailUrl: true, accessTier: true },
-    });
-
-    const isNewlyPublished = updateData.isPublished === true && !currentMedia?.isPublished;
-
-    // Handle publish/unpublish
-    if (updateData.isPublished !== undefined) {
-      updateData.publishedAt = updateData.isPublished ? new Date() : null;
-    }
-
     const media = await prisma.mediaContent.update({
       where: { id },
       data: updateData,
     });
-
-    // Send notifications if content is being published for the first time
-    if (isNewlyPublished && currentMedia?.creatorSlug) {
-      notifyFollowersOfNewContent(
-        currentMedia.creatorSlug,
-        {
-          title: currentMedia.title,
-          type: currentMedia.type,
-          thumbnailUrl: currentMedia.thumbnailUrl,
-          accessTier: currentMedia.accessTier,
-        },
-        prisma
-      ).catch((err) => console.error("[Media] Failed to send notifications:", err));
-    }
 
     return NextResponse.json({ media });
   } catch (error) {

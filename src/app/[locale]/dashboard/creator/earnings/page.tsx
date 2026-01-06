@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
@@ -20,8 +20,21 @@ import {
   Wallet,
   Send,
   AlertCircle,
+  Eye,
+  AlertTriangle,
+  Building2,
+  Upload,
+  Shield,
+  X,
 } from "lucide-react";
 import { Button, Card } from "@/components/ui";
+import {
+  RevenueChart,
+  RevenueBreakdown,
+  RevenueKpiCard,
+  type Period,
+} from "@/components/charts";
+import { useAdminCreator } from "@/components/providers/AdminCreatorContext";
 
 interface Earning {
   id: string;
@@ -73,6 +86,7 @@ interface PayoutRequestData {
   minimumPayout: number;
   walletEth: string | null;
   walletBtc: string | null;
+  hasWallet: boolean;
   latestRequest: {
     id: string;
     amount: number;
@@ -87,21 +101,56 @@ interface PayoutRequestData {
   hasEnoughBalance: boolean;
 }
 
+interface ChartData {
+  period: Period;
+  summary: {
+    total: number;
+    change: number;
+    avgDaily: number;
+  };
+  daily: {
+    date: string;
+    revenue: number;
+    subscriptions: number;
+    ppv: number;
+    tips: number;
+    media: number;
+  }[];
+  breakdown: {
+    type: string;
+    amount: number;
+    percentage: number;
+  }[];
+}
+
 export default function CreatorEarningsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const { selectedCreator } = useAdminCreator();
   const [isLoading, setIsLoading] = useState(true);
   const [data, setData] = useState<EarningsData | null>(null);
   const [page, setPage] = useState(1);
   const [typeFilter, setTypeFilter] = useState<string>("");
 
+  // Chart state
+  const [chartPeriod, setChartPeriod] = useState<Period>("30d");
+  const [chartData, setChartData] = useState<ChartData | null>(null);
+  const [isLoadingChart, setIsLoadingChart] = useState(true);
+
   // Payout request state
   const [payoutData, setPayoutData] = useState<PayoutRequestData | null>(null);
+  const [showPayoutForm, setShowPayoutForm] = useState(false);
   const [walletType, setWalletType] = useState<"ETH" | "BTC">("ETH");
   const [walletAddress, setWalletAddress] = useState("");
+  const [idPhoto, setIdPhoto] = useState<File | null>(null);
+  const [idPhotoPreview, setIdPhotoPreview] = useState<string | null>(null);
   const [isRequestingPayout, setIsRequestingPayout] = useState(false);
   const [payoutError, setPayoutError] = useState<string | null>(null);
   const [payoutSuccess, setPayoutSuccess] = useState(false);
+
+  // Agency-managed state
+  const [isAgencyManaged, setIsAgencyManaged] = useState(false);
+  const [managingAgencyName, setManagingAgencyName] = useState<string | null>(null);
 
   useEffect(() => {
     if (status === "loading") return;
@@ -112,6 +161,51 @@ export default function CreatorEarningsPage() {
     fetchEarnings();
     fetchPayoutData();
   }, [session, status, page, typeFilter]);
+
+  // Fetch chart data
+  const fetchChartData = useCallback(async () => {
+    if (!session?.user) return;
+    setIsLoadingChart(true);
+    try {
+      const res = await fetch(`/api/creator/earnings/chart?period=${chartPeriod}`);
+      if (res.ok) {
+        const result = await res.json();
+        setChartData(result);
+      }
+    } catch (error) {
+      console.error("Error fetching chart data:", error);
+    } finally {
+      setIsLoadingChart(false);
+    }
+  }, [session?.user, chartPeriod]);
+
+  useEffect(() => {
+    if (session?.user) {
+      fetchChartData();
+    }
+  }, [session?.user, chartPeriod, fetchChartData]);
+
+  // Fetch permissions to check if agency-managed
+  useEffect(() => {
+    const fetchPermissions = async () => {
+      if (!selectedCreator?.slug || !session?.user?.id) {
+        setIsAgencyManaged(false);
+        setManagingAgencyName(null);
+        return;
+      }
+      try {
+        const res = await fetch(`/api/creator/permissions?creator=${selectedCreator.slug}`);
+        if (res.ok) {
+          const data = await res.json();
+          setIsAgencyManaged(data.isAgencyManaged && !data.canEdit);
+          setManagingAgencyName(data.agencyName || null);
+        }
+      } catch (error) {
+        console.error("Error fetching permissions:", error);
+      }
+    };
+    fetchPermissions();
+  }, [selectedCreator?.slug, session?.user?.id]);
 
   const fetchPayoutData = async () => {
     try {
@@ -133,9 +227,26 @@ export default function CreatorEarningsPage() {
     }
   };
 
+  const handleIdPhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setIdPhoto(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setIdPhotoPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleRequestPayout = async () => {
     if (!walletAddress.trim()) {
       setPayoutError("Please enter your wallet address");
+      return;
+    }
+
+    if (!idPhoto) {
+      setPayoutError("Please upload your ID document");
       return;
     }
 
@@ -144,10 +255,32 @@ export default function CreatorEarningsPage() {
     setPayoutSuccess(false);
 
     try {
+      // First upload the ID photo
+      const formData = new FormData();
+      formData.append("file", idPhoto);
+      formData.append("type", "payout-id");
+
+      const uploadRes = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!uploadRes.ok) {
+        setPayoutError("Failed to upload ID document");
+        return;
+      }
+
+      const uploadResult = await uploadRes.json();
+
+      // Then submit the payout request
       const res = await fetch("/api/creator/payout-request", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ walletType, walletAddress: walletAddress.trim() }),
+        body: JSON.stringify({
+          walletType,
+          walletAddress: walletAddress.trim(),
+          idPhotoUrl: uploadResult.url,
+        }),
       });
 
       const result = await res.json();
@@ -158,7 +291,10 @@ export default function CreatorEarningsPage() {
       }
 
       setPayoutSuccess(true);
-      fetchPayoutData(); // Refresh data
+      setShowPayoutForm(false);
+      setIdPhoto(null);
+      setIdPhotoPreview(null);
+      fetchPayoutData();
     } catch (error) {
       console.error("Error requesting payout:", error);
       setPayoutError("Failed to request payout");
@@ -226,8 +362,8 @@ export default function CreatorEarningsPage() {
   }
 
   return (
-    <div className="min-h-screen p-3 pt-20 sm:p-4 sm:pt-20 lg:p-8 lg:pt-8 overflow-x-hidden">
-      <div className="max-w-6xl mx-auto w-full">
+    <div className="min-h-screen p-3 pt-20 sm:p-4 sm:pt-20 lg:p-8 lg:pt-8 overflow-x-hidden overflow-y-auto">
+      <div className="max-w-6xl mx-auto w-full overflow-hidden">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -241,6 +377,39 @@ export default function CreatorEarningsPage() {
             Track your revenue and commissions
           </p>
         </motion.div>
+
+        {/* Read-Only Mode Banner for Agency-Managed Creators */}
+        {isAgencyManaged && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.05 }}
+            className="mb-4 sm:mb-6"
+          >
+            <div className="relative overflow-hidden rounded-xl sm:rounded-2xl bg-gradient-to-r from-orange-500/20 via-amber-500/10 to-transparent border border-orange-500/30 p-4 sm:p-6">
+              <div className="absolute top-0 right-0 w-24 h-24 sm:w-32 sm:h-32 bg-orange-500/20 rounded-full blur-3xl" />
+              <div className="relative flex items-center gap-3 sm:gap-4">
+                <div className="p-2 sm:p-3 rounded-lg sm:rounded-xl bg-orange-500/20 flex-shrink-0">
+                  <Eye className="w-6 h-6 sm:w-8 sm:h-8 text-orange-400" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <h3 className="text-sm sm:text-lg font-semibold text-orange-200">
+                      View-Only Mode
+                    </h3>
+                  </div>
+                  <p className="text-xs sm:text-sm text-orange-300/80">
+                    Your earnings are managed by <span className="font-semibold text-orange-200">{managingAgencyName}</span>.
+                    Payout requests are handled by your agency.
+                  </p>
+                </div>
+                <div className="hidden sm:flex items-center gap-2 flex-shrink-0">
+                  <Building2 className="w-5 h-5 text-orange-400" />
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
 
         {/* First Month Banner */}
         {data?.commission.inFirstMonth && data.commission.firstMonthFree && (
@@ -269,91 +438,148 @@ export default function CreatorEarningsPage() {
           </motion.div>
         )}
 
-        {/* Stats Cards */}
+        {/* Revenue Chart */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4 mb-4 sm:mb-8"
+          className="mb-4 sm:mb-6"
         >
-          <Card variant="luxury" className="p-3 sm:p-6">
-            <div className="flex items-center gap-2 sm:gap-4">
-              <div className="p-2 sm:p-3 rounded-lg sm:rounded-xl bg-yellow-500/20 flex-shrink-0">
-                <Clock className="w-4 h-4 sm:w-6 sm:h-6 text-yellow-400" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-[10px] sm:text-sm text-[var(--muted)] truncate">Pending</p>
-                <p className="text-base sm:text-2xl font-bold text-[var(--foreground)]">
+          <RevenueChart
+            data={chartData?.daily || []}
+            period={chartPeriod}
+            onPeriodChange={setChartPeriod}
+            total={chartData?.summary.total || 0}
+            change={chartData?.summary.change || 0}
+            avgDaily={chartData?.summary.avgDaily || 0}
+            isLoading={isLoadingChart}
+            title="Revenue"
+          />
+        </motion.div>
+
+        {/* KPI Cards with Sparklines */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+          className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4 mb-4 sm:mb-6"
+        >
+          <RevenueKpiCard
+            title="Subscriptions"
+            value={chartData?.breakdown.find(b => b.type === "subscription")?.amount || 0}
+            change={0}
+            sparklineData={chartData?.daily.map(d => d.subscriptions) || []}
+            icon={CreditCard}
+            color="purple"
+            delay={0.1}
+          />
+          <RevenueKpiCard
+            title="PPV Sales"
+            value={chartData?.breakdown.find(b => b.type === "ppv")?.amount || 0}
+            change={0}
+            sparklineData={chartData?.daily.map(d => d.ppv) || []}
+            icon={MessageSquare}
+            color="amber"
+            delay={0.15}
+          />
+          <RevenueKpiCard
+            title="Tips"
+            value={chartData?.breakdown.find(b => b.type === "tip")?.amount || 0}
+            change={0}
+            sparklineData={chartData?.daily.map(d => d.tips) || []}
+            icon={Gift}
+            color="pink"
+            delay={0.2}
+          />
+          <RevenueKpiCard
+            title="Media Unlocks"
+            value={chartData?.breakdown.find(b => b.type === "media_unlock")?.amount || 0}
+            change={0}
+            sparklineData={chartData?.daily.map(d => d.media) || []}
+            icon={ImageIcon}
+            color="cyan"
+            delay={0.25}
+          />
+        </motion.div>
+
+        {/* Revenue Breakdown & Summary */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4 sm:mb-8"
+        >
+          <RevenueBreakdown
+            data={chartData?.breakdown || []}
+            total={chartData?.summary.total || 0}
+          />
+
+          {/* Balance Summary Card */}
+          <Card className="p-4 sm:p-6">
+            <h3 className="text-sm font-medium text-gray-400 mb-4">Balance Summary</h3>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
+                <div className="flex items-center gap-3">
+                  <Clock className="w-5 h-5 text-yellow-400" />
+                  <span className="text-sm text-gray-300">Pending Balance</span>
+                </div>
+                <span className="text-lg font-bold text-yellow-400">
                   {formatEuro(data?.summary.pendingBalance || 0)}
-                </p>
+                </span>
               </div>
-            </div>
-          </Card>
-
-          <Card variant="luxury" className="p-3 sm:p-6">
-            <div className="flex items-center gap-2 sm:gap-4">
-              <div className="p-2 sm:p-3 rounded-lg sm:rounded-xl bg-green-500/20 flex-shrink-0">
-                <TrendingUp className="w-4 h-4 sm:w-6 sm:h-6 text-green-400" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-[10px] sm:text-sm text-[var(--muted)] truncate">Earned</p>
-                <p className="text-base sm:text-2xl font-bold text-[var(--foreground)]">
+              <div className="flex items-center justify-between p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                <div className="flex items-center gap-3">
+                  <TrendingUp className="w-5 h-5 text-emerald-400" />
+                  <span className="text-sm text-gray-300">Total Earned</span>
+                </div>
+                <span className="text-lg font-bold text-emerald-400">
                   {formatEuro(data?.summary.totalEarned || 0)}
-                </p>
+                </span>
               </div>
-            </div>
-          </Card>
-
-          <Card variant="luxury" className="p-3 sm:p-6">
-            <div className="flex items-center gap-2 sm:gap-4">
-              <div className="p-2 sm:p-3 rounded-lg sm:rounded-xl bg-blue-500/20 flex-shrink-0">
-                <CheckCircle className="w-4 h-4 sm:w-6 sm:h-6 text-blue-400" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-[10px] sm:text-sm text-[var(--muted)] truncate">Paid Out</p>
-                <p className="text-base sm:text-2xl font-bold text-[var(--foreground)]">
+              <div className="flex items-center justify-between p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
+                <div className="flex items-center gap-3">
+                  <CheckCircle className="w-5 h-5 text-blue-400" />
+                  <span className="text-sm text-gray-300">Paid Out</span>
+                </div>
+                <span className="text-lg font-bold text-blue-400">
                   {formatEuro(data?.summary.totalPaid || 0)}
-                </p>
+                </span>
               </div>
-            </div>
-          </Card>
-
-          <Card variant="luxury" className="p-3 sm:p-6">
-            <div className="flex items-center gap-2 sm:gap-4">
-              <div className="p-2 sm:p-3 rounded-lg sm:rounded-xl bg-purple-500/20 flex-shrink-0">
-                <DollarSign className="w-4 h-4 sm:w-6 sm:h-6 text-purple-400" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-[10px] sm:text-sm text-[var(--muted)] truncate">Commission</p>
-                <p className="text-base sm:text-2xl font-bold text-[var(--foreground)]">
-                  {((data?.commission.currentRate || 0) * 100).toFixed(0)}%
-                </p>
+              <div className="flex items-center justify-between p-3 rounded-lg bg-purple-500/10 border border-purple-500/20">
+                <div className="flex items-center gap-3">
+                  <DollarSign className="w-5 h-5 text-purple-400" />
+                  <span className="text-sm text-gray-300">Commission Rate</span>
+                </div>
+                <span className="text-lg font-bold text-purple-400">
+                  {data?.commission.inFirstMonth ? "0%" : `${data?.commission.currentRate || 5}%`}
+                </span>
               </div>
             </div>
           </Card>
         </motion.div>
 
-        {/* Payout Request Section */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.12 }}
-          className="mb-4 sm:mb-8"
-        >
-          <Card variant="luxury" className="p-4 sm:p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 sm:p-3 rounded-lg sm:rounded-xl bg-[var(--gold)]/20 flex-shrink-0">
-                <Wallet className="w-5 h-5 sm:w-6 sm:h-6 text-[var(--gold)]" />
+        {/* Payout Request Section - Hidden for agency-managed creators */}
+        {!isAgencyManaged && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.12 }}
+            className="mb-4 sm:mb-8"
+          >
+            <Card variant="luxury" className="p-4 sm:p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 sm:p-3 rounded-lg sm:rounded-xl bg-[var(--gold)]/20 flex-shrink-0">
+                  <Wallet className="w-5 h-5 sm:w-6 sm:h-6 text-[var(--gold)]" />
+                </div>
+                <div>
+                  <h3 className="text-base sm:text-lg font-semibold text-[var(--foreground)]">
+                    Request Payout
+                  </h3>
+                  <p className="text-xs sm:text-sm text-[var(--muted)]">
+                    Minimum {formatEuro(payoutData?.minimumPayout || 100)} • 1 request per day
+                  </p>
+                </div>
               </div>
-              <div>
-                <h3 className="text-base sm:text-lg font-semibold text-[var(--foreground)]">
-                  Request Payout
-                </h3>
-                <p className="text-xs sm:text-sm text-[var(--muted)]">
-                  Minimum {formatEuro(payoutData?.minimumPayout || 100)} • 1 request per day
-                </p>
-              </div>
-            </div>
 
             {/* Latest Request Status */}
             {payoutData?.latestRequest && (
@@ -407,93 +633,180 @@ export default function CreatorEarningsPage() {
               </div>
             )}
 
-            {/* Request Form */}
+            {/* Request Payout Section */}
             {(!payoutData?.latestRequest || payoutData.latestRequest.status === "PAID") && (
-              <div className="space-y-4">
-                {/* Wallet Type Selection */}
-                <div className="flex gap-2">
-                  <button
+              <>
+                {!showPayoutForm ? (
+                  /* Initial Button - shows form when clicked */
+                  <Button
                     onClick={() => {
-                      setWalletType("ETH");
-                      setWalletAddress(payoutData?.walletEth || "");
+                      setShowPayoutForm(true);
+                      // Pre-fill wallet if available
+                      if (payoutData?.walletEth) {
+                        setWalletType("ETH");
+                        setWalletAddress(payoutData.walletEth);
+                      } else if (payoutData?.walletBtc) {
+                        setWalletType("BTC");
+                        setWalletAddress(payoutData.walletBtc);
+                      }
                     }}
-                    className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors ${
-                      walletType === "ETH"
-                        ? "bg-[var(--gold)] text-black"
-                        : "bg-[var(--surface)] text-[var(--muted)] hover:text-[var(--foreground)]"
-                    }`}
+                    disabled={!payoutData?.canRequest}
+                    className="w-full"
                   >
-                    ETH (Ethereum)
-                  </button>
-                  <button
-                    onClick={() => {
-                      setWalletType("BTC");
-                      setWalletAddress(payoutData?.walletBtc || "");
-                    }}
-                    className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors ${
-                      walletType === "BTC"
-                        ? "bg-[var(--gold)] text-black"
-                        : "bg-[var(--surface)] text-[var(--muted)] hover:text-[var(--foreground)]"
-                    }`}
-                  >
-                    BTC (Bitcoin)
-                  </button>
-                </div>
+                    {!payoutData?.hasEnoughBalance ? (
+                      <>
+                        <AlertCircle className="w-4 h-4 mr-2" />
+                        Minimum {formatEuro(payoutData?.minimumPayout || 100)} required
+                      </>
+                    ) : !payoutData?.cooldownPassed ? (
+                      <>
+                        <Clock className="w-4 h-4 mr-2" />
+                        Wait 24h between requests
+                      </>
+                    ) : (
+                      <>
+                        <Send className="w-4 h-4 mr-2" />
+                        Request Payout ({formatEuro(payoutData?.pendingBalance || 0)})
+                      </>
+                    )}
+                  </Button>
+                ) : (
+                  /* Payout Form - shown after clicking request button */
+                  <div className="space-y-4">
+                    {/* Wallet Type Selection */}
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => {
+                          setWalletType("ETH");
+                          setWalletAddress(payoutData?.walletEth || "");
+                        }}
+                        className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors ${
+                          walletType === "ETH"
+                            ? "bg-[var(--gold)] text-black"
+                            : "bg-[var(--surface)] text-[var(--muted)] hover:text-[var(--foreground)]"
+                        }`}
+                      >
+                        ETH (Ethereum)
+                      </button>
+                      <button
+                        onClick={() => {
+                          setWalletType("BTC");
+                          setWalletAddress(payoutData?.walletBtc || "");
+                        }}
+                        className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors ${
+                          walletType === "BTC"
+                            ? "bg-[var(--gold)] text-black"
+                            : "bg-[var(--surface)] text-[var(--muted)] hover:text-[var(--foreground)]"
+                        }`}
+                      >
+                        BTC (Bitcoin)
+                      </button>
+                    </div>
 
-                {/* Wallet Address Input */}
-                <input
-                  type="text"
-                  value={walletAddress}
-                  onChange={(e) => setWalletAddress(e.target.value)}
-                  placeholder={walletType === "ETH" ? "0x..." : "bc1... or 1... or 3..."}
-                  className="w-full px-4 py-3 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-[var(--foreground)] placeholder:text-[var(--muted)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--gold)]/50"
-                />
+                    {/* Wallet Address Input */}
+                    <input
+                      type="text"
+                      value={walletAddress}
+                      onChange={(e) => setWalletAddress(e.target.value)}
+                      placeholder={walletType === "ETH" ? "0x..." : "bc1... or 1... or 3..."}
+                      className="w-full px-4 py-3 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-[var(--foreground)] placeholder:text-[var(--muted)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--gold)]/50"
+                    />
 
-                {/* Request Button */}
-                <Button
-                  onClick={handleRequestPayout}
-                  disabled={
-                    isRequestingPayout ||
-                    !payoutData?.canRequest ||
-                    !walletAddress.trim()
-                  }
-                  className="w-full"
-                >
-                  {isRequestingPayout ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Requesting...
-                    </>
-                  ) : !payoutData?.hasEnoughBalance ? (
-                    <>
-                      <AlertCircle className="w-4 h-4 mr-2" />
-                      Minimum {formatEuro(payoutData?.minimumPayout || 100)} required
-                    </>
-                  ) : !payoutData?.cooldownPassed ? (
-                    <>
-                      <Clock className="w-4 h-4 mr-2" />
-                      Wait 24h between requests
-                    </>
-                  ) : (
-                    <>
-                      <Send className="w-4 h-4 mr-2" />
-                      Request Payout ({formatEuro(payoutData?.pendingBalance || 0)})
-                    </>
-                  )}
-                </Button>
-              </div>
+                    {/* ID Photo Upload */}
+                    <div className="space-y-2">
+                      <label className="text-sm text-[var(--muted)]">
+                        ID Document (Passport or ID Card)
+                      </label>
+                      {idPhotoPreview ? (
+                        <div className="relative">
+                          <img
+                            src={idPhotoPreview}
+                            alt="ID Preview"
+                            className="w-full h-32 object-cover rounded-lg border border-[var(--border)]"
+                          />
+                          <button
+                            onClick={() => {
+                              setIdPhoto(null);
+                              setIdPhotoPreview(null);
+                            }}
+                            className="absolute top-2 right-2 p-1 bg-black/50 rounded-full hover:bg-black/70 transition-colors"
+                          >
+                            <X className="w-4 h-4 text-white" />
+                          </button>
+                        </div>
+                      ) : (
+                        <label className="flex flex-col items-center justify-center w-full h-32 rounded-lg border-2 border-dashed border-[var(--border)] hover:border-[var(--gold)]/50 cursor-pointer transition-colors bg-[var(--surface)]">
+                          <Upload className="w-8 h-8 text-[var(--muted)] mb-2" />
+                          <span className="text-sm text-[var(--muted)]">Click to upload</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleIdPhotoChange}
+                            className="hidden"
+                          />
+                        </label>
+                      )}
+                      {/* GDPR Notice */}
+                      <div className="flex items-start gap-2 p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
+                        <Shield className="w-4 h-4 text-blue-400 flex-shrink-0 mt-0.5" />
+                        <p className="text-xs text-blue-300">
+                          Your ID document will be automatically deleted 24 hours after verification, in compliance with GDPR regulations.
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Submit & Cancel Buttons */}
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setShowPayoutForm(false);
+                          setPayoutError(null);
+                          setIdPhoto(null);
+                          setIdPhotoPreview(null);
+                        }}
+                        className="flex-1"
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        onClick={handleRequestPayout}
+                        disabled={
+                          isRequestingPayout ||
+                          !walletAddress.trim() ||
+                          !idPhoto
+                        }
+                        className="flex-1"
+                      >
+                        {isRequestingPayout ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Submitting...
+                          </>
+                        ) : (
+                          <>
+                            <Send className="w-4 h-4 mr-2" />
+                            Submit Request
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
-          </Card>
-        </motion.div>
+            </Card>
+          </motion.div>
+        )}
 
         {/* Filters */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.15 }}
-          className="mb-4 sm:mb-6 -mx-3 px-3 sm:mx-0 sm:px-0"
+          className="mb-4 sm:mb-6"
         >
-          <div className="flex gap-2 overflow-x-auto pb-2 sm:pb-0 sm:flex-wrap scrollbar-hide">
+          <div className="flex gap-2 overflow-x-auto pb-2 sm:pb-0 sm:flex-wrap scrollbar-hide -mx-3 px-3 sm:mx-0 sm:px-0">
             <button
               onClick={() => setTypeFilter("")}
               className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-medium transition-colors whitespace-nowrap flex-shrink-0 ${

@@ -106,9 +106,8 @@ export function ConversationList({
                 ) : (
                   <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[var(--gold)] to-[var(--gold-dark)]" />
                 )}
-                {conversation.user.isOnline && (
-                  <div className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-[var(--success)] border-2 border-[var(--background)]" />
-                )}
+                {/* Always show online for creators */}
+                <div className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-[var(--success)] border-2 border-[var(--background)]" />
               </div>
 
               {/* Content */}

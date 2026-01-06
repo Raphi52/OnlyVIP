@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { MessageCircle, Heart, DollarSign, Lock, Send, Sparkles, Check, Zap, Loader2, Crown, X, Coins } from "lucide-react";
 import { Button, Badge } from "@/components/ui";
 import { Creator } from "@/lib/creators";
+import { useTranslations } from "next-intl";
 
 interface ChatPreviewProps {
   creator?: Creator;
@@ -22,6 +23,7 @@ interface VipPlan {
 export function ChatPreview({ creator }: ChatPreviewProps) {
   const { data: session } = useSession();
   const router = useRouter();
+  const t = useTranslations("chat");
   const [isLoading, setIsLoading] = useState(false);
   const [canMessage, setCanMessage] = useState(false);
   const [showVipModal, setShowVipModal] = useState(false);
@@ -169,26 +171,26 @@ export function ChatPreview({ creator }: ChatPreviewProps) {
   const features = [
     {
       icon: MessageCircle,
-      title: "Private Messages",
-      description: "Direct conversation, just between us",
+      title: t("privateMessages"),
+      description: t("privateMessagesDesc"),
       color: "from-blue-500 to-cyan-500",
     },
     {
       icon: Lock,
-      title: "PPV Content",
-      description: "Unlock exclusive media sent in chat",
+      title: t("ppvContent"),
+      description: t("ppvContentDesc"),
       color: "from-purple-500 to-pink-500",
     },
     {
       icon: Heart,
-      title: "Send Tips",
-      description: "Show appreciation with instant tips",
+      title: t("sendTips"),
+      description: t("sendTipsDesc"),
       color: "from-red-500 to-orange-500",
     },
     {
       icon: Zap,
-      title: "Priority Response",
-      description: "VIP members get faster replies",
+      title: t("priorityResponse"),
+      description: t("priorityResponseDesc"),
       color: "from-[var(--gold)] to-yellow-500",
     },
   ];
@@ -217,17 +219,15 @@ export function ChatPreview({ creator }: ChatPreviewProps) {
               viewport={{ once: true }}
             >
               <MessageCircle className="w-4 h-4" />
-              Direct Connection
+              {t("directConnection")}
             </motion.span>
 
             <h2 className="text-4xl sm:text-5xl font-bold text-white mb-6 leading-tight">
-              Chat with{" "}
-              <span className="gradient-gold-text">Me Directly</span>
+              {t("chatWith")}{" "}
+              <span className="gradient-gold-text">{t("meDirectly")}</span>
             </h2>
             <p className="text-gray-400 text-lg mb-10 leading-relaxed">
-              VIP members get exclusive access to direct messaging.
-              Receive personalized content, respond to messages, and unlock
-              exclusive pay-per-view media sent just for you.
+              {t("vipAccessDesc")}
             </p>
 
             {/* Features grid */}
@@ -264,7 +264,7 @@ export function ChatPreview({ creator }: ChatPreviewProps) {
               ) : (
                 <MessageCircle className="w-5 h-5" />
               )}
-              {canMessage ? "Chat with me" : "Get VIP Access"}
+              {canMessage ? t("chatWithMe") : t("getVipAccess")}
             </Button>
           </motion.div>
 
@@ -304,7 +304,7 @@ export function ChatPreview({ creator }: ChatPreviewProps) {
                   <h4 className="font-semibold text-white">{creatorName}</h4>
                   <p className="text-xs text-green-400 flex items-center gap-1">
                     <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
-                    Online now
+                    {t("onlineNow")}
                   </p>
                 </div>
                 <Badge variant="vip">VIP</Badge>
@@ -396,10 +396,10 @@ export function ChatPreview({ creator }: ChatPreviewProps) {
                           <Lock className="w-5 h-5 text-white/80 relative z-10" />
                         </div>
                         <div className="flex-1">
-                          <p className="text-sm text-white font-medium">Exclusive content</p>
+                          <p className="text-sm text-white font-medium">{t("exclusiveContent")}</p>
                           <div className="flex items-center gap-2 mt-1">
                             <span className="px-2 py-0.5 rounded-full bg-[var(--gold)] text-black text-xs font-bold">$9.99</span>
-                            <span className="text-xs text-gray-400">Tap to unlock</span>
+                            <span className="text-xs text-gray-400">{t("tapToUnlock")}</span>
                           </div>
                         </div>
                       </div>
@@ -427,7 +427,7 @@ export function ChatPreview({ creator }: ChatPreviewProps) {
               {/* Input */}
               <div className="flex items-center gap-3 pt-4 border-t border-white/10">
                 <div className="flex-1 px-4 py-3 rounded-full bg-white/5 border border-white/10 text-gray-500 text-sm">
-                  Type a message...
+                  {t("typeMessage")}
                 </div>
                 <button className="w-11 h-11 rounded-full bg-gradient-to-r from-[var(--gold)] to-[var(--gold-light)] flex items-center justify-center shadow-lg shadow-[var(--gold)]/30 hover:scale-105 transition-transform">
                   <Send className="w-5 h-5 text-black" />
@@ -446,7 +446,7 @@ export function ChatPreview({ creator }: ChatPreviewProps) {
             >
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                <span className="text-sm text-white font-medium">New message!</span>
+                <span className="text-sm text-white font-medium">{t("newMessage")}</span>
               </div>
             </motion.div>
           </motion.div>
@@ -489,19 +489,19 @@ export function ChatPreview({ creator }: ChatPreviewProps) {
                   >
                     <Crown className="w-10 h-10 text-black" />
                   </motion.div>
-                  <h3 className="text-2xl font-bold text-white">Become VIP</h3>
+                  <h3 className="text-2xl font-bold text-white">{t("becomeVip")}</h3>
                   <p className="text-sm text-white/50 mt-1">
-                    Unlock direct messaging with {creatorName}
+                    {t("unlockMessagingWith", { name: creatorName })}
                   </p>
                 </div>
 
                 {/* Benefits */}
                 <div className="space-y-3 mb-6">
                   {[
-                    "Direct private messages",
-                    "Exclusive PPV content access",
-                    "Priority responses",
-                    "Send tips & gifts"
+                    t("benefitMessages"),
+                    t("benefitPpv"),
+                    t("benefitPriority"),
+                    t("benefitTips")
                   ].map((benefit, i) => (
                     <motion.div
                       key={benefit}
@@ -522,17 +522,17 @@ export function ChatPreview({ creator }: ChatPreviewProps) {
                 <div className="bg-white/5 rounded-2xl p-4 mb-6 border border-white/10">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-white/50 text-sm">VIP Access</p>
+                      <p className="text-white/50 text-sm">{t("vipAccess")}</p>
                       <div className="flex items-center gap-2 mt-1">
                         <Coins className="w-5 h-5 text-[var(--gold)]" />
                         <span className="text-2xl font-bold text-white">{vipPrice.toLocaleString()}</span>
-                        <span className="text-white/50">credits</span>
+                        <span className="text-white/50">{t("credits")}</span>
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="text-white/50 text-sm">Your balance</p>
+                      <p className="text-white/50 text-sm">{t("yourBalance")}</p>
                       <p className={`text-lg font-semibold ${userCredits >= vipPrice ? 'text-green-400' : 'text-red-400'}`}>
-                        {userCredits.toLocaleString()} credits
+                        {userCredits.toLocaleString()} {t("credits")}
                       </p>
                     </div>
                   </div>
@@ -551,12 +551,12 @@ export function ChatPreview({ creator }: ChatPreviewProps) {
                     ) : (
                       <Crown className="w-5 h-5" />
                     )}
-                    Unlock VIP Access
+                    {t("unlockVipAccess")}
                   </Button>
                 ) : (
                   <div className="space-y-3">
                     <p className="text-center text-red-400 text-sm">
-                      You need {(vipPrice - userCredits).toLocaleString()} more credits
+                      {t("needMoreCredits", { amount: (vipPrice - userCredits).toLocaleString() })}
                     </p>
                     <Button
                       variant="premium"
@@ -564,7 +564,7 @@ export function ChatPreview({ creator }: ChatPreviewProps) {
                       onClick={() => router.push("/dashboard?tab=credits")}
                     >
                       <Coins className="w-5 h-5" />
-                      Buy Credits
+                      {t("buyCredits")}
                     </Button>
                   </div>
                 )}
@@ -573,7 +573,7 @@ export function ChatPreview({ creator }: ChatPreviewProps) {
                   onClick={() => setShowVipModal(false)}
                   className="w-full mt-3 py-3 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 font-medium transition-colors"
                 >
-                  Maybe later
+                  {t("maybeLater")}
                 </button>
               </div>
             </motion.div>

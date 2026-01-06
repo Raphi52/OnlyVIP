@@ -3,8 +3,8 @@
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
-import { Heart, Loader2, Check } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Heart, Loader2, Check, Mail } from "lucide-react";
 import { Button } from "@/components/ui";
 
 interface FollowButtonProps {
@@ -20,6 +20,7 @@ export function FollowButton({ creatorSlug, variant = "default", className = "" 
   const [isVip, setIsVip] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showTooltip, setShowTooltip] = useState(false);
 
   useEffect(() => {
     if (status === "loading") return;
@@ -98,20 +99,53 @@ export function FollowButton({ creatorSlug, variant = "default", className = "" 
   }
 
   return (
-    <Button
-      variant={isFollowing ? "gold-outline" : "outline"}
-      onClick={handleFollow}
-      disabled={isSubmitting || isVip}
-      className={`gap-2 ${className}`}
+    <div
+      className="relative"
+      onMouseEnter={() => setShowTooltip(true)}
+      onMouseLeave={() => setShowTooltip(false)}
     >
-      {isSubmitting ? (
-        <Loader2 className="w-4 h-4 animate-spin" />
-      ) : isFollowing ? (
-        <Check className="w-4 h-4" />
-      ) : (
-        <Heart className="w-4 h-4" />
-      )}
-      {isVip ? "VIP Member" : isFollowing ? "Following" : "Follow"}
-    </Button>
+      <Button
+        variant={isFollowing ? "gold-outline" : "outline"}
+        onClick={handleFollow}
+        disabled={isSubmitting || isVip}
+        className={`gap-2 ${className}`}
+      >
+        {isSubmitting ? (
+          <Loader2 className="w-4 h-4 animate-spin" />
+        ) : isFollowing ? (
+          <Check className="w-4 h-4" />
+        ) : (
+          <Heart className="w-4 h-4" />
+        )}
+        {isVip ? "VIP Member" : isFollowing ? "Following" : "Follow"}
+      </Button>
+
+      {/* Tooltip */}
+      <AnimatePresence>
+        {showTooltip && !isVip && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 10 }}
+            transition={{ duration: 0.2 }}
+            className="absolute left-1/2 -translate-x-1/2 top-full mt-2 z-50 w-64"
+          >
+            <div className="bg-black/95 backdrop-blur-sm border border-[var(--gold)]/30 rounded-xl p-3 shadow-xl shadow-black/50">
+              <div className="flex items-start gap-2">
+                <Mail className="w-4 h-4 text-[var(--gold)] flex-shrink-0 mt-0.5" />
+                <p className="text-xs text-gray-300">
+                  {isFollowing
+                    ? "You'll receive an email every time new content drops!"
+                    : "Follow to receive an email every time new content drops!"
+                  }
+                </p>
+              </div>
+              {/* Arrow */}
+              <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-black/95 border-l border-t border-[var(--gold)]/30 rotate-45" />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }

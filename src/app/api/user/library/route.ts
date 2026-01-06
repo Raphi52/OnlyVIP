@@ -64,7 +64,6 @@ export async function GET(request: NextRequest) {
             id: {
               in: Array.from(purchasedIds),
             },
-            isPublished: true,
             ...searchFilter,
           },
           orderBy: {
@@ -96,7 +95,6 @@ export async function GET(request: NextRequest) {
             accessTier: {
               in: accessibleTiers as any,
             },
-            isPublished: true,
             id: {
               notIn: Array.from(purchasedIds),
             },

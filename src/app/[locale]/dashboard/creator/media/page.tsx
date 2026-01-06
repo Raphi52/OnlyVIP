@@ -46,8 +46,8 @@ interface MediaItem {
   thumbnailUrl: string | null;
   contentUrl: string;
   viewCount: number;
-  isPublished: boolean;
   createdAt: string;
+  isPublished: boolean;
   // Tag fields
   tagGallery: boolean;
   tagPPV: boolean;
@@ -212,7 +212,6 @@ export default function CreatorMediaPage() {
       formData.append("type", selectedType);
       formData.append("accessTier", selectedTier);
       formData.append("creatorSlug", selectedCreator.slug);
-      formData.append("isPublished", "true");
 
       // Add tag fields
       formData.append("tagGallery", tagGallery.toString());
@@ -294,29 +293,6 @@ export default function CreatorMediaPage() {
       }
     } catch (error) {
       console.error("Delete error:", error);
-    }
-  };
-
-  const handleTogglePublish = async (item: MediaItem) => {
-    try {
-      const res = await fetch("/api/media", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          id: item.id,
-          isPublished: !item.isPublished,
-        }),
-      });
-
-      if (res.ok) {
-        setMedia((prev) =>
-          prev.map((m) =>
-            m.id === item.id ? { ...m, isPublished: !m.isPublished } : m
-          )
-        );
-      }
-    } catch (error) {
-      console.error("Toggle publish error:", error);
     }
   };
 
@@ -460,18 +436,6 @@ export default function CreatorMediaPage() {
         const result = await res.json();
         if (action === "delete") {
           setMedia((prev) => prev.filter((m) => !selectedIds.has(m.id)));
-        } else if (action === "publish") {
-          setMedia((prev) =>
-            prev.map((m) =>
-              selectedIds.has(m.id) ? { ...m, isPublished: true } : m
-            )
-          );
-        } else if (action === "unpublish") {
-          setMedia((prev) =>
-            prev.map((m) =>
-              selectedIds.has(m.id) ? { ...m, isPublished: false } : m
-            )
-          );
         }
         clearSelection();
       } else {
@@ -571,7 +535,7 @@ export default function CreatorMediaPage() {
   }
 
   return (
-    <div className="p-4 sm:p-8 pb-24 sm:pb-8">
+    <div className="p-4 pt-20 sm:p-6 sm:pt-20 lg:p-8 lg:pt-8 pb-24">
       {/* Current Creator indicator */}
       {selectedCreator && (
         <div className="mb-6 flex items-center gap-3 text-sm text-gray-400">
@@ -894,30 +858,6 @@ export default function CreatorMediaPage() {
 
                   {/* Status buttons */}
                   <div className="absolute top-3 right-3 flex flex-col gap-2">
-                    {/* Published status */}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleTogglePublish(item);
-                      }}
-                      title={item.isPublished ? "Published" : "Draft"}
-                    >
-                      <div
-                        className={cn(
-                          "w-8 h-8 rounded-full flex items-center justify-center transition-colors",
-                          item.isPublished
-                            ? "bg-emerald-500/80 hover:bg-emerald-500"
-                            : "bg-[var(--muted)]/80 hover:bg-[var(--muted)]"
-                        )}
-                      >
-                        {item.isPublished ? (
-                          <Eye className="w-4 h-4 text-white" />
-                        ) : (
-                          <EyeOff className="w-4 h-4 text-white" />
-                        )}
-                      </div>
-                    </button>
-
                     {/* Gallery visibility */}
                     <button
                       onClick={(e) => {

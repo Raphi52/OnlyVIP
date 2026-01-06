@@ -39,7 +39,6 @@ interface MediaItem {
   isPurchaseable: boolean;
   price: number | null;
   viewCount: number;
-  isPublished: boolean;
   createdAt: string;
 }
 
@@ -133,7 +132,6 @@ export default function AdminMediaPage() {
       if (isPurchaseable && price) {
         formData.append("price", price);
       }
-      formData.append("isPublished", "true");
 
       files.forEach((file) => formData.append("files", file));
 
@@ -179,29 +177,6 @@ export default function AdminMediaPage() {
       }
     } catch (error) {
       console.error("Delete error:", error);
-    }
-  };
-
-  const handleTogglePublish = async (item: MediaItem) => {
-    try {
-      const res = await fetch("/api/media", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          id: item.id,
-          isPublished: !item.isPublished,
-        }),
-      });
-
-      if (res.ok) {
-        setMedia((prev) =>
-          prev.map((m) =>
-            m.id === item.id ? { ...m, isPublished: !m.isPublished } : m
-          )
-        );
-      }
-    } catch (error) {
-      console.error("Toggle publish error:", error);
     }
   };
 
@@ -419,28 +394,6 @@ export default function AdminMediaPage() {
                       </Badge>
                     )}
                   </div>
-
-                  {/* Published status */}
-                  <button
-                    onClick={() => handleTogglePublish(item)}
-                    className="absolute top-3 right-3"
-                    title={item.isPublished ? "Published" : "Draft"}
-                  >
-                    <div
-                      className={cn(
-                        "w-8 h-8 rounded-full flex items-center justify-center transition-colors",
-                        item.isPublished
-                          ? "bg-emerald-500/80 hover:bg-emerald-500"
-                          : "bg-[var(--muted)]/80 hover:bg-[var(--muted)]"
-                      )}
-                    >
-                      {item.isPublished ? (
-                        <Eye className="w-4 h-4 text-white" />
-                      ) : (
-                        <EyeOff className="w-4 h-4 text-white" />
-                      )}
-                    </div>
-                  </button>
 
                   {/* Type icon */}
                   {item.type === "VIDEO" && (

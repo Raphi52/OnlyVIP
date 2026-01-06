@@ -193,7 +193,7 @@ export default function SettingsPage() {
   const isAdmin = (session?.user as any)?.role === "ADMIN";
 
   return (
-    <div className="min-h-screen p-6 lg:p-8">
+    <div className="min-h-screen p-4 pt-20 sm:p-6 sm:pt-20 lg:p-8 lg:pt-8">
       <div className="max-w-2xl mx-auto space-y-6">
         {/* Header */}
         <div className="mb-8">
@@ -537,7 +537,6 @@ export default function SettingsPage() {
         <>
           <div
             className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50"
-            onClick={() => setConfirmModal(null)}
           />
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <motion.div

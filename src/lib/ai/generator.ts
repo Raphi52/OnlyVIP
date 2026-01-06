@@ -40,6 +40,8 @@ import {
   MediaContext
 } from "./prompt-builder";
 import { getScriptReferences, ScriptReference } from "./script-reference";
+import { matchScript, MatchedScript, buildMatchedScriptPrompt, getNextScript } from "../scripts/script-matcher";
+import { detectResponseOutcome, ResponseOutcome } from "../scripts/intent-detector";
 
 // ============= TYPES =============
 
@@ -70,10 +72,24 @@ export interface GeneratorResult {
     shortTerm: Partial<ShortTermMemory>;
     extractedFacts: Array<{ key: string; value: string }>;
   };
+  // Flow tracking for automatic script sequences
+  flowUpdate?: {
+    scriptId: string;
+    hasNextOnSuccess: boolean;
+    hasNextOnReject: boolean;
+    hasFollowUp: boolean;
+    followUpDelay?: number; // minutes
+  };
   debugInfo?: {
     strategy: string;
     tokensUsed?: number;
     scriptsUsed: number;
+    matchedScriptId?: string;
+    matchedScriptName?: string;
+    matchedScriptConfidence?: number;
+    scriptMediaCount?: number;
+    flowContinued?: boolean;
+    fanResponseOutcome?: ResponseOutcome;
   };
 }
 
@@ -124,28 +140,204 @@ export async function generateHumanResponse(params: GeneratorParams): Promise<Ge
       timestamp: m.createdAt
     })) as Message[];
 
-  // 4. Analyze if media should be sent
+  // 4. Check for flow continuation (if we sent a script and are awaiting fan response)
+  let matchedScript: MatchedScript | null = null;
+  let scriptMediaAvailable: MediaContext[] = [];
+  let flowContinued = false;
+  let fanResponseOutcome: ResponseOutcome | undefined;
+  let flowScriptInfo: { id: string; followUpDelay?: number; followUpScriptId?: string } | null = null;
+
+  // Load conversation to check flow state
+  const conversation = await prisma.conversation.findUnique({
+    where: { id: conversationId },
+    select: {
+      lastScriptId: true,
+      awaitingFanResponse: true,
+    },
+  });
+
+  // Check if we're in a flow and awaiting response
+  if (conversation?.awaitingFanResponse && conversation?.lastScriptId) {
+    // Detect fan's response outcome
+    const outcomeResult = detectResponseOutcome(currentMessage);
+    fanResponseOutcome = outcomeResult.outcome;
+
+    // Get next script based on outcome
+    if (outcomeResult.outcome === "positive" || outcomeResult.outcome === "negative") {
+      const nextScriptOutcome = outcomeResult.outcome === "positive" ? "success" : "reject";
+      const nextScript = await getNextScript(conversation.lastScriptId, nextScriptOutcome);
+
+      if (nextScript) {
+        flowContinued = true;
+
+        // Get full script with media
+        const fullScript = await prisma.script.findUnique({
+          where: { id: nextScript.id },
+          select: {
+            id: true,
+            name: true,
+            content: true,
+            category: true,
+            intent: true,
+            conversionRate: true,
+            successScore: true,
+            aiInstructions: true,
+            allowAiModify: true,
+            preserveCore: true,
+            language: true,
+            suggestedPrice: true,
+            nextScriptOnSuccess: true,
+            nextScriptOnReject: true,
+            followUpDelay: true,
+            followUpScriptId: true,
+            mediaItems: {
+              orderBy: { order: "asc" },
+              select: {
+                id: true,
+                order: true,
+                media: {
+                  select: {
+                    id: true,
+                    type: true,
+                    title: true,
+                    description: true,
+                    contentUrl: true,
+                    previewUrl: true,
+                    thumbnailUrl: true,
+                    ppvPriceCredits: true,
+                    tagFree: true,
+                    tagPPV: true,
+                  },
+                },
+              },
+            },
+          },
+        });
+
+        if (fullScript) {
+          // Create MatchedScript from flow script
+          matchedScript = {
+            script: {
+              id: fullScript.id,
+              name: fullScript.name,
+              content: fullScript.content,
+              category: fullScript.category,
+              intent: fullScript.intent,
+              conversionRate: fullScript.conversionRate,
+              successScore: fullScript.successScore,
+              aiInstructions: fullScript.aiInstructions,
+              allowAiModify: fullScript.allowAiModify,
+              preserveCore: fullScript.preserveCore,
+              language: fullScript.language,
+              suggestedPrice: fullScript.suggestedPrice,
+              nextScriptOnSuccess: fullScript.nextScriptOnSuccess,
+              nextScriptOnReject: fullScript.nextScriptOnReject,
+              mediaItems: fullScript.mediaItems,
+            },
+            confidence: 0.9, // High confidence for flow scripts
+            intent: null,
+            strategy: fullScript.allowAiModify ? "AI_PERSONALIZED_SCRIPT" : "SCRIPT_ONLY",
+            parsedContent: fullScript.content,
+            matchReason: "intent", // Flow continuation
+          };
+
+          flowScriptInfo = {
+            id: fullScript.id,
+            followUpDelay: fullScript.followUpDelay || undefined,
+            followUpScriptId: fullScript.followUpScriptId || undefined,
+          };
+
+          // Convert script media
+          if (fullScript.mediaItems.length > 0) {
+            scriptMediaAvailable = fullScript.mediaItems.map(item => ({
+              id: item.media.id,
+              type: item.media.type as "PHOTO" | "VIDEO",
+              title: item.media.title,
+              description: item.media.description || undefined,
+              isFree: item.media.tagFree,
+              ppvPrice: item.media.ppvPriceCredits || fullScript.suggestedPrice || undefined,
+              contentUrl: item.media.contentUrl,
+              previewUrl: item.media.previewUrl || undefined,
+              thumbnailUrl: item.media.thumbnailUrl || undefined,
+            }));
+          }
+        }
+      }
+    }
+  }
+
+  // 5. Try to match a new script if no flow continuation
+  if (!matchedScript && agencyId) {
+    matchedScript = await matchScript({
+      message: currentMessage,
+      creatorSlug,
+      agencyId,
+      fanName: longTerm.fanFacts?.name || undefined,
+      fanStage: longTerm.relationshipStage as "new" | "engaged" | "vip" | "cooling_off" | undefined,
+      creatorName: character.name,
+      language,
+    });
+
+    // Convert script media to MediaContext format
+    if (matchedScript?.script.mediaItems && matchedScript.script.mediaItems.length > 0) {
+      scriptMediaAvailable = matchedScript.script.mediaItems.map(item => ({
+        id: item.media.id,
+        type: item.media.type as "PHOTO" | "VIDEO",
+        title: item.media.title,
+        description: item.media.description || undefined,
+        isFree: item.media.tagFree,
+        ppvPrice: item.media.ppvPriceCredits || matchedScript!.script.suggestedPrice || undefined,
+        contentUrl: item.media.contentUrl,
+        previewUrl: item.media.previewUrl || undefined,
+        thumbnailUrl: item.media.thumbnailUrl || undefined,
+      }));
+
+      // Store flow info for new matched script
+      if (matchedScript) {
+        const scriptDetails = await prisma.script.findUnique({
+          where: { id: matchedScript.script.id },
+          select: { followUpDelay: true, followUpScriptId: true },
+        });
+        if (scriptDetails) {
+          flowScriptInfo = {
+            id: matchedScript.script.id,
+            followUpDelay: scriptDetails.followUpDelay || undefined,
+            followUpScriptId: scriptDetails.followUpScriptId || undefined,
+          };
+        }
+      }
+    }
+  }
+
+  // 5. Analyze if media should be sent
   const mediaDecision = analyzeMediaRelevance(currentMessage, shortTerm, longTerm);
 
-  // 5. Get available media if needed
+  // 6. Get available media - prioritize script media, fallback to library
   let availableMedia: MediaContext[] = [];
-  if (mediaDecision.shouldConsider) {
+  if (scriptMediaAvailable.length > 0) {
+    // Use media from matched script
+    availableMedia = scriptMediaAvailable;
+  } else if (mediaDecision.shouldConsider) {
+    // Fallback to creator's media library
     availableMedia = await getAvailableMedia(creatorSlug, currentMessage);
   }
 
-  // 6. Get script references (inspiration)
-  let scriptReferences: ScriptReference[] = [];
-  if (agencyId) {
-    scriptReferences = await getScriptReferences({
-      agencyId,
-      creatorSlug,
-      currentMessage,
-      language
-    });
-  }
+  // 7. Get script references (inspiration) - for additional context
+  // Scripts are now tied to creators, not agencies
+  const scriptReferences = await getScriptReferences({
+    creatorSlug,
+    agencyId: agencyId || null,
+    currentMessage,
+    language
+  });
 
-  // 7. Build prompts
-  const systemPrompt = buildSystemPrompt(character, language);
+  // 8. Build prompts
+  let systemPrompt = buildSystemPrompt(character, language);
+
+  // Add matched script prompt if we have a high-confidence match
+  if (matchedScript && matchedScript.confidence >= 0.5) {
+    systemPrompt += buildMatchedScriptPrompt(matchedScript);
+  }
 
   const userPrompt = buildUserPrompt({
     shortTermMemory: shortTerm,
@@ -189,7 +381,12 @@ export async function generateHumanResponse(params: GeneratorParams): Promise<Ge
   let shouldSendMedia = false;
   let selectedMedia: MediaContext | undefined;
 
-  if (mediaDecision.shouldSend && availableMedia.length > 0) {
+  // If script has media attached, strongly prefer sending it
+  if (scriptMediaAvailable.length > 0 && matchedScript && matchedScript.confidence >= 0.5) {
+    shouldSendMedia = true;
+    // Use first media from script (ordered by priority)
+    selectedMedia = scriptMediaAvailable[0];
+  } else if (mediaDecision.shouldSend && availableMedia.length > 0) {
     shouldSendMedia = true;
     selectedMedia = selectBestMedia(availableMedia, currentMessage, mediaDecision.preferFree);
   }
@@ -202,6 +399,18 @@ export async function generateHumanResponse(params: GeneratorParams): Promise<Ge
     console.error("[Generator] Failed to update relationship stage:", err)
   );
 
+  // Build flow update info if we used a script
+  let flowUpdate: GeneratorResult["flowUpdate"] | undefined;
+  if (matchedScript && flowScriptInfo) {
+    flowUpdate = {
+      scriptId: flowScriptInfo.id,
+      hasNextOnSuccess: !!matchedScript.script.nextScriptOnSuccess,
+      hasNextOnReject: !!matchedScript.script.nextScriptOnReject,
+      hasFollowUp: !!flowScriptInfo.followUpScriptId,
+      followUpDelay: flowScriptInfo.followUpDelay,
+    };
+  }
+
   return {
     text: responseText,
     shouldSendMedia,
@@ -213,9 +422,22 @@ export async function generateHumanResponse(params: GeneratorParams): Promise<Ge
       },
       extractedFacts
     },
+    flowUpdate,
     debugInfo: {
-      strategy: scriptReferences.length > 0 ? "script-inspired" : "pure-ai",
-      scriptsUsed: scriptReferences.reduce((sum, r) => sum + r.examples.length, 0)
+      strategy: flowContinued
+        ? `flow-continued:${matchedScript?.strategy}`
+        : matchedScript
+          ? `script-matched:${matchedScript.strategy}`
+          : scriptReferences.length > 0
+            ? "script-inspired"
+            : "pure-ai",
+      scriptsUsed: scriptReferences.reduce((sum, r) => sum + r.examples.length, 0),
+      matchedScriptId: matchedScript?.script.id,
+      matchedScriptName: matchedScript?.script.name,
+      matchedScriptConfidence: matchedScript?.confidence,
+      scriptMediaCount: scriptMediaAvailable.length,
+      flowContinued,
+      fanResponseOutcome,
     }
   };
 }
@@ -281,7 +503,6 @@ async function getAvailableMedia(creatorSlug: string, context: string): Promise<
   const media = await prisma.mediaContent.findMany({
     where: {
       creatorSlug,
-      isPublished: true,
       tagAI: true
     },
     take: 10,
@@ -566,6 +787,58 @@ function detectMoodFromMessage(message: string): ShortTermMemory["currentMood"] 
   return null;
 }
 
+// ============= FLOW TRACKING =============
+
+/**
+ * Update conversation flow state after sending a script
+ * Call this after successfully sending a message with a script
+ */
+export async function updateConversationFlow(
+  conversationId: string,
+  flowUpdate: GeneratorResult["flowUpdate"]
+): Promise<void> {
+  if (!flowUpdate) return;
+
+  const updateData: Record<string, unknown> = {
+    lastScriptId: flowUpdate.scriptId,
+    lastScriptSentAt: new Date(),
+    awaitingFanResponse: flowUpdate.hasNextOnSuccess || flowUpdate.hasNextOnReject,
+    followUpSent: false,
+  };
+
+  // Set up follow-up if configured
+  if (flowUpdate.hasFollowUp && flowUpdate.followUpDelay) {
+    const followUpTime = new Date();
+    followUpTime.setMinutes(followUpTime.getMinutes() + flowUpdate.followUpDelay);
+
+    updateData.pendingFollowUpId = flowUpdate.scriptId; // We'll look up the followUpScriptId later
+    updateData.followUpDueAt = followUpTime;
+  } else {
+    updateData.pendingFollowUpId = null;
+    updateData.followUpDueAt = null;
+  }
+
+  await prisma.conversation.update({
+    where: { id: conversationId },
+    data: updateData,
+  });
+}
+
+/**
+ * Clear flow state when fan responds (no longer awaiting)
+ * Call this when a fan sends a message
+ */
+export async function clearFlowAwaitingState(conversationId: string): Promise<void> {
+  await prisma.conversation.update({
+    where: { id: conversationId },
+    data: {
+      awaitingFanResponse: false,
+      // Keep lastScriptId for flow continuation
+      // Keep follow-up settings until they're sent
+    },
+  });
+}
+
 // ============= EXPORTS =============
 
 export {
@@ -576,3 +849,4 @@ export {
   buildSystemPrompt,
   buildUserPrompt
 };
+// Note: updateConversationFlow and clearFlowAwaitingState are already exported via their function declarations

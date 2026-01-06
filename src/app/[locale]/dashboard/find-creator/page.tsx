@@ -654,7 +654,6 @@ export default function FindCreatorPage() {
       {selectedListing && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
-          onClick={() => setSelectedListing(null)}
         >
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}

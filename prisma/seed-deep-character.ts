@@ -11,7 +11,7 @@ async function main() {
   console.log("🎭 Seeding Deep Character for Mia Costa...\n");
 
   // Find Mia Costa's personality or create one
-  const existingPersonality = await prisma.agencyAiPersonality.findFirst({
+  const existingPersonality = await prisma.creatorAiPersonality.findFirst({
     where: {
       creatorSlug: "miacosta",
       isActive: true,
@@ -156,7 +156,7 @@ Elle parle de son contenu naturellement, comme si c'était normal de partager so
 
   if (existingPersonality) {
     // Update existing personality with deep character data
-    await prisma.agencyAiPersonality.update({
+    await prisma.creatorAiPersonality.update({
       where: { id: existingPersonality.id },
       data: deepCharacterData,
     });
@@ -176,7 +176,7 @@ Elle parle de son contenu naturellement, comme si c'était normal de partager so
         },
       });
 
-      const newPersonality = await prisma.agencyAiPersonality.create({
+      const newPersonality = await prisma.creatorAiPersonality.create({
         data: {
           name: "Mia - Girlfriend Experience",
           agencyId: newAgency.id,
@@ -198,7 +198,7 @@ Elle parle de son contenu naturellement, comme si c'était normal de partager so
       console.log(`✅ Created new personality "${newPersonality.name}"`);
       console.log(`   ID: ${newPersonality.id}`);
     } else {
-      const newPersonality = await prisma.agencyAiPersonality.create({
+      const newPersonality = await prisma.creatorAiPersonality.create({
         data: {
           name: "Mia - Girlfriend Experience",
           agencyId: agency.id,

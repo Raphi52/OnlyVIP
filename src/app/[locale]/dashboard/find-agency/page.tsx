@@ -853,7 +853,6 @@ export default function FindAgencyPage() {
       {selectedAgency && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
-          onClick={() => setSelectedAgency(null)}
         >
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}

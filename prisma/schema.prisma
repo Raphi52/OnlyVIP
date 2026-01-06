@@ -52,7 +52,7 @@ model Agency {
   // Relations
   creators        Creator[]
   chatters        Chatter[]
-  aiPersonalities AgencyAiPersonality[]
+  aiPersonalities CreatorAiPersonality[]
   scripts         Script[]
   scriptFolders   ScriptFolder[]
   scriptSequences ScriptSequence[]
@@ -153,6 +153,13 @@ model Chatter {
   scriptUsages    ScriptUsage[]
   scriptFavorites ChatterScriptFavorite[]
 
+  // AI Copilot preferences - JSON: {panelLayout, defaultTone, shortcuts}
+  preferences       String?
+  lastAnalyticsView DateTime?
+
+  // Sessions for analytics
+  sessions ChatterSession[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -165,6 +172,7 @@ model ChatterCreatorAssignment {
   creatorSlug String
 
   chatter Chatter @relation(fields: [chatterId], references: [id], onDelete: Cascade)
+  creator Creator @relation(fields: [creatorSlug], references: [slug], onDelete: Cascade)
 
   createdAt DateTime @default(now())
 
@@ -172,19 +180,55 @@ model ChatterCreatorAssignment {
   @@index([creatorSlug])
 }
 
-// ============= AGENCY AI PERSONALITY =============
+// Chatter work session for analytics
+model ChatterSession {
+  id             String    @id @default(cuid())
+  chatterId      String
+  conversationId String?
+  creatorSlug    String?
 
-model AgencyAiPersonality {
+  // Session timing
+  startedAt DateTime  @default(now())
+  endedAt   DateTime?
+
+  // Session stats
+  messagesCount       Int   @default(0)
+  scriptsUsed         Int   @default(0)
+  aiSuggestionsUsed   Int   @default(0)
+  aiSuggestionsCharged Int  @default(0)
+  revenue             Float @default(0)
+
+  // Relations
+  chatter Chatter @relation(fields: [chatterId], references: [id], onDelete: Cascade)
+
+  @@index([chatterId])
+  @@index([startedAt])
+  @@index([creatorSlug])
+}
+
+// ============= AI PERSONALITY =============
+// Can belong to either an Agency OR directly to a Creator
+
+model CreatorAiPersonality {
   id   String @id @default(cuid())
   name String // "Sweet", "Dominant", etc.
 
-  // Agency & Creator
-  agencyId    String
-  agency      Agency @relation(fields: [agencyId], references: [id], onDelete: Cascade)
-  creatorSlug String // Assigned to which creator
+  // Agency (optional - for agency-managed creators)
+  agencyId String?
+  agency   Agency? @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+
+  // Creator (optional - for independent creators without agency)
+  creatorId String?
+  creator   Creator? @relation("CreatorAiPersonalities", fields: [creatorId], references: [id], onDelete: Cascade)
+
+  // Creator slug (always required - identifies which creator profile this is for)
+  creatorSlug String
 
   // Personality config
   personality String // JSON: traits, style, tone, etc.
+
+  // Language targeting (for language-based routing)
+  language String? // "en", "es", "fr", "de", "it", "pt", "zh", "ja", "ko", "ar", "ru", "hi" or null for any language
 
   // Tone matching (for auto-switching)
   primaryTone  String? // "romantic", "playful", "explicit", "casual", "demanding"
@@ -205,6 +249,11 @@ model AgencyAiPersonality {
   handoffSpendThreshold Float   @default(40) // Spending threshold in EUR (default $40)
   handoffOnHighIntent   Boolean @default(true) // Handoff on purchase signals
   handoffKeywords       String? // JSON array of keywords triggering handoff
+
+  // Give-up Settings (stop AI for non-paying fans)
+  giveUpOnNonPaying       Boolean @default(false) // Stop AI after X messages with 0 spend
+  giveUpMessageThreshold  Int     @default(20) // Message count threshold before giving up
+  giveUpAction            String  @default("stop") // "stop" = no response, "minimal" = rare short responses
 
   // Stats
   totalEarnings  Float @default(0)
@@ -245,10 +294,10 @@ model PersonalitySwitch {
 
   // From/To personalities
   fromPersonalityId String?
-  fromPersonality   AgencyAiPersonality? @relation("SwitchFrom", fields: [fromPersonalityId], references: [id], onDelete: SetNull)
+  fromPersonality   CreatorAiPersonality? @relation("SwitchFrom", fields: [fromPersonalityId], references: [id], onDelete: SetNull)
 
   toPersonalityId String
-  toPersonality   AgencyAiPersonality @relation("SwitchTo", fields: [toPersonalityId], references: [id], onDelete: Cascade)
+  toPersonality   CreatorAiPersonality @relation("SwitchTo", fields: [toPersonalityId], references: [id], onDelete: Cascade)
 
   // Switch reason
   reason       String // "auto_tone", "manual", "initial_assignment"
@@ -268,9 +317,17 @@ model PersonalitySwitch {
 model Script {
   id String @id @default(cuid())
 
-  // Agency
-  agencyId String
-  agency   Agency @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  // Owner - the creator who owns this script
+  creatorSlug String
+  creator     Creator @relation("CreatorScripts", fields: [creatorSlug], references: [slug], onDelete: Cascade)
+
+  // Agency (optional - for filtering imports from same agency)
+  agencyId String?
+  agency   Agency? @relation(fields: [agencyId], references: [id], onDelete: SetNull)
+
+  // Import tracking
+  importedFrom     String? // creatorSlug of the original script owner
+  importedFromName String? // Display name for UI
 
   // Script content
   name     String // "Sexy intro", "PPV pitch", etc.
@@ -280,9 +337,6 @@ model Script {
   // Folder organization
   folderId String?
   folder   ScriptFolder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
-
-  // Optional: specific to a creator
-  creatorSlug String?
 
   // Author (who created this script)
   authorId String?
@@ -299,10 +353,44 @@ model Script {
   hasVariables Boolean @default(false)
   variables    String? // JSON array: ["fanName", "price", "creatorName", etc.]
 
+  // === TRIGGER / CONTEXT ===
+  intent          String?             // "GREETING", "OBJECTION_PRICE", "PPV_PITCH", etc.
+  triggerKeywords String?             // JSON: ["trop cher", "expensive", "prix"]
+  triggerPatterns String?             // JSON: regex patterns for matching
+  fanStage        String?             // "new", "engaged", "vip", "cooling_off", "any"
+  minConfidence   Float   @default(0.5) // Threshold for auto-match (0-1)
+  priority        Int     @default(50)  // 1-100, higher = more priority
+
+  // === PRICING (for PPV scripts) ===
+  suggestedPrice Float?              // Suggested PPV price
+  priceMin       Float?              // Minimum acceptable price
+  priceMax       Float?              // Maximum price
+  isFreeTease    Boolean @default(false) // Send for free to hook them
+
+  // === AI INTEGRATION ===
+  aiInstructions   String?  @db.Text  // Instructions for AI on how to use/modify
+  allowAiModify    Boolean  @default(true) // AI can adapt the script
+  preserveCore     String?             // Part that must be kept intact
+  exampleResponses String?             // JSON: acceptable variations
+  successScore     Float    @default(0) // Auto-calculated success score
+
+  // === FLOW / BRANCHING ===
+  nextScriptOnSuccess String?          // Script ID to use if positive response
+  nextScriptOnReject  String?          // Script ID to use if negative response
+  followUpDelay       Int?             // Minutes before follow-up
+  followUpScriptId    String?          // Script ID for follow-up
+
+  // === LANGUAGE ===
+  language String @default("any")      // "fr", "en", "es", or "any"
+
+  // === OBJECTION HANDLING ===
+  objectionType     String?            // "price", "time", "trust", "not_interested"
+  objectionResponse String? @db.Text   // Specific response for this objection
+
   // Media attachments
   mediaItems ScriptMedia[]
 
-  // Sequence (for sequential scripts)
+  // Sequence (for sequential scripts) - DEPRECATED, use flow fields instead
   sequenceId    String?
   sequence      ScriptSequence? @relation(fields: [sequenceId], references: [id], onDelete: SetNull)
   sequenceOrder Int? // Position in sequence
@@ -332,6 +420,9 @@ model Script {
   @@index([folderId])
   @@index([status])
   @@index([sequenceId])
+  @@index([intent])
+  @@index([fanStage])
+  @@index([language])
 }
 
 // ScriptCategory: "GREETING" | "PPV_PITCH" | "FOLLOW_UP" | "CLOSING" | "CUSTOM"
@@ -342,9 +433,13 @@ model Script {
 model ScriptFolder {
   id String @id @default(cuid())
 
-  // Agency
-  agencyId String
-  agency   Agency @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  // Owner - the creator who owns this folder
+  creatorSlug String
+  creator     Creator @relation("CreatorScriptFolders", fields: [creatorSlug], references: [slug], onDelete: Cascade)
+
+  // Agency (optional - for filtering)
+  agencyId String?
+  agency   Agency? @relation(fields: [agencyId], references: [id], onDelete: SetNull)
 
   // Folder info
   name        String
@@ -559,7 +654,7 @@ model AiPersonalityEarning {
   id String @id @default(cuid())
 
   aiPersonalityId String
-  aiPersonality   AgencyAiPersonality @relation(fields: [aiPersonalityId], references: [id], onDelete: Cascade)
+  aiPersonality   CreatorAiPersonality @relation(fields: [aiPersonalityId], references: [id], onDelete: Cascade)
 
   // Original earning reference
   creatorEarningId String
@@ -599,6 +694,11 @@ model Creator {
   // Agency (optional - a creator can be managed by an agency)
   agencyId String?
   agency   Agency? @relation(fields: [agencyId], references: [id], onDelete: SetNull)
+
+  // Agency Takeover (when external creator joins agency)
+  isAgencyManaged Boolean   @default(false) // True when creator is managed by agency with restricted access
+  agencyManagedAt DateTime?                 // When agency takeover started
+  originalOwnerId String?                   // Original user ID before takeover (for audit)
 
   // Social links (JSON string)
   socialLinks String @default("{}")
@@ -646,8 +746,28 @@ model Creator {
   totalPaid      Float            @default(0) // Total paid out
   earnings       CreatorEarning[]
 
+  // Payout requests
+  payoutRequests PayoutRequest[]
+
+  // ID document for payout verification
+  idDocument   String?   // Path to uploaded ID document
+  idDocumentAt DateTime? // Upload date
+
   // Model listing for Find Agency marketplace
   modelListing ModelListing?
+
+  // AI Personalities for this creator
+  aiPersonalities CreatorAiPersonality[] @relation("CreatorAiPersonalities")
+
+  // Scripts library
+  scripts       Script[]       @relation("CreatorScripts")
+  scriptFolders ScriptFolder[] @relation("CreatorScriptFolders")
+
+  // Chatters assigned to this creator
+  assignedChatters ChatterCreatorAssignment[]
+
+  // Conversations
+  conversations Conversation[]
 
   // Public stats for Find Model
   publicStats CreatorPublicStats?
@@ -1017,10 +1137,7 @@ model MediaContent {
   purchaseCount Int @default(0)
 
   // Status
-  isPublished   Boolean   @default(false)
   isFeatured    Boolean   @default(false)
-  showInGallery Boolean   @default(true) // If false, won't appear on homepage/gallery (legacy, use tagGallery)
-  publishedAt   DateTime?
 
   // Relations
   purchases    MediaPurchase[]
@@ -1089,11 +1206,12 @@ model Conversation {
   id String @id @default(cuid())
 
   // Creator
-  creatorSlug String @default("miacosta")
+  creatorSlug String  @default("miacosta")
+  creator     Creator @relation(fields: [creatorSlug], references: [slug])
 
   // AI Personality Assignment (per-conversation)
   aiPersonalityId String?
-  aiPersonality   AgencyAiPersonality? @relation(fields: [aiPersonalityId], references: [id], onDelete: SetNull)
+  aiPersonality   CreatorAiPersonality? @relation(fields: [aiPersonalityId], references: [id], onDelete: SetNull)
 
   // Tone tracking for adaptive switching
   detectedTone   String? // "romantic", "playful", "explicit", "casual", "demanding"
@@ -1108,6 +1226,14 @@ model Conversation {
   assignedChatterId String?
   assignedChatter   Chatter? @relation("AssignedConversations", fields: [assignedChatterId], references: [id], onDelete: SetNull)
 
+  // Script Flow Tracking
+  lastScriptId          String?   // Last script sent to fan
+  lastScriptSentAt      DateTime? // When the last script was sent
+  awaitingFanResponse   Boolean   @default(false) // Waiting for fan to respond to script
+  pendingFollowUpId     String?   // Follow-up script to send
+  followUpDueAt         DateTime? // When to send the follow-up
+  followUpSent          Boolean   @default(false) // Has the follow-up been sent
+
   // Relations
   participants        ConversationParticipant[]
   messages            Message[]
@@ -1121,6 +1247,8 @@ model Conversation {
   @@index([aiPersonalityId])
   @@index([assignedChatterId])
   @@index([aiMode])
+  @@index([followUpDueAt])
+  @@index([awaitingFanResponse])
 }
 
 model ConversationParticipant {
@@ -1172,7 +1300,7 @@ model Message {
   chatterId       String? // If sent by a human chatter
   chatter         Chatter?             @relation("ChatterMessages", fields: [chatterId], references: [id], onDelete: SetNull)
   aiPersonalityId String? // If sent by an AI personality
-  aiPersonality   AgencyAiPersonality? @relation("AiPersonalityMessages", fields: [aiPersonalityId], references: [id], onDelete: SetNull)
+  aiPersonality   CreatorAiPersonality? @relation("AiPersonalityMessages", fields: [aiPersonalityId], references: [id], onDelete: SetNull)
 
   // Script attribution
   scriptId       String? // If a script was used
@@ -1602,7 +1730,7 @@ model AiSuggestion {
 
   // AI Personality that generated this
   personalityId String
-  personality   AgencyAiPersonality @relation(fields: [personalityId], references: [id], onDelete: Cascade)
+  personality   CreatorAiPersonality @relation(fields: [personalityId], references: [id], onDelete: Cascade)
 
   // Status
   status        String  @default("pending") // "pending" | "sent" | "edited" | "rejected" | "expired"
@@ -1615,6 +1743,10 @@ model AiSuggestion {
   // Timing
   expiresAt DateTime // Suggestions expire after X minutes
   sentAt    DateTime?
+
+  // Billing tracking
+  chargedCredits Int       @default(0) // Credits charged for this suggestion
+  chargedAt      DateTime? // When credits were charged
 
   createdAt DateTime @default(now())
 
@@ -1649,6 +1781,12 @@ model FanProfile {
 
   // AI-generated notes/summary
   notes String? @db.Text
+
+  // Personal note - rich summary of everything known about the fan
+  // Auto-generated by AI from memories, or manually edited by chatter
+  personalNote          String?   @db.Text
+  personalNoteUpdatedAt DateTime?
+  personalNoteUpdatedBy String?   // "ai" | chatterId
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -2396,6 +2534,7 @@ model CreatorVerification {
 model PayoutRequest {
   id          String   @id @default(cuid())
   creatorSlug String
+  creator     Creator  @relation(fields: [creatorSlug], references: [slug], onDelete: Cascade)
 
   // Amount requested (creator's pending balance at time of request)
   amount      Float
@@ -2403,6 +2542,9 @@ model PayoutRequest {
   // Wallet info
   walletType    String  // "ETH" | "BTC"
   walletAddress String
+
+  // Business info
+  businessNumber String? // Business registration number
 
   // Status
   status      String    @default("PENDING") // "PENDING" | "PAID"

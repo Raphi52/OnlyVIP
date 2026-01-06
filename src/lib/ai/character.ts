@@ -197,7 +197,7 @@ Elle tease, elle suggère, elle laisse l'imagination travailler.`,
 // ============= DATABASE FUNCTIONS =============
 
 /**
- * Load character from database (AgencyAiPersonality)
+ * Load character from database (CreatorAiPersonality)
  * ALL settings are now configurable per personality
  */
 export async function loadCharacter(creatorSlug: string, personalityId?: string): Promise<DeepCharacter> {
@@ -205,14 +205,14 @@ export async function loadCharacter(creatorSlug: string, personalityId?: string)
   let personality = null;
 
   if (personalityId) {
-    personality = await prisma.agencyAiPersonality.findUnique({
+    personality = await prisma.creatorAiPersonality.findUnique({
       where: { id: personalityId }
     });
   }
 
   // Fallback to first active personality for this creator
   if (!personality) {
-    personality = await prisma.agencyAiPersonality.findFirst({
+    personality = await prisma.creatorAiPersonality.findFirst({
       where: {
         creatorSlug,
         isActive: true

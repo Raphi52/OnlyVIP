@@ -85,7 +85,7 @@ export async function POST(
     // Switch personality
     if (personalityId) {
       // Verify personality exists and belongs to the same creator
-      const personality = await prisma.agencyAiPersonality.findFirst({
+      const personality = await prisma.creatorAiPersonality.findFirst({
         where: {
           id: personalityId,
           creatorSlug: conversation.creatorSlug,
@@ -162,7 +162,7 @@ export async function GET(
     }
 
     // Get all available personalities for this creator
-    const personalities = await prisma.agencyAiPersonality.findMany({
+    const personalities = await prisma.creatorAiPersonality.findMany({
       where: {
         creatorSlug: conversation.creatorSlug,
         isActive: true,

@@ -450,7 +450,9 @@ export default function ChattersPage() {
 
   const copyCredentials = () => {
     if (lastCreatedCredentials) {
-      navigator.clipboard.writeText(`Email: ${lastCreatedCredentials.email}\nPassword: ${lastCreatedCredentials.password}`);
+      navigator.clipboard.writeText(
+        `Login: https://viponly.fun/team/access\nEmail: ${lastCreatedCredentials.email}\nPassword: ${lastCreatedCredentials.password}`
+      );
       setCopiedCredentials(true);
       setTimeout(() => setCopiedCredentials(false), 2000);
     }
@@ -1687,7 +1689,6 @@ export default function ChattersPage() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-sm"
-            onClick={() => setShowDetailModal(null)}
           >
             <motion.div
               initial={{ y: "100%", opacity: 0 }}
@@ -1896,7 +1897,6 @@ export default function ChattersPage() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/80 backdrop-blur-sm md:p-4"
-            onClick={() => !lastCreatedCredentials && setShowModal(false)}
           >
             <motion.div
               initial={{ y: "100%", opacity: 0 }}
@@ -1916,7 +1916,7 @@ export default function ChattersPage() {
                     <h2 className="text-xl font-bold text-white mb-2">Chatter Created!</h2>
                     <p className="text-gray-400 mb-6">Share these credentials with your new team member</p>
 
-                    <div className="bg-white/5 rounded-xl p-4 mb-6 text-left">
+                    <div className="bg-white/5 rounded-xl p-4 mb-4 text-left">
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-sm text-gray-400">Email</span>
                         <span className="text-white font-mono">{lastCreatedCredentials.email}</span>
@@ -1924,6 +1924,26 @@ export default function ChattersPage() {
                       <div className="flex items-center justify-between">
                         <span className="text-sm text-gray-400">Password</span>
                         <span className="text-white font-mono">{lastCreatedCredentials.password}</span>
+                      </div>
+                    </div>
+
+                    <div className="bg-purple-500/10 border border-purple-500/30 rounded-xl p-4 mb-6 text-left">
+                      <div className="flex items-start gap-3">
+                        <Lock className="w-5 h-5 text-purple-400 flex-shrink-0 mt-0.5" />
+                        <div>
+                          <p className="text-sm font-medium text-purple-300 mb-1">Team Login</p>
+                          <p className="text-xs text-gray-400">
+                            Your chatter must log in at:{" "}
+                            <a
+                              href="/team/access"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-purple-400 hover:text-purple-300 underline"
+                            >
+                              viponly.fun/team/access
+                            </a>
+                          </p>
+                        </div>
                       </div>
                     </div>
 
@@ -1961,7 +1981,7 @@ export default function ChattersPage() {
                       <div className="w-12 h-1 bg-[var(--border)] rounded-full" />
                     </div>
 
-                    <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center justify-between mb-4">
                       <h2 className="text-xl font-bold text-white">
                         {editingChatter ? "Edit Chatter" : "Add Chatter"}
                       </h2>
@@ -1969,6 +1989,18 @@ export default function ChattersPage() {
                         <X className="w-5 h-5" />
                       </button>
                     </div>
+
+                    {!editingChatter && (
+                      <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-3 mb-4">
+                        <div className="flex items-start gap-2">
+                          <Lock className="w-4 h-4 text-blue-400 flex-shrink-0 mt-0.5" />
+                          <p className="text-xs text-gray-400">
+                            Once created, your chatter will log in at{" "}
+                            <span className="text-blue-400 font-medium">viponly.fun/team/access</span>
+                          </p>
+                        </div>
+                      </div>
+                    )}
 
                     <div className="space-y-4 mb-6">
                       <div>

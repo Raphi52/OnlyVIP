@@ -314,13 +314,12 @@ export async function calculateCreatorStats(creatorId: string): Promise<void> {
     });
 
     const totalPosts = await prisma.mediaContent.count({
-      where: { creatorSlug: slug, isPublished: true },
+      where: { creatorSlug: slug },
     });
 
     const postsLast30d = await prisma.mediaContent.count({
       where: {
         creatorSlug: slug,
-        isPublished: true,
         createdAt: { gte: thirtyDaysAgo },
       },
     });
@@ -382,7 +381,6 @@ export async function calculateCreatorStats(creatorId: string): Promise<void> {
       const monthPosts = await prisma.mediaContent.count({
         where: {
           creatorSlug: slug,
-          isPublished: true,
           createdAt: { gte: monthStart, lte: monthEnd },
         },
       });

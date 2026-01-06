@@ -27,16 +27,6 @@ export async function GET(
       );
     }
 
-    // Check access for non-admins
-    const isAdmin = session?.user?.role === "ADMIN";
-
-    if (!isAdmin && !media.isPublished) {
-      return NextResponse.json(
-        { error: "Media not found" },
-        { status: 404 }
-      );
-    }
-
     // Increment view count
     await prisma.mediaContent.update({
       where: { id },
@@ -46,8 +36,14 @@ export async function GET(
     // Check if user has access to content
     let hasAccess = false;
     let hasPurchased = false;
+    const isAdmin = (session?.user as any)?.role === "ADMIN";
 
-    if (session?.user?.id) {
+    // Free content is always accessible
+    if (media.tagFree === true) {
+      hasAccess = true;
+    }
+
+    if (session?.user?.id && !hasAccess) {
       // Check if purchased
       const purchase = await prisma.mediaPurchase.findUnique({
         where: {
@@ -59,8 +55,10 @@ export async function GET(
       });
       hasPurchased = !!purchase;
 
-      // Check subscription tier
-      if (!hasPurchased && media.accessTier !== "FREE") {
+      if (hasPurchased) {
+        hasAccess = true;
+      } else {
+        // Get user subscription
         const subscription = await prisma.subscription.findFirst({
           where: {
             userId: session.user.id,
@@ -71,17 +69,24 @@ export async function GET(
           },
         });
 
-        if (subscription) {
-          const tierOrder = ["FREE", "BASIC", "PREMIUM", "VIP"];
-          const userTierIndex = tierOrder.indexOf(subscription.plan.accessTier);
+        const tierOrder = ["FREE", "BASIC", "PREMIUM", "VIP"];
+        const userTierIndex = subscription ? tierOrder.indexOf(subscription.plan.accessTier) : 0;
+        const isVIP = subscription?.plan?.accessTier === "VIP";
+
+        // VIP-only content requires VIP subscription
+        if (media.tagVIP === true) {
+          hasAccess = isVIP;
+        }
+        // PPV content requires purchase (not subscription)
+        else if (media.tagPPV === true) {
+          hasAccess = false; // Must be purchased, already checked above
+        }
+        // Regular tier-based access
+        else {
           const mediaTierIndex = tierOrder.indexOf(media.accessTier);
           hasAccess = userTierIndex >= mediaTierIndex;
         }
-      } else if (media.accessTier === "FREE") {
-        hasAccess = true;
       }
-    } else if (media.accessTier === "FREE") {
-      hasAccess = true;
     }
 
     // Prepare response
@@ -97,8 +102,6 @@ export async function GET(
       isPurchaseable: media.isPurchaseable,
       price: media.price,
       viewCount: media.viewCount,
-      isPublished: media.isPublished,
-      publishedAt: media.publishedAt,
       createdAt: media.createdAt,
       hasAccess: hasAccess || hasPurchased,
       hasPurchased,
@@ -158,8 +161,7 @@ export async function PATCH(
       contentUrl,
       isPurchaseable,
       price,
-      isPublished,
-      // New tag fields
+      // Tag fields
       tagGallery,
       tagPPV,
       tagAI,
@@ -230,14 +232,7 @@ export async function PATCH(
         contentUrl: contentUrl ?? media.contentUrl,
         isPurchaseable: isPurchaseable ?? media.isPurchaseable,
         price: isPurchaseable ? (price ?? media.price) : null,
-        isPublished: isPublished ?? media.isPublished,
-        publishedAt:
-          isPublished && !media.isPublished
-            ? new Date()
-            : isPublished === false
-            ? null
-            : media.publishedAt,
-        // New tag fields
+        // Tag fields
         tagGallery: tagGallery ?? media.tagGallery,
         tagPPV: tagPPV ?? media.tagPPV,
         tagAI: tagAI ?? media.tagAI,

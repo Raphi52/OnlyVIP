@@ -168,7 +168,7 @@ export async function DELETE(
 
         // 4. Delete agency-related assignments and AI personalities
         await tx.chatterCreatorAssignment.deleteMany({ where: { creatorSlug: creator.slug } });
-        await tx.agencyAiPersonality.deleteMany({ where: { creatorSlug: creator.slug } });
+        await tx.creatorAiPersonality.deleteMany({ where: { creatorSlug: creator.slug } });
         await tx.script.deleteMany({ where: { creatorSlug: creator.slug } });
 
         // 5. Delete model listing (AgencyApplication will cascade)

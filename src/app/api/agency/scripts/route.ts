@@ -67,6 +67,10 @@ export async function GET(request: NextRequest) {
     const sequenceId = searchParams.get("sequenceId");
     const search = searchParams.get("search");
     const favorites = searchParams.get("favorites") === "true";
+    // New filters
+    const intent = searchParams.get("intent");
+    const fanStage = searchParams.get("fanStage");
+    const language = searchParams.get("language");
 
     if (!agencyId) {
       return NextResponse.json(
@@ -119,6 +123,19 @@ export async function GET(request: NextRequest) {
     }
     if (sequenceId) {
       whereClause.sequenceId = sequenceId;
+    }
+    // New filters
+    if (intent) {
+      whereClause.intent = intent;
+    }
+    if (fanStage) {
+      whereClause.fanStage = fanStage;
+    }
+    if (language && language !== "any") {
+      whereClause.OR = [
+        { language },
+        { language: "any" },
+      ];
     }
 
     // Search
@@ -200,6 +217,24 @@ export async function GET(request: NextRequest) {
       count: c._count,
     }));
 
+    // Get intent counts
+    const intentCounts = await prisma.script.groupBy({
+      by: ["intent"],
+      where: {
+        agencyId,
+        isActive: true,
+        status: role === "chatter" ? "APPROVED" : undefined,
+        intent: { not: null },
+      },
+      _count: true,
+    });
+
+    const intents = intentCounts.map((c) => ({
+      value: c.intent,
+      label: (c.intent || "").replace(/_/g, " "),
+      count: c._count,
+    }));
+
     // Format response
     const scriptsWithStats = scripts.map((script) => ({
       ...script,
@@ -219,6 +254,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       scripts: scriptsWithStats,
       categories,
+      intents,
       pendingCount,
       role,
     });
@@ -250,6 +286,28 @@ export async function POST(request: NextRequest) {
       mediaIds,
       sequenceId,
       sequenceOrder,
+      // New fields
+      intent,
+      triggerKeywords,
+      triggerPatterns,
+      fanStage,
+      minConfidence,
+      priority,
+      suggestedPrice,
+      priceMin,
+      priceMax,
+      isFreeTease,
+      aiInstructions,
+      allowAiModify,
+      preserveCore,
+      exampleResponses,
+      nextScriptOnSuccess,
+      nextScriptOnReject,
+      followUpDelay,
+      followUpScriptId,
+      language,
+      objectionType,
+      objectionResponse,
     } = body;
 
     if (!agencyId || !name || !content || !category) {
@@ -318,6 +376,28 @@ export async function POST(request: NextRequest) {
         variables: usedVariables.length > 0 ? JSON.stringify(usedVariables) : null,
         sequenceId: sequenceId || null,
         sequenceOrder: sequenceOrder ?? null,
+        // New fields
+        intent: intent || null,
+        triggerKeywords: triggerKeywords ? JSON.stringify(triggerKeywords) : null,
+        triggerPatterns: triggerPatterns ? JSON.stringify(triggerPatterns) : null,
+        fanStage: fanStage || null,
+        minConfidence: minConfidence ?? 0.5,
+        priority: priority ?? 50,
+        suggestedPrice: suggestedPrice ?? null,
+        priceMin: priceMin ?? null,
+        priceMax: priceMax ?? null,
+        isFreeTease: isFreeTease ?? false,
+        aiInstructions: aiInstructions || null,
+        allowAiModify: allowAiModify ?? true,
+        preserveCore: preserveCore || null,
+        exampleResponses: exampleResponses ? JSON.stringify(exampleResponses) : null,
+        nextScriptOnSuccess: nextScriptOnSuccess || null,
+        nextScriptOnReject: nextScriptOnReject || null,
+        followUpDelay: followUpDelay ?? null,
+        followUpScriptId: followUpScriptId || null,
+        language: language || "any",
+        objectionType: objectionType || null,
+        objectionResponse: objectionResponse || null,
       },
       include: {
         folder: {
@@ -397,6 +477,28 @@ export async function PATCH(request: NextRequest) {
       // Approval actions (owner only)
       action, // "approve" | "reject"
       rejectionReason,
+      // New fields
+      intent,
+      triggerKeywords,
+      triggerPatterns,
+      fanStage,
+      minConfidence,
+      priority,
+      suggestedPrice,
+      priceMin,
+      priceMax,
+      isFreeTease,
+      aiInstructions,
+      allowAiModify,
+      preserveCore,
+      exampleResponses,
+      nextScriptOnSuccess,
+      nextScriptOnReject,
+      followUpDelay,
+      followUpScriptId,
+      language,
+      objectionType,
+      objectionResponse,
     } = body;
 
     if (!id) {
@@ -418,6 +520,11 @@ export async function PATCH(request: NextRequest) {
 
     if (!script) {
       return NextResponse.json({ error: "Script not found" }, { status: 404 });
+    }
+
+    // Script must have an agencyId for this agency API
+    if (!script.agencyId) {
+      return NextResponse.json({ error: "Script not associated with an agency" }, { status: 400 });
     }
 
     // Check user role
@@ -480,6 +587,35 @@ export async function PATCH(request: NextRequest) {
     }
     if (sequenceId !== undefined) updateData.sequenceId = sequenceId || null;
     if (sequenceOrder !== undefined) updateData.sequenceOrder = sequenceOrder;
+
+    // New fields
+    if (intent !== undefined) updateData.intent = intent || null;
+    if (triggerKeywords !== undefined) {
+      updateData.triggerKeywords = triggerKeywords ? JSON.stringify(triggerKeywords) : null;
+    }
+    if (triggerPatterns !== undefined) {
+      updateData.triggerPatterns = triggerPatterns ? JSON.stringify(triggerPatterns) : null;
+    }
+    if (fanStage !== undefined) updateData.fanStage = fanStage || null;
+    if (minConfidence !== undefined) updateData.minConfidence = minConfidence;
+    if (priority !== undefined) updateData.priority = priority;
+    if (suggestedPrice !== undefined) updateData.suggestedPrice = suggestedPrice;
+    if (priceMin !== undefined) updateData.priceMin = priceMin;
+    if (priceMax !== undefined) updateData.priceMax = priceMax;
+    if (isFreeTease !== undefined) updateData.isFreeTease = isFreeTease;
+    if (aiInstructions !== undefined) updateData.aiInstructions = aiInstructions || null;
+    if (allowAiModify !== undefined) updateData.allowAiModify = allowAiModify;
+    if (preserveCore !== undefined) updateData.preserveCore = preserveCore || null;
+    if (exampleResponses !== undefined) {
+      updateData.exampleResponses = exampleResponses ? JSON.stringify(exampleResponses) : null;
+    }
+    if (nextScriptOnSuccess !== undefined) updateData.nextScriptOnSuccess = nextScriptOnSuccess || null;
+    if (nextScriptOnReject !== undefined) updateData.nextScriptOnReject = nextScriptOnReject || null;
+    if (followUpDelay !== undefined) updateData.followUpDelay = followUpDelay;
+    if (followUpScriptId !== undefined) updateData.followUpScriptId = followUpScriptId || null;
+    if (language !== undefined) updateData.language = language || "any";
+    if (objectionType !== undefined) updateData.objectionType = objectionType || null;
+    if (objectionResponse !== undefined) updateData.objectionResponse = objectionResponse || null;
 
     const updatedScript = await prisma.script.update({
       where: { id },
@@ -583,6 +719,11 @@ export async function DELETE(request: NextRequest) {
 
     if (!script) {
       return NextResponse.json({ error: "Script not found" }, { status: 404 });
+    }
+
+    // Script must have an agencyId for this agency API
+    if (!script.agencyId) {
+      return NextResponse.json({ error: "Script not associated with an agency" }, { status: 400 });
     }
 
     // Check user role

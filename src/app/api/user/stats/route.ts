@@ -79,6 +79,7 @@ export async function GET() {
                 slug: true,
                 displayName: true,
                 avatar: true,
+                userId: true,
               },
             })
           : null;
