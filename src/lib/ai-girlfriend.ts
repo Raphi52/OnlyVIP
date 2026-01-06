@@ -334,6 +334,8 @@ export async function generateAiResponse(
   }));
 
   try {
+    console.log(`[AI-GF] Calling ${provider}/${model} with ${chatMessages.length} messages`);
+
     const result = await generateAiMessage({
       provider,
       model,
@@ -345,8 +347,10 @@ export async function generateAiResponse(
     });
 
     let aiResponse = result.content?.trim();
+    console.log(`[AI-GF] Raw response (${aiResponse?.length || 0} chars): "${aiResponse?.substring(0, 100)}..."`);
 
     if (!aiResponse) {
+      console.warn(`[AI-GF] Empty response from AI, using fallback`);
       return getFallbackResponse(personality, suggestedMedia);
     }
 
@@ -369,8 +373,9 @@ export async function generateAiResponse(
     }
 
     return aiResponse;
-  } catch (error) {
-    console.error("AI generation error:", error);
+  } catch (error: any) {
+    console.error("[AI-GF] AI generation error:", error?.message || error);
+    console.error("[AI-GF] Stack:", error?.stack);
     return getFallbackResponse(personality, suggestedMedia);
   }
 }
