@@ -11,6 +11,7 @@ import {
 import Link from "next/link";
 import NextImage from "next/image";
 import { useInView } from "react-intersection-observer";
+import { useLocale } from "next-intl";
 import { MessageBubble } from "./MessageBubble";
 import { DateSeparator } from "./DateSeparator";
 import { TypingIndicator } from "./TypingIndicator";
@@ -165,6 +166,8 @@ export function ChatWindow({
   onMute,
   onDelete,
 }: ChatWindowProps) {
+  const locale = useLocale();
+
   // Local state for reactions (to update UI instantly)
   const [localReactions, setLocalReactions] = useState<Record<string, Reaction[]>>({});
 
@@ -484,37 +487,71 @@ export function ChatWindow({
             </motion.button>
           )}
 
-          {/* Avatar */}
-          <div className="relative">
-            {otherUser.image ? (
-              <motion.img
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                src={otherUser.image}
-                alt={otherUser.name}
-                className="w-10 h-10 sm:w-11 sm:h-11 rounded-full object-cover ring-2 ring-[var(--gold)]/30 shadow-lg"
+          {/* Avatar - clickable to go to creator profile */}
+          {otherUser.slug ? (
+            <Link href={`/${locale}/${otherUser.slug}`} className="relative block">
+              {otherUser.image ? (
+                <motion.img
+                  initial={{ scale: 0.9, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  src={otherUser.image}
+                  alt={otherUser.name}
+                  className="w-10 h-10 sm:w-11 sm:h-11 rounded-full object-cover ring-2 ring-[var(--gold)]/30 shadow-lg cursor-pointer hover:ring-[var(--gold)]/60 transition-all"
+                />
+              ) : (
+                <motion.div
+                  initial={{ scale: 0.9, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-gradient-to-br from-[var(--gold)] via-amber-400 to-amber-600 flex items-center justify-center text-black font-bold shadow-lg text-sm sm:text-base cursor-pointer hover:opacity-90 transition-opacity"
+                >
+                  {otherUser.name.charAt(0)}
+                </motion.div>
+              )}
+              {/* Always show online indicator for creators */}
+              <motion.span
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                className="absolute bottom-0 right-0 w-3 h-3 sm:w-3.5 sm:h-3.5 bg-emerald-500 rounded-full border-2 border-[#0a0a0a] shadow-lg shadow-emerald-500/50"
               />
-            ) : (
-              <motion.div
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-gradient-to-br from-[var(--gold)] via-amber-400 to-amber-600 flex items-center justify-center text-black font-bold shadow-lg text-sm sm:text-base"
-              >
-                {otherUser.name.charAt(0)}
-              </motion.div>
-            )}
-            {/* Always show online indicator for creators */}
-            <motion.span
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              className="absolute bottom-0 right-0 w-3 h-3 sm:w-3.5 sm:h-3.5 bg-emerald-500 rounded-full border-2 border-[#0a0a0a] shadow-lg shadow-emerald-500/50"
-            />
-          </div>
+            </Link>
+          ) : (
+            <div className="relative">
+              {otherUser.image ? (
+                <motion.img
+                  initial={{ scale: 0.9, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  src={otherUser.image}
+                  alt={otherUser.name}
+                  className="w-10 h-10 sm:w-11 sm:h-11 rounded-full object-cover ring-2 ring-[var(--gold)]/30 shadow-lg"
+                />
+              ) : (
+                <motion.div
+                  initial={{ scale: 0.9, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-gradient-to-br from-[var(--gold)] via-amber-400 to-amber-600 flex items-center justify-center text-black font-bold shadow-lg text-sm sm:text-base"
+                >
+                  {otherUser.name.charAt(0)}
+                </motion.div>
+              )}
+              {/* Always show online indicator for creators */}
+              <motion.span
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                className="absolute bottom-0 right-0 w-3 h-3 sm:w-3.5 sm:h-3.5 bg-emerald-500 rounded-full border-2 border-[#0a0a0a] shadow-lg shadow-emerald-500/50"
+              />
+            </div>
+          )}
 
           {/* Info */}
           <div className="min-w-0">
             <h3 className="text-sm sm:text-base font-semibold text-white flex items-center gap-1.5 sm:gap-2">
-              <span className="truncate">{otherUser.name}</span>
+              {otherUser.slug ? (
+                <Link href={`/${locale}/${otherUser.slug}`} className="truncate hover:text-[var(--gold)] transition-colors">
+                  {otherUser.name}
+                </Link>
+              ) : (
+                <span className="truncate">{otherUser.name}</span>
+              )}
               {isAdmin && (
                 <span className="px-1.5 sm:px-2 py-0.5 text-[9px] sm:text-[10px] font-bold rounded-full bg-gradient-to-r from-[var(--gold)] to-amber-600 text-black">
                   CREATOR
