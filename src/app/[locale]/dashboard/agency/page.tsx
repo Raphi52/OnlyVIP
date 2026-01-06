@@ -469,7 +469,7 @@ export default function AgencyDashboardPage() {
       color: "text-blue-400",
     },
     {
-      href: "/dashboard/agency/ai-personas",
+      href: "/dashboard/creator/ai",
       icon: Bot,
       label: "AI Personalities",
       count: selectedAgency.stats.aiPersonalitiesCount,

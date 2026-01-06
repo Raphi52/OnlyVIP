@@ -272,6 +272,7 @@ export async function selectRelevantMedia(
 export interface GenerateAiOptions {
   fanMemories?: string;
   isAiOnlyFan?: boolean;
+  scriptReference?: string; // Script prompt from matched scripts
   // Multi-provider settings
   provider?: AiProvider;
   model?: string;
@@ -308,6 +309,11 @@ export async function generateAiResponse(
   // ===== AI-ONLY FAN: Use shorter, less engaged responses =====
   if (options.isAiOnlyFan) {
     additionalContext += `\n[Note: This fan has low engagement. Keep responses shorter and focus on driving purchases.]`;
+  }
+
+  // ===== SCRIPT REFERENCE: Add matched scripts as guidance =====
+  if (options.scriptReference) {
+    additionalContext += `\n${options.scriptReference}`;
   }
 
   // Add media context if available

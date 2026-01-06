@@ -91,6 +91,9 @@ export async function sendVerificationEmail(
   `);
 
   try {
+    console.log("[Email] Sending verification email to:", email);
+    console.log("[Email] From:", FROM_EMAIL);
+
     const result = await getResend().emails.send({
       from: FROM_EMAIL,
       to: email,
@@ -98,7 +101,14 @@ export async function sendVerificationEmail(
       html,
     });
 
-    console.log("[Email] Verification email sent to:", email);
+    console.log("[Email] Resend API response:", JSON.stringify(result, null, 2));
+
+    if (result.error) {
+      console.error("[Email] Resend returned error:", result.error);
+      return { success: false, error: result.error };
+    }
+
+    console.log("[Email] Verification email sent successfully! ID:", result.data?.id);
     return { success: true, id: result.data?.id };
   } catch (error) {
     console.error("[Email] Failed to send verification email:", error);

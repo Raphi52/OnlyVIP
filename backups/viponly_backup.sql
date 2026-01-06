@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict mKhZebqjIb2I6uLhCwOTggOpgnaRLh1IhFTMSZ8Qc6Eh0nv48VHSIiocNOIPtYy
+\restrict rudgJ0KMXtQBcxEI1zcT5inQ3vOXE2MmUPwHHjvdqK3p5QKPgsKrOyiL3hMcg17
 
 -- Dumped from database version 16.11
 -- Dumped by pg_dump version 16.11
@@ -741,6 +741,30 @@ CREATE TABLE public."CreatorAiPersonality" (
 
 
 ALTER TABLE public."CreatorAiPersonality" OWNER TO viponly;
+
+--
+-- Name: CreatorApplication; Type: TABLE; Schema: public; Owner: viponly
+--
+
+CREATE TABLE public."CreatorApplication" (
+    id text NOT NULL,
+    "userId" text NOT NULL,
+    "displayName" text NOT NULL,
+    slug text,
+    bio text,
+    "documentUrl" text NOT NULL,
+    "documentType" text DEFAULT 'ID_CARD'::text NOT NULL,
+    status text DEFAULT 'PENDING'::text NOT NULL,
+    "reviewedAt" timestamp(3) without time zone,
+    "reviewedBy" text,
+    "rejectionReason" text,
+    "createdCreatorId" text,
+    "createdAt" timestamp(3) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    "updatedAt" timestamp(3) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+
+ALTER TABLE public."CreatorApplication" OWNER TO viponly;
 
 --
 -- Name: CreatorEarning; Type: TABLE; Schema: public; Owner: viponly
@@ -1841,10 +1865,6 @@ COPY public."AgencyCreatorPayout" (id, "agencyId", "creatorSlug", amount, "walle
 --
 
 COPY public."AgencyEarning" (id, "agencyId", "creatorEarningId", "grossAmount", "agencyShare", "agencyGross", "chatterAmount", "netAmount", type, status, "paidAt", "createdAt") FROM stdin;
-cmk1v20ui004fodqur937gvue	cmk030e29000gxaefcwlkd3uj	cmk1v20u5004dodqurcb1uybz	45	0.3	13.5	0	13.5	MEDIA_UNLOCK	PENDING	\N	2026-01-06 00:38:05.514
-cmk1v4o5b004yodqui7kg6vh2	cmk030e29000gxaefcwlkd3uj	cmk1v4o54004wodquhofqtmdu	30	0.3	9.000000000000002	0	9.000000000000002	MEDIA_UNLOCK	PENDING	\N	2026-01-06 00:40:09.024
-cmk1v69yl005kodqukaehrq72	cmk030e29000gxaefcwlkd3uj	cmk1v69yb005iodqu1bjqugti	60	0.3	18	0	18	MEDIA_UNLOCK	PENDING	\N	2026-01-06 00:41:23.95
-cmk1v75av005uodqucnefzt7m	cmk030e29000gxaefcwlkd3uj	cmk1v75am005sodqutb9acctk	90	0.3	27	0	27	MEDIA_UNLOCK	PENDING	\N	2026-01-06 00:42:04.567
 \.
 
 
@@ -2023,14 +2043,12 @@ COPY public."ConversationHandoff" (id, "conversationId", "triggerType", "trigger
 
 COPY public."ConversationParticipant" (id, "conversationId", "userId", "lastReadAt", "isTyping", "isPinned", "isMuted") FROM stdin;
 cmk0x4ey0000xjotzcy2d76z5	cmk0x4ey0000vjotz58b2furd	cmjzuusq60000peus3yh1w5h0	\N	f	f	f
-cmk2bks7l001sdqe2akznff78	cmk2bks7l001qdqe2m8eljo35	cmk1ueg4p002todquzipxofvf	2026-01-06 08:57:41.889	f	f	f
-cmk1f6e0w001tv6nsbkhihcco	cmk1f6e0w001rv6ns35i65pco	cmjzuusq60000peus3yh1w5h0	2026-01-06 01:35:52.663	f	f	f
-cmk2bks7l001tdqe2xbq3d95o	cmk2bks7l001qdqe2m8eljo35	cmjzuusq60000peus3yh1w5h0	2026-01-06 08:56:33.355	f	f	f
-cmk1xjp9d0009jvmh3h3biw26	cmk1xjp9d0006jvmh3ca5ygw4	cmjzuusq60000peus3yh1w5h0	2026-01-06 02:13:06.106	f	f	f
+cmk1f6e0w001tv6nsbkhihcco	cmk1f6e0w001rv6ns35i65pco	cmjzuusq60000peus3yh1w5h0	2026-01-06 12:34:58.82	f	f	f
+cmk1xjp9d0009jvmh3h3biw26	cmk1xjp9d0006jvmh3ca5ygw4	cmjzuusq60000peus3yh1w5h0	2026-01-06 12:35:01.041	f	f	f
 cmk1fp6980012l8ualcfjfzn7	cmk1fp698000zl8uajwqr8hza	cmk1f94jh002jv6nsto6u1low	2026-01-05 18:12:52.153	f	f	f
 cmk1fp6980011l8uapo7o13ku	cmk1fp698000zl8uajwqr8hza	cmjzuusq60000peus3yh1w5h0	2026-01-06 02:13:13.467	f	f	f
-cmk1xjp9d0008jvmhfw09siwn	cmk1xjp9d0006jvmh3ca5ygw4	cmk1s1na3000lo5iizzr4of9j	2026-01-06 04:38:20.884	f	f	t
 cmk1f6e0w001uv6nswlgp2g5r	cmk1f6e0w001rv6ns35i65pco	cmk1f12jf000hv6nsy4m7gi0j	2026-01-06 00:16:03.282	f	f	f
+cmk2bks7l001tdqe2xbq3d95o	cmk2bks7l001qdqe2m8eljo35	cmjzuusq60000peus3yh1w5h0	2026-01-06 12:35:32.141	f	f	f
 \.
 
 
@@ -2043,8 +2061,8 @@ cmjzvmh9b0001w2yvmxhi3y1k	emmarose	Emma Rose	Emma Rose	/uploads/avatar/2c1bdd182
 3ddabc13-8eb9-479c-b92a-5c2945f4b358	bold-kira	Kira	Bold Kira	/uploads/avatar/99600d41b28be080dbec39f7ee03d209.jpg	/uploads/media/53db801c7af827d6a7487bd7a0e86f6e.jpg	/uploads/media/6ffefc1edbdd003330b39d5868a62b46.jpg	Contenu exclusif et photos sensuelles	cmjzuusq60000peus3yh1w5h0	cmk030e29000gxaefcwlkd3uj	{"instagram":null,"twitter":null,"tiktok":null}	{}			204	70	0	t	0	[]	\N	120	\N	t	4	30	t	anthropic	claude-haiku-4-5-20241022	\N	\N	f	0	0	0	t	f	2026-01-04 15:23:32.83	2026-01-04 18:46:10.489	\N	\N	f	\N	\N	t
 11a5d637-50ce-4a2a-a5ae-c104c87f3c72	esmeralda	Esmeralda	Esmeralda	/uploads/media/3098541333274861187_1.jpg	\N	/uploads/media/3139060541796007962_1.jpg	Contenu exclusif et photos sensuelles	cmjzuusq60000peus3yh1w5h0	cmk030e29000gxaefcwlkd3uj	{}	{}	\N	\N	8	123	0	t	0	[]	\N	30	\N	t	4	30	t	anthropic	claude-haiku-4-5-20251001	\N	\N	f	9.99	9.99	0	t	f	2026-01-04 15:23:32.83	2026-01-05 17:29:51.738	\N	\N	f	\N	\N	t
 cmjzvmh8u0000w2yvr1v6joo4	miacosta	Mia Costa	Mia Costa	/uploads/avatar/43bbec049243a195272ab4b77f68acd6.jpg	/uploads/media/41fbbc7bc97359bcff78b249cdd507cc.jpg	/uploads/media/a95c0cb9486b3bb2beec3e713edc22d6.jpg	Welcome to my exclusive content. Join my VIP for the full experience.	cmjzuusq60000peus3yh1w5h0	cmk030e29000gxaefcwlkd3uj	{"instagram":"https://instagram.com/miacosta","twitter":"https://twitter.com/miacosta","tiktok":null}	{}			127	113	2500	t	0	["bigass","latina"]	\N	30	2026-01-05 17:17:24.475	t	4	60	t	anthropic	claude-haiku-4-5-20251001	\N	\N	f	227.47	227.47	0	t	f	2026-01-04 15:18:27.535	2026-01-06 08:20:27.742	\N	\N	f	\N	\N	t
-cmk1u08lj001fodqu16oyzxph	dev	Dev	Dev	\N	\N	\N	\N	cmk1s1na3000lo5iizzr4of9j	\N	{}	{}	\N	\N	0	0	0	t	0	[]	\N	120	\N	t	4	30	t	anthropic	claude-haiku-4-5-20241022	\N	\N	f	0	0	0	f	f	2026-01-06 00:08:42.631	2026-01-06 00:08:42.631	\N	\N	f	\N	\N	f
-cmk1v5seo0055odqukg7zxl5v	test	test	test	\N	\N	\N	\N	cmk1ueg4p002todquzipxofvf	\N	{}	{}	\N	\N	0	0	0	t	0	[]	\N	120	\N	t	4	30	t	anthropic	claude-haiku-4-5-20241022	\N	\N	f	0	0	0	f	f	2026-01-06 00:41:01.2	2026-01-06 00:41:01.2	\N	\N	f	\N	\N	f
+cmk1v5seo0055odqukg7zxl5v	test	test	test	\N	\N	\N	\N	\N	\N	{}	{}	\N	\N	0	0	0	t	0	[]	\N	120	\N	t	4	30	t	anthropic	claude-haiku-4-5-20241022	\N	\N	f	0	0	0	f	f	2026-01-06 00:41:01.2	2026-01-06 00:41:01.2	\N	\N	f	\N	\N	f
+cmk1u08lj001fodqu16oyzxph	dev	Dev	Dev	\N	\N	\N	\N	\N	\N	{}	{}	\N	\N	0	0	0	t	0	[]	\N	120	\N	t	4	30	t	anthropic	claude-haiku-4-5-20241022	\N	\N	f	0	0	0	f	f	2026-01-06 00:08:42.631	2026-01-06 00:08:42.631	\N	\N	f	\N	\N	f
 \.
 
 
@@ -2059,18 +2077,20 @@ cmk1fqtbf001cl8uax1sfm7mv	aze	cmk030e29000gxaefcwlkd3uj	11a5d637-50ce-4a2a-a5ae-
 
 
 --
+-- Data for Name: CreatorApplication; Type: TABLE DATA; Schema: public; Owner: viponly
+--
+
+COPY public."CreatorApplication" (id, "userId", "displayName", slug, bio, "documentUrl", "documentType", status, "reviewedAt", "reviewedBy", "rejectionReason", "createdCreatorId", "createdAt", "updatedAt") FROM stdin;
+\.
+
+
+--
 -- Data for Name: CreatorEarning; Type: TABLE DATA; Schema: public; Owner: viponly
 --
 
 COPY public."CreatorEarning" (id, "creatorSlug", type, "sourceId", "grossAmount", "commissionRate", "commissionAmount", "netAmount", status, "paidAt", "payoutTxId", "userId", "chatterId", "aiPersonalityId", "attributedMessageId", "createdAt") FROM stdin;
 cmk1f4vyk001ev6nsj2cqo9js	miacosta	SUBSCRIPTION	\N	29.99	0	0	29.99	PENDING	\N	\N	cmk1f12jf000hv6nsy4m7gi0j	\N	\N	\N	2026-01-05 17:12:25.293
 cmk1fnab8000tl8uas1o0ewy6	esmeralda	SUBSCRIPTION	\N	9.99	0	0	9.99	PENDING	\N	\N	cmk1f94jh002jv6nsto6u1low	\N	\N	\N	2026-01-05 17:26:43.7
-cmk1tzi2a0016odqudfqgz5ut	miacosta	SUBSCRIPTION	\N	9.99	0	0	9.99	PENDING	\N	\N	cmk1s1na3000lo5iizzr4of9j	\N	\N	\N	2026-01-06 00:08:08.242
-cmk1v20u5004dodqurcb1uybz	miacosta	MEDIA_UNLOCK	mcmjzwlutnimu2yymrz	45	0	0	31.5	PENDING	\N	\N	cmk1s1na3000lo5iizzr4of9j	\N	\N	\N	2026-01-06 00:38:05.501
-cmk1v4o54004wodquhofqtmdu	miacosta	MEDIA_UNLOCK	mcmjzwlutnqj7m1a7vk	30	0	0	21	PENDING	\N	\N	cmk1ueg4p002todquzipxofvf	\N	\N	\N	2026-01-06 00:40:09.016
-cmk1v69yb005iodqu1bjqugti	miacosta	MEDIA_UNLOCK	mcmjzwlutnphtw0enlb	60	0	0	42	PENDING	\N	\N	cmk1ueg4p002todquzipxofvf	\N	\N	\N	2026-01-06 00:41:23.939
-cmk1v75am005sodqutb9acctk	miacosta	MEDIA_UNLOCK	mcmjzwlutnk5plu0bd6	90	0	0	62.99999999999999	PENDING	\N	\N	cmk1s1na3000lo5iizzr4of9j	\N	\N	\N	2026-01-06 00:42:04.559
-cmk2bkmvm001ndqe2hrfeyxzz	miacosta	SUBSCRIPTION	\N	29.99	0	0	29.99	PENDING	\N	\N	cmk1ueg4p002todquzipxofvf	\N	\N	\N	2026-01-06 08:20:27.731
 \.
 
 
@@ -2116,17 +2136,6 @@ cmk1fnaa7000ll8uaj1dxn7hc	cmk1f94jh002jv6nsto6u1low	-999	4001	SUBSCRIPTION	PAID	
 cmk1fnaal000ql8uatyvh7vuh	cmk1f94jh002jv6nsto6u1low	500	4501	SUBSCRIPTION_BONUS	BONUS	\N	\N	cmk1fnaac000nl8ua6evkoydd	Bonus credits for BASIC subscription (PPV catalog only)	\N	2026-01-05 17:26:43.677
 cmk1h7dwq00467sl2w3mbt0j5	cmk1f94jh002jv6nsto6u1low	5000	9501	ADMIN_GRANT	PAID	\N	\N	\N	Admin paid credit grant	2026-01-11 18:10:21.098	2026-01-05 18:10:21.099
 cmk1h7hgx00487sl2y9yy5nmq	cmk1f94jh002jv6nsto6u1low	5000	14501	ADMIN_GRANT	PAID	\N	\N	\N	Admin paid credit grant	2026-01-11 18:10:25.712	2026-01-05 18:10:25.713
-cmk1tynba000qodquw9frgxbm	cmk1s1na3000lo5iizzr4of9j	5000	5000	ADMIN_GRANT	PAID	\N	\N	\N	Admin paid credit grant	2026-01-12 00:07:28.39	2026-01-06 00:07:28.391
-cmk1tyrvh000sodqupjub1skr	cmk1s1na3000lo5iizzr4of9j	10000	15000	ADMIN_GRANT	PAID	\N	\N	\N	Admin paid credit grant	2026-01-12 00:07:34.3	2026-01-06 00:07:34.301
-cmk1tzi1i000yodqukakr5a0p	cmk1s1na3000lo5iizzr4of9j	-999	14001	SUBSCRIPTION	PAID	\N	\N	\N	BASIC subscription (monthly) for miacosta	\N	2026-01-06 00:08:08.215
-cmk1tzi200013odquzbgy3p8e	cmk1s1na3000lo5iizzr4of9j	500	14501	SUBSCRIPTION_BONUS	BONUS	\N	\N	cmk1tzi1o0010odqu6qsl9hy0	Bonus credits for BASIC subscription (PPV catalog only)	\N	2026-01-06 00:08:08.232
-cmk1v20sv0046odqugn4gnu8c	cmk1s1na3000lo5iizzr4of9j	-4500	10001	MEDIA_UNLOCK	PAID	mcmjzwlutnimu2yymrz	\N	\N	MEDIA_UNLOCK: 5000 credits	\N	2026-01-06 00:38:05.456
-cmk1v20t20048odquj5le90lp	cmk1s1na3000lo5iizzr4of9j	-500	9501	MEDIA_UNLOCK	BONUS	mcmjzwlutnimu2yymrz	\N	\N	MEDIA_UNLOCK: 5000 credits (bonus)	\N	2026-01-06 00:38:05.462
-cmk1v2yew004jodqu6mqnm3qz	cmk1ueg4p002todquzipxofvf	15000	15000	ADMIN_GRANT	PAID	\N	\N	\N	Admin paid credit grant	2026-01-12 00:38:49.015	2026-01-06 00:38:49.016
-cmk1v4o39004rodqu3fyqa8su	cmk1ueg4p002todquzipxofvf	-3000	12000	MEDIA_UNLOCK	PAID	mcmjzwlutnqj7m1a7vk	\N	\N	MEDIA_UNLOCK: 3000 credits	\N	2026-01-06 00:40:08.95
-cmk1v69xb005dodqu7p9ig28v	cmk1ueg4p002todquzipxofvf	-6000	6000	MEDIA_UNLOCK	PAID	mcmjzwlutnphtw0enlb	\N	\N	MEDIA_UNLOCK: 6000 credits	\N	2026-01-06 00:41:23.903
-cmk1v759p005nodqu8ayrd1ur	cmk1s1na3000lo5iizzr4of9j	-9000	501	MEDIA_UNLOCK	PAID	mcmjzwlutnk5plu0bd6	\N	\N	MEDIA_UNLOCK: 9000 credits	\N	2026-01-06 00:42:04.526
-cmk2bkmv4001idqe2ioh7tmiq	cmk1ueg4p002todquzipxofvf	-2999	3001	SUBSCRIPTION	PAID	\N	\N	\N	VIP subscription (monthly) for miacosta	\N	2026-01-06 08:20:27.713
 \.
 
 
@@ -2854,10 +2863,6 @@ cmjzvtzxw00b8ixwc9v4ifrbs	Post 646667	bold-kira-3770053436512646667	\N	bold-kira
 --
 
 COPY public."MediaPurchase" (id, "userId", "mediaId", amount, currency, provider, "providerTxId", status, "expiresAt", "downloadCount", "maxDownloads", "createdAt", "updatedAt") FROM stdin;
-cmk1v20tc004aodqucgzim1b4	cmk1s1na3000lo5iizzr4of9j	mcmjzwlutnimu2yymrz	0	CREDITS	CREDITS	\N	COMPLETED	\N	0	\N	2026-01-06 00:38:05.472	2026-01-06 00:38:05.472
-cmk1v4o3q004todqu94pul8fd	cmk1ueg4p002todquzipxofvf	mcmjzwlutnqj7m1a7vk	0	CREDITS	CREDITS	\N	COMPLETED	\N	0	\N	2026-01-06 00:40:08.966	2026-01-06 00:40:08.966
-cmk1v69xl005fodqumiimea31	cmk1ueg4p002todquzipxofvf	mcmjzwlutnphtw0enlb	0	CREDITS	CREDITS	\N	COMPLETED	\N	0	\N	2026-01-06 00:41:23.914	2026-01-06 00:41:23.914
-cmk1v75a3005podquh98tf6yc	cmk1s1na3000lo5iizzr4of9j	mcmjzwlutnk5plu0bd6	0	CREDITS	CREDITS	\N	COMPLETED	\N	0	\N	2026-01-06 00:42:04.54	2026-01-06 00:42:04.54
 \.
 
 
@@ -2874,10 +2879,6 @@ cmk1fqc300018l8uaqsoo5wla	cmk1fp698000zl8uajwqr8hza	cmk1f94jh002jv6nsto6u1low	cm
 cmk1fra6s001gl8uabgz9f8c3	cmk1fp698000zl8uajwqr8hza	cmk1f94jh002jv6nsto6u1low	cmjzuusq60000peus3yh1w5h0	coucou esmeralda	\N	f	\N	[]	0	t	f	f	\N	\N	\N	f	f	\N	\N	\N	2026-01-05 17:29:50.165	2026-01-05 17:29:55.07
 cmk1fro1u001kl8uanejp0cql	cmk1fp698000zl8uajwqr8hza	cmk1f94jh002jv6nsto6u1low	cmjzuusq60000peus3yh1w5h0	coucou esmeralda !	\N	f	\N	[]	0	t	f	f	\N	\N	\N	f	f	\N	\N	\N	2026-01-05 17:30:08.13	2026-01-05 17:30:08.362
 cmk1h6r6a00407sl2tjhmd7oj	cmk1fp698000zl8uajwqr8hza	cmjzuusq60000peus3yh1w5h0	cmk1f94jh002jv6nsto6u1low	\N	\N	t	5000	[]	0	t	f	f	\N	\N	\N	f	f	\N	\N	\N	2026-01-05 18:09:51.634	2026-01-05 18:09:55.936
-cmk1xkte1000fjvmhc62wryti	cmk1xjp9d0006jvmh3ca5ygw4	cmk1s1na3000lo5iizzr4of9j	cmjzuusq60000peus3yh1w5h0	Hey	\N	f	\N	[]	0	t	f	f	\N	\N	\N	f	f	\N	\N	\N	2026-01-06 01:48:41.545	2026-01-06 02:12:03.458
-cmk2bkvi6001vdqe26jldmcnv	cmk2bks7l001qdqe2m8eljo35	cmk1ueg4p002todquzipxofvf	cmjzuusq60000peus3yh1w5h0	hey mia	\N	f	\N	[]	0	t	f	f	\N	\N	\N	f	f	\N	\N	\N	2026-01-06 08:20:38.91	2026-01-06 08:23:56.739
-cmk2bra110025dqe2ubkguxgo	cmk2bks7l001qdqe2m8eljo35	cmjzuusq60000peus3yh1w5h0	cmk1ueg4p002todquzipxofvf	hey	\N	f	\N	[]	0	t	f	f	\N	\N	\N	f	f	\N	\N	\N	2026-01-06 08:25:37.669	2026-01-06 08:31:47.055
-cmk2ct2830003ohnzaq7gb6ch	cmk2bks7l001qdqe2m8eljo35	cmjzuusq60000peus3yh1w5h0	cmk1ueg4p002todquzipxofvf	\N	\N	t	5000	[]	0	t	f	f	\N	\N	\N	f	f	\N	\N	\N	2026-01-06 08:55:00.483	2026-01-06 08:55:02.602
 \.
 
 
@@ -2887,7 +2888,6 @@ cmk2ct2830003ohnzaq7gb6ch	cmk2bks7l001qdqe2m8eljo35	cmjzuusq60000peus3yh1w5h0	cm
 
 COPY public."MessageMedia" (id, "messageId", "mediaId", type, url, "previewUrl", "createdAt") FROM stdin;
 cmk1h6r6a00427sl2kvoxm6pc	cmk1h6r6a00407sl2tjhmd7oj	cmjzvtykn0036ixwcir3hz4de	VIDEO	/uploads/media/3677596564148615529_1.mp4	/uploads/media/3677596564148615529_1_thumb.jpg	2026-01-05 18:09:51.634
-cmk2ct2830005ohnzte42cty5	cmk2ct2830003ohnzaq7gb6ch	mcmjzwlutnvw5ell0oq	PHOTO	/uploads/media/2833171100456070295_1.jpg	/uploads/media/2833171100456070295_1.jpg	2026-01-06 08:55:00.483
 \.
 
 
@@ -3989,6 +3989,46 @@ cmk2cttu80007ohnzqijj6oag	/en/dashboard/messages	\N	v_1766804955115_r25kzpvto1	c
 cmk2cvngy0008ohnz0fa69bpr	/en/dashboard/messages	\N	v_1766804955115_r25kzpvto1	cmk1ueg4p002todquzipxofvf	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767689721490_ttnvd6rylt	2026-01-06 08:57:01.331
 cmk2cvy4l0009ohnzwhlsz4nj	/en/dashboard/messages	\N	v_1766804955115_r25kzpvto1	cmk1ueg4p002todquzipxofvf	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767689721490_ttnvd6rylt	2026-01-06 08:57:15.142
 cmk2j7e7d000aohnzy3iqi6ow	/fr	\N	v_1767700446884_8skhgm8l6ng	\N	Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/109.0	desktop	Firefox	Windows	\N	s_1767700446885_zq9uecf9zao	2026-01-06 11:54:06.889
+cmk2k9mnm000bohnzycm4a0g5	/fr	\N	v_1766808100130_nq519a6ii39	cmjzuusq60000peus3yh1w5h0	Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767702230761_53083104f8l	2026-01-06 12:23:50.77
+cmk2k9yhp000cohnz8j8cvirm	/fr/dashboard	\N	v_1766808100130_nq519a6ii39	cmjzuusq60000peus3yh1w5h0	Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767702230761_53083104f8l	2026-01-06 12:24:06.109
+cmk2ka01w000dohnzu5bwvujl	/fr	\N	v_1766808100130_nq519a6ii39	cmjzuusq60000peus3yh1w5h0	Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767702230761_53083104f8l	2026-01-06 12:24:08.132
+cmk2ka2de000eohnzslgzlass	/fr/dashboard	\N	v_1766808100130_nq519a6ii39	cmjzuusq60000peus3yh1w5h0	Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767702230761_53083104f8l	2026-01-06 12:24:11.139
+cmk2ka6wp000fohnzlfufj5ek	/fr/dashboard/admin/users	\N	v_1766808100130_nq519a6ii39	cmjzuusq60000peus3yh1w5h0	Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767702230761_53083104f8l	2026-01-06 12:24:17.017
+cmk2kauvf000gohnzkspa6uy1	/fr	\N	v_1766808100130_nq519a6ii39	cmjzuusq60000peus3yh1w5h0	Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767702230761_53083104f8l	2026-01-06 12:24:48.075
+cmk2kaz2k000hohnzhsa5fx5v	/fr/emmarose	\N	v_1766808100130_nq519a6ii39	cmjzuusq60000peus3yh1w5h0	Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767702230761_53083104f8l	2026-01-06 12:24:53.516
+cmk2kazxi000iohnz1em8x18v	/fr	\N	v_1766808100130_nq519a6ii39	cmjzuusq60000peus3yh1w5h0	Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767702230761_53083104f8l	2026-01-06 12:24:54.63
+cmk2kb0y3000johnz67qvzro4	/fr/miacosta	\N	v_1766808100130_nq519a6ii39	cmjzuusq60000peus3yh1w5h0	Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767702230761_53083104f8l	2026-01-06 12:24:55.948
+cmk2kdoed000kohnz8z1y3mf5	/fr/dashboard/messages	https://viponly.fun/fr/miacosta	v_1766808100130_nq519a6ii39	cmjzuusq60000peus3yh1w5h0	Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767702230761_53083104f8l	2026-01-06 12:26:59.654
+cmk2koohe000lohnz5svbw9tu	/fr	https://viponly.fun/fr/dashboard/messages	v_1766804038091_cp6wd3qhq1	\N	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767702932975_uigvv5r6ka	2026-01-06 12:35:32.979
+cmk2kor8o000mohnzp06m3rvf	/fr/auth/register	https://viponly.fun/fr/dashboard/messages	v_1766804038091_cp6wd3qhq1	\N	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767702932975_uigvv5r6ka	2026-01-06 12:35:36.553
+cmk2kpwqj000oohnzrpayeer2	/fr/auth/login	https://viponly.fun/fr/dashboard/messages	v_1766804038091_cp6wd3qhq1	\N	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767702932975_uigvv5r6ka	2026-01-06 12:36:30.33
+cmk2l4uwr00004sy6d27i5an3	/fr/dashboard	https://accounts.google.com/	v_1766804038091_cp6wd3qhq1	cmjzuusq60000peus3yh1w5h0	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767702932975_uigvv5r6ka	2026-01-06 12:48:07.803
+cmk2l4ys400014sy6roo4dpey	/fr/dashboard/admin/users	https://accounts.google.com/	v_1766804038091_cp6wd3qhq1	cmjzuusq60000peus3yh1w5h0	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767702932975_uigvv5r6ka	2026-01-06 12:48:12.82
+cmk2l6c1h000a4sy6a3lstsht	/en	https://viponly.fun/en/dashboard/messages?user=cmjzuusq60000peus3yh1w5h0	v_1766804955115_r25kzpvto1	\N	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767703756647_4rvqmzlsfb	2026-01-06 12:49:16.661
+cmk2l6fl2000b4sy6giy3eie2	/en/auth/register	https://viponly.fun/en/dashboard/messages?user=cmjzuusq60000peus3yh1w5h0	v_1766804955115_r25kzpvto1	\N	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767703756647_4rvqmzlsfb	2026-01-06 12:49:21.254
+cmk2l7sc4000d4sy623ud8dam	/en/auth/login	https://viponly.fun/en/dashboard/messages?user=cmjzuusq60000peus3yh1w5h0	v_1766804955115_r25kzpvto1	\N	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767703756647_4rvqmzlsfb	2026-01-06 12:50:24.436
+cmk2m4u3u000010pvh7p6e5bq	/en/auth/register	https://viponly.fun/en/auth/login	v_1766804955115_r25kzpvto1	\N	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767703756647_4rvqmzlsfb	2026-01-06 13:16:06.379
+cmk2m517m000110pvui240xja	/fr/dashboard/admin/creator-applications	https://viponly.fun/fr/dashboard/admin/users	v_1766804038091_cp6wd3qhq1	cmjzuusq60000peus3yh1w5h0	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767705375168_m0nuhpr0avj	2026-01-06 13:16:15.586
+cmk2m55hw000210pvxds9e4ya	/fr/dashboard/admin/users	https://viponly.fun/fr/dashboard/admin/users	v_1766804038091_cp6wd3qhq1	cmjzuusq60000peus3yh1w5h0	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767705375168_m0nuhpr0avj	2026-01-06 13:16:21.141
+cmk2mv25c0000nznp5tohtm01	/fr/dashboard/admin/creator-applications	https://viponly.fun/fr/dashboard/admin/users	v_1766804038091_cp6wd3qhq1	cmjzuusq60000peus3yh1w5h0	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767705375168_m0nuhpr0avj	2026-01-06 13:36:29.857
+cmk2mvfhp0001nznpgo91m1ka	/en/auth/login	https://viponly.fun/en/auth/login	v_1766804955115_r25kzpvto1	\N	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767706607147_j5sgzy56m3g	2026-01-06 13:36:47.15
+cmk2mvguj0002nznp1rmqs9z9	/en/auth/register	https://viponly.fun/en/auth/login	v_1766804955115_r25kzpvto1	\N	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767706607147_j5sgzy56m3g	2026-01-06 13:36:48.907
+cmk2mvkhd0003nznp2nbxvvb3	/fr/dashboard/admin/users	https://viponly.fun/fr/dashboard/admin/users	v_1766804038091_cp6wd3qhq1	cmjzuusq60000peus3yh1w5h0	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767705375168_m0nuhpr0avj	2026-01-06 13:36:53.617
+cmk2nheja0006nznpkae9ad3a	/fr	https://viponly.fun/fr/dashboard/admin/users	v_1766804038091_cp6wd3qhq1	cmjzuusq60000peus3yh1w5h0	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767707632242_2txdmpgkzru	2026-01-06 13:53:52.342
+cmk2nhfza0007nznps2fcxgzh	/fr/miacosta	https://viponly.fun/fr/dashboard/admin/users	v_1766804038091_cp6wd3qhq1	cmjzuusq60000peus3yh1w5h0	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767707632242_2txdmpgkzru	2026-01-06 13:53:54.214
+cmk2njhei0008nznpi4e4cfpr	/fr/dashboard/messages	https://viponly.fun/fr/miacosta	v_1766804038091_cp6wd3qhq1	cmjzuusq60000peus3yh1w5h0	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767707632242_2txdmpgkzru	2026-01-06 13:55:29.371
+cmk2nk2160009nznpq1jr651w	/en/auth/login	https://viponly.fun/en/auth/login	v_1766804955115_r25kzpvto1	\N	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767706607147_j5sgzy56m3g	2026-01-06 13:55:56.107
+cmk2nmagd000anznp1gl1fcde	/fr	https://viponly.fun/fr/miacosta	v_1766804038091_cp6wd3qhq1	cmjzuusq60000peus3yh1w5h0	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767707632242_2txdmpgkzru	2026-01-06 13:57:40.333
+cmk2nmbaw000bnznpi44w3f5d	/fr/miacosta	https://viponly.fun/fr/miacosta	v_1766804038091_cp6wd3qhq1	cmjzuusq60000peus3yh1w5h0	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767707632242_2txdmpgkzru	2026-01-06 13:57:41.432
+cmk2nmdb6000cnznprfy7m739	/fr/miacosta/gallery	https://viponly.fun/fr/miacosta	v_1766804038091_cp6wd3qhq1	cmjzuusq60000peus3yh1w5h0	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767707632242_2txdmpgkzru	2026-01-06 13:57:44.034
+cmk2nmywz000dnznphp7th8xx	/en	\N	v_1767707892031_z748gmaibnp	\N	Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/109.0	desktop	Firefox	Windows	\N	s_1767707892032_v4x3pwtmju	2026-01-06 13:58:12.036
+cmk2no5ky000enznpy2ctjwez	/fr/dashboard/messages	https://viponly.fun/fr/miacosta/gallery	v_1766804038091_cp6wd3qhq1	cmjzuusq60000peus3yh1w5h0	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767707632242_2txdmpgkzru	2026-01-06 13:59:07.33
+cmk2not7j000fnznp8zkehmh8	/fr	https://viponly.fun/fr/miacosta/gallery	v_1766804038091_cp6wd3qhq1	cmjzuusq60000peus3yh1w5h0	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767707632242_2txdmpgkzru	2026-01-06 13:59:37.951
+cmk2nryxu000gnznpggavdl44	/fr/esmeralda	https://viponly.fun/fr/miacosta/gallery	v_1766804038091_cp6wd3qhq1	cmjzuusq60000peus3yh1w5h0	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767707632242_2txdmpgkzru	2026-01-06 14:02:05.346
+cmk2oprbt00002o6ln0iv04pw	/fr/esmeralda	https://viponly.fun/fr/miacosta/gallery	v_1766804038091_cp6wd3qhq1	cmjzuusq60000peus3yh1w5h0	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767709701354_5d8wg1nzdct	2026-01-06 14:28:21.785
+cmk2oq8vv00012o6lf70k8u71	/fr/esmeralda	https://viponly.fun/fr/miacosta/gallery	v_1766804038091_cp6wd3qhq1	cmjzuusq60000peus3yh1w5h0	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767709701354_5d8wg1nzdct	2026-01-06 14:28:44.54
+cmk2ozhtv00022o6lq7cmd1t5	/en	\N	v_1767710156028_obsdfrrlogg	\N	Mozilla/5.0 (iPhone; CPU iPhone OS 10_3_1 like Mac OS X) AppleWebKit/603.1.30 (KHTML, like Gecko) Version/10.0 Mobile/14E304 Safari/602.1	mobile	Safari	macOS	\N	s_1767710156029_ga33ajopnek	2026-01-06 14:35:56.035
+cmk2p8f7v00032o6lexmosnn4	/fr/esmeralda	https://viponly.fun/fr/miacosta/gallery	v_1766804038091_cp6wd3qhq1	cmjzuusq60000peus3yh1w5h0	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767709701354_5d8wg1nzdct	2026-01-06 14:42:52.555
 \.
 
 
@@ -4218,8 +4258,6 @@ COPY public."StatsSnapshot" (id, "entityType", "entityId", "snapshotAt", metrics
 COPY public."Subscription" (id, "userId", "planId", "creatorSlug", status, "paymentProvider", "stripeSubscriptionId", "stripeCustomerId", "billingInterval", "currentPeriodStart", "currentPeriodEnd", "cancelAtPeriodEnd", "canceledAt", "trialStart", "trialEnd", "lastCreditGrant", "nextCreditGrant", metadata, "createdAt", "updatedAt") FROM stdin;
 cmk1f4vy00018v6nssil81hb5	cmk1f12jf000hv6nsy4m7gi0j	cmjzvj3g30001s3fiavy5gx4a	miacosta	ACTIVE	CREDITS	\N	\N	MONTHLY	2026-01-05 17:12:25.272	2026-02-05 17:12:25.272	f	\N	\N	\N	\N	2026-02-05 17:12:25.272	\N	2026-01-05 17:12:25.273	2026-01-05 17:12:25.273
 cmk1fnaac000nl8ua6evkoydd	cmk1f94jh002jv6nsto6u1low	cmjzvj3ft0000s3fiy2us8rfo	esmeralda	ACTIVE	CREDITS	\N	\N	MONTHLY	2026-01-05 17:26:43.667	2026-02-05 17:26:43.667	f	\N	\N	\N	\N	2026-02-05 17:26:43.667	\N	2026-01-05 17:26:43.669	2026-01-05 17:26:43.669
-cmk1tzi1o0010odqu6qsl9hy0	cmk1s1na3000lo5iizzr4of9j	cmjzvj3ft0000s3fiy2us8rfo	miacosta	ACTIVE	CREDITS	\N	\N	MONTHLY	2026-01-06 00:08:08.219	2026-02-06 00:08:08.219	f	\N	\N	\N	\N	2026-02-06 00:08:08.219	\N	2026-01-06 00:08:08.22	2026-01-06 00:08:08.22
-cmk2bkmvb001kdqe2jz7dijjc	cmk1ueg4p002todquzipxofvf	cmjzvj3g30001s3fiavy5gx4a	miacosta	ACTIVE	CREDITS	\N	\N	MONTHLY	2026-01-06 08:20:27.718	2026-02-06 08:20:27.718	f	\N	\N	\N	\N	2026-02-06 08:20:27.718	\N	2026-01-06 08:20:27.72	2026-01-06 08:20:27.72
 \.
 
 
@@ -4238,15 +4276,9 @@ cmjzvj3g30001s3fiavy5gx4a	VIP	vip	Ultimate experience with full access	29.99	287
 --
 
 COPY public."User" (id, email, "emailVerified", "passwordHash", name, image, role, "isCreator", "isAgencyOwner", "creditBalance", "paidCredits", "bonusCredits", "stripeCustomerId", "createdAt", "updatedAt") FROM stdin;
-cmk1s1na3000lo5iizzr4of9j	devhost12@gmail.com	\N	\N	Dev	https://lh3.googleusercontent.com/a/ACg8ocJXaegD-ZwYtIkIgRcEvRCq-NPsb2QXJiHfw6mGAPI0QrTq9A=s96-c	USER	t	f	501	501	0	\N	2026-01-05 23:13:49.083	2026-01-06 00:42:04.522
-cmk1x443r000jpyotoi1x5qfl	devhost12+1@gmail.com	\N	$2b$12$EpSewYgd1YjtnS4sxQcCiuXzn2BRGtkz4eUeuNJwRzUvPSYCAVBN6	testuser	\N	USER	f	f	0	0	0	\N	2026-01-06 01:35:42.28	2026-01-06 01:35:42.28
-cmk1x5qw7000mpyote0zexnnq	devhost12+2@gmail.com	\N	$2b$12$5EGmLDX4sLCjbhtsM0aP/.13b/5uoZLgxOwrhnWJFpNR5UNVlr9d6	testuser223	\N	USER	f	f	0	0	0	\N	2026-01-06 01:36:58.471	2026-01-06 01:36:58.471
-cmk1x9d3f000tpyothrifgf39	raphoulamenace@gmail.com	\N	$2b$12$bEgC05ZqE5IvFzsfL04bB.TenXuM6X5g69EzuLLJOrV65NuxaLfy.	raphou	\N	USER	f	f	0	0	0	\N	2026-01-06 01:39:47.212	2026-01-06 01:39:47.212
-cmk1ueg4p002todquzipxofvf	raphi5269@gmail.com	\N	\N	Raph Vln	https://lh3.googleusercontent.com/a/ACg8ocI1OKc7ZjkunYrSe8PvjFowlOoiD-70_uJ2x263ILV5Grl8kA=s96-c	USER	t	f	3001	3001	0	\N	2026-01-06 00:19:45.577	2026-01-06 08:20:27.709
 cmk1f12jf000hv6nsy4m7gi0j	maxencebonnetcarrier@gmail.com	\N	\N	Maxence Bonnet-Carrier	https://lh3.googleusercontent.com/a/ACg8ocJfPTvQBNSFPZ1QxfSJ1S_zkAxU5w6JmuLR80v90J9mY8H9dg=s96-c	USER	f	f	9001	2001	7000	\N	2026-01-05 17:09:27.196	2026-01-05 17:12:25.282
-cmk2bspai0028dqe2esiipdtm	lamenace@gmail.com	\N	$2b$12$nWHE29eJbe0zOhq1Q/66ouSv6b1.aju4Wya/MkBP/msfld.YdSrYO	raphou	\N	USER	f	f	0	0	0	\N	2026-01-06 08:26:44.106	2026-01-06 08:26:44.106
 cmjzuusq60000peus3yh1w5h0	viralstudioshop@gmail.com	\N	\N	viral studio	https://lh3.googleusercontent.com/a/ACg8ocItcHGLCZPJV_WNHR_ip-h8V9Y16GN2zr4bZC2Apej1oiEujw=s96-c	ADMIN	t	t	998	498	500	\N	2026-01-04 14:56:56.046	2026-01-05 17:17:24.515
-cmk2buoq50000cpy7waiuwgqb	dago@gmail.com	\N	$2b$12$fojDiHq6f1sS3RRnpxy2hOT8rtUKpkIHZTnU66M2bEZDQNDby9JeO	ggdago	\N	USER	f	f	0	0	0	\N	2026-01-06 08:28:16.685	2026-01-06 08:28:16.685
+cmk2mw4dt0005nznp1v0exjea	amberlytoej@gmail.com	\N	$2b$12$bUxG8XNixkWBPbA1nmw.QO6AuXTFCQWKbqgtvVKLz9kF3bg7o9GlW	raph	\N	USER	f	f	0	0	0	\N	2026-01-06 13:37:19.41	2026-01-06 13:37:19.41
 cmk1f94jh002jv6nsto6u1low	madajeff1@gmail.com	\N	\N	Jeff Mada	https://lh3.googleusercontent.com/a/ACg8ocIOz4HImYiqeAoBhzvwP5JNRq_uM2zKCjkD8g003r2Djnl-Tg=s96-c	USER	f	t	14501	14001	500	\N	2026-01-05 17:15:43.037	2026-01-05 19:14:44.507
 \.
 
@@ -4262,6 +4294,7 @@ reset:devhost12+2@gmail.com	116f0f44e4d38b92087046c64b3d2a9fc131c3bad3d89669c36d
 raphoulamenace@gmail.com	d09b9ea256e8d8deb7b21cd282112da4a9cce29b1a0a967f75183d0349625772	2026-01-07 01:39:47.216
 lamenace@gmail.com	2391d40098e1d5c84e65d5910d5a8f6d950d1c20fc4ca5743b99019bfa9fc1f9	2026-01-07 08:26:44.177
 dago@gmail.com	f7574cc903649429a3e3301825f3c8865eae611b9be54947da0830ff12ffe425	2026-01-07 08:28:16.73
+amberlytoej@gmail.com	f8798ee59794f88846d9b98625b1d8d2fe59ee348f9c20cf6c3fb840262dab03	2026-01-07 13:56:13.663
 \.
 
 
@@ -4487,6 +4520,14 @@ ALTER TABLE ONLY public."Conversation"
 
 ALTER TABLE ONLY public."CreatorAiPersonality"
     ADD CONSTRAINT "CreatorAiPersonality_pkey" PRIMARY KEY (id);
+
+
+--
+-- Name: CreatorApplication CreatorApplication_pkey; Type: CONSTRAINT; Schema: public; Owner: viponly
+--
+
+ALTER TABLE ONLY public."CreatorApplication"
+    ADD CONSTRAINT "CreatorApplication_pkey" PRIMARY KEY (id);
 
 
 --
@@ -5340,6 +5381,27 @@ CREATE INDEX "CreatorAiPersonality_creatorSlug_idx" ON public."CreatorAiPersonal
 --
 
 CREATE INDEX "CreatorAiPersonality_primaryTone_idx" ON public."CreatorAiPersonality" USING btree ("primaryTone");
+
+
+--
+-- Name: CreatorApplication_createdAt_idx; Type: INDEX; Schema: public; Owner: viponly
+--
+
+CREATE INDEX "CreatorApplication_createdAt_idx" ON public."CreatorApplication" USING btree ("createdAt");
+
+
+--
+-- Name: CreatorApplication_status_idx; Type: INDEX; Schema: public; Owner: viponly
+--
+
+CREATE INDEX "CreatorApplication_status_idx" ON public."CreatorApplication" USING btree (status);
+
+
+--
+-- Name: CreatorApplication_userId_status_key; Type: INDEX; Schema: public; Owner: viponly
+--
+
+CREATE UNIQUE INDEX "CreatorApplication_userId_status_key" ON public."CreatorApplication" USING btree ("userId", status);
 
 
 --
@@ -6483,6 +6545,14 @@ ALTER TABLE ONLY public."CreatorAiPersonality"
 
 
 --
+-- Name: CreatorApplication CreatorApplication_userId_fkey; Type: FK CONSTRAINT; Schema: public; Owner: viponly
+--
+
+ALTER TABLE ONLY public."CreatorApplication"
+    ADD CONSTRAINT "CreatorApplication_userId_fkey" FOREIGN KEY ("userId") REFERENCES public."User"(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
 -- Name: CreatorEarning CreatorEarning_creatorSlug_fkey; Type: FK CONSTRAINT; Schema: public; Owner: viponly
 --
 
@@ -6853,5 +6923,5 @@ REVOKE USAGE ON SCHEMA public FROM PUBLIC;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict mKhZebqjIb2I6uLhCwOTggOpgnaRLh1IhFTMSZ8Qc6Eh0nv48VHSIiocNOIPtYy
+\unrestrict rudgJ0KMXtQBcxEI1zcT5inQ3vOXE2MmUPwHHjvdqK3p5QKPgsKrOyiL3hMcg17
 

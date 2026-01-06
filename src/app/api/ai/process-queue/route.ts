@@ -24,6 +24,12 @@ import { isAiOnlyFan, updateFanQualification } from "@/lib/fan-qualifier";
 import { selectModel, type LLMContext } from "@/lib/llm-router";
 import { hasAiChatCredits, chargeAiChatCredit } from "@/lib/credits";
 import { type AiProvider } from "@/lib/ai-providers";
+import {
+  matchScript,
+  buildMatchedScriptPrompt,
+  getTopScriptsForIntent,
+  buildScriptReferencePrompt,
+} from "@/lib/scripts/script-matcher";
 
 // This endpoint should be called by a cron job every 30 seconds
 // or can be triggered manually for testing
@@ -503,7 +509,7 @@ export async function GET(request: NextRequest) {
         // Check if fan is expressing objection (too expensive, maybe later, etc.)
         const objectionResult = detectObjection(originalMessage.text || "");
 
-        let responseText: string;
+        let responseText: string = "";
 
         if (objectionResult) {
           console.log(`[AI] Objection detected: ${objectionResult.patternName} (${objectionResult.strategy})`);
@@ -539,30 +545,83 @@ export async function GET(request: NextRequest) {
             console.log(`[AI] Injecting fan memories: ${memoriesPrompt.substring(0, 100)}...`);
           }
 
-          // ===== SELECT LLM MODEL BASED ON CONTEXT =====
-          const llmContext: LLMContext = {
-            conversationType: objectionResult ? "closing" : "normal",
-            fanSpendingTier: "regular",
-            leadScore: leadScore?.overall,
-            isObjectionHandling: !!objectionResult,
-          };
-          const selectedModel = selectModel(llmContext);
-          console.log(`[AI] Selected model: ${selectedModel} for fan ${fanUserId || "unknown"}`);
+          // ===== SCRIPT MATCHING =====
+          // Try to find a matching script for this conversation context
+          let scriptPrompt = "";
+          try {
+            // Get creator's agency ID for script matching
+            const creatorForAgency = await prisma.creator.findUnique({
+              where: { slug: queueItem.creatorSlug },
+              select: { agencyId: true },
+            });
 
-          // Generate AI response with memories context and provider settings
-          responseText = await generateAiResponse(
-            context,
-            personality,
-            suggestedMediaForAI,
-            {
-              fanMemories: memoriesPrompt || undefined,
-              isAiOnlyFan: fanProfile?.aiOnlyMode || false,
-              // Multi-provider AI settings
-              provider: (creator.aiProvider as AiProvider) || "anthropic",
-              model: creator.aiModel || "claude-haiku-4-5-20241022",
-              apiKey: creator.aiUseCustomKey ? creator.aiApiKey : null,
+            if (creatorForAgency?.agencyId) {
+              // Determine fan stage from profile
+              const fanStage = fanProfile?.spendingTier === "whale" ? "vip"
+                : fanProfile?.totalMessages && fanProfile.totalMessages > 10 ? "engaged"
+                : "new";
+
+              // Try to match a script
+              const matchedScript = await matchScript({
+                message: originalMessage.text || "",
+                creatorSlug: queueItem.creatorSlug,
+                agencyId: creatorForAgency.agencyId,
+                fanName: originalMessage.sender.name || undefined,
+                fanStage: fanStage as "new" | "engaged" | "vip" | "cooling_off",
+                creatorName: creator.displayName || undefined,
+                language: detectLanguageFromMessages([originalMessage.text || ""]) || "fr",
+                conversationHistory: context.messages,
+              });
+
+              if (matchedScript) {
+                console.log(`[AI] Script matched: "${matchedScript.script.name}" (${matchedScript.confidence.toFixed(2)} confidence, strategy: ${matchedScript.strategy})`);
+
+                // Build prompt based on strategy
+                if (matchedScript.strategy === "SCRIPT_ONLY" && matchedScript.confidence >= 0.85) {
+                  // Very high confidence - use script verbatim
+                  responseText = matchedScript.parsedContent;
+                  console.log(`[AI] Using script verbatim: "${responseText.substring(0, 50)}..."`);
+                } else {
+                  // Add script as reference for AI
+                  scriptPrompt = buildMatchedScriptPrompt(matchedScript);
+                  console.log(`[AI] Adding script reference to prompt`);
+                }
+              }
+              // Note: If matchedScript is null, no script reference is added
             }
-          );
+          } catch (scriptError) {
+            console.error(`[AI] Script matching error (non-fatal):`, scriptError);
+            // Continue without script - this is a non-fatal error
+          }
+
+          // If we already have responseText from SCRIPT_ONLY strategy, skip AI generation
+          if (!responseText) {
+            // ===== SELECT LLM MODEL BASED ON CONTEXT =====
+            const llmContext: LLMContext = {
+              conversationType: objectionResult ? "closing" : "normal",
+              fanSpendingTier: "regular",
+              leadScore: leadScore?.overall,
+              isObjectionHandling: !!objectionResult,
+            };
+            const selectedModel = selectModel(llmContext);
+            console.log(`[AI] Selected model: ${selectedModel} for fan ${fanUserId || "unknown"}`);
+
+            // Generate AI response with memories and script context
+            responseText = await generateAiResponse(
+              context,
+              personality,
+              suggestedMediaForAI,
+              {
+                fanMemories: memoriesPrompt || undefined,
+                isAiOnlyFan: fanProfile?.aiOnlyMode || false,
+                scriptReference: scriptPrompt || undefined,
+                // Multi-provider AI settings
+                provider: (creator.aiProvider as AiProvider) || "anthropic",
+                model: creator.aiModel || "claude-haiku-4-5-20241022",
+                apiKey: creator.aiUseCustomKey ? creator.aiApiKey : null,
+              }
+            );
+          }
         }
 
         // ===== EXTRACT MEMORIES FROM FAN MESSAGE (async, non-blocking) =====

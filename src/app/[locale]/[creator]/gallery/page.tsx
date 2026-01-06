@@ -447,7 +447,7 @@ export default function GalleryPage() {
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: index * 0.03 }}
-                      className="group cursor-pointer"
+                      className="group cursor-pointer relative overflow-visible"
                       onClick={() => {
                         // If PPV and not purchased, show unlock modal
                         if (needsCreditsToUnlock(item)) {
@@ -463,11 +463,74 @@ export default function GalleryPage() {
                       onMouseEnter={() => setHoveredItem(item.id)}
                       onMouseLeave={() => setHoveredItem(null)}
                     >
+                      {/* ✨ PREMIUM HOLOGRAPHIC BORDER for locked content */}
+                      {!canAccess && (
+                        <>
+                          {/* Animated rainbow border */}
+                          <motion.div
+                            className="absolute inset-0 rounded-2xl z-0 p-[2px]"
+                            style={{
+                              background: 'linear-gradient(90deg, #ff0080, #ff8c00, #ffef00, #00ff80, #00bfff, #8000ff, #ff0080)',
+                              backgroundSize: '300% 100%',
+                            }}
+                            animate={{
+                              backgroundPosition: ['0% 0%', '100% 0%', '0% 0%'],
+                            }}
+                            transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
+                          >
+                            {/* Inner gold fill */}
+                            <div className="w-full h-full rounded-[14px] bg-gradient-to-br from-yellow-400/90 via-amber-500/90 to-yellow-600/90" />
+                          </motion.div>
+                        </>
+                      )}
+
                       <div className={cn(
-                        "relative overflow-hidden rounded-2xl border border-white/10 transition-all duration-300",
-                        isHovered && "border-[var(--gold)]/50 shadow-xl shadow-[var(--gold)]/10",
+                        "relative overflow-hidden rounded-2xl border transition-all duration-300 z-[1]",
+                        !canAccess ? "border-transparent" : "border-white/10",
+                        isHovered && canAccess && "border-[var(--gold)]/50 shadow-xl shadow-[var(--gold)]/10",
                         isGridView ? "aspect-[3/4]" : "aspect-video"
                       )}>
+                        {/* ✨ Interior holographic effects for locked content */}
+                        {!canAccess && (
+                          <>
+                            {/* Primary prismatic sweep */}
+                            <div
+                              className="absolute inset-0 z-[15] animate-holographic-sweep pointer-events-none"
+                              style={{
+                                background: 'linear-gradient(125deg, transparent 0%, rgba(255,0,128,0.2) 15%, rgba(0,255,255,0.2) 30%, rgba(255,255,0,0.15) 45%, rgba(128,0,255,0.2) 60%, rgba(0,255,128,0.15) 75%, transparent 100%)',
+                                backgroundSize: '300% 300%',
+                              }}
+                            />
+                            {/* Secondary reverse sweep */}
+                            <div
+                              className="absolute inset-0 z-[15] animate-holographic-sweep-reverse pointer-events-none"
+                              style={{
+                                background: 'linear-gradient(-45deg, transparent 0%, rgba(0,200,255,0.15) 25%, rgba(255,100,200,0.15) 50%, rgba(100,255,150,0.15) 75%, transparent 100%)',
+                                backgroundSize: '250% 250%',
+                              }}
+                            />
+                          </>
+                        )}
+
+                        {/* Shimmer on hover - white band that crosses */}
+                        <div
+                          className={cn(
+                            "absolute inset-0 z-[16] pointer-events-none transition-transform duration-700 overflow-hidden"
+                          )}
+                        >
+                          <div
+                            className={cn(
+                              "absolute inset-[-100%] transition-transform duration-700",
+                              isHovered ? "translate-x-[50%]" : "-translate-x-[50%]"
+                            )}
+                            style={{
+                              background: !canAccess
+                                ? 'linear-gradient(105deg, transparent 0%, transparent 40%, rgba(255,255,255,0.3) 45%, rgba(255,255,255,0.5) 50%, rgba(255,255,255,0.3) 55%, transparent 60%, transparent 100%)'
+                                : 'linear-gradient(105deg, transparent 0%, transparent 42%, rgba(255,255,255,0.15) 47%, rgba(255,255,255,0.25) 50%, rgba(255,255,255,0.15) 53%, transparent 58%, transparent 100%)',
+                            }}
+                          />
+                        </div>
+
                         {/* Image - blur when locked (thumbnail is low-quality preview, contentUrl is protected by API) */}
                         {item.thumbnailUrl ? (
                           <NextImage
@@ -476,8 +539,8 @@ export default function GalleryPage() {
                             fill
                             sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
                             className={cn(
-                              "object-cover transition-transform duration-700 group-hover:scale-110 pointer-events-none select-none",
-                              !canAccess && "blur-sm scale-[1.02]"
+                              "object-cover transition-all duration-500 group-hover:scale-105 pointer-events-none select-none",
+                              !canAccess && "blur-sm group-hover:blur-[3px] scale-[1.02]"
                             )}
                             draggable={false}
                             onContextMenu={(e) => e.preventDefault()}
@@ -691,8 +754,8 @@ export default function GalleryPage() {
                           fill
                           sizes="(max-width: 1024px) 100vw, 80vw"
                           className={cn(
-                            "object-cover pointer-events-none select-none",
-                            !canAccess && "blur-sm scale-[1.02]"
+                            "object-cover pointer-events-none select-none transition-all duration-500",
+                            !canAccess && "blur-sm hover:blur-[3px] scale-[1.02]"
                           )}
                           draggable={false}
                           onContextMenu={(e) => e.preventDefault()}

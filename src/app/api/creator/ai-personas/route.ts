@@ -85,14 +85,35 @@ export async function GET(request: NextRequest) {
           },
         });
 
+        // Safely parse JSON fields
+        let parsedPersonality = {};
+        let parsedToneKeywords = null;
+        let parsedHandoffKeywords = null;
+
+        try {
+          parsedPersonality = p.personality ? JSON.parse(p.personality) : {};
+        } catch {
+          parsedPersonality = {};
+        }
+        try {
+          parsedToneKeywords = p.toneKeywords ? JSON.parse(p.toneKeywords) : null;
+        } catch {
+          parsedToneKeywords = null;
+        }
+        try {
+          parsedHandoffKeywords = p.handoffKeywords ? JSON.parse(p.handoffKeywords) : null;
+        } catch {
+          parsedHandoffKeywords = null;
+        }
+
         return {
           id: p.id,
           creatorSlug: p.creatorSlug,
           agencyId: p.agencyId,
           name: p.name,
-          personality: p.personality ? JSON.parse(p.personality) : {},
+          personality: parsedPersonality,
           primaryTone: p.primaryTone,
-          toneKeywords: p.toneKeywords ? JSON.parse(p.toneKeywords) : null,
+          toneKeywords: parsedToneKeywords,
           language: p.language, // Language targeting
           trafficShare: p.trafficShare,
           isActive: p.isActive,
@@ -103,7 +124,7 @@ export async function GET(request: NextRequest) {
           autoHandoffEnabled: p.autoHandoffEnabled,
           handoffSpendThreshold: p.handoffSpendThreshold,
           handoffOnHighIntent: p.handoffOnHighIntent,
-          handoffKeywords: p.handoffKeywords ? JSON.parse(p.handoffKeywords) : null,
+          handoffKeywords: parsedHandoffKeywords,
           giveUpOnNonPaying: p.giveUpOnNonPaying,
           giveUpMessageThreshold: p.giveUpMessageThreshold,
           giveUpAction: p.giveUpAction,

@@ -87,11 +87,32 @@ export async function GET(request: NextRequest) {
             ? (earnings._count / conversations.length) * 100
             : 0;
 
+        // Safely parse JSON fields
+        let parsedPersonality = {};
+        let parsedToneKeywords: string[] = [];
+        let parsedHandoffKeywords: string[] = [];
+
+        try {
+          parsedPersonality = personality.personality ? JSON.parse(personality.personality) : {};
+        } catch {
+          parsedPersonality = {};
+        }
+        try {
+          parsedToneKeywords = personality.toneKeywords ? JSON.parse(personality.toneKeywords) : [];
+        } catch {
+          parsedToneKeywords = [];
+        }
+        try {
+          parsedHandoffKeywords = personality.handoffKeywords ? JSON.parse(personality.handoffKeywords) : [];
+        } catch {
+          parsedHandoffKeywords = [];
+        }
+
         return {
           ...personality,
-          personality: JSON.parse(personality.personality || "{}"),
-          toneKeywords: personality.toneKeywords ? JSON.parse(personality.toneKeywords) : [],
-          handoffKeywords: personality.handoffKeywords ? JSON.parse(personality.handoffKeywords) : [],
+          personality: parsedPersonality,
+          toneKeywords: parsedToneKeywords,
+          handoffKeywords: parsedHandoffKeywords,
           stats: {
             revenue30d: earnings._sum.grossAmount || 0,
             sales30d: earnings._count,

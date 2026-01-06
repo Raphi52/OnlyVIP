@@ -720,20 +720,114 @@ export function Pricing({ creatorSlug = "miacosta" }: PricingProps) {
           viewport={{ once: true }}
           className="text-center mt-8"
         >
-          <p className="text-sm text-gray-500 mb-4">
+          <p className="text-sm text-gray-500 mb-6">
             {t("buyCreditsSecurely")}
           </p>
-          <div className="flex items-center justify-center gap-4 flex-wrap">
-            <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 border border-white/10">
-              <span className="text-[#F7931A] font-medium">Bitcoin</span>
-            </div>
-            <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 border border-white/10">
-              <span className="text-[#627EEA] font-medium">Ethereum</span>
-            </div>
-            <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 border border-white/10">
-              <span className="text-blue-400 font-medium">{t("creditCard")}</span>
-            </div>
+
+          {/* Payment Icons Grid */}
+          <div className="flex items-center justify-center gap-3 sm:gap-4 flex-wrap max-w-2xl mx-auto">
+            {/* Bitcoin */}
+            <motion.div
+              whileHover={{ scale: 1.1, y: -2 }}
+              className="group relative w-14 h-10 sm:w-16 sm:h-12 rounded-xl bg-gradient-to-br from-[#F7931A]/20 to-[#F7931A]/5 border border-[#F7931A]/30 hover:border-[#F7931A]/60 flex items-center justify-center transition-all cursor-pointer overflow-hidden"
+            >
+              <div className="absolute inset-0 bg-gradient-to-t from-[#F7931A]/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+              <svg className="w-6 h-6 sm:w-7 sm:h-7 text-[#F7931A] relative z-10" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M23.638 14.904c-1.602 6.43-8.113 10.34-14.542 8.736C2.67 22.05-1.244 15.525.362 9.105 1.962 2.67 8.475-1.243 14.9.358c6.43 1.605 10.342 8.115 8.738 14.546zm-6.35-4.613c.24-1.59-.974-2.45-2.64-3.03l.54-2.153-1.315-.33-.52 2.107c-.345-.087-.7-.17-1.053-.252l.53-2.127-1.32-.33-.54 2.165c-.285-.067-.565-.132-.84-.2l-1.815-.45-.35 1.407s.974.225.955.238c.535.136.63.486.615.766l-1.477 5.92c-.075.166-.24.406-.614.314.015.02-.96-.24-.96-.24l-.66 1.51 1.71.426.93.242-.54 2.19 1.32.327.54-2.17c.36.1.705.19 1.05.273l-.51 2.154 1.32.33.545-2.19c2.24.427 3.93.254 4.64-1.774.57-1.637-.03-2.58-1.217-3.196.854-.193 1.5-.76 1.68-1.93h.01zm-3.01 4.22c-.404 1.64-3.157.75-4.05.53l.72-2.9c.896.23 3.757.67 3.33 2.37zm.41-4.24c-.37 1.49-2.662.735-3.405.55l.654-2.64c.744.18 3.137.52 2.75 2.084v.006z"/>
+              </svg>
+            </motion.div>
+
+            {/* Ethereum */}
+            <motion.div
+              whileHover={{ scale: 1.1, y: -2 }}
+              className="group relative w-14 h-10 sm:w-16 sm:h-12 rounded-xl bg-gradient-to-br from-[#627EEA]/20 to-[#627EEA]/5 border border-[#627EEA]/30 hover:border-[#627EEA]/60 flex items-center justify-center transition-all cursor-pointer overflow-hidden"
+            >
+              <div className="absolute inset-0 bg-gradient-to-t from-[#627EEA]/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+              <svg className="w-5 h-5 sm:w-6 sm:h-6 text-[#627EEA] relative z-10" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M11.944 17.97L4.58 13.62 11.943 24l7.37-10.38-7.372 4.35h.003zM12.056 0L4.69 12.223l7.365 4.354 7.365-4.35L12.056 0z"/>
+              </svg>
+            </motion.div>
+
+            {/* USDT */}
+            <motion.div
+              whileHover={{ scale: 1.1, y: -2 }}
+              className="group relative w-14 h-10 sm:w-16 sm:h-12 rounded-xl bg-gradient-to-br from-[#26A17B]/20 to-[#26A17B]/5 border border-[#26A17B]/30 hover:border-[#26A17B]/60 flex items-center justify-center transition-all cursor-pointer overflow-hidden"
+            >
+              <div className="absolute inset-0 bg-gradient-to-t from-[#26A17B]/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+              <svg className="w-6 h-6 sm:w-7 sm:h-7 text-[#26A17B] relative z-10" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 0C5.374 0 0 5.374 0 12s5.374 12 12 12 12-5.374 12-12S18.629 0 12 0zm5.5 13.38c-.057.033-.117.064-.175.097-.69.38-1.87.656-3.325.784v2.872c0 .114-.093.206-.206.206h-1.588a.206.206 0 0 1-.206-.206v-2.827c-1.561-.103-2.852-.39-3.575-.788a.19.19 0 0 1-.096-.165v-1.482c0-.13.133-.22.255-.177 1.146.398 2.665.618 4.416.618 1.75 0 3.27-.22 4.415-.618a.19.19 0 0 1 .255.177v1.402a.19.19 0 0 1-.096.165h.026v.044zm0-3.014c-.057.033-.117.064-.175.097-.69.38-1.87.656-3.325.784v.87c0 .114-.093.206-.206.206h-1.588a.206.206 0 0 1-.206-.206v-.827c-1.561-.103-2.852-.39-3.575-.788a.19.19 0 0 1-.096-.165V8.85c0-.13.133-.22.255-.177 1.146.398 2.665.619 4.416.619 1.75 0 3.27-.221 4.415-.619a.19.19 0 0 1 .255.177v1.401a.19.19 0 0 1-.096.165h.026v.044zm0-3.013c-.057.033-.117.065-.175.097-.69.38-1.87.656-3.325.784v-.87h-2v.827c-1.561-.103-2.852-.39-3.575-.788a.19.19 0 0 1-.096-.165V5.836c0-.13.133-.22.255-.177 1.146.398 2.665.619 4.416.619 1.75 0 3.27-.221 4.415-.619a.19.19 0 0 1 .255.177v1.401a.19.19 0 0 1-.096.165h.026v.044-.068z"/>
+              </svg>
+            </motion.div>
+
+            {/* Visa */}
+            <motion.div
+              whileHover={{ scale: 1.1, y: -2 }}
+              className="group relative w-14 h-10 sm:w-16 sm:h-12 rounded-xl bg-gradient-to-br from-[#1A1F71]/40 to-[#1A1F71]/20 border border-[#1A1F71]/50 hover:border-[#1A1F71]/80 flex items-center justify-center transition-all cursor-pointer overflow-hidden"
+            >
+              <div className="absolute inset-0 bg-gradient-to-t from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+              <svg className="w-10 h-4 sm:w-12 sm:h-5 relative z-10" viewBox="0 0 48 16" fill="none">
+                <path d="M19.315 15.5h-3.91L17.88.5h3.91l-2.475 15z" fill="#1A1F71"/>
+                <path d="M33.96.5l-3.75 10.35-.395-2.01-.005.015-1.185-6.09c-.205-1.05-.995-1.245-1.89-1.265H21.55l-.05.265c1.47.375 2.775.915 3.875 1.57L28.76 15.5h4.075l6.205-15H33.96z" fill="#1A1F71"/>
+                <path d="M38.695.5L36.06 15.5h3.72L42.415.5h-3.72z" fill="#1A1F71"/>
+                <path d="M8.675 10.195l-.395-2.01-.005.015L7.09 2.11c-.205-1.05-.995-1.245-1.89-1.265H.015L0 1.11c2.355.605 4.47 1.645 6.175 2.99l3.39 10.4h4.075L19.845.5h-4.08l-5.625 9.24-1.465.455z" fill="#1A1F71"/>
+              </svg>
+            </motion.div>
+
+            {/* Mastercard */}
+            <motion.div
+              whileHover={{ scale: 1.1, y: -2 }}
+              className="group relative w-14 h-10 sm:w-16 sm:h-12 rounded-xl bg-gradient-to-br from-gray-900/80 to-gray-800/60 border border-gray-700/50 hover:border-gray-600/80 flex items-center justify-center transition-all cursor-pointer overflow-hidden"
+            >
+              <div className="absolute inset-0 bg-gradient-to-t from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+              <svg className="w-9 h-6 sm:w-10 sm:h-7 relative z-10" viewBox="0 0 48 30" fill="none">
+                <circle cx="18" cy="15" r="12" fill="#EB001B"/>
+                <circle cx="30" cy="15" r="12" fill="#F79E1B"/>
+                <path d="M24 5.5c3.128 2.25 5.15 5.88 5.15 9.95 0 4.07-2.022 7.7-5.15 9.95-3.128-2.25-5.15-5.88-5.15-9.95 0-4.07 2.022-7.7 5.15-9.95z" fill="#FF5F00"/>
+              </svg>
+            </motion.div>
+
+            {/* Apple Pay */}
+            <motion.div
+              whileHover={{ scale: 1.1, y: -2 }}
+              className="group relative w-14 h-10 sm:w-16 sm:h-12 rounded-xl bg-gradient-to-br from-white/10 to-white/5 border border-white/20 hover:border-white/40 flex items-center justify-center transition-all cursor-pointer overflow-hidden"
+            >
+              <div className="absolute inset-0 bg-gradient-to-t from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+              <svg className="w-10 h-5 sm:w-12 sm:h-6 text-white relative z-10" viewBox="0 0 48 20" fill="currentColor">
+                <path d="M8.43 3.12c-.56.66-1.46 1.18-2.34 1.1-.11-.88.32-1.82.82-2.4.56-.65 1.54-1.13 2.33-1.17.1.92-.27 1.82-.81 2.47zM9.25 4.43c-1.3-.08-2.4.74-3.02.74-.62 0-1.56-.7-2.58-.68-1.33.02-2.55.77-3.23 1.97-1.38 2.38-.35 5.92.98 7.86.66.95 1.44 2.01 2.47 1.97 1-.04 1.37-.64 2.58-.64s1.54.64 2.58.62c1.07-.02 1.74-.97 2.4-1.92.75-1.1 1.06-2.16 1.08-2.22-.02-.01-2.08-.8-2.1-3.16-.02-1.98 1.62-2.93 1.7-2.98-.93-1.37-2.37-1.52-2.87-1.56h.01z"/>
+                <path d="M20.52 1.18c3.35 0 5.68 2.31 5.68 5.67 0 3.38-2.37 5.7-5.76 5.7h-3.7v5.9h-2.66V1.18h6.44zm-3.78 9.1h3.07c2.33 0 3.66-1.26 3.66-3.42 0-2.16-1.33-3.41-3.65-3.41h-3.08v6.83z"/>
+                <path d="M27.11 14.08c0-2.19 1.68-3.53 4.66-3.7l3.44-.2v-.97c0-1.4-.93-2.23-2.5-2.23-1.47 0-2.4.73-2.63 1.86h-2.43c.14-2.31 2.13-4.02 5.14-4.02 3.02 0 4.96 1.6 4.96 4.1v8.53h-2.47v-2.04h-.06c-.73 1.39-2.31 2.21-3.96 2.21-2.46 0-4.15-1.52-4.15-3.54zm8.1-1.07v-1l-3.1.19c-1.54.1-2.41.75-2.41 1.8 0 1.04.9 1.72 2.27 1.72 1.79 0 3.24-1.23 3.24-2.71z"/>
+                <path d="M39.8 22.2v-2.07c.18.05.6.05.79.05 1.14 0 1.76-.48 2.14-1.7l.23-.74-4.47-12.29h2.79l3.06 9.95h.04l3.06-9.95H50l-4.63 12.92c-1.06 2.97-2.28 3.92-4.84 3.92-.18 0-.55-.02-.73-.09z"/>
+              </svg>
+            </motion.div>
+
+            {/* Google Pay */}
+            <motion.div
+              whileHover={{ scale: 1.1, y: -2 }}
+              className="group relative w-14 h-10 sm:w-16 sm:h-12 rounded-xl bg-gradient-to-br from-white/10 to-white/5 border border-white/20 hover:border-white/40 flex items-center justify-center transition-all cursor-pointer overflow-hidden"
+            >
+              <div className="absolute inset-0 bg-gradient-to-t from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+              <svg className="w-10 h-5 sm:w-12 sm:h-6 relative z-10" viewBox="0 0 48 20" fill="none">
+                <path d="M22.8 10.04v5.84h-1.86V1.52h4.93c1.18-.02 2.32.42 3.18 1.24.88.78 1.38 1.9 1.36 3.06.02 1.18-.48 2.3-1.36 3.08-.86.82-1.94 1.24-3.18 1.22l-3.07-.08zm0-6.66v4.8h3.1c.7.02 1.38-.26 1.88-.76.98-.96 1-2.54.04-3.52l-.04-.04c-.5-.52-1.18-.8-1.88-.78h-3.1v.3z" fill="white"/>
+                <path d="M35.34 6.4c1.38 0 2.46.36 3.26 1.1.8.72 1.2 1.72 1.2 2.98v6.02h-1.78v-1.36h-.08c-.76 1.12-1.78 1.68-3.04 1.68-1.08 0-1.98-.32-2.7-.96-.7-.62-1.08-1.44-1.08-2.42 0-1.02.4-1.84 1.16-2.44.78-.6 1.82-.9 3.12-.9 1.1 0 2.02.2 2.72.6v-.42c0-.66-.28-1.28-.78-1.72-.5-.44-1.14-.68-1.82-.68-.98 0-1.78.42-2.36 1.24l-1.64-.98c.88-1.2 2.2-1.82 3.9-1.82l-.08.08zm-2.4 7c0 .48.22.9.58 1.18.4.32.88.48 1.4.48.76 0 1.48-.3 2.04-.84.58-.56.86-1.22.86-1.98-.56-.46-1.36-.68-2.38-.68-.74 0-1.38.18-1.88.52-.42.34-.62.78-.62 1.32z" fill="white"/>
+                <path d="M48 6.72l-6.18 14.2h-1.94l2.3-4.96-4.06-9.24h2.04l2.92 7.1h.04l2.84-7.1H48z" fill="white"/>
+                <path d="M15.42 8.7c0-.54-.04-1.08-.14-1.6H7.86v3.04h4.26c-.18 1-.74 1.88-1.58 2.46v2.02h2.54c1.5-1.38 2.34-3.4 2.34-5.92z" fill="#4285F4"/>
+                <path d="M7.86 16.56c2.14 0 3.94-.7 5.26-1.92l-2.54-2.02c-.72.48-1.62.76-2.72.76-2.08 0-3.86-1.4-4.5-3.3H.74v2.08c1.34 2.64 4.06 4.4 7.12 4.4z" fill="#34A853"/>
+                <path d="M3.36 10.08c-.32-.96-.32-2 0-2.96V5H.74C-.38 7.24-.38 9.88.74 12.12l2.62-2.04z" fill="#FBBC04"/>
+                <path d="M7.86 3.82c1.14-.02 2.24.4 3.08 1.18l2.28-2.28C11.78 1.4 9.88.62 7.86.64c-3.06 0-5.78 1.76-7.12 4.4l2.62 2.04c.64-1.9 2.42-3.26 4.5-3.26z" fill="#EA4335"/>
+              </svg>
+            </motion.div>
           </div>
+
+          {/* Security badge */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true }}
+            className="flex items-center justify-center gap-2 mt-6"
+          >
+            <Lock className="w-4 h-4 text-green-500" />
+            <span className="text-xs text-gray-500">SSL Secured • 256-bit Encryption</span>
+          </motion.div>
         </motion.div>
       </div>
 

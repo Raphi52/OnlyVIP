@@ -80,10 +80,56 @@ function ParallaxImage({
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "-50px" }}
       transition={{ duration: 0.6, delay: index * 0.05 }}
-      className="group relative"
+      className="group"
     >
-      <Link href={`${basePath}/gallery`}>
-        <div className={`relative ${size} rounded-2xl overflow-hidden border border-white/10 hover:border-[var(--gold)]/50 transition-all duration-500 cursor-pointer`}>
+      <Link href={`${basePath}/gallery`} className="relative block">
+        {/* ✨ PREMIUM HOLOGRAPHIC BORDER for locked content */}
+        {shouldBlur && (
+          <motion.div
+            className="absolute inset-0 rounded-2xl z-0 p-[2px]"
+            style={{
+              background: 'linear-gradient(90deg, #ff0080, #ff8c00, #ffef00, #00ff80, #00bfff, #8000ff, #ff0080)',
+              backgroundSize: '300% 100%',
+            }}
+            animate={{
+              backgroundPosition: ['0% 0%', '100% 0%', '0% 0%'],
+            }}
+            transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
+          >
+            <div className="w-full h-full rounded-[14px] bg-gradient-to-br from-yellow-400/90 via-amber-500/90 to-yellow-600/90" />
+          </motion.div>
+        )}
+        <div className={`relative ${size} rounded-2xl overflow-hidden border ${shouldBlur ? "border-transparent z-[1]" : "border-white/10 hover:border-[var(--gold)]/50"} transition-all duration-500 cursor-pointer`}>
+          {/* ✨ Interior holographic effects for locked content */}
+          {shouldBlur && (
+            <>
+              <div
+                className="absolute inset-0 z-[15] animate-holographic-sweep pointer-events-none"
+                style={{
+                  background: 'linear-gradient(125deg, transparent 0%, rgba(255,0,128,0.2) 15%, rgba(0,255,255,0.2) 30%, rgba(255,255,0,0.15) 45%, rgba(128,0,255,0.2) 60%, rgba(0,255,128,0.15) 75%, transparent 100%)',
+                  backgroundSize: '300% 300%',
+                }}
+              />
+              <div
+                className="absolute inset-0 z-[15] animate-holographic-sweep-reverse pointer-events-none"
+                style={{
+                  background: 'linear-gradient(-45deg, transparent 0%, rgba(0,200,255,0.15) 25%, rgba(255,100,200,0.15) 50%, rgba(100,255,150,0.15) 75%, transparent 100%)',
+                  backgroundSize: '250% 250%',
+                }}
+              />
+            </>
+          )}
+          {/* Shimmer on hover */}
+          <div className="absolute inset-0 z-[16] pointer-events-none overflow-hidden">
+            <div
+              className="absolute inset-[-100%] -translate-x-[50%] group-hover:translate-x-[50%] transition-transform duration-700"
+              style={{
+                background: shouldBlur
+                  ? 'linear-gradient(105deg, transparent 0%, transparent 40%, rgba(255,255,255,0.3) 45%, rgba(255,255,255,0.5) 50%, rgba(255,255,255,0.3) 55%, transparent 60%, transparent 100%)'
+                  : 'linear-gradient(105deg, transparent 0%, transparent 42%, rgba(255,255,255,0.15) 47%, rgba(255,255,255,0.25) 50%, rgba(255,255,255,0.15) 53%, transparent 58%, transparent 100%)',
+              }}
+            />
+          </div>
           {/* Image - no blur for FREE content */}
           <Image
             src={media.thumbnailUrl}
@@ -91,7 +137,7 @@ function ParallaxImage({
             fill
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
             className={`object-cover transition-all duration-500 scale-105 group-hover:scale-100 ${
-              shouldBlur ? "blur-sm group-hover:blur-[2px]" : ""
+              shouldBlur ? "blur-sm group-hover:blur-[3px]" : ""
             }`}
           />
 

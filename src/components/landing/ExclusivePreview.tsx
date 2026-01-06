@@ -74,13 +74,62 @@ function PreviewCard({
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <Link href={`${basePath}/gallery`}>
-        <div className="relative aspect-[16/9] lg:aspect-[21/9] rounded-3xl overflow-hidden border-2 border-white/10 hover:border-[var(--gold)]/50 transition-all duration-500 cursor-pointer">
+      <Link href={`${basePath}/gallery`} className="relative block">
+        {/* ✨ PREMIUM HOLOGRAPHIC BORDER for locked content */}
+        {shouldBlur && (
+          <motion.div
+            className="absolute inset-0 rounded-3xl z-0 p-[3px]"
+            style={{
+              background: 'linear-gradient(90deg, #ff0080, #ff8c00, #ffef00, #00ff80, #00bfff, #8000ff, #ff0080)',
+              backgroundSize: '300% 100%',
+            }}
+            animate={{
+              backgroundPosition: ['0% 0%', '100% 0%', '0% 0%'],
+            }}
+            transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
+          >
+            <div className="w-full h-full rounded-[21px] bg-gradient-to-br from-yellow-400/90 via-amber-500/90 to-yellow-600/90" />
+          </motion.div>
+        )}
+        <div className={`relative aspect-[16/9] lg:aspect-[21/9] rounded-3xl overflow-hidden border-2 ${shouldBlur ? "border-transparent z-[1]" : "border-white/10 hover:border-[var(--gold)]/50"} transition-all duration-500 cursor-pointer`}>
+          {/* ✨ Interior holographic effects for locked content */}
+          {shouldBlur && (
+            <>
+              <div
+                className="absolute inset-0 z-[15] animate-holographic-sweep pointer-events-none"
+                style={{
+                  background: 'linear-gradient(125deg, transparent 0%, rgba(255,0,128,0.2) 15%, rgba(0,255,255,0.2) 30%, rgba(255,255,0,0.15) 45%, rgba(128,0,255,0.2) 60%, rgba(0,255,128,0.15) 75%, transparent 100%)',
+                  backgroundSize: '300% 300%',
+                }}
+              />
+              <div
+                className="absolute inset-0 z-[15] animate-holographic-sweep-reverse pointer-events-none"
+                style={{
+                  background: 'linear-gradient(-45deg, transparent 0%, rgba(0,200,255,0.15) 25%, rgba(255,100,200,0.15) 50%, rgba(100,255,150,0.15) 75%, transparent 100%)',
+                  backgroundSize: '250% 250%',
+                }}
+              />
+            </>
+          )}
+          {/* Shimmer on hover - white band */}
+          <div className="absolute inset-0 z-[16] pointer-events-none overflow-hidden">
+            <motion.div
+              className="absolute inset-[-100%]"
+              initial={{ x: "-50%" }}
+              animate={{ x: isHovered ? "50%" : "-50%" }}
+              transition={{ duration: 0.7 }}
+              style={{
+                background: shouldBlur
+                  ? 'linear-gradient(105deg, transparent 0%, transparent 40%, rgba(255,255,255,0.3) 45%, rgba(255,255,255,0.5) 50%, rgba(255,255,255,0.3) 55%, transparent 60%, transparent 100%)'
+                  : 'linear-gradient(105deg, transparent 0%, transparent 42%, rgba(255,255,255,0.15) 47%, rgba(255,255,255,0.25) 50%, rgba(255,255,255,0.15) 53%, transparent 58%, transparent 100%)',
+              }}
+            />
+          </div>
           {/* Background image - no blur for FREE content */}
           <div
             className="absolute inset-0 transition-all duration-700"
             style={{
-              filter: shouldBlur ? (isHovered ? "blur(3px)" : "blur(5px)") : "none",
+              filter: shouldBlur ? (isHovered ? "blur(4px)" : "blur(5px)") : "none",
               transform: isHovered ? "scale(1.02)" : "scale(1.05)",
             }}
           >
