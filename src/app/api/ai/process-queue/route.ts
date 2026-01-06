@@ -242,6 +242,20 @@ export async function GET(request: NextRequest) {
                 aiMediaFrequency: true,
                 aiPPVRatio: true,
                 aiTeasingEnabled: true,
+                // Deep character fields
+                background: true,
+                coreTraits: true,
+                flaws: true,
+                quirks: true,
+                innerVoice: true,
+                writingStyle: true,
+                boundaries: true,
+                responseRules: true,
+                exampleGoodMessages: true,
+                exampleBadMessages: true,
+                customInstructions: true,
+                characterAge: true,
+                primaryLanguage: true,
               },
             },
           },
@@ -300,6 +314,20 @@ export async function GET(request: NextRequest) {
                     aiMediaFrequency: true,
                     aiPPVRatio: true,
                     aiTeasingEnabled: true,
+                    // Deep character fields
+                    background: true,
+                    coreTraits: true,
+                    flaws: true,
+                    quirks: true,
+                    innerVoice: true,
+                    writingStyle: true,
+                    boundaries: true,
+                    responseRules: true,
+                    exampleGoodMessages: true,
+                    exampleBadMessages: true,
+                    customInstructions: true,
+                    characterAge: true,
+                    primaryLanguage: true,
                   },
                 },
               },
@@ -373,6 +401,20 @@ export async function GET(request: NextRequest) {
                     aiMediaFrequency: true,
                     aiPPVRatio: true,
                     aiTeasingEnabled: true,
+                    // Deep character fields
+                    background: true,
+                    coreTraits: true,
+                    flaws: true,
+                    quirks: true,
+                    innerVoice: true,
+                    writingStyle: true,
+                    boundaries: true,
+                    responseRules: true,
+                    exampleGoodMessages: true,
+                    exampleBadMessages: true,
+                    customInstructions: true,
+                    characterAge: true,
+                    primaryLanguage: true,
                   },
                 },
               },
@@ -422,6 +464,20 @@ export async function GET(request: NextRequest) {
                   aiMediaFrequency: true,
                   aiPPVRatio: true,
                   aiTeasingEnabled: true,
+                  // Deep character fields
+                  background: true,
+                  coreTraits: true,
+                  flaws: true,
+                  quirks: true,
+                  innerVoice: true,
+                  writingStyle: true,
+                  boundaries: true,
+                  responseRules: true,
+                  exampleGoodMessages: true,
+                  exampleBadMessages: true,
+                  customInstructions: true,
+                  characterAge: true,
+                  primaryLanguage: true,
                 },
               },
             },
@@ -452,6 +508,27 @@ export async function GET(request: NextRequest) {
         // Parse personality from CreatorAiPersonality
         const personality = parsePersonality(conversation.aiPersonality?.personality || null);
         console.log(`[AI] Using personality: ${conversation.aiPersonality?.name || "default"}`);
+
+        // Build deep character data from personality
+        const deepCharacter = conversation.aiPersonality ? {
+          background: conversation.aiPersonality.background,
+          coreTraits: conversation.aiPersonality.coreTraits,
+          flaws: conversation.aiPersonality.flaws,
+          quirks: conversation.aiPersonality.quirks,
+          innerVoice: conversation.aiPersonality.innerVoice,
+          writingStyle: conversation.aiPersonality.writingStyle,
+          boundaries: conversation.aiPersonality.boundaries,
+          responseRules: conversation.aiPersonality.responseRules,
+          exampleGoodMessages: conversation.aiPersonality.exampleGoodMessages,
+          exampleBadMessages: conversation.aiPersonality.exampleBadMessages,
+          customInstructions: conversation.aiPersonality.customInstructions,
+          characterAge: conversation.aiPersonality.characterAge,
+          primaryLanguage: conversation.aiPersonality.primaryLanguage,
+        } : undefined;
+
+        if (deepCharacter?.background) {
+          console.log(`[AI] Deep character loaded: ${deepCharacter.background.substring(0, 50)}...`);
+        }
 
         // Build AI media settings from personality (with fallback defaults)
         const aiPersonality = conversation.aiPersonality;
@@ -533,6 +610,7 @@ export async function GET(request: NextRequest) {
               provider: (creator.aiProvider as AiProvider) || "anthropic",
               model: creator.aiModel || "claude-haiku-4-5-20241022",
               apiKey: creator.aiUseCustomKey ? creator.aiApiKey : null,
+              deepCharacter,
             });
           }
         } else if (mediaDecision.type === "TEASE" && mediaDecision.teaseText) {
@@ -619,6 +697,8 @@ export async function GET(request: NextRequest) {
                 provider: (creator.aiProvider as AiProvider) || "anthropic",
                 model: creator.aiModel || "claude-haiku-4-5-20241022",
                 apiKey: creator.aiUseCustomKey ? creator.aiApiKey : null,
+                // Deep character data
+                deepCharacter,
               }
             );
           }

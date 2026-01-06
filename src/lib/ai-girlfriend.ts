@@ -78,9 +78,104 @@ const STYLE_PROMPTS: Record<AiPersonality["style"], string> = {
   girlfriend: `You act like their actual girlfriend - caring, jealous sometimes, asking about their day, remembering details they share.`,
 };
 
+// ============= DEEP CHARACTER PROMPT GENERATION =============
+
+function parseJsonSafe(json: string | null | undefined, fallback: any = []): any {
+  if (!json) return fallback;
+  try {
+    return JSON.parse(json);
+  } catch {
+    return fallback;
+  }
+}
+
+export function generateDeepCharacterPrompt(deepChar: DeepCharacterData): string {
+  const parts: string[] = [];
+
+  // Background story
+  if (deepChar.background) {
+    parts.push(`HISTOIRE/BACKGROUND:\n${deepChar.background}`);
+  }
+
+  // Core traits
+  const traits = parseJsonSafe(deepChar.coreTraits);
+  if (traits.length > 0) {
+    parts.push(`TRAITS PRINCIPAUX:\n${traits.map((t: string) => `- ${t}`).join("\n")}`);
+  }
+
+  // Flaws (makes her human)
+  const flaws = parseJsonSafe(deepChar.flaws);
+  if (flaws.length > 0) {
+    parts.push(`DÉFAUTS (ce qui la rend humaine):\n${flaws.map((f: string) => `- ${f}`).join("\n")}`);
+  }
+
+  // Quirks (distinctive behaviors)
+  const quirks = parseJsonSafe(deepChar.quirks);
+  if (quirks.length > 0) {
+    parts.push(`MANIES/TICS DE LANGAGE:\n${quirks.map((q: string) => `- ${q}`).join("\n")}`);
+  }
+
+  // Inner voice
+  if (deepChar.innerVoice) {
+    parts.push(`VOIX INTÉRIEURE (guide de cohérence):\n${deepChar.innerVoice}`);
+  }
+
+  // Writing style
+  const style = parseJsonSafe(deepChar.writingStyle, {});
+  if (Object.keys(style).length > 0) {
+    let styleText = "STYLE D'ÉCRITURE:";
+    if (style.sentenceLength) styleText += `\n- Longueur phrases: ${style.sentenceLength}`;
+    if (style.emojiUsage) styleText += `\n- Emojis: ${style.emojiUsage}`;
+    if (style.typicalExpressions?.length) styleText += `\n- Expressions typiques: ${style.typicalExpressions.join(", ")}`;
+    if (style.punctuationStyle) styleText += `\n- Ponctuation: ${style.punctuationStyle}`;
+    parts.push(styleText);
+  }
+
+  // Response rules
+  const rules = parseJsonSafe(deepChar.responseRules, {});
+  if (Object.keys(rules).length > 0) {
+    let rulesText = "RÈGLES DE RÉPONSE:";
+    if (rules.maxWords) rulesText += `\n- Max ${rules.maxWords} mots par message`;
+    if (rules.noCapitals) rulesText += `\n- Pas de majuscule en début de phrase`;
+    if (rules.noPeriods) rulesText += `\n- Pas de point à la fin`;
+    if (rules.maxEmojis) rulesText += `\n- Max ${rules.maxEmojis} emoji par message`;
+    if (rules.abbreviations?.length) rulesText += `\n- Utilise: ${rules.abbreviations.join(", ")}`;
+    parts.push(rulesText);
+  }
+
+  // Boundaries
+  const bounds = parseJsonSafe(deepChar.boundaries, {});
+  if (Object.keys(bounds).length > 0) {
+    let boundsText = "LIMITES ABSOLUES:";
+    if (bounds.neverSay?.length) boundsText += `\n- NE JAMAIS DIRE: ${bounds.neverSay.join(", ")}`;
+    if (bounds.avoidTopics?.length) boundsText += `\n- ÉVITER les sujets: ${bounds.avoidTopics.join(", ")}`;
+    if (bounds.neverDo?.length) boundsText += `\n- NE JAMAIS: ${bounds.neverDo.map((x: string) => x.toLowerCase()).join(", ")}`;
+    parts.push(boundsText);
+  }
+
+  // Good examples
+  const goodExamples = parseJsonSafe(deepChar.exampleGoodMessages);
+  if (goodExamples.length > 0) {
+    parts.push(`EXEMPLES DE BONS MESSAGES (à imiter):\n${goodExamples.map((m: string) => `"${m}"`).join("\n")}`);
+  }
+
+  // Bad examples
+  const badExamples = parseJsonSafe(deepChar.exampleBadMessages);
+  if (badExamples.length > 0) {
+    parts.push(`EXEMPLES DE MAUVAIS MESSAGES (NE JAMAIS écrire comme ça):\n${badExamples.map((m: string) => `"${m}"`).join("\n")}`);
+  }
+
+  // Custom instructions
+  if (deepChar.customInstructions) {
+    parts.push(`INSTRUCTIONS PERSONNALISÉES:\n${deepChar.customInstructions}`);
+  }
+
+  return parts.join("\n\n");
+}
+
 // ============= SYSTEM PROMPT GENERATION =============
 
-export function generateSystemPrompt(personality: AiPersonality, hasMedia: boolean = false): string {
+export function generateSystemPrompt(personality: AiPersonality, hasMedia: boolean = false, deepCharacter?: DeepCharacterData): string {
   const traits = personality.traits.join(", ");
   const interests = personality.interests.join(", ");
   const stylePrompt = STYLE_PROMPTS[personality.style] || STYLE_PROMPTS.casual_sexy;
@@ -133,6 +228,16 @@ RESPONSE STYLE:
 - React emotionally to what they say
 - Ask questions to keep conversation going
 - Mirror their energy level`;
+
+  // Add deep character data if available
+  if (deepCharacter) {
+    const deepPrompt = generateDeepCharacterPrompt(deepCharacter);
+    if (deepPrompt) {
+      basePrompt += `\n\n===== PERSONNAGE PROFOND =====\n${deepPrompt}`;
+    }
+  }
+
+  return basePrompt;
 }
 
 // ============= MEDIA SELECTION =============
@@ -269,6 +374,22 @@ export async function selectRelevantMedia(
 
 // ============= RESPONSE GENERATION =============
 
+export interface DeepCharacterData {
+  background?: string | null;
+  coreTraits?: string | null; // JSON array
+  flaws?: string | null; // JSON array
+  quirks?: string | null; // JSON array
+  innerVoice?: string | null;
+  writingStyle?: string | null; // JSON object
+  boundaries?: string | null; // JSON object
+  responseRules?: string | null; // JSON object
+  exampleGoodMessages?: string | null; // JSON array
+  exampleBadMessages?: string | null; // JSON array
+  customInstructions?: string | null;
+  characterAge?: number | null;
+  primaryLanguage?: string | null;
+}
+
 export interface GenerateAiOptions {
   fanMemories?: string;
   isAiOnlyFan?: boolean;
@@ -277,6 +398,8 @@ export interface GenerateAiOptions {
   provider?: AiProvider;
   model?: string;
   apiKey?: string | null; // Encrypted custom key or null for platform key
+  // Deep character data
+  deepCharacter?: DeepCharacterData;
 }
 
 export async function generateAiResponse(
@@ -291,7 +414,7 @@ export async function generateAiResponse(
   const customApiKey = options.apiKey || null;
 
   const hasMedia = suggestedMedia !== null;
-  const systemPrompt = generateSystemPrompt(personality, hasMedia);
+  const systemPrompt = generateSystemPrompt(personality, hasMedia, options.deepCharacter);
 
   // Add conversation context
   let additionalContext = "";
