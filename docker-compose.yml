@@ -53,6 +53,9 @@ services:
       # Secure wallet addresses (configured here, not in admin panel)
       - PAYGATE_WALLET_ADDRESS=${PAYGATE_WALLET_ADDRESS:-}
       - PLATFORM_WALLET_BTC=${PLATFORM_WALLET_BTC:-}
+      # Email (Resend)
+      - RESEND_API_KEY=${RESEND_API_KEY:-}
+      - EMAIL_FROM=${EMAIL_FROM:-VipOnly <noreply@viponly.fun>}
     expose:
       - "3000"
     volumes:
