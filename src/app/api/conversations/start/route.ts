@@ -32,12 +32,16 @@ export async function POST(request: NextRequest) {
     // Admin can always message
     const isAdmin = (session.user as any).role === "ADMIN";
 
-    if (!isAdmin) {
-      // Check user's subscription allows messaging
+    // Check if user is a creator (creators can always message)
+    const isCreator = (session.user as any).isCreator === true;
+
+    if (!isAdmin && !isCreator) {
+      // Check user's subscription for THIS creator allows messaging
       const subscription = await prisma.subscription.findFirst({
         where: {
           userId,
-          status: "ACTIVE",
+          creatorSlug,
+          status: { in: ["ACTIVE", "TRIALING"] },
         },
         include: {
           plan: true,
@@ -99,8 +103,28 @@ export async function POST(request: NextRequest) {
       : [{ userId: creatorUserId }, { userId }];
 
     // Select personality for this conversation (A/B testing via trafficShare)
-    const aiPersonalityId = await selectPersonalityForConversation(creatorSlug);
+    let aiPersonalityId = await selectPersonalityForConversation(creatorSlug);
     console.log("[conversations/start] Selected AI personality:", aiPersonalityId || "NONE (AI disabled)");
+
+    // Validate aiPersonalityId exists if not null
+    if (aiPersonalityId) {
+      const personalityExists = await prisma.creatorAiPersonality.findUnique({
+        where: { id: aiPersonalityId },
+        select: { id: true },
+      });
+      if (!personalityExists) {
+        console.warn("[conversations/start] AI personality not found, setting to null:", aiPersonalityId);
+        aiPersonalityId = null;
+      }
+    }
+
+    console.log("[conversations/start] Creating conversation with:", {
+      creatorSlug,
+      aiPersonalityId,
+      participants,
+      creatorUserId,
+      userId,
+    });
 
     const conversation = await prisma.conversation.create({
       data: {
@@ -126,10 +150,14 @@ export async function POST(request: NextRequest) {
       isNew: true,
       aiPersonalityId: aiPersonalityId || null,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error starting conversation:", error);
+    console.error("Error name:", error?.name);
+    console.error("Error message:", error?.message);
+    console.error("Error code:", error?.code);
+    console.error("Error meta:", JSON.stringify(error?.meta, null, 2));
     return NextResponse.json(
-      { error: "Failed to start conversation" },
+      { error: "Failed to start conversation", details: error?.message || "Unknown error" },
       { status: 500 }
     );
   }
