@@ -80,8 +80,8 @@ function PreviewCard({
           <div
             className="absolute inset-0 transition-all duration-700"
             style={{
-              filter: shouldBlur ? (isHovered ? "blur(15px)" : "blur(25px)") : "none",
-              transform: isHovered ? "scale(1.05)" : "scale(1.1)",
+              filter: shouldBlur ? (isHovered ? "blur(3px)" : "blur(5px)") : "none",
+              transform: isHovered ? "scale(1.02)" : "scale(1.05)",
             }}
           >
             <Image

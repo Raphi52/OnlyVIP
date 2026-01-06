@@ -1,602 +1,427 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { motion } from "framer-motion";
 import {
-  Crown,
-  Sparkles,
-  Check,
+  Upload,
   Loader2,
-  Link2,
-  ArrowLeft,
-  Rocket,
-  DollarSign,
-  MessageCircle,
-  Image,
-  Clock,
+  CheckCircle2,
   XCircle,
-  Send,
+  Clock,
+  FileText,
+  User,
+  AlertTriangle,
+  Crown,
 } from "lucide-react";
-import { Button, Card } from "@/components/ui";
+import { Button } from "@/components/ui";
 
-type ApplicationStatus = "PENDING" | "APPROVED" | "REJECTED" | null;
+interface Application {
+  id: string;
+  displayName: string;
+  status: "PENDING" | "APPROVED" | "REJECTED";
+  rejectionReason: string | null;
+  createdAt: string;
+  reviewedAt: string | null;
+}
 
 export default function BecomeCreatorPage() {
-  const { data: session, status, update } = useSession();
+  const { data: session } = useSession();
   const router = useRouter();
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [applications, setApplications] = useState<Application[]>([]);
+  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
-  const [applicationStatus, setApplicationStatus] = useState<ApplicationStatus>(null);
-  const [applicationDate, setApplicationDate] = useState<string | null>(null);
-  const [isLoadingStatus, setIsLoadingStatus] = useState(true);
-
-  const [slug, setSlug] = useState("");
+  // Form state
   const [displayName, setDisplayName] = useState("");
-  const [note, setNote] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [slugStatus, setSlugStatus] = useState<"idle" | "checking" | "available" | "taken" | "invalid">("idle");
-  const [slugError, setSlugError] = useState("");
+  const [bio, setBio] = useState("");
+  const [documentType, setDocumentType] = useState("ID_CARD");
+  const [documentFile, setDocumentFile] = useState<File | null>(null);
+  const [documentPreview, setDocumentPreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const isCreator = (session?.user as any)?.isCreator === true;
-
-  // Fetch application status
   useEffect(() => {
-    async function fetchStatus() {
-      try {
-        const res = await fetch("/api/user/become-creator?status=true");
-        if (res.ok) {
-          const data = await res.json();
-          setApplicationStatus(data.applicationStatus);
-          setApplicationDate(data.applicationDate);
-        }
-      } catch (error) {
-        console.error("Error fetching status:", error);
-      } finally {
-        setIsLoadingStatus(false);
-      }
-    }
+    fetchApplications();
+  }, []);
 
-    if (status === "authenticated") {
-      fetchStatus();
-    } else if (status === "unauthenticated") {
-      setIsLoadingStatus(false);
-    }
-  }, [status]);
-
-  // Redirect if already a creator
-  useEffect(() => {
-    if (status === "authenticated" && isCreator) {
-      router.push("/dashboard/creator");
-    }
-  }, [status, isCreator, router]);
-
-  // Redirect if not authenticated
-  useEffect(() => {
-    if (status === "unauthenticated") {
-      router.push("/auth/login");
-    }
-  }, [status, router]);
-
-  // Auto-generate slug from display name
-  useEffect(() => {
-    if (displayName && !slug) {
-      const generatedSlug = displayName
-        .toLowerCase()
-        .replace(/\s+/g, "-")
-        .replace(/[^a-z0-9-]/g, "")
-        .replace(/-+/g, "-")
-        .replace(/^-|-$/g, "");
-      setSlug(generatedSlug);
-    }
-  }, [displayName]);
-
-  // Check slug availability with debounce
-  useEffect(() => {
-    if (!slug || slug.length < 3) {
-      setSlugStatus("idle");
-      return;
-    }
-
-    const slugRegex = /^[a-z0-9-]+$/;
-    if (!slugRegex.test(slug)) {
-      setSlugStatus("invalid");
-      setSlugError("Only lowercase letters, numbers, and hyphens");
-      return;
-    }
-
-    setSlugStatus("checking");
-    const timer = setTimeout(async () => {
-      try {
-        const res = await fetch(`/api/user/become-creator?slug=${slug}`);
+  const fetchApplications = async () => {
+    try {
+      const res = await fetch("/api/creator/apply");
+      if (res.ok) {
         const data = await res.json();
-        if (data.available) {
-          setSlugStatus("available");
-          setSlugError("");
-        } else {
-          setSlugStatus("taken");
-          setSlugError(data.reason === "reserved" ? "This URL is reserved" : "This URL is already taken");
-        }
-      } catch {
-        setSlugStatus("idle");
+        setApplications(data.applications || []);
       }
-    }, 500);
-
-    return () => clearTimeout(timer);
-  }, [slug]);
-
-  // Submit application
-  const handleApply = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setError("");
-
-    try {
-      const res = await fetch("/api/user/become-creator", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "apply", note }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        setError(data.error || "Failed to submit application");
-        return;
-      }
-
-      setApplicationStatus("PENDING");
-      setApplicationDate(new Date().toISOString());
-    } catch (err) {
-      setError("Something went wrong. Please try again.");
+    } catch (error) {
+      console.error("Error fetching applications:", error);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Create creator profile (after approval)
-  const handleCreateProfile = async (e: React.FormEvent) => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
+    if (!allowedTypes.includes(file.type)) {
+      setMessage({ type: "error", text: "Format invalide. Utilisez JPG, PNG, WebP ou PDF." });
+      return;
+    }
+
+    // Validate file size (10MB max)
+    if (file.size > 10 * 1024 * 1024) {
+      setMessage({ type: "error", text: "Fichier trop grand. Maximum 10MB." });
+      return;
+    }
+
+    setDocumentFile(file);
+    if (file.type.startsWith("image/")) {
+      setDocumentPreview(URL.createObjectURL(file));
+    } else {
+      setDocumentPreview(null);
+    }
+    setMessage(null);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-    setError("");
 
-    if (!slug || slug.length < 3) {
-      setError("Please choose a URL for your page (at least 3 characters)");
-      setIsLoading(false);
+    if (!displayName.trim()) {
+      setMessage({ type: "error", text: "Le nom d'affichage est requis" });
       return;
     }
 
-    if (slugStatus === "taken" || slugStatus === "invalid") {
-      setError("Please choose a valid and available URL");
-      setIsLoading(false);
+    if (!documentFile) {
+      setMessage({ type: "error", text: "Un document d'identite est requis" });
       return;
     }
+
+    setIsSubmitting(true);
+    setMessage(null);
 
     try {
-      const res = await fetch("/api/user/become-creator", {
+      const formData = new FormData();
+      formData.append("displayName", displayName.trim());
+      formData.append("bio", bio.trim());
+      formData.append("documentType", documentType);
+      formData.append("document", documentFile);
+
+      const res = await fetch("/api/creator/apply", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          slug,
-          displayName: displayName || session?.user?.name || slug,
-        }),
+        body: formData,
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || "Failed to create creator profile");
-        return;
+        throw new Error(data.error || "Erreur lors de la soumission");
       }
 
-      await update();
-      router.push("/dashboard/creator");
-    } catch (err) {
-      setError("Something went wrong. Please try again.");
+      setMessage({ type: "success", text: "Candidature envoyee ! Nous la traiterons sous peu." });
+
+      // Reset form
+      setDisplayName("");
+      setBio("");
+      setDocumentFile(null);
+      setDocumentPreview(null);
+
+      // Refresh applications
+      fetchApplications();
+    } catch (error) {
+      setMessage({
+        type: "error",
+        text: error instanceof Error ? error.message : "Erreur lors de la soumission",
+      });
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
 
-  if (status === "loading" || isLoadingStatus) {
+  const pendingApplication = applications.find((a) => a.status === "PENDING");
+  const isCreator = (session?.user as any)?.isCreator;
+
+  if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-[var(--gold)]" />
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="w-8 h-8 animate-spin text-yellow-500" />
       </div>
     );
   }
 
-  const benefits = [
-    { icon: Image, title: "Share Content", description: "Upload photos and videos for your fans" },
-    { icon: DollarSign, title: "Earn Money", description: "Subscriptions, tips, and PPV content" },
-    { icon: MessageCircle, title: "Connect", description: "Direct messaging with your subscribers" },
-    { icon: Rocket, title: "Your Page", description: "Get your own custom URL on VipOnly" },
-  ];
-
-  // PENDING STATE - Waiting for approval
-  if (applicationStatus === "PENDING") {
+  // Already a creator
+  if (isCreator) {
     return (
-      <div className="min-h-screen py-8 px-4">
-        <div className="max-w-2xl mx-auto">
-          <Link
-            href="/dashboard"
-            className="inline-flex items-center text-[var(--muted)] hover:text-[var(--foreground)] mb-6 transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Dashboard
-          </Link>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-          >
-            <Card variant="luxury" className="p-8 text-center">
-              <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-purple-500/20 mb-4">
-                <Clock className="w-8 h-8 text-purple-400" />
-              </div>
-              <h1 className="text-2xl font-bold text-[var(--foreground)] mb-2">
-                Application Pending
-              </h1>
-              <p className="text-[var(--muted)] mb-4">
-                Your creator application is being reviewed by our team.
-                We'll notify you once it's approved.
-              </p>
-              {applicationDate && (
-                <p className="text-sm text-[var(--muted)]">
-                  Submitted on {new Date(applicationDate).toLocaleDateString()}
-                </p>
-              )}
-            </Card>
-          </motion.div>
-        </div>
-      </div>
-    );
-  }
-
-  // REJECTED STATE
-  if (applicationStatus === "REJECTED") {
-    return (
-      <div className="min-h-screen py-8 px-4">
-        <div className="max-w-2xl mx-auto">
-          <Link
-            href="/dashboard"
-            className="inline-flex items-center text-[var(--muted)] hover:text-[var(--foreground)] mb-6 transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Dashboard
-          </Link>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-          >
-            <Card variant="luxury" className="p-8 text-center">
-              <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-red-500/20 mb-4">
-                <XCircle className="w-8 h-8 text-red-400" />
-              </div>
-              <h1 className="text-2xl font-bold text-[var(--foreground)] mb-2">
-                Application Not Approved
-              </h1>
-              <p className="text-[var(--muted)] mb-6">
-                Unfortunately, your application was not approved at this time.
-                You can contact support for more information.
-              </p>
-              <Link href="/contact">
-                <Button variant="outline">Contact Support</Button>
-              </Link>
-            </Card>
-          </motion.div>
-        </div>
-      </div>
-    );
-  }
-
-  // APPROVED STATE - Show profile creation form
-  if (applicationStatus === "APPROVED") {
-    return (
-      <div className="min-h-screen py-8 px-4">
-        <div className="max-w-2xl mx-auto">
-          <Link
-            href="/dashboard"
-            className="inline-flex items-center text-[var(--muted)] hover:text-[var(--foreground)] mb-6 transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Dashboard
-          </Link>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-center mb-8"
-          >
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-green-500 to-emerald-600 mb-4">
-              <Check className="w-8 h-8 text-white" />
-            </div>
-            <h1 className="text-3xl font-bold text-[var(--foreground)] mb-2">
-              Application Approved!
-            </h1>
-            <p className="text-[var(--muted)]">
-              Set up your creator profile to get started
-            </p>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-          >
-            <Card variant="luxury" className="p-6">
-              <div className="flex items-center gap-2 mb-6">
-                <Sparkles className="w-5 h-5 text-[var(--gold)]" />
-                <h2 className="text-lg font-semibold text-[var(--foreground)]">
-                  Set up your creator profile
-                </h2>
-              </div>
-
-              {error && (
-                <div className="mb-6 p-4 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-sm">
-                  {error}
-                </div>
-              )}
-
-              <form onSubmit={handleCreateProfile} className="space-y-5">
-                <div>
-                  <label className="block text-sm font-medium text-[var(--foreground)] mb-2">
-                    Creator Name
-                  </label>
-                  <input
-                    type="text"
-                    value={displayName}
-                    onChange={(e) => setDisplayName(e.target.value)}
-                    placeholder={session?.user?.name || "Your name or brand"}
-                    className="w-full px-4 py-3 rounded-xl bg-[var(--surface)] border border-[var(--border)] text-[var(--foreground)] focus:outline-none focus:border-[var(--gold)] transition-colors"
-                  />
-                  <p className="text-xs text-[var(--muted)] mt-1">
-                    This is how fans will see you
-                  </p>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-[var(--foreground)] mb-2 flex items-center gap-2">
-                    <Link2 className="w-4 h-4" />
-                    Your Page URL
-                  </label>
-                  <div className="relative">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--muted)]">
-                      viponly.fun/
-                    </span>
-                    <input
-                      type="text"
-                      value={slug}
-                      onChange={(e) => {
-                        const value = e.target.value
-                          .toLowerCase()
-                          .replace(/\s+/g, "-")
-                          .replace(/[^a-z0-9-]/g, "");
-                        setSlug(value);
-                      }}
-                      placeholder="yourname"
-                      className={`w-full pl-28 pr-12 py-3 rounded-xl bg-[var(--surface)] border text-[var(--foreground)] focus:outline-none transition-colors ${
-                        slugStatus === "available"
-                          ? "border-green-500 focus:border-green-500"
-                          : slugStatus === "taken" || slugStatus === "invalid"
-                          ? "border-red-500 focus:border-red-500"
-                          : "border-[var(--border)] focus:border-[var(--gold)]"
-                      }`}
-                    />
-                    <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                      {slugStatus === "checking" && (
-                        <Loader2 className="w-4 h-4 text-[var(--muted)] animate-spin" />
-                      )}
-                      {slugStatus === "available" && (
-                        <Check className="w-4 h-4 text-green-500" />
-                      )}
-                    </div>
-                  </div>
-                  {slugError ? (
-                    <p className="text-xs text-red-400 mt-1">{slugError}</p>
-                  ) : (
-                    <p className="text-xs text-[var(--muted)] mt-1">
-                      Only lowercase letters, numbers, and hyphens
-                    </p>
-                  )}
-                </div>
-
-                <Button
-                  type="submit"
-                  variant="premium"
-                  size="lg"
-                  className="w-full"
-                  disabled={isLoading || slugStatus === "taken" || slugStatus === "invalid" || !slug}
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                      Creating profile...
-                    </>
-                  ) : (
-                    <>
-                      <Crown className="w-5 h-5 mr-2" />
-                      Create My Profile
-                    </>
-                  )}
-                </Button>
-              </form>
-            </Card>
-          </motion.div>
-        </div>
-      </div>
-    );
-  }
-
-  // DEFAULT STATE - Show application form
-  return (
-    <div className="min-h-screen px-4 pt-20 sm:pt-20 lg:pt-8 pb-8">
-      <div className="max-w-2xl mx-auto">
-        <Link
-          href="/dashboard"
-          className="inline-flex items-center text-[var(--muted)] hover:text-[var(--foreground)] mb-6 transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Back to Dashboard
-        </Link>
-
+      <div className="max-w-2xl mx-auto p-6">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-8"
+          className="bg-gradient-to-br from-yellow-500/20 to-amber-500/20 border border-yellow-500/30 rounded-2xl p-8 text-center"
         >
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-[var(--gold)] to-yellow-600 mb-4">
-            <Crown className="w-8 h-8 text-black" />
-          </div>
-          <h1 className="text-3xl font-bold text-[var(--foreground)] mb-2">
-            Become a Creator
-          </h1>
-          <p className="text-[var(--muted)]">
-            Start sharing exclusive content and earning money
+          <Crown className="w-16 h-16 text-yellow-400 mx-auto mb-4" />
+          <h1 className="text-2xl font-bold text-white mb-2">Vous etes deja createur !</h1>
+          <p className="text-gray-400 mb-6">
+            Vous avez deja acces au dashboard createur.
           </p>
+          <Button
+            onClick={() => router.push("/dashboard/creator")}
+            className="bg-gradient-to-r from-yellow-500 to-amber-500 text-black font-semibold"
+          >
+            Aller au Dashboard Createur
+          </Button>
         </motion.div>
+      </div>
+    );
+  }
 
-        {/* Benefits */}
+  // Has pending application
+  if (pendingApplication) {
+    return (
+      <div className="max-w-2xl mx-auto p-6">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="grid grid-cols-2 gap-4 mb-8"
+          className="bg-[#1a1a2e] border border-yellow-500/30 rounded-2xl p-8"
         >
-          {benefits.map((benefit, index) => (
-            <div
-              key={index}
-              className="p-4 rounded-xl bg-[var(--surface)] border border-[var(--border)]"
-            >
-              <benefit.icon className="w-6 h-6 text-[var(--gold)] mb-2" />
-              <h3 className="font-semibold text-[var(--foreground)] text-sm">
-                {benefit.title}
-              </h3>
-              <p className="text-xs text-[var(--muted)]">{benefit.description}</p>
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-12 h-12 rounded-full bg-yellow-500/20 flex items-center justify-center">
+              <Clock className="w-6 h-6 text-yellow-400" />
             </div>
-          ))}
+            <div>
+              <h1 className="text-xl font-bold text-white">Candidature en attente</h1>
+              <p className="text-gray-400 text-sm">
+                Soumise le {new Date(pendingApplication.createdAt).toLocaleDateString("fr-FR")}
+              </p>
+            </div>
+          </div>
+
+          <div className="bg-black/30 rounded-xl p-4 mb-6">
+            <p className="text-gray-300">
+              <span className="text-gray-500">Nom :</span> {pendingApplication.displayName}
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 text-yellow-400 bg-yellow-500/10 rounded-lg p-4">
+            <AlertTriangle className="w-5 h-5 flex-shrink-0" />
+            <p className="text-sm">
+              Votre candidature est en cours de verification. Vous recevrez une notification une fois traitee.
+            </p>
+          </div>
         </motion.div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-2xl mx-auto p-6">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+      >
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold text-white mb-2">Devenir Createur</h1>
+          <p className="text-gray-400">
+            Remplissez le formulaire ci-dessous pour devenir createur sur notre plateforme.
+            Un document d&apos;identite est requis pour la verification.
+          </p>
+        </div>
+
+        {/* Previous applications */}
+        {applications.length > 0 && (
+          <div className="mb-6 space-y-3">
+            {applications.filter((a) => a.status !== "PENDING").map((app) => (
+              <div
+                key={app.id}
+                className={`p-4 rounded-xl border ${
+                  app.status === "APPROVED"
+                    ? "bg-green-500/10 border-green-500/30"
+                    : "bg-red-500/10 border-red-500/30"
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  {app.status === "APPROVED" ? (
+                    <CheckCircle2 className="w-5 h-5 text-green-400" />
+                  ) : (
+                    <XCircle className="w-5 h-5 text-red-400" />
+                  )}
+                  <span className="font-medium text-white">{app.displayName}</span>
+                  <span className="text-sm text-gray-400">
+                    - {app.status === "APPROVED" ? "Approuvee" : "Rejetee"}
+                  </span>
+                </div>
+                {app.rejectionReason && (
+                  <p className="text-sm text-red-400 mt-2">
+                    Raison: {app.rejectionReason}
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Application Form */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-        >
-          <Card variant="luxury" className="p-6">
-            <div className="flex items-center gap-2 mb-6">
-              <Sparkles className="w-5 h-5 text-[var(--gold)]" />
-              <h2 className="text-lg font-semibold text-[var(--foreground)]">
-                Create your creator profile
-              </h2>
+        <form onSubmit={handleSubmit} className="bg-[#1a1a2e] rounded-2xl p-6 space-y-6">
+          {message && (
+            <div
+              className={`p-4 rounded-lg ${
+                message.type === "success"
+                  ? "bg-green-500/20 text-green-400"
+                  : "bg-red-500/20 text-red-400"
+              }`}
+            >
+              {message.text}
             </div>
+          )}
 
-            {error && (
-              <div className="mb-6 p-4 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-sm">
-                {error}
-              </div>
-            )}
+          {/* Display Name */}
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              <User className="w-4 h-4 inline mr-2" />
+              Nom d&apos;affichage *
+            </label>
+            <input
+              type="text"
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value)}
+              placeholder="Le nom qui sera affiche sur votre profil"
+              className="w-full px-4 py-3 bg-black/50 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:border-yellow-500 focus:outline-none transition-colors"
+              required
+            />
+          </div>
 
-            <form onSubmit={handleCreateProfile} className="space-y-5">
-              <div>
-                <label className="block text-sm font-medium text-[var(--foreground)] mb-2">
-                  Creator Name
-                </label>
-                <input
-                  type="text"
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
-                  placeholder={session?.user?.name || "Your name or brand"}
-                  className="w-full px-4 py-3 rounded-xl bg-[var(--surface)] border border-[var(--border)] text-[var(--foreground)] focus:outline-none focus:border-[var(--gold)] transition-colors"
+          {/* Bio */}
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Bio (optionnel)
+            </label>
+            <textarea
+              value={bio}
+              onChange={(e) => setBio(e.target.value)}
+              placeholder="Parlez un peu de vous..."
+              rows={3}
+              className="w-full px-4 py-3 bg-black/50 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:border-yellow-500 focus:outline-none transition-colors resize-none"
+            />
+          </div>
+
+          {/* Document Type */}
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              <FileText className="w-4 h-4 inline mr-2" />
+              Type de document
+            </label>
+            <select
+              value={documentType}
+              onChange={(e) => setDocumentType(e.target.value)}
+              className="w-full px-4 py-3 bg-black/50 border border-gray-700 rounded-xl text-white focus:border-yellow-500 focus:outline-none transition-colors"
+            >
+              <option value="ID_CARD">Carte d&apos;identite</option>
+              <option value="PASSPORT">Passeport</option>
+              <option value="DRIVERS_LICENSE">Permis de conduire</option>
+            </select>
+          </div>
+
+          {/* Document Upload */}
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              <Upload className="w-4 h-4 inline mr-2" />
+              Photo du document *
+            </label>
+            <p className="text-xs text-gray-500 mb-3">
+              Prenez une photo claire de votre document d&apos;identite. Les informations doivent etre lisibles.
+            </p>
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp,application/pdf"
+              onChange={handleFileChange}
+              className="hidden"
+            />
+
+            {documentPreview ? (
+              <div className="relative">
+                <img
+                  src={documentPreview}
+                  alt="Document preview"
+                  className="w-full max-h-64 object-contain rounded-xl border border-gray-700"
                 />
-                <p className="text-xs text-[var(--muted)] mt-1">
-                  This is how fans will see you
-                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDocumentFile(null);
+                    setDocumentPreview(null);
+                  }}
+                  className="absolute top-2 right-2 p-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
+                >
+                  <XCircle className="w-4 h-4" />
+                </button>
               </div>
-
-              <div>
-                <label className="block text-sm font-medium text-[var(--foreground)] mb-2 flex items-center gap-2">
-                  <Link2 className="w-4 h-4" />
-                  Your Page URL
-                </label>
-                <div className="relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--muted)]">
-                    viponly.fun/
-                  </span>
-                  <input
-                    type="text"
-                    value={slug}
-                    onChange={(e) => {
-                      const value = e.target.value
-                        .toLowerCase()
-                        .replace(/\s+/g, "-")
-                        .replace(/[^a-z0-9-]/g, "");
-                      setSlug(value);
-                    }}
-                    placeholder="yourname"
-                    className={`w-full pl-28 pr-12 py-3 rounded-xl bg-[var(--surface)] border text-[var(--foreground)] focus:outline-none transition-colors ${
-                      slugStatus === "available"
-                        ? "border-green-500 focus:border-green-500"
-                        : slugStatus === "taken" || slugStatus === "invalid"
-                        ? "border-red-500 focus:border-red-500"
-                        : "border-[var(--border)] focus:border-[var(--gold)]"
-                    }`}
-                  />
-                  <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                    {slugStatus === "checking" && (
-                      <Loader2 className="w-4 h-4 text-[var(--muted)] animate-spin" />
-                    )}
-                    {slugStatus === "available" && (
-                      <Check className="w-4 h-4 text-green-500" />
-                    )}
+            ) : documentFile ? (
+              <div className="flex items-center gap-3 p-4 bg-black/30 rounded-xl border border-gray-700">
+                <FileText className="w-8 h-8 text-yellow-400" />
+                <div className="flex-1">
+                  <p className="text-white text-sm truncate">{documentFile.name}</p>
+                  <p className="text-gray-500 text-xs">
+                    {(documentFile.size / 1024 / 1024).toFixed(2)} MB
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDocumentFile(null);
+                    setDocumentPreview(null);
+                  }}
+                  className="p-2 text-red-400 hover:text-red-300 transition-colors"
+                >
+                  <XCircle className="w-5 h-5" />
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full p-8 border-2 border-dashed border-gray-700 rounded-xl hover:border-yellow-500/50 transition-colors group"
+              >
+                <div className="flex flex-col items-center gap-3">
+                  <div className="w-12 h-12 rounded-full bg-yellow-500/20 flex items-center justify-center group-hover:bg-yellow-500/30 transition-colors">
+                    <Upload className="w-6 h-6 text-yellow-400" />
+                  </div>
+                  <div className="text-center">
+                    <p className="text-white font-medium">Cliquez pour uploader</p>
+                    <p className="text-gray-500 text-sm">JPG, PNG, WebP ou PDF (max 10MB)</p>
                   </div>
                 </div>
-                {slugError ? (
-                  <p className="text-xs text-red-400 mt-1">{slugError}</p>
-                ) : (
-                  <p className="text-xs text-[var(--muted)] mt-1">
-                    Only lowercase letters, numbers, and hyphens (min 3 characters)
-                  </p>
-                )}
-              </div>
+              </button>
+            )}
+          </div>
 
-              <Button
-                type="submit"
-                variant="premium"
-                size="lg"
-                className="w-full"
-                disabled={isLoading || slugStatus === "taken" || slugStatus === "invalid" || !slug || slug.length < 3}
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                    Creating profile...
-                  </>
-                ) : (
-                  <>
-                    <Crown className="w-5 h-5 mr-2" />
-                    Become a Creator
-                  </>
-                )}
-              </Button>
-            </form>
+          {/* Submit Button */}
+          <Button
+            type="submit"
+            disabled={isSubmitting || !displayName.trim() || !documentFile}
+            className="w-full bg-gradient-to-r from-yellow-500 to-amber-500 text-black font-semibold py-3 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                Envoi en cours...
+              </>
+            ) : (
+              <>
+                <Crown className="w-5 h-5 mr-2" />
+                Soumettre ma candidature
+              </>
+            )}
+          </Button>
 
-            <p className="text-xs text-[var(--muted)] text-center mt-4">
-              By creating a profile, you agree to our{" "}
-              <Link href="/terms" className="text-[var(--gold)] hover:underline">
-                Creator Terms
-              </Link>{" "}
-              and{" "}
-              <Link href="/privacy" className="text-[var(--gold)] hover:underline">
-                Privacy Policy
-              </Link>
-            </p>
-          </Card>
-        </motion.div>
-      </div>
+          <p className="text-xs text-gray-500 text-center">
+            En soumettant ce formulaire, vous acceptez nos conditions d&apos;utilisation et notre politique de confidentialite.
+          </p>
+        </form>
+      </motion.div>
     </div>
   );
 }

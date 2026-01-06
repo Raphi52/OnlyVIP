@@ -860,6 +860,9 @@ model User {
   authoredScripts Script[] @relation("ScriptAuthor")
   approvedScripts Script[] @relation("ScriptApprover")
 
+  // Creator applications (become a creator)
+  creatorApplications CreatorApplication[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -2529,6 +2532,43 @@ model CreatorVerification {
 
 // VerificationDocumentType: "PASSPORT" | "ID_CARD" | "DRIVERS_LICENSE"
 // VerificationStatus: "PENDING" | "APPROVED" | "REJECTED" | "EXPIRED"
+
+// ============= CREATOR APPLICATION (Become a Creator) =============
+
+model CreatorApplication {
+  id String @id @default(cuid())
+
+  // User applying to become a creator
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Desired creator profile info
+  displayName String
+  slug        String? // Desired slug (optional, can be auto-generated)
+  bio         String? @db.Text
+
+  // Identity verification document
+  documentUrl  String // Photo of ID document (required)
+  documentType String @default("ID_CARD") // ID_CARD, PASSPORT, DRIVERS_LICENSE
+
+  // Application status
+  status          String    @default("PENDING") // PENDING, APPROVED, REJECTED
+  reviewedAt      DateTime?
+  reviewedBy      String? // Admin user ID who reviewed
+  rejectionReason String?
+
+  // Created creator (set after approval)
+  createdCreatorId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, status]) // One pending application per user
+  @@index([status])
+  @@index([createdAt])
+}
+
+// CreatorApplicationStatus: "PENDING" | "APPROVED" | "REJECTED"
 
 // ============= PAYOUT REQUESTS =============
 

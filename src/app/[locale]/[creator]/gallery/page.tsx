@@ -477,7 +477,7 @@ export default function GalleryPage() {
                             sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
                             className={cn(
                               "object-cover transition-transform duration-700 group-hover:scale-110 pointer-events-none select-none",
-                              !canAccess && "blur-xl scale-110"
+                              !canAccess && "blur-sm scale-[1.02]"
                             )}
                             draggable={false}
                             onContextMenu={(e) => e.preventDefault()}
@@ -692,7 +692,7 @@ export default function GalleryPage() {
                           sizes="(max-width: 1024px) 100vw, 80vw"
                           className={cn(
                             "object-cover pointer-events-none select-none",
-                            !canAccess && "blur-2xl scale-110"
+                            !canAccess && "blur-sm scale-[1.02]"
                           )}
                           draggable={false}
                           onContextMenu={(e) => e.preventDefault()}

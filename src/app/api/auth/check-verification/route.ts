@@ -9,14 +9,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ needsVerification: false });
     }
 
-    // Find the user
-    const user = await prisma.user.findUnique({
-      where: { email },
-      select: { emailVerified: true, passwordHash: true },
+    // Find the user (case-insensitive email search)
+    const user = await prisma.user.findFirst({
+      where: {
+        email: { equals: email, mode: "insensitive" }
+      },
+      select: { emailVerified: true, passwordHash: true, email: true },
     });
 
     // Only indicate needs verification if user exists, has password (not OAuth only), and is not verified
     if (user && user.passwordHash && !user.emailVerified) {
+      console.log(`[AUTH] User ${user.email} needs email verification`);
       return NextResponse.json({ needsVerification: true });
     }
 

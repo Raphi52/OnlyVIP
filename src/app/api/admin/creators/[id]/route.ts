@@ -125,17 +125,18 @@ export async function PATCH(
 }
 
 // DELETE /api/admin/creators/[id] - Delete a specific creator (supports both ID and slug)
-// Admin can delete any creator - cleans up ALL related data
+// Admin can delete any creator, creators can delete their own profiles
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth();
-    if (!session || (session.user as any)?.role !== "ADMIN") {
+    if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const isAdmin = (session.user as any)?.role === "ADMIN";
     const { id } = await params;
 
     // Find the creator by id or slug
@@ -147,8 +148,13 @@ export async function DELETE(
       return NextResponse.json({ error: "Creator not found" }, { status: 404 });
     }
 
+    // Check permissions: Admin can delete any, creators can only delete their own
+    if (!isAdmin && creator.userId !== session.user.id) {
+      return NextResponse.json({ error: "You can only delete your own creator profiles" }, { status: 403 });
+    }
+
     // Delete all associated data in proper order (respecting foreign keys)
-    console.log(`[Admin] Deleting creator ${creator.slug} (${creator.id})`);
+    console.log(`[Delete] Deleting creator ${creator.slug} (${creator.id}) by user ${session.user.id}`);
 
     try {
       // Use sequential transaction to ensure proper order

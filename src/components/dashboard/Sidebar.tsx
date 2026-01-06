@@ -58,7 +58,7 @@ const creatorLinksDef = [
   { href: "/dashboard/creator/scripts", icon: FileText, labelKey: "creator.scripts" },
   { href: "/dashboard/creator/ai", icon: Bot, labelKey: "creator.aiGirlfriend" },
   { href: "/dashboard/find-agency", icon: Search, labelKey: "creator.findAgency" },
-  { href: "/dashboard/creator/settings", icon: Settings, labelKey: "settings.title" },
+  { href: "/dashboard/creator/settings", icon: Settings, labelKey: "creator.creatorSettings" },
 ];
 
 const restrictedCreatorLinksDef = [
@@ -70,6 +70,7 @@ const adminLinksDef = [
   { href: "/dashboard/admin", icon: Shield, labelKey: "admin.title" },
   { href: "/dashboard/admin/agencies", icon: Building2, labelKey: "admin.allAgencies" },
   { href: "/dashboard/admin/creators", icon: Crown, labelKey: "admin.totalCreators" },
+  { href: "/dashboard/admin/creator-applications", icon: Inbox, labelKey: "admin.creatorApplications" },
   { href: "/dashboard/admin/users", icon: Users, labelKey: "admin.totalUsers" },
   { href: "/dashboard/admin/payments", icon: DollarSign, labelKey: "admin.allPayments" },
   { href: "/dashboard/admin/payouts", icon: Wallet, labelKey: "admin.payouts" },
@@ -94,6 +95,7 @@ export function Sidebar() {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [pendingPayoutsCount, setPendingPayoutsCount] = useState(0);
+  const [pendingApplicationsCount, setPendingApplicationsCount] = useState(0);
   const [isCreatorDropdownOpen, setIsCreatorDropdownOpen] = useState(false);
   const [isAgencyManaged, setIsAgencyManaged] = useState(false);
   const [managingAgencyName, setManagingAgencyName] = useState<string | null>(null);
@@ -166,6 +168,20 @@ export function Sidebar() {
     }
   }, [isAdmin]);
 
+  // Fetch pending creator applications count (admin only)
+  const fetchPendingApplicationsCount = useCallback(async () => {
+    if (!isAdmin) return;
+    try {
+      const res = await fetch("/api/admin/creator-applications/count");
+      if (res.ok) {
+        const data = await res.json();
+        setPendingApplicationsCount(data.count || 0);
+      }
+    } catch (error) {
+      console.error("Error fetching pending applications count:", error);
+    }
+  }, [isAdmin]);
+
   // Fetch permissions for selected creator (check if agency-managed)
   const fetchCreatorPermissions = useCallback(async () => {
     if (!selectedCreator?.slug || !session?.user?.id) {
@@ -198,10 +214,12 @@ export function Sidebar() {
   useEffect(() => {
     fetchUnreadCount();
     fetchPendingPayoutsCount();
+    fetchPendingApplicationsCount();
     // Refresh every 30 seconds
     const interval = setInterval(() => {
       fetchUnreadCount();
       fetchPendingPayoutsCount();
+      fetchPendingApplicationsCount();
     }, 30000);
 
     // Listen for custom event when messages are read
@@ -214,7 +232,7 @@ export function Sidebar() {
       clearInterval(interval);
       window.removeEventListener("unread-count-updated", handleUnreadUpdate);
     };
-  }, [fetchUnreadCount, fetchPendingPayoutsCount]);
+  }, [fetchUnreadCount, fetchPendingPayoutsCount, fetchPendingApplicationsCount]);
 
   const NavLink = ({
     href,
@@ -511,7 +529,11 @@ export function Sidebar() {
                 key={link.href}
                 {...link}
                 index={index}
-                badge={link.href === "/dashboard/admin/payouts" ? pendingPayoutsCount : undefined}
+                badge={
+                  link.href === "/dashboard/admin/payouts" ? pendingPayoutsCount :
+                  link.href === "/dashboard/admin/creator-applications" ? pendingApplicationsCount :
+                  undefined
+                }
               />
             ))}
             <div className="h-4" />

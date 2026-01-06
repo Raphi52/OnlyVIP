@@ -256,6 +256,38 @@ export async function POST(
     );
     const receiverId = otherParticipant?.userId || actualSenderId;
 
+    // For PPV from library: fetch MediaContent URLs if mediaId is provided but url is missing
+    let processedMedia = media;
+    if (media && media.length > 0) {
+      const mediaIdsToFetch = media
+        .filter((m: any) => m.mediaId && !m.url)
+        .map((m: any) => m.mediaId);
+
+      if (mediaIdsToFetch.length > 0) {
+        const mediaContents = await prisma.mediaContent.findMany({
+          where: { id: { in: mediaIdsToFetch } },
+          select: { id: true, contentUrl: true, thumbnailUrl: true, type: true },
+        });
+
+        const mediaContentMap = new Map(mediaContents.map((mc) => [mc.id, mc]));
+
+        processedMedia = media.map((m: any) => {
+          if (m.mediaId && !m.url) {
+            const mc = mediaContentMap.get(m.mediaId);
+            if (mc) {
+              return {
+                ...m,
+                url: mc.contentUrl,
+                previewUrl: m.previewUrl || mc.thumbnailUrl,
+                type: m.type || mc.type,
+              };
+            }
+          }
+          return m;
+        });
+      }
+    }
+
     // Create the message
     const message = await prisma.message.create({
       data: {
@@ -267,9 +299,9 @@ export async function POST(
         isPPV: isPPV || false,
         ppvPrice: isPPV && ppvPrice ? ppvPrice : null,
         ppvUnlockedBy: "[]",
-        media: media && media.length > 0
+        media: processedMedia && processedMedia.length > 0
           ? {
-              create: media.map((m: any) => ({
+              create: processedMedia.map((m: any) => ({
                 type: m.type,
                 url: m.url,
                 previewUrl: m.previewUrl || null,

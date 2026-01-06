@@ -183,6 +183,16 @@ export async function GET(request: NextRequest) {
     const session = await auth();
     const currentUserId = session?.user?.id;
 
+    // Check if user is the creator (owner) of this content
+    let isCreatorOwner = false;
+    if (currentUserId && creatorSlug) {
+      const creator = await prisma.creator.findUnique({
+        where: { slug: creatorSlug },
+        select: { userId: true },
+      });
+      isCreatorOwner = creator?.userId === currentUserId;
+    }
+
     // Get user's subscription tier and purchases if logged in
     let userTier = "FREE";
     let purchasedMediaIds: Set<string> = new Set();
@@ -233,8 +243,10 @@ export async function GET(request: NextRequest) {
       const mediaTierIndex = tierOrder.indexOf(item.accessTier);
 
       // Determine if user has access
+      // Creator always has access to their own content
       let hasAccess = false;
-      if (isFree) hasAccess = true;
+      if (isCreatorOwner) hasAccess = true;
+      else if (isFree) hasAccess = true;
       else if (isPurchased) hasAccess = true;
       else if (isVIPOnly && isVIP) hasAccess = true;
       else if (!isPPV && !isVIPOnly && userTierIndex >= mediaTierIndex) hasAccess = true;

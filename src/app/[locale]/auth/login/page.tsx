@@ -41,6 +41,23 @@ function LoginForm() {
     setResendSuccess(false);
 
     try {
+      // FIRST check if user exists and needs verification BEFORE attempting login
+      // This gives a better UX by showing the verification message immediately
+      const checkRes = await fetch("/api/auth/check-verification", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      const checkData = await checkRes.json();
+
+      if (checkData.needsVerification) {
+        setEmailNotVerified(true);
+        setError("");
+        setIsLoading(false);
+        return;
+      }
+
+      // If email is verified (or user doesn't exist), proceed with login
       const result = await signIn("credentials", {
         email,
         password,
@@ -48,22 +65,6 @@ function LoginForm() {
       });
 
       if (result?.error) {
-        // Check if email is not verified
-        if (result.error.includes("EMAIL_NOT_VERIFIED") || result.error === "CredentialsSignin") {
-          // Check verification status via API
-          const checkRes = await fetch("/api/auth/check-verification", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email }),
-          });
-          const checkData = await checkRes.json();
-
-          if (checkData.needsVerification) {
-            setEmailNotVerified(true);
-            setError("");
-            return;
-          }
-        }
         setError(t("invalidCredentials"));
       } else {
         router.push(callbackUrl);

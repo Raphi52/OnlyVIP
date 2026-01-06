@@ -215,7 +215,7 @@ export function MediaUnlockModal({
                       alt={media.title}
                       fill
                       sizes="(max-width: 768px) 90vw, 500px"
-                      className="object-cover blur-xl scale-110 pointer-events-none select-none"
+                      className="object-cover blur-sm scale-[1.02] pointer-events-none select-none"
                       draggable={false}
                       onContextMenu={(e) => e.preventDefault()}
                     />

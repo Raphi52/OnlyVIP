@@ -90,8 +90,8 @@ function ParallaxImage({
             alt={media.title}
             fill
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-            className={`object-cover transition-all duration-500 scale-110 group-hover:scale-105 ${
-              shouldBlur ? "blur-xl group-hover:blur-lg" : ""
+            className={`object-cover transition-all duration-500 scale-105 group-hover:scale-100 ${
+              shouldBlur ? "blur-sm group-hover:blur-[2px]" : ""
             }`}
           />
 

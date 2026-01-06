@@ -1,6 +1,15 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+
+// Hook to get the previous value
+function usePrevious<T>(value: T): T | undefined {
+  const ref = useRef<T | undefined>(undefined);
+  useEffect(() => {
+    ref.current = value;
+  }, [value]);
+  return ref.current;
+}
 import { useSession } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
@@ -139,14 +148,17 @@ export default function MessagesPage() {
     checkSubscription();
   }, [userId, isCreator, isAdmin]);
 
-  // Fetch conversations
+  // Fetch conversations (filtered by selected creator if any)
   const fetchConversations = useCallback(async () => {
     if (!userId) return;
 
     try {
-      // Fetch all conversations where user is a participant
-      // This includes both fan conversations (user as fan) and creator conversations (user as creator)
-      const res = await fetch("/api/conversations");
+      // Build URL with optional creator filter
+      const url = selectedCreator?.slug
+        ? `/api/conversations?creator=${selectedCreator.slug}`
+        : "/api/conversations";
+
+      const res = await fetch(url);
       if (res.ok) {
         const data = await res.json();
         setConversations(data.conversations || []);
@@ -156,7 +168,7 @@ export default function MessagesPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [userId]);
+  }, [userId, selectedCreator?.slug]);
 
   useEffect(() => {
     if (userId && hasSubscription) {
@@ -165,6 +177,17 @@ export default function MessagesPage() {
       setIsLoading(false);
     }
   }, [userId, hasSubscription, fetchConversations, status]);
+
+  // Reset selected conversation when creator changes (but not on initial mount)
+  const previousCreatorSlug = usePrevious(selectedCreator?.slug);
+  useEffect(() => {
+    // Only reset if creator actually changed (not on initial mount)
+    if (previousCreatorSlug !== undefined && previousCreatorSlug !== selectedCreator?.slug) {
+      setSelectedConversation(null);
+      setMessages([]);
+      setAutoSelectDone(false);
+    }
+  }, [selectedCreator?.slug, previousCreatorSlug]);
 
   // Auto-select conversation from URL param (by conversation ID)
   useEffect(() => {
