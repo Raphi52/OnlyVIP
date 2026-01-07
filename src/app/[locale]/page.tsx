@@ -201,7 +201,7 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <Link href={`/${locale}`} className="flex items-center gap-2">
-              <Sparkles className="w-7 h-7 text-[var(--gold)]" />
+              <Crown className="w-7 h-7 text-[var(--gold)]" />
               <span className="text-xl font-bold gradient-gold-text">VipOnly</span>
             </Link>
 
