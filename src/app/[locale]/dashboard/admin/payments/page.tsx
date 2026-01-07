@@ -174,31 +174,31 @@ export default function AdminPaymentsPage() {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex items-center justify-between mb-6 sm:mb-8"
+        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6 sm:mb-8"
       >
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-[var(--foreground)] mb-1 sm:mb-2">
-            All Transactions
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-[var(--foreground)] mb-1 truncate">
+            Transactions
           </h1>
-          <p className="text-sm sm:text-base text-[var(--muted)]">
-            Credit purchases & internal transactions
+          <p className="text-xs sm:text-sm text-[var(--muted)]">
+            Achats crédits & transactions
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-shrink-0">
           {/* Period selector */}
           <select
             value={period}
             onChange={(e) => { setPeriod(e.target.value); setPage(1); }}
-            className="px-3 py-2 bg-[var(--surface)] border border-[var(--border)] rounded-lg text-sm text-[var(--foreground)] focus:outline-none focus:border-[var(--gold)]"
+            className="px-2 sm:px-3 py-2 bg-[var(--surface)] border border-[var(--border)] rounded-lg text-xs sm:text-sm text-[var(--foreground)] focus:outline-none focus:border-[var(--gold)]"
           >
-            <option value="7d">7 days</option>
-            <option value="30d">30 days</option>
-            <option value="90d">90 days</option>
-            <option value="1y">1 year</option>
-            <option value="all">All time</option>
+            <option value="7d">7j</option>
+            <option value="30d">30j</option>
+            <option value="90d">90j</option>
+            <option value="1y">1 an</option>
+            <option value="all">Tout</option>
           </select>
-          <Button variant="ghost" size="icon" onClick={fetchTransactions}>
-            <RefreshCw className="w-5 h-5" />
+          <Button variant="ghost" size="icon" onClick={fetchTransactions} className="flex-shrink-0">
+            <RefreshCw className="w-4 h-4 sm:w-5 sm:h-5" />
           </Button>
         </div>
       </motion.div>
@@ -330,13 +330,13 @@ export default function AdminPaymentsPage() {
             className="w-full pl-10 pr-4 py-2.5 bg-[var(--surface)] border border-[var(--border)] rounded-xl text-[var(--foreground)] placeholder-[var(--muted)] focus:outline-none focus:border-[var(--gold)]"
           />
         </div>
-        <Button onClick={handleSearch}>Search</Button>
-        <div className="flex items-center gap-1.5">
+        <Button onClick={handleSearch} className="flex-shrink-0">Search</Button>
+        <div className="flex items-center gap-1 sm:gap-1.5 overflow-x-auto">
           {["all", "COMPLETED", "PENDING", "FAILED"].map((s) => (
             <button
               key={s}
               onClick={() => setFilterStatus(s)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all capitalize ${
+              className={`px-2 sm:px-3 py-1.5 rounded-lg text-[10px] sm:text-xs font-medium transition-all capitalize whitespace-nowrap ${
                 filterStatus === s
                   ? s === "COMPLETED" ? "bg-emerald-500 text-white" :
                     s === "PENDING" ? "bg-yellow-500 text-black" :
