@@ -210,7 +210,7 @@ export default function HomePage() {
                 <div className="relative">
                   <motion.button
                     onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                    className="flex items-center gap-3 px-3 py-2 rounded-full border border-white/10 hover:border-[var(--gold)]/30 bg-white/5 hover:bg-white/10 transition-all duration-300"
+                    className="flex items-center gap-2 sm:gap-3 px-2 sm:px-3 py-2 rounded-full border border-white/10 hover:border-[var(--gold)]/30 bg-white/5 hover:bg-white/10 transition-all duration-300"
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                   >
@@ -228,7 +228,7 @@ export default function HomePage() {
                         <User className="w-4 h-4 text-black" />
                       </div>
                     )}
-                    <span className="text-sm text-gray-300 max-w-[100px] truncate">
+                    <span className="hidden sm:block text-sm text-gray-300 max-w-[100px] truncate">
                       {session.user?.name?.split(" ")[0] || "User"}
                     </span>
                   </motion.button>
