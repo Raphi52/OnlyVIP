@@ -80,19 +80,20 @@ export function RecentMessagesWidget() {
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.12 }}
     >
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <h2 className="text-lg font-semibold text-white">Messages</h2>
+      <div className="flex items-center justify-between mb-4 gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <h2 className="text-base sm:text-lg font-semibold text-white">Messages</h2>
           {unreadCount > 0 && (
-            <span className="px-2 py-0.5 rounded-full bg-red-500 text-white text-xs font-bold">
+            <span className="px-2 py-0.5 rounded-full bg-red-500 text-white text-xs font-bold flex-shrink-0">
               {unreadCount} new
             </span>
           )}
         </div>
-        <Link href="/dashboard/messages">
-          <Button variant="ghost" size="sm" className="gap-1 text-sm text-gray-400">
-            View all
-            <ArrowRight className="w-4 h-4" />
+        <Link href="/dashboard/messages" className="flex-shrink-0">
+          <Button variant="ghost" size="sm" className="gap-1 text-xs sm:text-sm text-gray-400 px-2 sm:px-3">
+            <span className="hidden sm:inline">View all</span>
+            <span className="sm:hidden">Voir</span>
+            <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4" />
           </Button>
         </Link>
       </div>

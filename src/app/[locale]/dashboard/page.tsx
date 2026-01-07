@@ -212,9 +212,10 @@ export default function DashboardPage() {
                   animate={{ opacity: [0.5, 0.8, 0.5] }}
                   transition={{ duration: 1.5, repeat: Infinity }}
                 />
-                <Button className="relative gap-1.5 sm:gap-2 px-4 sm:px-5 py-2.5 text-sm bg-gradient-to-r from-yellow-400 to-amber-500 hover:from-yellow-500 hover:to-amber-600 text-black font-bold border-0 shadow-lg shadow-yellow-500/30">
-                  <Plus className="w-4 h-4" />
-                  <span>{t("billing.buyCredits")}</span>
+                <Button className="relative gap-1.5 sm:gap-2 px-3 sm:px-5 py-2.5 text-xs sm:text-sm bg-gradient-to-r from-yellow-400 to-amber-500 hover:from-yellow-500 hover:to-amber-600 text-black font-bold border-0 shadow-lg shadow-yellow-500/30 whitespace-nowrap">
+                  <Plus className="w-4 h-4 flex-shrink-0" />
+                  <span className="hidden sm:inline">{t("billing.buyCredits")}</span>
+                  <span className="sm:hidden">Crédits</span>
                 </Button>
               </motion.div>
             </Link>
