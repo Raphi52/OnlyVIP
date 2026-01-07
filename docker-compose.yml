@@ -48,6 +48,7 @@ services:
       - NOWPAYMENTS_API_KEY=${NOWPAYMENTS_API_KEY:-}
       - NOWPAYMENTS_IPN_SECRET=${NOWPAYMENTS_IPN_SECRET:-}
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
       - AI_MODEL=${AI_MODEL:-mistralai/mistral-7b-instruct}
       - MIXPAY_PAYEE_ID=${MIXPAY_PAYEE_ID:-}
       # Secure wallet addresses (configured here, not in admin panel)

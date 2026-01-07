@@ -163,6 +163,7 @@ export default function ProtectedMedia({
             draggable={false}
             onContextMenu={handleContextMenu}
             onDragStart={handleDragStart}
+            unoptimized
           />
           {/* Transparent overlay to prevent direct access */}
           <div

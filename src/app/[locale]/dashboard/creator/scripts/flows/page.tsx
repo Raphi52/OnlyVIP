@@ -250,7 +250,7 @@ export default function FlowsPage() {
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-4">
             <Link
-              href={`/${locale}/dashboard/agency/scripts`}
+              href={`/${locale}/dashboard/creator/scripts`}
               className="w-10 h-10 rounded-xl bg-white/5 text-gray-400 flex items-center justify-center hover:bg-white/10 transition-colors"
             >
               <ArrowLeft className="w-5 h-5" />
@@ -266,7 +266,7 @@ export default function FlowsPage() {
             </div>
           </div>
           <Link
-            href={`/${locale}/dashboard/agency/scripts/new`}
+            href={`/${locale}/dashboard/creator/scripts/new`}
             className="h-10 px-4 rounded-xl bg-purple-600 text-white font-medium flex items-center gap-2 hover:bg-purple-500 transition-colors"
           >
             <Plus className="w-4 h-4" />
@@ -340,7 +340,7 @@ export default function FlowsPage() {
                 : "Create scripts and connect them to build conversation flows"}
             </p>
             <Link
-              href={`/${locale}/dashboard/agency/scripts/new`}
+              href={`/${locale}/dashboard/creator/scripts/new`}
               className="inline-flex h-10 px-6 rounded-xl bg-purple-600 text-white font-medium items-center gap-2 hover:bg-purple-500 transition-colors"
             >
               <Plus className="w-4 h-4" />
@@ -437,7 +437,7 @@ export default function FlowsPage() {
 
                       {/* View detail link */}
                       <Link
-                        href={`/${locale}/dashboard/agency/scripts/${chain.rootScript.id}`}
+                        href={`/${locale}/dashboard/creator/scripts/${chain.rootScript.id}`}
                         onClick={(e) => e.stopPropagation()}
                         className="h-8 px-3 rounded-lg bg-white/5 text-gray-400 text-sm flex items-center gap-1.5 hover:bg-white/10 transition-colors"
                       >
@@ -476,7 +476,7 @@ export default function FlowsPage() {
                       allScripts={scripts}
                       onScriptClick={(scriptId) => {
                         // Navigate to script detail
-                        window.location.href = `/${locale}/dashboard/agency/scripts/${scriptId}`;
+                        window.location.href = `/${locale}/dashboard/creator/scripts/${scriptId}`;
                       }}
                     />
                   </div>
@@ -505,7 +505,7 @@ export default function FlowsPage() {
               return (
                 <Link
                   key={script.id}
-                  href={`/${locale}/dashboard/agency/scripts/${script.id}`}
+                  href={`/${locale}/dashboard/creator/scripts/${script.id}`}
                   className="bg-white/5 rounded-xl p-4 border border-white/10 hover:bg-white/[0.07] transition-colors"
                 >
                   <div className="flex items-start justify-between gap-2 mb-2">
@@ -534,7 +534,7 @@ export default function FlowsPage() {
           {scriptsWithoutFlows.length > 6 && (
             <div className="mt-4 text-center">
               <Link
-                href={`/${locale}/dashboard/agency/scripts`}
+                href={`/${locale}/dashboard/creator/scripts`}
                 className="text-sm text-purple-400 hover:text-purple-300"
               >
                 View all {scriptsWithoutFlows.length} standalone scripts

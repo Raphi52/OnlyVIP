@@ -535,7 +535,7 @@ export default function CreatorMediaPage() {
   }
 
   return (
-    <div className="p-4 pt-20 sm:p-6 sm:pt-20 lg:p-8 lg:pt-8 pb-24">
+    <div className="p-4 pt-20 sm:p-6 sm:pt-20 lg:p-8 lg:pt-8 pb-24 overflow-x-hidden">
       {/* Current Creator indicator */}
       {selectedCreator && (
         <div className="mb-6 flex items-center gap-3 text-sm text-gray-400">

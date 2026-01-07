@@ -22,7 +22,7 @@ import {
   LayoutGrid,
   Loader2,
 } from "lucide-react";
-import { Button, Card } from "@/components/ui";
+import { Button, Card, PremiumCard } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { CREATOR_CATEGORIES, getCategoryById, getCategoriesFromJson } from "@/lib/categories";
 
@@ -230,10 +230,23 @@ function CreatorsPageContent() {
 
       {/* Hero Section */}
       <section className="relative pt-24 pb-8 px-4 overflow-hidden">
-        {/* Background effects */}
+        {/* Animated background orbs */}
         <div className="absolute inset-0">
-          <div className="absolute top-0 left-1/4 w-96 h-96 bg-[var(--gold)]/10 blur-[120px] rounded-full" />
-          <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-500/10 blur-[120px] rounded-full" />
+          <motion.div
+            className="absolute top-20 left-1/4 w-[500px] h-[500px] bg-gradient-to-r from-[var(--gold)]/10 via-amber-500/5 to-transparent rounded-full blur-[100px]"
+            animate={{ x: [0, 30, 0], opacity: [0.3, 0.5, 0.3], scale: [1, 1.1, 1] }}
+            transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
+          />
+          <motion.div
+            className="absolute top-40 right-1/4 w-[400px] h-[400px] bg-gradient-to-l from-purple-500/10 via-pink-500/5 to-transparent rounded-full blur-[80px]"
+            animate={{ x: [0, -20, 0], opacity: [0.2, 0.4, 0.2] }}
+            transition={{ duration: 8, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+          />
+          <motion.div
+            className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-gradient-to-t from-[var(--gold)]/10 via-amber-500/5 to-transparent rounded-full blur-[100px]"
+            animate={{ opacity: [0.2, 0.35, 0.2] }}
+            transition={{ duration: 6, repeat: Infinity, ease: "easeInOut", delay: 2 }}
+          />
         </div>
 
         <div className="max-w-7xl mx-auto relative z-10">
@@ -242,47 +255,58 @@ function CreatorsPageContent() {
             animate={{ opacity: 1, y: 0 }}
             className="text-center mb-10"
           >
+            {/* Premium badge with glow */}
             <motion.div
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-gradient-to-r from-[var(--gold)]/20 to-amber-500/10 border border-[var(--gold)]/30 text-[var(--gold)] text-sm font-medium mb-6 relative"
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[var(--gold)]/10 border border-[var(--gold)]/20 text-[var(--gold)] text-sm font-medium mb-6"
             >
-              <Crown className="w-4 h-4" />
-              {creators.length} Exclusive Creators
+              <motion.div
+                className="absolute inset-0 rounded-full bg-gradient-to-r from-[var(--gold)]/20 to-amber-500/10 blur-xl"
+                animate={{ opacity: [0.3, 0.6, 0.3] }}
+                transition={{ duration: 2, repeat: Infinity }}
+              />
+              <Crown className="w-4 h-4 relative z-10" />
+              <span className="relative z-10">{creators.length} Exclusive Creators</span>
+              <Sparkles className="w-4 h-4 relative z-10" />
             </motion.div>
 
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-4">
-              Discover <span className="gradient-gold-text">Amazing</span> Creators
+              Discover <span className="bg-gradient-to-r from-yellow-200 via-[var(--gold)] to-amber-500 bg-clip-text text-transparent">Amazing</span> Creators
             </h1>
             <p className="text-lg text-gray-400 max-w-2xl mx-auto">
               Browse our collection of exclusive content creators. Subscribe and unlock their premium content.
             </p>
           </motion.div>
 
-          {/* Search Bar */}
+          {/* Search Bar with premium styling */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
             className="max-w-2xl mx-auto mb-8"
           >
-            <div className="relative">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search creators by name..."
-                className="w-full pl-12 pr-12 py-4 rounded-2xl bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:outline-none focus:border-[var(--gold)]/50 focus:bg-white/10 transition-all"
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery("")}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-white/10 transition-colors"
-                >
-                  <X className="w-4 h-4 text-gray-500" />
-                </button>
-              )}
+            <div className="relative group">
+              {/* Glow effect on focus */}
+              <div className="absolute -inset-[1px] rounded-2xl bg-gradient-to-r from-[var(--gold)]/0 via-[var(--gold)]/0 to-[var(--gold)]/0 group-focus-within:from-[var(--gold)]/30 group-focus-within:via-amber-500/30 group-focus-within:to-[var(--gold)]/30 transition-all duration-300 blur-sm" />
+              <div className="relative">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search creators by name..."
+                  className="w-full pl-12 pr-12 py-4 rounded-2xl bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:outline-none focus:border-[var(--gold)]/50 focus:bg-white/10 transition-all"
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery("")}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-white/10 transition-colors"
+                  >
+                    <X className="w-4 h-4 text-gray-500" />
+                  </button>
+                )}
+              </div>
             </div>
           </motion.div>
 
@@ -394,11 +418,11 @@ function CreatorsPageContent() {
                 {searchQuery && ` for "${searchQuery}"`}
               </motion.p>
 
-              {/* Grid */}
+              {/* Grid - Premium spacing */}
               <motion.div
                 layout
                 className={cn(
-                  "grid gap-4 sm:gap-6",
+                  "grid gap-6 sm:gap-8 p-2",
                   gridSize === "normal"
                     ? "grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
                     : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
@@ -498,121 +522,129 @@ function CreatorsPageContent() {
   );
 }
 
-// Creator Card Component
+// Premium Creator Card Component
 function CreatorCard({ creator, size }: { creator: Creator; size: GridSize }) {
   const [isHovered, setIsHovered] = useState(false);
 
   return (
     <Link href={`/${creator.slug}`}>
-      <div
-        className="relative group"
+      <motion.div
+        className="relative"
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
+        whileHover={{ y: -5 }}
+        transition={{ duration: 0.2 }}
       >
-        <Card
-          className={cn(
-            "relative overflow-hidden transition-all duration-300 border border-white/10 hover:border-[var(--gold)]/50",
-            isHovered && "scale-[1.02]"
-          )}
+        <PremiumCard
+          variant="gold"
+          showSparkles={true}
+          showHolographic={true}
+          rounded="2xl"
+          className="h-full"
+          contentClassName="h-full"
         >
-        {/* Image */}
-        <div className={cn(
-          "relative overflow-hidden",
-          size === "large" ? "aspect-[4/5]" : "aspect-[3/4]"
-        )}>
-          {creator.cardImage || creator.avatar ? (
-            <Image
-              src={creator.cardImage || creator.avatar || ""}
-              alt={creator.displayName}
-              fill
-              unoptimized={(creator.cardImage || creator.avatar || "").startsWith("/uploads")}
-              className={cn(
-                "object-cover transition-transform duration-700",
-                isHovered && "scale-110"
-              )}
-            />
-          ) : (
-            <div className="w-full h-full bg-gradient-to-br from-[var(--gold)]/20 to-purple-500/20 flex items-center justify-center">
-              <span className="text-6xl font-bold text-white/20">
-                {creator.displayName.charAt(0)}
-              </span>
-            </div>
-          )}
-
-          {/* Overlay gradient */}
+          {/* Image */}
           <div className={cn(
-            "absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent transition-opacity duration-300",
-            isHovered ? "opacity-90" : "opacity-70"
-          )} />
-
-          {/* Content overlay */}
-          <div className="absolute bottom-0 left-0 right-0 p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <h3 className={cn(
-                "font-bold text-white",
-                size === "large" ? "text-xl" : "text-lg"
-              )}>
-                {creator.displayName}
-              </h3>
-            </div>
-
-            <p className={cn(
-              "text-gray-300 line-clamp-2 mb-3",
-              size === "large" ? "text-sm" : "text-xs"
-            )}>
-              {creator.bio || "Exclusive content creator"}
-            </p>
-
-            {/* Stats */}
-            <div className="flex items-center gap-3 text-xs text-gray-400">
-              {creator.photoCount > 0 && (
-                <span className="flex items-center gap-1 bg-black/40 px-2 py-1 rounded-full backdrop-blur-sm">
-                  <Camera className="w-3 h-3" />
-                  {creator.photoCount}
+            "relative overflow-hidden",
+            size === "large" ? "aspect-[4/5]" : "aspect-[3/4]"
+          )}>
+            {creator.cardImage || creator.avatar ? (
+              <Image
+                src={creator.cardImage || creator.avatar || ""}
+                alt={creator.displayName}
+                fill
+                unoptimized={(creator.cardImage || creator.avatar || "").startsWith("/uploads")}
+                className={cn(
+                  "object-cover transition-transform duration-700",
+                  isHovered && "scale-110"
+                )}
+              />
+            ) : (
+              <div className="w-full h-full bg-gradient-to-br from-[var(--gold)]/20 to-purple-500/20 flex items-center justify-center">
+                <span className="text-6xl font-bold text-white/20">
+                  {creator.displayName.charAt(0)}
                 </span>
-              )}
-              {creator.videoCount > 0 && (
-                <span className="flex items-center gap-1 bg-black/40 px-2 py-1 rounded-full backdrop-blur-sm">
-                  <Video className="w-3 h-3" />
-                  {creator.videoCount}
-                </span>
-              )}
-              {creator.subscriberCount > 0 && (
-                <span className="flex items-center gap-1 bg-black/40 px-2 py-1 rounded-full backdrop-blur-sm">
-                  <Users className="w-3 h-3" />
-                  {creator.subscriberCount}
-                </span>
-              )}
-            </div>
-          </div>
-
-          {/* Category tags */}
-          <div className="absolute top-3 left-3 right-3 flex flex-wrap gap-1.5">
-            {/* New badge */}
-            {creator.createdAt && isNewCreator(creator.createdAt) && (
-              <span className="px-2 py-0.5 rounded-full bg-green-500 text-white text-[10px] font-bold">
-                NEW
-              </span>
+              </div>
             )}
-            {/* Category tags (show first 2) */}
-            {creator.categories?.slice(0, 2).map((catId) => {
-              const cat = getCategoryById(catId);
-              return cat ? (
-                <span
-                  key={catId}
-                  className={cn(
-                    "px-2 py-0.5 rounded-full text-[10px] font-bold",
-                    cat.color
+
+            {/* Overlay gradient */}
+            <div className={cn(
+              "absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent transition-opacity duration-300",
+              isHovered ? "opacity-90" : "opacity-70"
+            )} />
+
+            {/* Content overlay */}
+            <div className="absolute bottom-0 left-0 right-0 p-4 z-10">
+              <div className="flex items-center gap-2 mb-2">
+                <h3 className={cn(
+                  "font-bold text-white",
+                  size === "large" ? "text-xl" : "text-lg"
+                )}>
+                  {creator.displayName}
+                </h3>
+              </div>
+
+              <p className={cn(
+                "text-gray-300 line-clamp-2 mb-3",
+                size === "large" ? "text-sm" : "text-xs"
+              )}>
+                {creator.bio || "Exclusive content creator"}
+              </p>
+
+              {/* Stats */}
+              <div className="flex items-center gap-3 text-xs text-gray-400">
+                {creator.photoCount > 0 && (
+                  <span className="flex items-center gap-1 bg-black/50 px-2 py-1 rounded-full backdrop-blur-sm">
+                    <Camera className="w-3 h-3" />
+                    {creator.photoCount}
+                  </span>
+                )}
+                {creator.videoCount > 0 && (
+                  <span className="flex items-center gap-1 bg-black/50 px-2 py-1 rounded-full backdrop-blur-sm">
+                    <Video className="w-3 h-3" />
+                    {creator.videoCount}
+                  </span>
+                )}
+                {creator.subscriberCount > 0 && (
+                  <span className="flex items-center gap-1 bg-black/50 px-2 py-1 rounded-full backdrop-blur-sm">
+                    <Users className="w-3 h-3" />
+                    {creator.subscriberCount}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Category tags */}
+            <div className="absolute top-3 left-3 right-3 flex flex-wrap gap-1.5 z-10">
+              {/* New badge with glow */}
+              {creator.createdAt && isNewCreator(creator.createdAt) && (
+                <motion.span
+                  className="px-2 py-0.5 rounded-full bg-green-500 text-white text-[10px] font-bold shadow-lg shadow-green-500/30"
+                  animate={{ boxShadow: ["0 0 10px rgba(34,197,94,0.3)", "0 0 20px rgba(34,197,94,0.5)", "0 0 10px rgba(34,197,94,0.3)"] }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                >
+                  NEW
+                </motion.span>
+              )}
+              {/* Category tags (show first 2) */}
+              {creator.categories?.slice(0, 2).map((catId) => {
+                const cat = getCategoryById(catId);
+                return cat ? (
+                  <span
+                    key={catId}
+                    className={cn(
+                      "px-2 py-0.5 rounded-full text-[10px] font-bold backdrop-blur-sm",
+                      cat.color
                   )}
                 >
                   {cat.label}
                 </span>
-              ) : null;
-            })}
+                ) : null;
+              })}
+            </div>
           </div>
-        </div>
-        </Card>
-      </div>
+        </PremiumCard>
+      </motion.div>
     </Link>
   );
 }

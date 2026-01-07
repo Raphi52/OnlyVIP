@@ -6,6 +6,8 @@ import Link from "next/link";
 import Image from "next/image";
 import { Lock, Play, Crown, Sparkles, ArrowRight, Eye, Coins } from "lucide-react";
 import { Button } from "@/components/ui";
+import { useSession } from "next-auth/react";
+import { MediaFeedViewer, type MediaItem as FeedMediaItem } from "@/components/media/MediaFeedViewer";
 
 interface ExclusivePreviewProps {
   creatorSlug?: string;
@@ -40,10 +42,12 @@ function PreviewCard({
   item,
   index,
   basePath,
+  onOpenMedia,
 }: {
   item: MediaItem;
   index: number;
   basePath: string;
+  onOpenMedia?: (index: number) => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const [isHovered, setIsHovered] = useState(false);
@@ -74,7 +78,10 @@ function PreviewCard({
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <Link href={`${basePath}/gallery`} className="relative block">
+      <div
+        className="relative block cursor-pointer"
+        onClick={() => onOpenMedia?.(index)}
+      >
         {/* ✨ PREMIUM HOLOGRAPHIC BORDER for locked content */}
         {shouldBlur && (
           <motion.div
@@ -139,6 +146,7 @@ function PreviewCard({
               fill
               sizes="100vw"
               className="object-cover"
+              unoptimized
             />
           </div>
 
@@ -272,7 +280,7 @@ function PreviewCard({
             </div>
           </div>
         </div>
-      </Link>
+      </div>
     </motion.div>
   );
 }
@@ -280,7 +288,50 @@ function PreviewCard({
 export function ExclusivePreview({ creatorSlug = "miacosta" }: ExclusivePreviewProps) {
   const basePath = `/${creatorSlug}`;
   const [media, setMedia] = useState<MediaItem[]>([]);
+  const [allMedia, setAllMedia] = useState<FeedMediaItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [feedViewerState, setFeedViewerState] = useState<{ isOpen: boolean; initialIndex: number } | null>(null);
+  const [userCredits, setUserCredits] = useState(0);
+  const [isVIP, setIsVIP] = useState(false);
+  const [purchasedIds, setPurchasedIds] = useState<Set<string>>(new Set());
+  const { data: session } = useSession();
+
+  // Fetch user data
+  useEffect(() => {
+    async function fetchUserData() {
+      if (!session?.user?.id) return;
+      try {
+        const [subRes, creditsRes, libRes] = await Promise.all([
+          fetch("/api/user/subscription"),
+          fetch("/api/user/credits"),
+          fetch("/api/user/library?tab=purchased"),
+        ]);
+
+        if (subRes.ok) {
+          const subData = await subRes.json();
+          if (subData.subscription?.plan?.accessTier) {
+            setIsVIP(subData.subscription.plan.accessTier === "VIP");
+          }
+        }
+
+        if (creditsRes.ok) {
+          const creditsData = await creditsRes.json();
+          setUserCredits(creditsData.balance || 0);
+        }
+
+        if (libRes.ok) {
+          const libData = await libRes.json();
+          const ids = new Set<string>(
+            libData.purchasedContent?.map((item: { id: string }) => item.id) || []
+          );
+          setPurchasedIds(ids);
+        }
+      } catch (error) {
+        console.error("Error fetching user data:", error);
+      }
+    }
+    fetchUserData();
+  }, [session?.user?.id]);
 
   useEffect(() => {
     async function fetchMedia() {
@@ -299,6 +350,38 @@ export function ExclusivePreview({ creatorSlug = "miacosta" }: ExclusivePreviewP
     }
     fetchMedia();
   }, [creatorSlug]);
+
+  // Fetch all media when opening feed viewer
+  const handleOpenMedia = async (clickedIndex: number) => {
+    try {
+      const res = await fetch(`/api/media?creator=${creatorSlug}&tagGallery=true&limit=500`);
+      if (res.ok) {
+        const data = await res.json();
+        const mediaList: FeedMediaItem[] = (data.media || []).map((item: MediaItem) => ({
+          id: item.id,
+          type: item.type,
+          title: item.title,
+          description: item.description,
+          thumbnailUrl: item.thumbnailUrl,
+          contentUrl: null,
+          accessTier: item.accessTier,
+          duration: item.duration,
+          tagFree: item.tagFree,
+          tagVIP: item.tagVIP,
+          tagPPV: item.tagPPV,
+          ppvPriceCredits: item.ppvPriceCredits,
+          hasPurchased: purchasedIds.has(item.id),
+        }));
+        setAllMedia(mediaList);
+
+        const clickedMediaId = media[clickedIndex]?.id;
+        const allMediaIndex = mediaList.findIndex((m: FeedMediaItem) => m.id === clickedMediaId);
+        setFeedViewerState({ isOpen: true, initialIndex: allMediaIndex >= 0 ? allMediaIndex : 0 });
+      }
+    } catch (error) {
+      console.error("Error fetching all media:", error);
+    }
+  };
 
   // Don't render if no media and not loading
   if (!isLoading && media.length === 0) {
@@ -361,6 +444,7 @@ export function ExclusivePreview({ creatorSlug = "miacosta" }: ExclusivePreviewP
                 item={item}
                 index={index}
                 basePath={basePath}
+                onOpenMedia={handleOpenMedia}
               />
             ))}
           </div>
@@ -389,6 +473,20 @@ export function ExclusivePreview({ creatorSlug = "miacosta" }: ExclusivePreviewP
           </p>
         </motion.div>
       </div>
+
+      {/* Media Feed Viewer */}
+      {feedViewerState?.isOpen && allMedia.length > 0 && (
+        <MediaFeedViewer
+          mediaItems={allMedia}
+          initialIndex={feedViewerState.initialIndex}
+          onClose={() => setFeedViewerState(null)}
+          creatorSlug={creatorSlug}
+          userCredits={userCredits}
+          isVIP={isVIP}
+          onCreditsUpdate={(newBalance) => setUserCredits(newBalance)}
+          onPurchased={(mediaId) => setPurchasedIds(prev => new Set([...prev, mediaId]))}
+        />
+      )}
     </section>
   );
 }

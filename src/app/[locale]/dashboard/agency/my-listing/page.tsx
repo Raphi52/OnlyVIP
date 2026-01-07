@@ -234,7 +234,7 @@ export default function AgencyMyListingPage() {
         {/* Header */}
         <div className="flex items-center gap-4 mb-8">
           <Link
-            href="/dashboard/agency"
+            href="/dashboard/find-creator"
             className="p-2 rounded-xl hover:bg-white/10 text-[var(--muted)]"
           >
             <ArrowLeft className="w-5 h-5" />

@@ -15,6 +15,7 @@ import {
   X,
   MessageSquare,
   Calendar,
+  CreditCard,
 } from "lucide-react";
 import { Button, Card, Badge } from "@/components/ui";
 import { useAdminCreator } from "@/components/providers/AdminCreatorContext";
@@ -140,8 +141,7 @@ export default function CreatorMembersPage() {
       filterStatus === "all" ||
       (filterStatus === "vip" && member.isCreatorVip) ||
       (filterStatus === "blocked" && member.isBlocked) ||
-      (filterStatus === "subscriber" && member.hasSubscription) ||
-      (filterStatus === "active" && !member.isBlocked);
+      (filterStatus === "subscriber" && member.hasSubscription);
 
     return matchesSearch && matchesFilter;
   });
@@ -196,7 +196,7 @@ export default function CreatorMembersPage() {
           />
         </div>
         <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto pb-1 sm:pb-0 scrollbar-hide">
-          {["all", "vip", "subscriber", "blocked", "active"].map((filter) => (
+          {["all", "vip", "subscriber", "blocked"].map((filter) => (
             <button
               key={filter}
               onClick={() => setFilterStatus(filter)}
@@ -261,13 +261,13 @@ export default function CreatorMembersPage() {
         <Card variant="luxury" className="p-3 sm:p-4">
           <div className="flex items-center gap-2 sm:gap-3">
             <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-emerald-500/20 flex items-center justify-center flex-shrink-0">
-              <Check className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-400" />
+              <CreditCard className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-400" />
             </div>
             <div className="min-w-0">
               <p className="text-lg sm:text-2xl font-bold text-[var(--foreground)]">
-                {members.filter((m) => !m.isBlocked).length}
+                {members.filter((m) => m.hasSubscription).length}
               </p>
-              <p className="text-[10px] sm:text-sm text-[var(--muted)] truncate">Active</p>
+              <p className="text-[10px] sm:text-sm text-[var(--muted)] truncate">Subscribers</p>
             </div>
           </div>
         </Card>

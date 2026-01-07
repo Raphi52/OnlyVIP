@@ -21,9 +21,9 @@ export async function GET(
         slug: dbCreator.slug,
         name: dbCreator.name,
         displayName: dbCreator.displayName,
-        avatar: dbCreator.avatar || defaultCreators[slug.toLowerCase()]?.avatar,
-        cardImage: dbCreator.cardImage,
-        coverImage: dbCreator.coverImage || defaultCreators[slug.toLowerCase()]?.coverImage,
+        avatar: dbCreator.avatar || defaultCreators[slug.toLowerCase()]?.avatar || null,
+        cardImage: dbCreator.cardImage || null,
+        coverImage: dbCreator.coverImage || defaultCreators[slug.toLowerCase()]?.coverImage || null,
         bio: dbCreator.bio || defaultCreators[slug.toLowerCase()]?.bio || "",
         socialLinks: {
           instagram: socialLinks.instagram || undefined,

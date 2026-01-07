@@ -108,15 +108,19 @@ export function Hero({ creator }: HeroProps) {
         style={{ y: smoothY, scale: smoothScale }}
       >
         <div className="absolute inset-0">
-          <Image
-            src={creator?.coverImage || "/media/preview/3036738115692549406_1.jpg"}
-            alt={`${creator?.displayName || "Creator"} background`}
-            fill
-            priority
-            sizes="100vw"
-            unoptimized={(creator?.coverImage || "").startsWith("/uploads")}
-            className="object-cover"
-          />
+          {creator?.coverImage ? (
+            <Image
+              src={creator.coverImage}
+              alt={`${creator?.displayName || "Creator"} background`}
+              fill
+              priority
+              sizes="100vw"
+              unoptimized={creator.coverImage.startsWith("/uploads")}
+              className="object-cover"
+            />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-br from-gray-900 via-black to-gray-900" />
+          )}
         </div>
         {/* Multi-layer gradient overlay */}
         <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/50 to-black" />
@@ -243,11 +247,11 @@ export function Hero({ creator }: HeroProps) {
                 <Link href={`${basePath}/gallery`}>
                   <Button
                     variant="gold-outline"
-                    size="lg"
-                    className="gap-2 text-lg px-8 py-7 backdrop-blur-sm"
+                    size="sm"
+                    className="gap-2 px-4 py-2 backdrop-blur-sm"
                   >
-                    <Eye className="w-5 h-5" />
-                    {t("previewGallery")}
+                    <Eye className="w-4 h-4" />
+                    {t("gallery")}
                   </Button>
                 </Link>
                 <FollowButton creatorSlug={creatorSlug} className="text-lg px-8 py-7" />
@@ -340,15 +344,21 @@ export function Hero({ creator }: HeroProps) {
                 {/* Card */}
                 <div className="relative rounded-3xl overflow-hidden border-2 border-[var(--gold)]/40 shadow-2xl shadow-[var(--gold)]/20">
                   <div className="aspect-[3/4] relative">
-                    <Image
-                      src={creator?.cardImage || creator?.avatar || "/media/preview/3039035234726006678_1.jpg"}
-                      alt={creator?.displayName || "Creator"}
-                      fill
-                      priority
-                      sizes="(max-width: 768px) 100vw, 400px"
-                      unoptimized={(creator?.cardImage || creator?.avatar || "").startsWith("/uploads")}
-                      className="object-cover"
-                    />
+                    {(creator?.cardImage || creator?.avatar) ? (
+                      <Image
+                        src={creator?.cardImage || creator?.avatar || ""}
+                        alt={creator?.displayName || "Creator"}
+                        fill
+                        priority
+                        sizes="(max-width: 768px) 100vw, 400px"
+                        unoptimized={(creator?.cardImage || creator?.avatar || "").startsWith("/uploads")}
+                        className="object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center">
+                        <Crown className="w-24 h-24 text-[var(--gold)]/50" />
+                      </div>
+                    )}
                     {/* Gradient overlay */}
                     <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
 

@@ -7,6 +7,8 @@ import Image from "next/image";
 import { Lock, Play, Crown, Sparkles, Eye, Star, Coins, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui";
 import { useTranslations } from "next-intl";
+import { useSession } from "next-auth/react";
+import { MediaFeedViewer, type MediaItem as FeedMediaItem } from "@/components/media/MediaFeedViewer";
 
 interface ContentShowcaseProps {
   creatorSlug?: string;
@@ -41,11 +43,13 @@ function ParallaxImage({
   index,
   basePath,
   t,
+  onOpenMedia,
 }: {
   media: MediaItem;
   index: number;
   basePath: string;
   t: ReturnType<typeof useTranslations<"gallery">>;
+  onOpenMedia?: (index: number) => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({
@@ -53,14 +57,14 @@ function ParallaxImage({
     offset: ["start end", "end start"],
   });
 
-  const speeds = [0.15, 0.25, 0.35, 0.2, 0.3, 0.15, 0.25, 0.35, 0.2, 0.3, 0.15, 0.25];
+  const speeds = [0.15, 0.25, 0.35, 0.2, 0.3, 0.15, 0.25, 0.35];
   const speed = speeds[index % speeds.length];
 
   const y = useTransform(scrollYProgress, [0, 1], [-50 * speed, 50 * speed]);
   const smoothY = useSpring(y, { stiffness: 100, damping: 30 });
 
-  const sizes = ["aspect-[3/4]", "aspect-square", "aspect-[4/5]", "aspect-[3/4]", "aspect-[4/3]", "aspect-square"];
-  const size = sizes[index % sizes.length];
+  // Uniform size like gallery page
+  const size = "aspect-[3/4]";
 
   // New tag-based access
   const isFree = media.tagFree === true;
@@ -82,7 +86,10 @@ function ParallaxImage({
       transition={{ duration: 0.6, delay: index * 0.05 }}
       className="group"
     >
-      <Link href={`${basePath}/gallery`} className="relative block">
+      <div
+        className="relative block cursor-pointer"
+        onClick={() => onOpenMedia?.(index)}
+      >
         {/* ✨ PREMIUM HOLOGRAPHIC BORDER for locked content */}
         {shouldBlur && (
           <motion.div
@@ -141,6 +148,7 @@ function ParallaxImage({
             className={`object-cover transition-all duration-500 scale-105 group-hover:scale-100 ${
               shouldBlur ? "blur-[10px] group-hover:blur-[3px]" : ""
             }`}
+            unoptimized
           />
 
           {/* Dark overlay */}
@@ -232,7 +240,7 @@ function ParallaxImage({
             </div>
           </div>
         </div>
-      </Link>
+      </div>
     </motion.div>
   );
 }
@@ -241,20 +249,63 @@ export function ContentShowcase({ creatorSlug = "miacosta" }: ContentShowcasePro
   const containerRef = useRef<HTMLElement>(null);
   const basePath = `/${creatorSlug}`;
   const [media, setMedia] = useState<MediaItem[]>([]);
+  const [allMedia, setAllMedia] = useState<FeedMediaItem[]>([]);
   const [stats, setStats] = useState({ photos: 0, videos: 0 });
   const [isLoading, setIsLoading] = useState(true);
+  const [feedViewerState, setFeedViewerState] = useState<{ isOpen: boolean; initialIndex: number } | null>(null);
+  const [userCredits, setUserCredits] = useState(0);
+  const [isVIP, setIsVIP] = useState(false);
+  const [purchasedIds, setPurchasedIds] = useState<Set<string>>(new Set());
+  const { data: session } = useSession();
   const t = useTranslations("gallery");
+
+  // Fetch user data
+  useEffect(() => {
+    async function fetchUserData() {
+      if (!session?.user?.id) return;
+      try {
+        const [subRes, creditsRes, libRes] = await Promise.all([
+          fetch("/api/user/subscription"),
+          fetch("/api/user/credits"),
+          fetch("/api/user/library?tab=purchased"),
+        ]);
+
+        if (subRes.ok) {
+          const subData = await subRes.json();
+          if (subData.subscription?.plan?.accessTier) {
+            setIsVIP(subData.subscription.plan.accessTier === "VIP");
+          }
+        }
+
+        if (creditsRes.ok) {
+          const creditsData = await creditsRes.json();
+          setUserCredits(creditsData.balance || 0);
+        }
+
+        if (libRes.ok) {
+          const libData = await libRes.json();
+          const ids = new Set<string>(
+            libData.purchasedContent?.map((item: { id: string }) => item.id) || []
+          );
+          setPurchasedIds(ids);
+        }
+      } catch (error) {
+        console.error("Error fetching user data:", error);
+      }
+    }
+    fetchUserData();
+  }, [session?.user?.id]);
 
   useEffect(() => {
     async function fetchMedia() {
       try {
-        // Fetch only gallery-tagged media
-        const res = await fetch(`/api/media?creator=${creatorSlug}&limit=12&tagGallery=true`);
+        // Fetch only gallery-tagged media (max 8 for homepage)
+        const res = await fetch(`/api/media?creator=${creatorSlug}&limit=8&tagGallery=true`);
         if (res.ok) {
           const data = await res.json();
           setMedia(data.media || []);
 
-          // Use stats from API (counts all gallery media, not just returned 12)
+          // Use stats from API (counts all gallery media, not just returned 8)
           if (data.stats) {
             setStats({ photos: data.stats.photos, videos: data.stats.videos });
           }
@@ -267,6 +318,39 @@ export function ContentShowcase({ creatorSlug = "miacosta" }: ContentShowcasePro
     }
     fetchMedia();
   }, [creatorSlug]);
+
+  // Fetch all media when opening feed viewer
+  const handleOpenMedia = async (clickedIndex: number) => {
+    try {
+      // Fetch all gallery media for scrolling
+      const res = await fetch(`/api/media?creator=${creatorSlug}&tagGallery=true&limit=500`);
+      if (res.ok) {
+        const data = await res.json();
+        const mediaList: FeedMediaItem[] = (data.media || []).map((item: MediaItem) => ({
+          id: item.id,
+          type: item.type,
+          title: item.title,
+          thumbnailUrl: item.thumbnailUrl,
+          contentUrl: null, // Will be fetched when needed
+          accessTier: item.accessTier,
+          duration: item.duration,
+          tagFree: item.tagFree,
+          tagVIP: item.tagVIP,
+          tagPPV: item.tagPPV,
+          ppvPriceCredits: item.ppvPriceCredits,
+          hasPurchased: purchasedIds.has(item.id),
+        }));
+        setAllMedia(mediaList);
+
+        // Find the index in all media that matches the clicked item
+        const clickedMediaId = media[clickedIndex]?.id;
+        const allMediaIndex = mediaList.findIndex((m: FeedMediaItem) => m.id === clickedMediaId);
+        setFeedViewerState({ isOpen: true, initialIndex: allMediaIndex >= 0 ? allMediaIndex : 0 });
+      }
+    } catch (error) {
+      console.error("Error fetching all media:", error);
+    }
+  };
 
   const { scrollYProgress } = useScroll({
     target: containerRef,
@@ -415,6 +499,7 @@ export function ContentShowcase({ creatorSlug = "miacosta" }: ContentShowcasePro
                 index={index}
                 basePath={basePath}
                 t={t}
+                onOpenMedia={handleOpenMedia}
               />
             ))}
           </div>
@@ -449,6 +534,20 @@ export function ContentShowcase({ creatorSlug = "miacosta" }: ContentShowcasePro
           </div>
         </motion.div>
       </div>
+
+      {/* Media Feed Viewer */}
+      {feedViewerState?.isOpen && allMedia.length > 0 && (
+        <MediaFeedViewer
+          mediaItems={allMedia}
+          initialIndex={feedViewerState.initialIndex}
+          onClose={() => setFeedViewerState(null)}
+          creatorSlug={creatorSlug}
+          userCredits={userCredits}
+          isVIP={isVIP}
+          onCreditsUpdate={(newBalance) => setUserCredits(newBalance)}
+          onPurchased={(mediaId) => setPurchasedIds(prev => new Set([...prev, mediaId]))}
+        />
+      )}
     </section>
   );
 }

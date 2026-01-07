@@ -6,7 +6,7 @@ import {
   Send, Plus, Sparkles, Loader2, Play, X, Lock, Coins,
   Search, Smile, ArrowLeft, ChevronDown, Mic, Image as ImageIcon,
   Gift, Heart, Paperclip, StopCircle, MoreVertical,
-  Bell, BellOff, Trash2, Images
+  Bell, BellOff, Trash2, Images, Music
 } from "lucide-react";
 import Link from "next/link";
 import NextImage from "next/image";
@@ -167,6 +167,40 @@ export function ChatWindow({
   onDelete,
 }: ChatWindowProps) {
   const locale = useLocale();
+
+  // Track keyboard visibility for mobile
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+  // Listen to visualViewport changes for keyboard detection
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const viewport = window.visualViewport;
+    if (!viewport) return;
+
+    const handleResize = () => {
+      // Calculate keyboard height by comparing viewport to window height
+      const keyboardH = window.innerHeight - viewport.height;
+      const newKeyboardHeight = keyboardH > 50 ? keyboardH : 0;
+
+      // If keyboard just opened, scroll to bottom
+      if (newKeyboardHeight > 0 && keyboardHeight === 0) {
+        setTimeout(() => {
+          messagesEndRef.current?.scrollIntoView({ behavior: "instant" });
+        }, 100);
+      }
+
+      setKeyboardHeight(newKeyboardHeight);
+    };
+
+    viewport.addEventListener("resize", handleResize);
+    viewport.addEventListener("scroll", handleResize);
+
+    return () => {
+      viewport.removeEventListener("resize", handleResize);
+      viewport.removeEventListener("scroll", handleResize);
+    };
+  }, [keyboardHeight]);
 
   // Local state for reactions (to update UI instantly)
   const [localReactions, setLocalReactions] = useState<Record<string, Reaction[]>>({});
@@ -403,7 +437,7 @@ export function ChatWindow({
     e.preventDefault();
     setIsDraggingFiles(false);
     const files = Array.from(e.dataTransfer.files).filter(
-      (f) => f.type.startsWith("image/") || f.type.startsWith("video/")
+      (f) => f.type.startsWith("image/") || f.type.startsWith("video/") || f.type.startsWith("audio/")
     );
     setSelectedFiles((prev) => [...prev, ...files]);
   };
@@ -471,6 +505,11 @@ export function ChatWindow({
   return (
     <div
       className="flex flex-col h-full bg-gradient-to-b from-[#0a0a0a] to-[#0f0f0f] relative overflow-hidden"
+      style={{
+        // Use dvh on mobile to account for browser UI
+        height: "100%",
+        maxHeight: keyboardHeight > 0 ? `calc(100dvh - ${keyboardHeight}px)` : "100dvh",
+      }}
       onDragOver={(e) => {
         e.preventDefault();
         setIsDraggingFiles(true);
@@ -886,6 +925,10 @@ export function ChatWindow({
                         <Play className="w-6 h-6 text-white" fill="white" />
                       </div>
                     </div>
+                  ) : file.type.startsWith("audio/") ? (
+                    <div className="w-full h-full bg-gradient-to-br from-purple-900/50 to-indigo-900/50 flex items-center justify-center">
+                      <Music className="w-8 h-8 text-purple-400" />
+                    </div>
                   ) : null}
                   <motion.button
                     whileTap={{ scale: 0.8 }}
@@ -956,8 +999,13 @@ export function ChatWindow({
       <motion.div
         initial={{ y: 20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        className="relative z-20 p-3 md:p-4 border-t border-white/5 bg-[#0a0a0a]/80 backdrop-blur-xl"
-        style={{ paddingBottom: "max(12px, env(safe-area-inset-bottom))" }}
+        className="relative z-20 p-3 md:p-4 border-t border-white/5 bg-[#0a0a0a]/95 backdrop-blur-xl"
+        style={{
+          // Extra padding for mobile browser navigation bars (Brave, Chrome, Safari)
+          paddingBottom: keyboardHeight > 0
+            ? "12px" // When keyboard is open, less padding needed
+            : "max(20px, calc(env(safe-area-inset-bottom) + 12px))",
+        }}
       >
         <div className="flex items-end gap-1.5 sm:gap-2 pb-[2px]">
           {/* Attach button */}
@@ -1039,7 +1087,7 @@ export function ChatWindow({
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/*,video/*"
+            accept="image/*,video/*,audio/*"
             multiple
             className="hidden"
             onChange={handleFileSelect}

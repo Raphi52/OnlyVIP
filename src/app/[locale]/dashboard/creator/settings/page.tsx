@@ -82,10 +82,8 @@ export default function CreatorSettingsPage() {
   // Pricing state (in credits, 100 credits = $1)
   const [basicMonthlyCredits, setBasicMonthlyCredits] = useState("999");
   const [basicAnnualCredits, setBasicAnnualCredits] = useState("9588");
-  const [basicBonusCredits, setBasicBonusCredits] = useState("500");
   const [vipMonthlyCredits, setVipMonthlyCredits] = useState("2999");
   const [vipAnnualCredits, setVipAnnualCredits] = useState("28788");
-  const [vipBonusCredits, setVipBonusCredits] = useState("2000");
 
   const isCreator = (session?.user as any)?.isCreator === true;
   const isAdmin = (session?.user as any)?.role === "ADMIN";
@@ -139,12 +137,10 @@ export default function CreatorSettingsPage() {
           if (basicPlan) {
             setBasicMonthlyCredits(basicPlan.monthlyCredits?.toString() || "999");
             setBasicAnnualCredits(basicPlan.annualCredits?.toString() || "9588");
-            setBasicBonusCredits(basicPlan.bonusCredits?.toString() || "500");
           }
           if (vipPlan) {
             setVipMonthlyCredits(vipPlan.monthlyCredits?.toString() || "2999");
             setVipAnnualCredits(vipPlan.annualCredits?.toString() || "28788");
-            setVipBonusCredits(vipPlan.bonusCredits?.toString() || "2000");
           }
         }
       }
@@ -341,13 +337,11 @@ export default function CreatorSettingsPage() {
                 id: "basic",
                 monthlyCredits: parseInt(basicMonthlyCredits) || 999,
                 annualCredits: parseInt(basicAnnualCredits) || 9588,
-                bonusCredits: parseInt(basicBonusCredits) || 500,
               },
               {
                 id: "vip",
                 monthlyCredits: parseInt(vipMonthlyCredits) || 2999,
                 annualCredits: parseInt(vipAnnualCredits) || 28788,
-                bonusCredits: parseInt(vipBonusCredits) || 2000,
               },
             ],
           },
@@ -913,11 +907,8 @@ export default function CreatorSettingsPage() {
                 <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-[var(--gold)]" />
                 Subscription Pricing
               </h2>
-              <p className="text-xs sm:text-sm text-[var(--muted)] mb-1 sm:mb-2">
+              <p className="text-xs sm:text-sm text-[var(--muted)] mb-4 sm:mb-6">
                 Set prices in credits. 100 credits = $1
-              </p>
-              <p className="text-[10px] sm:text-xs text-[var(--muted)] mb-4 sm:mb-6">
-                Bonus credits are given to subscribers monthly.
               </p>
 
               <div className="space-y-4 sm:space-y-6">
@@ -927,7 +918,7 @@ export default function CreatorSettingsPage() {
                     <Crown className="w-4 h-4 sm:w-5 sm:h-5 text-blue-400" />
                     <h3 className="font-semibold text-sm sm:text-base text-[var(--foreground)]">Basic Plan</h3>
                   </div>
-                  <div className="grid grid-cols-3 gap-2 sm:gap-4">
+                  <div className="grid grid-cols-2 gap-2 sm:gap-4">
                     <div>
                       <label className="block text-[10px] sm:text-sm font-medium text-[var(--foreground)] mb-1 sm:mb-2">
                         Monthly
@@ -962,23 +953,6 @@ export default function CreatorSettingsPage() {
                         ~${(parseInt(basicAnnualCredits) / 100 || 0).toFixed(0)}/yr
                       </p>
                     </div>
-                    <div>
-                      <label className="block text-[10px] sm:text-sm font-medium text-[var(--foreground)] mb-1 sm:mb-2">
-                        Bonus
-                      </label>
-                      <input
-                        type="number"
-                        step="1"
-                        min="0"
-                        value={basicBonusCredits}
-                        onChange={(e) => setBasicBonusCredits(e.target.value)}
-                        className="w-full px-2 py-2 sm:px-4 sm:py-3 rounded-lg sm:rounded-xl bg-[var(--surface)] border border-[var(--border)] text-sm sm:text-base text-[var(--foreground)] focus:outline-none focus:border-green-400"
-                        placeholder="500"
-                      />
-                      <p className="text-[10px] sm:text-xs text-green-400 mt-0.5 sm:mt-1">
-                        Free
-                      </p>
-                    </div>
                   </div>
                 </div>
 
@@ -989,7 +963,7 @@ export default function CreatorSettingsPage() {
                     <h3 className="font-semibold text-sm sm:text-base text-[var(--foreground)]">VIP Plan</h3>
                     <span className="px-1.5 py-0.5 text-[10px] sm:text-xs font-bold bg-[var(--gold)] text-black rounded-full">Popular</span>
                   </div>
-                  <div className="grid grid-cols-3 gap-2 sm:gap-4">
+                  <div className="grid grid-cols-2 gap-2 sm:gap-4">
                     <div>
                       <label className="block text-[10px] sm:text-sm font-medium text-[var(--foreground)] mb-1 sm:mb-2">
                         Monthly
@@ -1022,23 +996,6 @@ export default function CreatorSettingsPage() {
                       />
                       <p className="text-[10px] sm:text-xs text-[var(--muted)] mt-0.5 sm:mt-1">
                         ~${(parseInt(vipAnnualCredits) / 100 || 0).toFixed(0)}/yr
-                      </p>
-                    </div>
-                    <div>
-                      <label className="block text-[10px] sm:text-sm font-medium text-[var(--foreground)] mb-1 sm:mb-2">
-                        Bonus
-                      </label>
-                      <input
-                        type="number"
-                        step="1"
-                        min="0"
-                        value={vipBonusCredits}
-                        onChange={(e) => setVipBonusCredits(e.target.value)}
-                        className="w-full px-2 py-2 sm:px-4 sm:py-3 rounded-lg sm:rounded-xl bg-[var(--surface)] border border-[var(--border)] text-sm sm:text-base text-[var(--foreground)] focus:outline-none focus:border-green-400"
-                        placeholder="2000"
-                      />
-                      <p className="text-[10px] sm:text-xs text-green-400 mt-0.5 sm:mt-1">
-                        Free
                       </p>
                     </div>
                   </div>

@@ -863,6 +863,7 @@ model User {
   subscriptions    Subscription[]
   mediaPurchases   MediaPurchase[]
   messagePurchases MessagePayment[]
+  favorites        UserFavorite[]
 
   // Chat
   sentMessages     Message[]                 @relation("sender")
@@ -1163,6 +1164,7 @@ model MediaContent {
   purchases    MediaPurchase[]
   messageMedia MessageMedia[]
   scriptMedia  ScriptMedia[]
+  favorites    UserFavorite[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1219,6 +1221,21 @@ model MediaPurchase {
 }
 
 // PaymentStatus: "PENDING" | "COMPLETED" | "FAILED" | "REFUNDED" | "CANCELLED"
+
+model UserFavorite {
+  id      String @id @default(cuid())
+  userId  String
+  mediaId String
+
+  user  User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  media MediaContent @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, mediaId])
+  @@index([userId])
+  @@index([mediaId])
+}
 
 // ============= CHAT SYSTEM =============
 
@@ -1315,6 +1332,10 @@ model Message {
 
   // AI Generated flag (for UI badges)
   isAiGenerated Boolean @default(false)
+
+  // System message (from VIPonly platform)
+  isSystemMessage Boolean @default(false)
+  systemMessageType String? // "VERIFICATION_APPROVED", "VERIFICATION_REJECTED", "WELCOME", etc.
 
   // Attribution (who sent this message on behalf of creator)
   chatterId       String? // If sent by a human chatter

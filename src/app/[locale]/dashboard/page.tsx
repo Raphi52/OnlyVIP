@@ -130,7 +130,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="px-3 pt-20 pb-6 sm:px-6 sm:pt-20 lg:px-8 lg:pt-8 space-y-4 sm:space-y-6 max-w-3xl mx-auto lg:max-w-none">
+    <div className="px-3 pt-20 pb-6 sm:px-6 sm:pt-20 lg:px-8 lg:pt-8 space-y-4 sm:space-y-6 max-w-3xl mx-auto lg:max-w-none overflow-x-hidden">
       {/* Welcome */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -253,7 +253,7 @@ export default function DashboardPage() {
                 <Crown className="w-10 h-10 sm:w-12 sm:h-12 text-yellow-500/50 mx-auto mb-2 sm:mb-3 drop-shadow-[0_0_8px_rgba(250,204,21,0.3)]" />
               </motion.div>
               <p className="text-sm sm:text-base text-gray-400 mb-3 sm:mb-4">{t("user.noSubscriptions")}</p>
-              <Link href="/miacosta/membership">
+              <Link href="/creators">
                 <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="inline-block relative">
                   <motion.div
                     className="absolute inset-0 rounded-xl bg-gradient-to-r from-yellow-400 to-amber-500 blur-md"

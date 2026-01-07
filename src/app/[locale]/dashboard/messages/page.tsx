@@ -728,7 +728,7 @@ export default function MessagesPage() {
   // Loading state - show loading while session, conversations, or subscription is being checked
   if (status === "loading" || isLoading || isCheckingSubscription) {
     return (
-      <div className="h-screen pt-16 lg:pt-0 flex items-center justify-center bg-gradient-to-b from-[#0a0a0a] to-[#0f0f0f] px-4">
+      <div className="h-dvh pt-16 lg:pt-0 flex items-center justify-center bg-gradient-to-b from-[#0a0a0a] to-[#0f0f0f] px-4">
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -751,7 +751,7 @@ export default function MessagesPage() {
   // Not logged in - only show when explicitly confirmed as unauthenticated
   if (status === "unauthenticated") {
     return (
-      <div className="min-h-screen pt-16 lg:pt-0 flex items-center justify-center p-4 sm:p-6 bg-gradient-to-b from-[#0a0a0a] to-[#0f0f0f]">
+      <div className="min-h-dvh pt-16 lg:pt-0 flex items-center justify-center p-4 sm:p-6 bg-gradient-to-b from-[#0a0a0a] to-[#0f0f0f]">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -787,7 +787,7 @@ export default function MessagesPage() {
   // No subscription
   if (!hasSubscription) {
     return (
-      <div className="min-h-screen pt-16 lg:pt-0 flex items-center justify-center p-4 sm:p-6 bg-gradient-to-b from-[#0a0a0a] to-[#0f0f0f]">
+      <div className="min-h-dvh pt-16 lg:pt-0 flex items-center justify-center p-4 sm:p-6 bg-gradient-to-b from-[#0a0a0a] to-[#0f0f0f]">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -817,10 +817,10 @@ export default function MessagesPage() {
               <p className="text-sm sm:text-base text-white/50 mb-6 sm:mb-8">
                 Upgrade to VIP to start chatting directly with creators.
               </p>
-              <Link href="/miacosta/membership">
+              <Link href="/creators">
                 <Button variant="premium" size="lg" className="w-full gap-2 shadow-xl shadow-[var(--gold)]/20 text-sm sm:text-base">
                   <Sparkles className="w-4 h-4 sm:w-5 sm:h-5" />
-                  Upgrade to VIP
+                  Browse Creators
                 </Button>
               </Link>
             </div>
@@ -831,7 +831,7 @@ export default function MessagesPage() {
   }
 
   return (
-    <div className="h-screen pt-16 lg:pt-0 flex bg-gradient-to-b from-[#0a0a0a] to-[#0f0f0f]">
+    <div className="h-dvh pt-16 lg:pt-0 flex bg-gradient-to-b from-[#0a0a0a] to-[#0f0f0f]">
       {/* Left Panel Toggle (when collapsed on desktop) - only show when a conversation is selected */}
       <AnimatePresence>
         {!showLeftPanel && selectedConversation && (

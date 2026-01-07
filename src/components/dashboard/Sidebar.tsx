@@ -352,6 +352,7 @@ export function Sidebar() {
                       width={48}
                       height={48}
                       className="w-12 h-12 rounded-lg object-cover border-2 border-purple-500/50 group-hover:border-purple-400 transition-colors"
+                      unoptimized
                     />
                     <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-purple-500 flex items-center justify-center">
                       <Building2 className="w-3 h-3 text-white" />
@@ -389,20 +390,30 @@ export function Sidebar() {
               (isAdmin || isCreatorUser || isAgencyOwner) && displayCreators.length > 0 && "hover:border-[var(--gold)]/30 cursor-pointer"
             )}
           >
-            {creatorAvatar || session?.user?.image ? (
+            {creatorAvatar ? (
               <NextImage
-                src={creatorAvatar || session?.user?.image || ""}
+                key={creatorAvatar}
+                src={creatorAvatar}
                 alt=""
                 width={44}
                 height={44}
                 className="w-11 h-11 rounded-full object-cover border-2 border-[var(--gold)]/50 flex-shrink-0"
                 referrerPolicy="no-referrer"
+                unoptimized
+              />
+            ) : session?.user?.image ? (
+              <NextImage
+                src={session.user.image}
+                alt=""
+                width={44}
+                height={44}
+                className="w-11 h-11 rounded-full object-cover border-2 border-[var(--gold)]/50 flex-shrink-0"
+                referrerPolicy="no-referrer"
+                unoptimized
               />
             ) : (
               <div className="w-11 h-11 rounded-full bg-gradient-to-br from-[var(--gold)] to-yellow-600 flex items-center justify-center flex-shrink-0">
-                <span className="text-black font-bold text-lg">
-                  {(creatorName || session?.user?.name)?.[0] || "U"}
-                </span>
+                <Crown className="w-5 h-5 text-black" />
               </div>
             )}
             <div className="flex-1 min-w-0">
@@ -464,17 +475,17 @@ export function Sidebar() {
                       >
                         {creator.avatar ? (
                           <NextImage
+                            key={creator.avatar}
                             src={creator.avatar}
                             alt=""
                             width={32}
                             height={32}
                             className="w-8 h-8 rounded-full object-cover border border-[var(--gold)]/30"
+                            unoptimized
                           />
                         ) : (
                           <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[var(--gold)] to-yellow-600 flex items-center justify-center">
-                            <span className="text-black font-bold text-sm">
-                              {creator.displayName?.[0] || "C"}
-                            </span>
+                            <Crown className="w-4 h-4 text-black" />
                           </div>
                         )}
                         <span className="flex-1 text-left text-sm font-medium truncate">

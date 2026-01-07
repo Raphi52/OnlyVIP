@@ -30,10 +30,100 @@ import {
   Handshake,
   Heart,
 } from "lucide-react";
-import { Button, Card } from "@/components/ui";
+import { Button, Card, PremiumCard, FeatureCard, PremiumBadge } from "@/components/ui";
 import { Footer } from "@/components/layout/Footer";
 import { getCategoryById } from "@/lib/categories";
 import { cn } from "@/lib/utils";
+
+// Premium Creator Card component for homepage
+function PremiumCreatorCard({ creator, locale }: { creator: Creator; locale: string }) {
+  return (
+    <Link href={`/${locale}/${creator.slug}`}>
+      <PremiumCard
+        variant="gold"
+        showSparkles={true}
+        showHolographic={true}
+        className="h-full"
+        contentClassName="h-full"
+        rounded="2xl"
+      >
+        <div className="aspect-[3/4] relative overflow-hidden">
+          {creator.cardImage || creator.avatar ? (
+            <Image
+              src={creator.cardImage || creator.avatar || ""}
+              alt={creator.displayName}
+              fill
+              sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
+              unoptimized={(creator.cardImage || creator.avatar || "").startsWith("/uploads")}
+              className="object-cover group-hover:scale-105 transition-transform duration-500"
+            />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-br from-[var(--gold)]/20 to-purple-500/20 flex items-center justify-center">
+              <span className="text-5xl font-bold text-white/20">
+                {creator.displayName.charAt(0)}
+              </span>
+            </div>
+          )}
+
+          {/* Overlay gradient */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
+
+          {/* Content overlay */}
+          <div className="absolute bottom-0 left-0 right-0 p-4 z-10">
+            <h3 className="text-lg font-bold text-white mb-1">
+              {creator.displayName}
+            </h3>
+            <p className="text-sm text-gray-300 line-clamp-2 mb-3">
+              {creator.bio || "Exclusive content creator"}
+            </p>
+
+            {/* Stats */}
+            <div className="flex items-center gap-3 text-xs text-gray-400">
+              {creator.photoCount > 0 && (
+                <span className="flex items-center gap-1 bg-black/50 backdrop-blur-sm px-2 py-1 rounded-full">
+                  <Camera className="w-3 h-3" />
+                  {creator.photoCount}
+                </span>
+              )}
+              {creator.videoCount > 0 && (
+                <span className="flex items-center gap-1 bg-black/50 backdrop-blur-sm px-2 py-1 rounded-full">
+                  <Video className="w-3 h-3" />
+                  {creator.videoCount}
+                </span>
+              )}
+              {creator.subscriberCount > 0 && (
+                <span className="flex items-center gap-1 bg-black/50 backdrop-blur-sm px-2 py-1 rounded-full">
+                  <Users className="w-3 h-3" />
+                  {creator.subscriberCount}
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Category tags */}
+          {creator.categories && creator.categories.length > 0 && (
+            <div className="absolute top-3 right-3 flex flex-col gap-1 items-end z-10">
+              {creator.categories.slice(0, 2).map((catId) => {
+                const cat = getCategoryById(catId);
+                return cat ? (
+                  <span
+                    key={catId}
+                    className={cn(
+                      "px-2 py-0.5 rounded-full text-[10px] font-bold backdrop-blur-sm",
+                      cat.color
+                    )}
+                  >
+                    {cat.label}
+                  </span>
+                ) : null;
+              })}
+            </div>
+          )}
+        </div>
+      </PremiumCard>
+    </Link>
+  );
+}
 
 interface Creator {
   id: string;
@@ -224,8 +314,25 @@ export default function HomePage() {
       </nav>
 
       {/* Hero Section - Browse Models */}
-      <section className="relative pt-24 pb-8 px-4">
-        <div className="absolute inset-0 bg-gradient-to-b from-[var(--gold)]/5 via-transparent to-transparent" />
+      <section className="relative pt-24 pb-8 px-4 overflow-hidden">
+        {/* Animated background orbs */}
+        <div className="absolute inset-0">
+          <motion.div
+            className="absolute top-20 left-1/4 w-[500px] h-[500px] bg-gradient-to-r from-[var(--gold)]/10 via-amber-500/5 to-transparent rounded-full blur-[100px]"
+            animate={{ x: [0, 30, 0], opacity: [0.3, 0.5, 0.3], scale: [1, 1.1, 1] }}
+            transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
+          />
+          <motion.div
+            className="absolute top-40 right-1/4 w-[400px] h-[400px] bg-gradient-to-l from-purple-500/10 via-pink-500/5 to-transparent rounded-full blur-[80px]"
+            animate={{ x: [0, -20, 0], opacity: [0.2, 0.4, 0.2] }}
+            transition={{ duration: 8, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+          />
+          <motion.div
+            className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-gradient-to-t from-[var(--gold)]/10 via-amber-500/5 to-transparent rounded-full blur-[100px]"
+            animate={{ opacity: [0.2, 0.35, 0.2] }}
+            transition={{ duration: 6, repeat: Infinity, ease: "easeInOut", delay: 2 }}
+          />
+        </div>
 
         <div className="max-w-7xl mx-auto relative z-10">
           <motion.div
@@ -234,17 +341,33 @@ export default function HomePage() {
             transition={{ duration: 0.6 }}
             className="text-center mb-12"
           >
+            {/* Premium badge */}
+            <motion.div
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-gradient-to-r from-[var(--gold)]/20 to-amber-500/10 border border-[var(--gold)]/30 text-[var(--gold)] text-sm font-medium mb-6 relative"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+            >
+              <motion.div
+                className="absolute inset-0 rounded-full bg-gradient-to-r from-[var(--gold)]/20 to-amber-500/10 blur-xl"
+                animate={{ opacity: [0.3, 0.6, 0.3] }}
+                transition={{ duration: 2, repeat: Infinity }}
+              />
+              <Crown className="w-4 h-4 relative z-10" />
+              <span className="relative z-10">{t("home.premiumCollection") || "Premium Collection"}</span>
+              <Sparkles className="w-4 h-4 relative z-10" />
+            </motion.div>
+
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-4">
-              <span className="gradient-gold-text">{t("home.title")}</span> — {t("home.subtitle")}
+              <span className="bg-gradient-to-r from-yellow-200 via-[var(--gold)] to-amber-500 bg-clip-text text-transparent">{t("home.title")}</span> — {t("home.subtitle")}
             </h1>
             <p className="text-lg text-gray-400 max-w-2xl mx-auto">
               {t("home.description")}
             </p>
           </motion.div>
 
-          {/* Creators Grid */}
+          {/* Creators Grid - Premium Cards */}
           {loading ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 sm:gap-8 p-2">
               {[...Array(8)].map((_, i) => (
                 <div key={i} className="aspect-[3/4] rounded-2xl bg-white/5 animate-pulse" />
               ))}
@@ -254,7 +377,7 @@ export default function HomePage() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.2 }}
-              className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6"
+              className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 sm:gap-8 p-2"
             >
               {creators.map((creator, i) => (
                 <motion.div
@@ -262,85 +385,9 @@ export default function HomePage() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.05 }}
+                  whileHover={{ y: -5 }}
                 >
-                  <Link href={`/${locale}/${creator.slug}`}>
-                    <Card className="group overflow-hidden hover:border-[var(--gold)]/50 transition-all duration-300 hover:scale-[1.02]">
-                      {/* Image */}
-                      <div className="aspect-[3/4] relative overflow-hidden">
-                        {creator.cardImage || creator.avatar ? (
-                          <Image
-                            src={creator.cardImage || creator.avatar || ""}
-                            alt={creator.displayName}
-                            fill
-                            sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                            unoptimized={(creator.cardImage || creator.avatar || "").startsWith("/uploads")}
-                            className="object-cover group-hover:scale-105 transition-transform duration-500"
-                          />
-                        ) : (
-                          <div className="w-full h-full bg-gradient-to-br from-[var(--gold)]/20 to-purple-500/20 flex items-center justify-center">
-                            <span className="text-5xl font-bold text-white/20">
-                              {creator.displayName.charAt(0)}
-                            </span>
-                          </div>
-                        )}
-
-                        {/* Overlay gradient */}
-                        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
-
-                        {/* Content overlay */}
-                        <div className="absolute bottom-0 left-0 right-0 p-4">
-                          <h3 className="text-lg font-bold text-white mb-1">
-                            {creator.displayName}
-                          </h3>
-                          <p className="text-sm text-gray-300 line-clamp-2 mb-3">
-                            {creator.bio || "Exclusive content creator"}
-                          </p>
-
-                          {/* Stats */}
-                          <div className="flex items-center gap-3 text-xs text-gray-400">
-                            {creator.photoCount > 0 && (
-                              <span className="flex items-center gap-1">
-                                <Camera className="w-3 h-3" />
-                                {creator.photoCount}
-                              </span>
-                            )}
-                            {creator.videoCount > 0 && (
-                              <span className="flex items-center gap-1">
-                                <Video className="w-3 h-3" />
-                                {creator.videoCount}
-                              </span>
-                            )}
-                            {creator.subscriberCount > 0 && (
-                              <span className="flex items-center gap-1">
-                                <Users className="w-3 h-3" />
-                                {creator.subscriberCount}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Category tags */}
-                        {creator.categories && creator.categories.length > 0 && (
-                          <div className="absolute top-3 right-3 flex flex-col gap-1 items-end">
-                            {creator.categories.slice(0, 2).map((catId) => {
-                              const cat = getCategoryById(catId);
-                              return cat ? (
-                                <span
-                                  key={catId}
-                                  className={cn(
-                                    "px-2 py-0.5 rounded-full text-[10px] font-bold backdrop-blur-sm",
-                                    cat.color
-                                  )}
-                                >
-                                  {cat.label}
-                                </span>
-                              ) : null;
-                            })}
-                          </div>
-                        )}
-                      </div>
-                    </Card>
-                  </Link>
+                  <PremiumCreatorCard creator={creator} locale={locale} />
                 </motion.div>
               ))}
             </motion.div>
@@ -403,7 +450,7 @@ export default function HomePage() {
           </motion.div>
 
           <div className="grid lg:grid-cols-2 gap-12 items-center">
-            {/* Features */}
+            {/* Features with FeatureCard */}
             <div className="grid sm:grid-cols-2 gap-4">
               {creatorFeatures.map((feature, i) => (
                 <motion.div
@@ -412,31 +459,35 @@ export default function HomePage() {
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                   transition={{ delay: i * 0.1 }}
+                  whileHover={{ y: -5 }}
                 >
-                  <Card className="p-5 h-full hover:border-[var(--gold)]/30 transition-colors">
+                  <FeatureCard variant="gold" className="p-5 h-full">
                     <div className="w-10 h-10 rounded-lg bg-[var(--gold)]/10 flex items-center justify-center mb-3">
                       <feature.icon className="w-5 h-5 text-[var(--gold)]" />
                     </div>
                     <h3 className="font-semibold text-white mb-1">{feature.title}</h3>
                     <p className="text-sm text-gray-400">{feature.description}</p>
-                  </Card>
+                  </FeatureCard>
                 </motion.div>
               ))}
             </div>
 
-            {/* Creator Card */}
+            {/* Creator Card - Premium */}
             <motion.div
               initial={{ opacity: 0, x: 20 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
             >
-              <div className="relative">
-                <div className="absolute inset-0 bg-gradient-to-r from-[var(--gold)]/20 to-purple-500/20 rounded-3xl blur-3xl" />
-                <Card variant="featured" className="relative p-8">
+              <PremiumCard variant="gold" showSparkles={true} showHolographic={true} rounded="3xl">
+                <div className="p-8">
                   <div className="flex items-center gap-4 mb-6">
-                    <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[var(--gold)] to-yellow-600 flex items-center justify-center">
+                    <motion.div
+                      className="w-16 h-16 rounded-full bg-gradient-to-br from-[var(--gold)] to-yellow-600 flex items-center justify-center shadow-lg shadow-[var(--gold)]/30"
+                      animate={{ boxShadow: ["0 0 20px rgba(212,175,55,0.3)", "0 0 40px rgba(212,175,55,0.5)", "0 0 20px rgba(212,175,55,0.3)"] }}
+                      transition={{ duration: 2, repeat: Infinity }}
+                    >
                       <Crown className="w-8 h-8 text-black" />
-                    </div>
+                    </motion.div>
                     <div>
                       <h3 className="text-xl font-bold text-white">{t("home.creatorAccount")}</h3>
                       <p className="text-gray-400">{t("home.startEarning")}</p>
@@ -466,9 +517,13 @@ export default function HomePage() {
                       t("home.realtimeAnalytics"),
                     ].map((benefit, i) => (
                       <div key={i} className="flex items-center gap-3">
-                        <div className="w-5 h-5 rounded-full bg-[var(--gold)]/20 flex items-center justify-center">
+                        <motion.div
+                          className="w-5 h-5 rounded-full bg-[var(--gold)]/20 flex items-center justify-center"
+                          animate={{ scale: [1, 1.1, 1] }}
+                          transition={{ duration: 2, repeat: Infinity, delay: i * 0.2 }}
+                        >
                           <Check className="w-3 h-3 text-[var(--gold)]" />
-                        </div>
+                        </motion.div>
                         <span className="text-gray-300 text-sm">{benefit}</span>
                       </div>
                     ))}
@@ -480,8 +535,8 @@ export default function HomePage() {
                       <ArrowRight className="w-5 h-5" />
                     </Button>
                   </Link>
-                </Card>
-              </div>
+                </div>
+              </PremiumCard>
             </motion.div>
           </div>
         </div>
@@ -514,7 +569,7 @@ export default function HomePage() {
           </motion.div>
 
           <div className="grid lg:grid-cols-2 gap-12 items-center">
-            {/* Agency Features */}
+            {/* Agency Features with FeatureCard */}
             <div className="grid sm:grid-cols-2 gap-4">
               {[
                 { icon: Users, title: t("home.multipleCreators"), desc: t("home.multipleCreatorsDesc") },
@@ -528,31 +583,35 @@ export default function HomePage() {
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                   transition={{ delay: i * 0.1 }}
+                  whileHover={{ y: -5 }}
                 >
-                  <Card className="p-5 h-full hover:border-purple-500/30 transition-colors">
+                  <FeatureCard variant="purple" className="p-5 h-full">
                     <div className="w-10 h-10 rounded-lg bg-purple-500/10 flex items-center justify-center mb-3">
                       <feature.icon className="w-5 h-5 text-purple-400" />
                     </div>
                     <h3 className="font-semibold text-white mb-1">{feature.title}</h3>
                     <p className="text-sm text-gray-400">{feature.desc}</p>
-                  </Card>
+                  </FeatureCard>
                 </motion.div>
               ))}
             </div>
 
-            {/* Agency Card */}
+            {/* Agency Card - Premium */}
             <motion.div
               initial={{ opacity: 0, x: 20 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
             >
-              <div className="relative">
-                <div className="absolute inset-0 bg-gradient-to-r from-purple-500/20 to-pink-500/20 rounded-3xl blur-3xl" />
-                <Card variant="featured" className="relative p-8">
+              <PremiumCard variant="purple" showSparkles={true} showHolographic={true} rounded="3xl">
+                <div className="p-8">
                   <div className="flex items-center gap-4 mb-6">
-                    <div className="w-16 h-16 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                    <motion.div
+                      className="w-16 h-16 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-lg shadow-purple-500/30"
+                      animate={{ boxShadow: ["0 0 20px rgba(168,85,247,0.3)", "0 0 40px rgba(168,85,247,0.5)", "0 0 20px rgba(168,85,247,0.3)"] }}
+                      transition={{ duration: 2, repeat: Infinity }}
+                    >
                       <Building2 className="w-8 h-8 text-white" />
-                    </div>
+                    </motion.div>
                     <div>
                       <h3 className="text-xl font-bold text-white">{t("home.agencyAccount")}</h3>
                       <p className="text-gray-400">{t("home.manageCreators")}</p>
@@ -582,9 +641,13 @@ export default function HomePage() {
                       t("home.realtimeAnalytics"),
                     ].map((benefit, i) => (
                       <div key={i} className="flex items-center gap-3">
-                        <div className="w-5 h-5 rounded-full bg-purple-500/20 flex items-center justify-center">
+                        <motion.div
+                          className="w-5 h-5 rounded-full bg-purple-500/20 flex items-center justify-center"
+                          animate={{ scale: [1, 1.1, 1] }}
+                          transition={{ duration: 2, repeat: Infinity, delay: i * 0.2 }}
+                        >
                           <Check className="w-3 h-3 text-purple-400" />
-                        </div>
+                        </motion.div>
                         <span className="text-gray-300 text-sm">{benefit}</span>
                       </div>
                     ))}
@@ -596,8 +659,8 @@ export default function HomePage() {
                       <ArrowRight className="w-5 h-5" />
                     </Button>
                   </Link>
-                </Card>
-              </div>
+                </div>
+              </PremiumCard>
             </motion.div>
           </div>
         </div>

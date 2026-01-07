@@ -20,6 +20,32 @@ export async function GET(
 
     const currentUserId = session.user.id;
     const { id: conversationId } = await params;
+
+    // Check if user is blocked by the creator
+    const conversation = await prisma.conversation.findUnique({
+      where: { id: conversationId },
+      select: { creatorSlug: true },
+    });
+
+    if (conversation?.creatorSlug) {
+      const memberRecord = await prisma.creatorMember.findUnique({
+        where: {
+          creatorSlug_userId: {
+            creatorSlug: conversation.creatorSlug,
+            userId: currentUserId,
+          },
+        },
+        select: { isBlocked: true },
+      });
+
+      if (memberRecord?.isBlocked) {
+        return NextResponse.json(
+          { error: "You have been blocked by this creator" },
+          { status: 403 }
+        );
+      }
+    }
+
     const { searchParams } = new URL(request.url);
     const limit = parseInt(searchParams.get("limit") || "50");
     const cursor = searchParams.get("cursor");
@@ -248,6 +274,26 @@ export async function POST(
         { error: "Conversation not found" },
         { status: 404 }
       );
+    }
+
+    // Check if user is blocked by the creator (only for non-creators sending messages)
+    if (conversation.creatorSlug) {
+      const memberRecord = await prisma.creatorMember.findUnique({
+        where: {
+          creatorSlug_userId: {
+            creatorSlug: conversation.creatorSlug,
+            userId: actualSenderId,
+          },
+        },
+        select: { isBlocked: true },
+      });
+
+      if (memberRecord?.isBlocked) {
+        return NextResponse.json(
+          { error: "You have been blocked by this creator" },
+          { status: 403 }
+        );
+      }
     }
 
     // Find receiver - for self-conversations, receiver is same as sender

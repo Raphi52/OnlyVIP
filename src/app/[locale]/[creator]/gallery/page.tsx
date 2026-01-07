@@ -29,11 +29,13 @@ import {
   Filter,
   ChevronDown,
   Coins,
+  Star,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCurrency } from "@/components/providers/CurrencyProvider";
 import { CryptoPaymentModal } from "@/components/payments";
 import { MediaUnlockModal } from "@/components/media/MediaUnlockModal";
+import { MediaFeedViewer, type MediaItem as FeedMediaItem } from "@/components/media/MediaFeedViewer";
 
 const categories = [
   { id: "All", label: "All", icon: Sparkles },
@@ -88,7 +90,7 @@ export default function GalleryPage() {
 
   const [activeCategory, setActiveCategory] = useState(initialCategory);
   const [isGridView, setIsGridView] = useState(true);
-  const [selectedMedia, setSelectedMedia] = useState<string | null>(null);
+  const [feedViewerState, setFeedViewerState] = useState<{ isOpen: boolean; initialIndex: number } | null>(null);
   const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [purchasedIds, setPurchasedIds] = useState<Set<string>>(new Set());
@@ -104,6 +106,8 @@ export default function GalleryPage() {
   const [userCredits, setUserCredits] = useState(0);
   const [isVIP, setIsVIP] = useState(false);
   const [showUnlockModal, setShowUnlockModal] = useState<MediaItem | null>(null);
+  const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
+  const [togglingFavorite, setTogglingFavorite] = useState<string | null>(null);
   const { formatPrice } = useCurrency();
 
   const tierOrder = ["FREE", "BASIC", "VIP"];
@@ -162,12 +166,68 @@ export default function GalleryPage() {
           );
           setPurchasedIds(ids);
         }
+
+        // Fetch favorites
+        const favRes = await fetch("/api/user/favorites");
+        if (favRes.ok) {
+          const favData = await favRes.json();
+          setFavoriteIds(new Set(favData.favoriteIds || []));
+        }
       } catch (error) {
         console.error("Error fetching user access:", error);
       }
     };
     fetchUserAccess();
   }, [session?.user?.id]);
+
+  // Toggle favorite
+  const toggleFavorite = async (e: React.MouseEvent, mediaId: string) => {
+    e.stopPropagation();
+    if (!session?.user) {
+      router.push(`/${creatorSlug}/auth/login?callbackUrl=/${creatorSlug}/gallery`);
+      return;
+    }
+
+    setTogglingFavorite(mediaId);
+    try {
+      const res = await fetch("/api/user/favorites", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mediaId }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.isFavorite) {
+          setFavoriteIds((prev) => new Set([...prev, mediaId]));
+        } else {
+          setFavoriteIds((prev) => {
+            const newSet = new Set(prev);
+            newSet.delete(mediaId);
+            return newSet;
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Error toggling favorite:", error);
+    } finally {
+      setTogglingFavorite(null);
+    }
+  };
+
+  // Track view when media is opened
+  const trackView = async (mediaId: string) => {
+    try {
+      await fetch("/api/media/view", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mediaId }),
+      });
+    } catch (error) {
+      // Silent fail - don't block the user experience
+      console.error("Error tracking view:", error);
+    }
+  };
 
   useEffect(() => {
     const fetchMedia = async () => {
@@ -449,16 +509,14 @@ export default function GalleryPage() {
                       transition={{ delay: index * 0.03 }}
                       className="group cursor-pointer relative overflow-visible"
                       onClick={() => {
-                        // If PPV and not purchased, show unlock modal
-                        if (needsCreditsToUnlock(item)) {
-                          if (!session?.user) {
-                            router.push(`/${creatorSlug}/auth/login?callbackUrl=/${creatorSlug}/gallery`);
-                            return;
-                          }
-                          setShowUnlockModal(item);
-                        } else {
-                          setSelectedMedia(item.id);
+                        // Open feed viewer at this index
+                        if (!session?.user && needsCreditsToUnlock(item)) {
+                          router.push(`/${creatorSlug}/auth/login?callbackUrl=/${creatorSlug}/gallery`);
+                          return;
                         }
+                        // Track the view
+                        trackView(item.id);
+                        setFeedViewerState({ isOpen: true, initialIndex: index });
                       }}
                       onMouseEnter={() => setHoveredItem(item.id)}
                       onMouseLeave={() => setHoveredItem(null)}
@@ -546,6 +604,7 @@ export default function GalleryPage() {
                             )}
                             draggable={false}
                             onContextMenu={(e) => e.preventDefault()}
+                            unoptimized
                           />
                         ) : (
                           <div className="w-full h-full bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center">
@@ -604,8 +663,29 @@ export default function GalleryPage() {
                           )}
                         </div>
 
-                        {/* Status badge - Top Right */}
-                        <div className="absolute top-3 right-3 z-10">
+                        {/* Status badge & Favorite - Top Right */}
+                        <div className="absolute top-3 right-3 z-10 flex items-center gap-2">
+                          {/* Favorite button */}
+                          <button
+                            onClick={(e) => toggleFavorite(e, item.id)}
+                            disabled={togglingFavorite === item.id}
+                            className={cn(
+                              "w-9 h-9 rounded-full flex items-center justify-center transition-all",
+                              favoriteIds.has(item.id)
+                                ? "bg-[var(--gold)] text-black shadow-lg shadow-[var(--gold)]/30"
+                                : "bg-black/60 backdrop-blur-sm border border-white/20 text-white hover:bg-[var(--gold)]/80 hover:text-black hover:border-transparent",
+                              togglingFavorite === item.id && "opacity-50"
+                            )}
+                          >
+                            <Star
+                              className={cn(
+                                "w-4 h-4 transition-transform",
+                                favoriteIds.has(item.id) && "fill-current",
+                                togglingFavorite === item.id && "animate-pulse"
+                              )}
+                            />
+                          </button>
+                          {/* Status badge */}
                           {isPurchased ? (
                             <div className="w-9 h-9 rounded-full bg-emerald-500 flex items-center justify-center shadow-lg">
                               <Check className="w-5 h-5 text-white" />
@@ -708,201 +788,25 @@ export default function GalleryPage() {
         </section>
       </main>
 
-      {/* Lightbox Modal */}
-      <AnimatePresence>
-        {selectedMedia && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 backdrop-blur-xl"
-            onClick={() => setSelectedMedia(null)}
-          >
-            {/* Close button */}
-            <motion.button
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="absolute top-6 right-6 p-3 rounded-full bg-white/10 hover:bg-white/20 transition-colors z-20"
-              onClick={() => setSelectedMedia(null)}
-            >
-              <X className="w-6 h-6 text-white" />
-            </motion.button>
-
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              onClick={(e) => e.stopPropagation()}
-              className="max-w-5xl w-full mx-4"
-            >
-              {(() => {
-                const item = mediaItems.find((m) => m.id === selectedMedia);
-                if (!item) return null;
-
-                const canAccess = hasAccessToMedia(item);
-                const isPurchased = purchasedIds.has(item.id);
-                const canBuy = item.isPurchaseable && item.price && !canAccess;
-
-                return (
-                  <div className="bg-[#111] rounded-3xl overflow-hidden border border-white/10 shadow-2xl">
-                    <div
-                      className="relative aspect-video select-none"
-                      onContextMenu={(e) => e.preventDefault()}
-                    >
-                      {item.thumbnailUrl ? (
-                        <NextImage
-                          src={item.thumbnailUrl}
-                          alt={item.title}
-                          fill
-                          sizes="(max-width: 1024px) 100vw, 80vw"
-                          className={cn(
-                            "object-cover pointer-events-none select-none transition-all duration-500",
-                            !canAccess && "blur-[10px] hover:blur-[3px] scale-[1.02]"
-                          )}
-                          draggable={false}
-                          onContextMenu={(e) => e.preventDefault()}
-                        />
-                      ) : (
-                        <div className="w-full h-full bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center">
-                          <ImageIcon className="w-20 h-20 text-gray-600" />
-                        </div>
-                      )}
-
-                      {/* Locked overlay */}
-                      {!canAccess && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-                          <motion.div
-                            initial={{ scale: 0.9, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            className="text-center px-6"
-                          >
-                            <motion.div
-                              className="w-24 h-24 rounded-full bg-gradient-to-r from-[var(--gold)] to-[var(--gold-light)] flex items-center justify-center mx-auto mb-6 shadow-xl shadow-[var(--gold)]/30"
-                              animate={{ scale: [1, 1.05, 1] }}
-                              transition={{ duration: 2, repeat: Infinity }}
-                            >
-                              <Lock className="w-10 h-10 text-black" />
-                            </motion.div>
-                            <h3 className="text-3xl font-bold text-white mb-2">
-                              {item.accessTier === "VIP" ? "VIP Content" : "Premium Content"}
-                            </h3>
-                            <p className="text-gray-400 mb-8 max-w-md mx-auto">
-                              {canBuy
-                                ? "Purchase this content for one-time access"
-                                : "Subscribe to unlock this exclusive content"}
-                            </p>
-                            {canBuy ? (
-                              <Button
-                                variant="premium"
-                                size="lg"
-                                className="gap-2 px-8"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handlePurchase(item.id);
-                                }}
-                                disabled={isPurchasing === item.id}
-                              >
-                                {isPurchasing === item.id ? (
-                                  <>
-                                    <Loader2 className="w-5 h-5 animate-spin" />
-                                    Processing...
-                                  </>
-                                ) : (
-                                  <>
-                                    <ShoppingBag className="w-5 h-5" />
-                                    Buy for {formatPrice(item.price!)}
-                                  </>
-                                )}
-                              </Button>
-                            ) : (
-                              <Button
-                                variant="premium"
-                                size="lg"
-                                className="gap-2 px-8"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  router.push(`/${creatorSlug}/membership`);
-                                }}
-                              >
-                                <Crown className="w-5 h-5" />
-                                Subscribe Now
-                              </Button>
-                            )}
-                          </motion.div>
-                        </div>
-                      )}
-
-                      {/* Purchased badge */}
-                      {isPurchased && (
-                        <div className="absolute top-4 right-4">
-                          <Badge className="bg-emerald-500 text-white border-0 px-4 py-2">
-                            <Check className="w-4 h-4 mr-1" />
-                            Purchased
-                          </Badge>
-                        </div>
-                      )}
-
-                      {/* Play button for accessible videos */}
-                      {canAccess && item.type === "VIDEO" && (
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <motion.button
-                            className="w-20 h-20 rounded-full bg-[var(--gold)] flex items-center justify-center shadow-xl shadow-[var(--gold)]/30"
-                            whileHover={{ scale: 1.1 }}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              window.open(item.contentUrl, "_blank");
-                            }}
-                          >
-                            <Play className="w-8 h-8 text-black ml-1" fill="currentColor" />
-                          </motion.button>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Content info */}
-                    <div className="p-6 border-t border-white/10">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h2 className="text-2xl font-bold text-white mb-2">
-                            {item.title}
-                          </h2>
-                          <div className="flex items-center gap-2">
-                            <Badge variant={item.type === "VIDEO" ? "video" : "photo"}>
-                              {item.type}
-                            </Badge>
-                            <Badge variant={tierVariants[item.accessTier] || "default"}>
-                              {item.accessTier === "VIP" && <Crown className="w-3 h-3 mr-1" />}
-                              {item.accessTier}
-                            </Badge>
-                            {item.duration && (
-                              <Badge variant="duration">
-                                {formatDuration(item.duration)}
-                              </Badge>
-                            )}
-                          </div>
-                        </div>
-                        {canAccess && item.contentUrl && (
-                          <Button
-                            variant="premium"
-                            className="gap-2"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              window.open(item.contentUrl, "_blank");
-                            }}
-                          >
-                            <Eye className="w-4 h-4" />
-                            View Full
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })()}
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Media Feed Viewer */}
+      {feedViewerState?.isOpen && (
+        <MediaFeedViewer
+          mediaItems={filteredMedia.map(item => ({
+            ...item,
+            contentUrl: item.contentUrl || null,
+            hasPurchased: purchasedIds.has(item.id),
+            hasAccess: hasAccessToMedia(item),
+            isFavorited: favoriteIds.has(item.id),
+          }))}
+          initialIndex={feedViewerState.initialIndex}
+          onClose={() => setFeedViewerState(null)}
+          creatorSlug={creatorSlug}
+          userCredits={userCredits}
+          isVIP={isVIP}
+          onCreditsUpdate={(newBalance) => setUserCredits(newBalance)}
+          onPurchased={(mediaId) => setPurchasedIds(prev => new Set([...prev, mediaId]))}
+        />
+      )}
 
       {/* Payment Method Choice Modal */}
       <AnimatePresence>

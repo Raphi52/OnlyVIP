@@ -242,20 +242,6 @@ export async function GET(request: NextRequest) {
                 aiMediaFrequency: true,
                 aiPPVRatio: true,
                 aiTeasingEnabled: true,
-                // Deep character fields
-                background: true,
-                coreTraits: true,
-                flaws: true,
-                quirks: true,
-                innerVoice: true,
-                writingStyle: true,
-                boundaries: true,
-                responseRules: true,
-                exampleGoodMessages: true,
-                exampleBadMessages: true,
-                customInstructions: true,
-                characterAge: true,
-                primaryLanguage: true,
               },
             },
           },
@@ -314,20 +300,6 @@ export async function GET(request: NextRequest) {
                     aiMediaFrequency: true,
                     aiPPVRatio: true,
                     aiTeasingEnabled: true,
-                    // Deep character fields
-                    background: true,
-                    coreTraits: true,
-                    flaws: true,
-                    quirks: true,
-                    innerVoice: true,
-                    writingStyle: true,
-                    boundaries: true,
-                    responseRules: true,
-                    exampleGoodMessages: true,
-                    exampleBadMessages: true,
-                    customInstructions: true,
-                    characterAge: true,
-                    primaryLanguage: true,
                   },
                 },
               },
@@ -401,20 +373,6 @@ export async function GET(request: NextRequest) {
                     aiMediaFrequency: true,
                     aiPPVRatio: true,
                     aiTeasingEnabled: true,
-                    // Deep character fields
-                    background: true,
-                    coreTraits: true,
-                    flaws: true,
-                    quirks: true,
-                    innerVoice: true,
-                    writingStyle: true,
-                    boundaries: true,
-                    responseRules: true,
-                    exampleGoodMessages: true,
-                    exampleBadMessages: true,
-                    customInstructions: true,
-                    characterAge: true,
-                    primaryLanguage: true,
                   },
                 },
               },
@@ -464,20 +422,6 @@ export async function GET(request: NextRequest) {
                   aiMediaFrequency: true,
                   aiPPVRatio: true,
                   aiTeasingEnabled: true,
-                  // Deep character fields
-                  background: true,
-                  coreTraits: true,
-                  flaws: true,
-                  quirks: true,
-                  innerVoice: true,
-                  writingStyle: true,
-                  boundaries: true,
-                  responseRules: true,
-                  exampleGoodMessages: true,
-                  exampleBadMessages: true,
-                  customInstructions: true,
-                  characterAge: true,
-                  primaryLanguage: true,
                 },
               },
             },
@@ -509,26 +453,8 @@ export async function GET(request: NextRequest) {
         const personality = parsePersonality(conversation.aiPersonality?.personality || null);
         console.log(`[AI] Using personality: ${conversation.aiPersonality?.name || "default"}`);
 
-        // Build deep character data from personality
-        const deepCharacter = conversation.aiPersonality ? {
-          background: conversation.aiPersonality.background,
-          coreTraits: conversation.aiPersonality.coreTraits,
-          flaws: conversation.aiPersonality.flaws,
-          quirks: conversation.aiPersonality.quirks,
-          innerVoice: conversation.aiPersonality.innerVoice,
-          writingStyle: conversation.aiPersonality.writingStyle,
-          boundaries: conversation.aiPersonality.boundaries,
-          responseRules: conversation.aiPersonality.responseRules,
-          exampleGoodMessages: conversation.aiPersonality.exampleGoodMessages,
-          exampleBadMessages: conversation.aiPersonality.exampleBadMessages,
-          customInstructions: conversation.aiPersonality.customInstructions,
-          characterAge: conversation.aiPersonality.characterAge,
-          primaryLanguage: conversation.aiPersonality.primaryLanguage,
-        } : undefined;
-
-        if (deepCharacter?.background) {
-          console.log(`[AI] Deep character loaded: ${deepCharacter.background.substring(0, 50)}...`);
-        }
+        // Deep character data (placeholder for future use)
+        const deepCharacter = undefined;
 
         // Build AI media settings from personality (with fallback defaults)
         const aiPersonality = conversation.aiPersonality;

@@ -489,6 +489,27 @@ export const MessageBubble = memo(function MessageBubble({
                       </div>
                     </div>
                   </div>
+                ) : item.type === "AUDIO" ? (
+                  /* Audio Player */
+                  <div className="relative w-full min-w-[200px] p-4 bg-gradient-to-br from-purple-900/50 to-indigo-900/50 rounded-2xl">
+                    <div className="flex items-center gap-3">
+                      {/* Audio icon */}
+                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center flex-shrink-0">
+                        <Volume2 className="w-6 h-6 text-white" />
+                      </div>
+                      {/* Audio controls */}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-white/80 font-medium truncate mb-2">Audio message</p>
+                        <audio
+                          src={item.url}
+                          controls
+                          className="w-full h-8 [&::-webkit-media-controls-panel]:bg-white/10 [&::-webkit-media-controls-current-time-display]:text-white [&::-webkit-media-controls-time-remaining-display]:text-white"
+                          controlsList="nodownload"
+                          onContextMenu={(e) => e.preventDefault()}
+                        />
+                      </div>
+                    </div>
+                  </div>
                 ) : (
                   /* Photo */
                   <>

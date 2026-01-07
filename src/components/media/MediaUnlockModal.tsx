@@ -218,6 +218,7 @@ export function MediaUnlockModal({
                       className="object-cover blur-sm scale-[1.02] pointer-events-none select-none"
                       draggable={false}
                       onContextMenu={(e) => e.preventDefault()}
+                      unoptimized
                     />
                     <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
                       <motion.div

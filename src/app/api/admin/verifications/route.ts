@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { unlink, rm } from "fs/promises";
 import path from "path";
+import { sendSystemMessage, SYSTEM_MESSAGES } from "@/lib/system-messages";
 
 // GET - List all pending verifications (admin only)
 export async function GET() {
@@ -74,7 +75,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get the verification
+    // Get the verification with creator info
     const verification = await prisma.creatorVerification.findUnique({
       where: { id: verificationId },
     });
@@ -85,6 +86,12 @@ export async function POST(request: NextRequest) {
         { status: 404 }
       );
     }
+
+    // Get the creator to find the userId
+    const creator = await prisma.creator.findUnique({
+      where: { id: verification.creatorId },
+      select: { userId: true, displayName: true, name: true },
+    });
 
     // Delete uploaded files (GDPR compliance)
     const deleteFiles = async () => {
@@ -130,6 +137,21 @@ export async function POST(request: NextRequest) {
       // Delete files after approval
       await deleteFiles();
 
+      // Send system message to creator
+      if (creator?.userId) {
+        try {
+          const creatorName = creator.displayName || creator.name || "Créateur";
+          await sendSystemMessage({
+            userId: creator.userId,
+            text: SYSTEM_MESSAGES.VERIFICATION_APPROVED(creatorName),
+            messageType: "VERIFICATION_APPROVED",
+          });
+        } catch (msgError) {
+          console.error("Failed to send verification approval message:", msgError);
+          // Don't fail the whole operation if message fails
+        }
+      }
+
       return NextResponse.json({
         success: true,
         message: "Verification approved. Documents have been permanently deleted.",
@@ -159,6 +181,20 @@ export async function POST(request: NextRequest) {
 
       // Delete files after rejection too
       await deleteFiles();
+
+      // Send system message to creator
+      if (creator?.userId) {
+        try {
+          await sendSystemMessage({
+            userId: creator.userId,
+            text: SYSTEM_MESSAGES.VERIFICATION_REJECTED(rejectionReason),
+            messageType: "VERIFICATION_REJECTED",
+          });
+        } catch (msgError) {
+          console.error("Failed to send verification rejection message:", msgError);
+          // Don't fail the whole operation if message fails
+        }
+      }
 
       return NextResponse.json({
         success: true,

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 
-// GET /api/user/library - Get user's purchased and subscription content
+// GET /api/user/library - Get user's purchased and favorite content
 export async function GET(request: NextRequest) {
   try {
     const session = await auth();
@@ -12,25 +12,20 @@ export async function GET(request: NextRequest) {
 
     const userId = session.user.id;
     const { searchParams } = new URL(request.url);
-    const tab = searchParams.get("tab") || "all"; // all, purchased, subscription
+    const tab = searchParams.get("tab") || "all"; // all, purchased, favorites
     const search = searchParams.get("search") || "";
 
-    // Get user's subscription
-    const subscription = await prisma.subscription.findFirst({
-      where: {
-        userId,
-        status: "ACTIVE",
-      },
-      include: {
-        plan: true,
-      },
-    });
+    // Build search filter
+    const searchFilter = search
+      ? {
+          title: {
+            contains: search,
+            mode: "insensitive" as const,
+          },
+        }
+      : {};
 
-    const userTier = subscription?.plan?.accessTier || "FREE";
-    const tierOrder = ["FREE", "BASIC", "VIP"];
-    const userTierIndex = tierOrder.indexOf(userTier);
-
-    // Get purchased media IDs
+    // Get purchased media
     const purchases = await prisma.mediaPurchase.findMany({
       where: {
         userId,
@@ -43,18 +38,20 @@ export async function GET(request: NextRequest) {
     });
     const purchasedIds = new Set(purchases.map((p) => p.mediaId));
 
-    let purchasedContent: any[] = [];
-    let subscriptionContent: any[] = [];
+    // Get favorite media
+    const favorites = await prisma.userFavorite.findMany({
+      where: {
+        userId,
+      },
+      select: {
+        mediaId: true,
+        createdAt: true,
+      },
+    });
+    const favoriteIds = new Set(favorites.map((f) => f.mediaId));
 
-    // Build search filter
-    const searchFilter = search
-      ? {
-          title: {
-            contains: search,
-            mode: "insensitive" as const,
-          },
-        }
-      : {};
+    let purchasedContent: any[] = [];
+    let favoritesContent: any[] = [];
 
     // Get purchased content
     if (tab === "all" || tab === "purchased") {
@@ -80,58 +77,48 @@ export async function GET(request: NextRequest) {
           accessTier: media.accessTier,
           purchasedAt: purchases.find((p) => p.mediaId === media.id)?.createdAt,
           source: "purchased",
+          isFavorite: favoriteIds.has(media.id),
         }));
       }
     }
 
-    // Get subscription-accessible content
-    if (tab === "all" || tab === "subscription") {
-      if (userTierIndex >= 0) {
-        // Get content accessible by subscription tier (excluding already purchased)
-        const accessibleTiers = tierOrder.slice(0, userTierIndex + 1);
-
-        const subMedia = await prisma.mediaContent.findMany({
+    // Get favorites content
+    if (tab === "all" || tab === "favorites") {
+      if (favorites.length > 0) {
+        const favoriteMedia = await prisma.mediaContent.findMany({
           where: {
-            accessTier: {
-              in: accessibleTiers as any,
-            },
             id: {
-              notIn: Array.from(purchasedIds),
+              in: Array.from(favoriteIds),
             },
             ...searchFilter,
           },
           orderBy: {
             createdAt: "desc",
           },
-          take: 50,
         });
 
-        subscriptionContent = subMedia.map((media) => ({
+        favoritesContent = favoriteMedia.map((media) => ({
           id: media.id,
           title: media.title,
           type: media.type.toLowerCase(),
           thumbnail: media.thumbnailUrl || "/placeholder.jpg",
           contentUrl: media.contentUrl,
           accessTier: media.accessTier,
-          source: "subscription",
+          favoritedAt: favorites.find((f) => f.mediaId === media.id)?.createdAt,
+          source: "favorites",
+          isFavorite: true,
+          isPurchased: purchasedIds.has(media.id),
         }));
       }
     }
 
     return NextResponse.json({
       purchasedContent,
-      subscriptionContent,
-      subscription: subscription
-        ? {
-            planName: subscription.plan.name,
-            accessTier: subscription.plan.accessTier,
-            canMessage: subscription.plan.canMessage,
-          }
-        : null,
+      favoritesContent,
       stats: {
         purchasedCount: purchasedContent.length,
-        subscriptionCount: subscriptionContent.length,
-        totalAccessible: purchasedContent.length + subscriptionContent.length,
+        favoritesCount: favoritesContent.length,
+        totalAccessible: purchasedContent.length + favoritesContent.length,
       },
     });
   } catch (error) {

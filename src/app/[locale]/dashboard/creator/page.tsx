@@ -191,7 +191,7 @@ export default function CreatorDashboard() {
   ];
 
   return (
-    <div className="p-4 pt-20 pb-24 sm:p-6 sm:pt-20 lg:p-8 lg:pt-8">
+    <div className="p-4 pt-20 pb-24 sm:p-6 sm:pt-20 lg:p-8 lg:pt-8 overflow-x-hidden">
       {/* Creator Selector (if multiple) */}
       {creators.length > 1 && (
         <motion.div

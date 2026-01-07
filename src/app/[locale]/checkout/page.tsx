@@ -110,18 +110,26 @@ function CheckoutContent() {
     qrCodeUrl?: string;
   } | null>(null);
 
-  // Get plan from URL
+  // Get plan and creator from URL
   const planId = searchParams.get("plan") as PlanKey;
   const interval = searchParams.get("interval") || "monthly";
+  const creatorSlug = searchParams.get("creator");
   const plan = planId ? plans[planId] : null;
+
+  // Redirect to creators page if no creator specified
+  useEffect(() => {
+    if (!creatorSlug) {
+      router.push("/creators");
+    }
+  }, [creatorSlug, router]);
 
   // Redirect to login if not authenticated
   useEffect(() => {
     if (status === "unauthenticated") {
-      const callbackUrl = encodeURIComponent(`/checkout?plan=${planId}&interval=${interval}`);
+      const callbackUrl = encodeURIComponent(`/checkout?plan=${planId}&interval=${interval}&creator=${creatorSlug}`);
       router.push(`/auth/login?callbackUrl=${callbackUrl}`);
     }
-  }, [status, router, planId, interval]);
+  }, [status, router, planId, interval, creatorSlug]);
 
   const price = plan ? (interval === "annual" ? plan.annualPrice : plan.monthlyPrice) : 0;
 
@@ -141,7 +149,7 @@ function CheckoutContent() {
             planId: plan.id.toUpperCase(),
             billingInterval: interval === "annual" ? "ANNUAL" : "MONTHLY",
             currency: selectedCrypto || "btc",
-            creatorSlug: "miacosta", // Default creator for generic checkout
+            creatorSlug: creatorSlug || ""
           }),
         });
 
@@ -169,7 +177,7 @@ function CheckoutContent() {
             planId: plan.id.toUpperCase(),
             billingInterval: interval === "annual" ? "ANNUAL" : "MONTHLY",
             amount: price,
-            creatorSlug: "miacosta", // Default creator for generic checkout
+            creatorSlug: creatorSlug || ""
           }),
         });
 
