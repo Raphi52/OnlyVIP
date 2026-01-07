@@ -7,7 +7,7 @@ import {
   X,
   ChevronUp,
   ChevronDown,
-  Heart,
+  Star,
   Play,
   Pause,
   Volume2,
@@ -256,7 +256,7 @@ export function MediaFeedViewer({
       const price = item.ppvPriceCredits || 0;
       if (userCredits < price) {
         // Redirect to buy credits
-        window.location.href = `/${creatorSlug}/credits`;
+        window.location.href = "/credits";
         return;
       }
 
@@ -331,8 +331,8 @@ export function MediaFeedViewer({
         </div>
 
         {/* Position indicator */}
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-full bg-black/60 backdrop-blur-sm border border-white/10">
-          <span className="text-white text-sm font-medium">
+        <div className="absolute bottom-3 landscape:bottom-1 left-1/2 -translate-x-1/2 z-50 px-3 py-1.5 landscape:px-2 landscape:py-1 rounded-full bg-black/60 backdrop-blur-sm border border-white/10">
+          <span className="text-white text-sm landscape:text-xs font-medium">
             {activeIndex + 1} / {mediaItems.length}
           </span>
         </div>
@@ -340,7 +340,7 @@ export function MediaFeedViewer({
         {/* Scroll container */}
         <div
           ref={containerRef}
-          className="h-full w-full overflow-y-scroll snap-y snap-mandatory scrollbar-hide"
+          className="h-[100dvh] w-full overflow-y-scroll snap-y snap-mandatory scrollbar-hide"
           onClick={(e) => e.stopPropagation()}
           style={{ scrollSnapType: "y mandatory" }}
         >
@@ -352,13 +352,13 @@ export function MediaFeedViewer({
               <div
                 key={item.id}
                 ref={(el) => { slideRefs.current[index] = el; }}
-                className="h-full w-full flex items-center justify-center snap-start snap-always"
+                className="h-[100dvh] w-full flex items-center justify-center snap-start snap-always"
                 style={{ scrollSnapAlign: "start", scrollSnapStop: "always" }}
               >
                 <div className="relative w-full h-full max-w-4xl mx-auto flex flex-col">
                   {/* Media container */}
-                  <div className="flex-1 relative flex items-center justify-center p-4 md:p-8">
-                    <div className="relative w-full h-full max-h-[70vh] rounded-2xl overflow-hidden bg-black/50 border border-white/10">
+                  <div className="flex-1 relative flex items-center justify-center p-2 landscape:p-2 md:p-8">
+                    <div className="relative w-full h-full max-h-[65dvh] landscape:max-h-[75dvh] rounded-2xl overflow-hidden bg-black/50 border border-white/10">
                       {/* Image or Video */}
                       {item.type === "VIDEO" && hasAccess && item.contentUrl ? (
                         <video
@@ -475,48 +475,48 @@ export function MediaFeedViewer({
                   </div>
 
                   {/* Bottom overlay - info and controls */}
-                  <div className="absolute bottom-16 left-0 right-0 p-4 md:p-8">
-                    <div className="max-w-4xl mx-auto bg-gradient-to-t from-black/80 via-black/60 to-transparent rounded-2xl p-4 md:p-6">
+                  <div className="absolute bottom-14 landscape:bottom-1 left-0 right-0 p-2 md:p-8">
+                    <div className="max-w-4xl mx-auto bg-gradient-to-t from-black/80 via-black/60 to-transparent rounded-2xl p-3 landscape:p-2 md:p-6">
                       {/* Badges */}
-                      <div className="flex flex-wrap gap-2 mb-3">
+                      <div className="flex flex-wrap gap-1.5 mb-2 landscape:mb-1">
                         {item.tagFree && (
-                          <Badge className="bg-green-500 text-white border-0">
+                          <Badge className="bg-green-500 text-white border-0 text-xs landscape:text-[10px] landscape:px-1.5 landscape:py-0.5">
                             FREE
                           </Badge>
                         )}
                         {item.tagVIP && (
-                          <Badge className="bg-gradient-to-r from-[var(--gold)] to-yellow-500 text-black border-0">
-                            <Crown className="w-3 h-3 mr-1" />
+                          <Badge className="bg-gradient-to-r from-[var(--gold)] to-yellow-500 text-black border-0 text-xs landscape:text-[10px] landscape:px-1.5 landscape:py-0.5">
+                            <Crown className="w-3 h-3 landscape:w-2.5 landscape:h-2.5 mr-1" />
                             VIP
                           </Badge>
                         )}
                         {item.tagPPV && (
-                          <Badge className="bg-purple-500 text-white border-0">
-                            <Coins className="w-3 h-3 mr-1" />
+                          <Badge className="bg-purple-500 text-white border-0 text-xs landscape:text-[10px] landscape:px-1.5 landscape:py-0.5">
+                            <Coins className="w-3 h-3 landscape:w-2.5 landscape:h-2.5 mr-1" />
                             {item.ppvPriceCredits || 0}
                           </Badge>
                         )}
                         {item.type === "VIDEO" && item.duration && (
-                          <Badge variant="duration">
+                          <Badge variant="duration" className="text-xs landscape:text-[10px] landscape:px-1.5 landscape:py-0.5">
                             {formatDuration(item.duration)}
                           </Badge>
                         )}
                       </div>
 
                       {/* Title */}
-                      <h2 className="text-xl md:text-2xl font-bold text-white mb-2">
+                      <h2 className="text-lg landscape:text-sm md:text-2xl font-bold text-white mb-1 landscape:mb-0.5 line-clamp-1">
                         {item.title}
                       </h2>
 
-                      {/* Description */}
+                      {/* Description - hidden in landscape */}
                       {item.description && (
-                        <p className="text-gray-300 text-sm md:text-base mb-4 line-clamp-2">
+                        <p className="text-gray-300 text-sm md:text-base mb-3 line-clamp-2 landscape:hidden">
                           {item.description}
                         </p>
                       )}
 
                       {/* Controls row */}
-                      <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-3 landscape:gap-2">
                         {/* Favorite button */}
                         <button
                           onClick={(e) => {
@@ -525,10 +525,10 @@ export function MediaFeedViewer({
                           }}
                           className="flex items-center gap-2 text-white hover:text-[var(--gold)] transition-colors"
                         >
-                          <Heart
+                          <Star
                             className={cn(
-                              "w-6 h-6 transition-all",
-                              isFavorited && "fill-red-500 text-red-500"
+                              "w-6 h-6 landscape:w-5 landscape:h-5 transition-all",
+                              isFavorited && "fill-yellow-500 text-yellow-500"
                             )}
                           />
                         </button>
@@ -545,9 +545,9 @@ export function MediaFeedViewer({
                               className="text-white hover:text-[var(--gold)] transition-colors"
                             >
                               {isPlaying ? (
-                                <Pause className="w-6 h-6" />
+                                <Pause className="w-6 h-6 landscape:w-5 landscape:h-5" />
                               ) : (
-                                <Play className="w-6 h-6" />
+                                <Play className="w-6 h-6 landscape:w-5 landscape:h-5" />
                               )}
                             </button>
 
@@ -560,19 +560,19 @@ export function MediaFeedViewer({
                               className="text-white hover:text-[var(--gold)] transition-colors"
                             >
                               {isMuted ? (
-                                <VolumeX className="w-6 h-6" />
+                                <VolumeX className="w-6 h-6 landscape:w-5 landscape:h-5" />
                               ) : (
-                                <Volume2 className="w-6 h-6" />
+                                <Volume2 className="w-6 h-6 landscape:w-5 landscape:h-5" />
                               )}
                             </button>
 
                             {/* Progress bar */}
-                            <div className="flex-1 flex items-center gap-3">
-                              <span className="text-xs text-gray-400 min-w-[40px]">
+                            <div className="flex-1 flex items-center gap-2 landscape:gap-1">
+                              <span className="text-xs landscape:text-[10px] text-gray-400 min-w-[32px] landscape:min-w-[28px]">
                                 {formatDuration(videoProgress)}
                               </span>
                               <div
-                                className="flex-1 h-1.5 bg-white/20 rounded-full cursor-pointer overflow-hidden"
+                                className="flex-1 h-1.5 landscape:h-1 bg-white/20 rounded-full cursor-pointer overflow-hidden"
                                 onClick={handleProgressClick}
                               >
                                 <div
@@ -582,7 +582,7 @@ export function MediaFeedViewer({
                                   }}
                                 />
                               </div>
-                              <span className="text-xs text-gray-400 min-w-[40px]">
+                              <span className="text-xs landscape:text-[10px] text-gray-400 min-w-[32px] landscape:min-w-[28px]">
                                 {formatDuration(videoDuration)}
                               </span>
                             </div>

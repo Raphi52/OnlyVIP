@@ -87,7 +87,7 @@ interface AiPersona {
   createdAt: string;
 }
 
-type AiProvider = "anthropic" | "openai" | "openrouter";
+type AiProvider = "openai" | "openrouter";
 
 interface AiModel {
   id: string;
@@ -100,15 +100,6 @@ interface AiModel {
 // ==================== CONSTANTS ====================
 
 const AI_PROVIDERS: Record<AiProvider, { name: string; models: AiModel[]; keyPlaceholder: string }> = {
-  anthropic: {
-    name: "Anthropic (Claude)",
-    models: [
-      { id: "claude-haiku-4-5-20251001", name: "Claude 4.5 Haiku", tier: "fast", credits: 1, default: true },
-      { id: "claude-sonnet-4-5-20250929", name: "Claude 4.5 Sonnet", tier: "balanced", credits: 2 },
-      { id: "claude-opus-4-5-20251101", name: "Claude 4.5 Opus", tier: "premium", credits: 3 },
-    ],
-    keyPlaceholder: "sk-ant-api03-...",
-  },
   openai: {
     name: "OpenAI (GPT)",
     models: [
@@ -121,10 +112,12 @@ const AI_PROVIDERS: Record<AiProvider, { name: string; models: AiModel[]; keyPla
   openrouter: {
     name: "OpenRouter",
     models: [
-      { id: "mistralai/mistral-7b-instruct", name: "Mistral 7B (Free)", tier: "free", default: true },
-      { id: "meta-llama/llama-3.1-70b-instruct", name: "Llama 3.1 70B", tier: "fast" },
-      { id: "anthropic/claude-3.5-sonnet", name: "Claude 3.5 Sonnet", tier: "balanced" },
-      { id: "openai/gpt-4o", name: "GPT-4o", tier: "balanced" },
+      { id: "mistralai/mistral-small-creative", name: "Mistral Small Creative (Roleplay)", tier: "fast", default: true },
+      { id: "nousresearch/hermes-3-llama-3.1-405b:free", name: "Hermes 3 405B (Free)", tier: "free" },
+      { id: "neversleep/llama-3.1-lumimaid-8b", name: "Lumimaid 8B (Roleplay)", tier: "fast" },
+      { id: "gryphe/mythomax-l2-13b", name: "MythoMax 13B (Classic)", tier: "fast" },
+      { id: "venice/uncensored:free", name: "Venice Uncensored (Free)", tier: "free" },
+      { id: "meta-llama/llama-3.1-70b-instruct", name: "Llama 3.1 70B", tier: "balanced" },
     ],
     keyPlaceholder: "sk-or-v1-...",
   },
@@ -253,8 +246,8 @@ export default function CreatorAiPage() {
 
   // Global Settings
   const [responseDelay, setResponseDelay] = useState(120);
-  const [aiProvider, setAiProvider] = useState<AiProvider>("anthropic");
-  const [aiModel, setAiModel] = useState("claude-haiku-4-5-20251001");
+  const [aiProvider, setAiProvider] = useState<AiProvider>("openrouter");
+  const [aiModel, setAiModel] = useState("mistralai/mistral-small-creative");
   const [aiUseCustomKey, setAiUseCustomKey] = useState(false);
   const [aiApiKey, setAiApiKey] = useState("");
   const [aiApiKeyHash, setAiApiKeyHash] = useState<string | null>(null);
@@ -332,9 +325,9 @@ export default function CreatorAiPage() {
       const res = await fetch(`/api/creators/${selectedCreator.slug}`);
       if (res.ok) {
         const data = await res.json();
-        setResponseDelay(data.aiResponseDelay || 120);
-        setAiProvider((data.aiProvider as AiProvider) || "anthropic");
-        setAiModel(data.aiModel || "claude-haiku-4-5-20241022");
+        setResponseDelay(data.aiResponseDelay ?? 120);
+        setAiProvider((data.aiProvider as AiProvider) || "openrouter");
+        setAiModel(data.aiModel || "mistralai/mistral-small-creative");
         setAiUseCustomKey(data.aiUseCustomKey || false);
         setAiApiKeyHash(data.aiApiKeyHash || null);
         setAiMediaEnabled(data.aiMediaEnabled ?? true);
@@ -882,19 +875,35 @@ export default function CreatorAiPage() {
               <h3 className="font-semibold text-white">Response Delay</h3>
             </div>
             <p className="text-sm text-gray-400 mb-4">Average time before AI responds (varies for realism)</p>
-            <div className="flex items-center gap-4">
-              <input
-                type="range"
-                min="30"
-                max="600"
-                step="30"
-                value={responseDelay}
-                onChange={(e) => setResponseDelay(parseInt(e.target.value))}
-                className="flex-1 h-2 bg-gray-700 rounded-full appearance-none cursor-pointer accent-[var(--gold)]"
-              />
-              <span className="text-lg font-semibold text-white min-w-[80px] text-right">
-                {responseDelay < 60 ? `${responseDelay}s` : `${Math.floor(responseDelay / 60)}m ${responseDelay % 60}s`}
-              </span>
+            <div className="grid grid-cols-5 sm:grid-cols-7 md:grid-cols-9 gap-2">
+              {[
+                { value: 0, label: "0s" },
+                { value: 5, label: "5s" },
+                { value: 10, label: "10s" },
+                { value: 20, label: "20s" },
+                { value: 30, label: "30s" },
+                { value: 60, label: "1min" },
+                { value: 90, label: "1m30" },
+                { value: 120, label: "2min" },
+                { value: 150, label: "2m30" },
+                { value: 180, label: "3min" },
+                { value: 210, label: "3m30" },
+                { value: 240, label: "4min" },
+                { value: 270, label: "4m30" },
+                { value: 300, label: "5min" },
+              ].map((option) => (
+                <button
+                  key={option.value}
+                  onClick={() => setResponseDelay(option.value)}
+                  className={`px-2 py-2 rounded-lg text-sm font-medium transition-all ${
+                    responseDelay === option.value
+                      ? "bg-[var(--gold)] text-black"
+                      : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))}
             </div>
           </Card>
 

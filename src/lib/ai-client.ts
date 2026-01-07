@@ -35,10 +35,6 @@ export interface GenerateResult {
  */
 function getPlatformKey(provider: AiProvider): string {
   switch (provider) {
-    case "anthropic":
-      const anthropicKey = process.env.ANTHROPIC_API_KEY;
-      if (!anthropicKey) throw new Error("ANTHROPIC_API_KEY not configured");
-      return anthropicKey;
     case "openai":
       const openaiKey = process.env.OPENAI_API_KEY;
       if (!openaiKey) throw new Error("OPENAI_API_KEY not configured");
@@ -47,55 +43,9 @@ function getPlatformKey(provider: AiProvider): string {
       const openrouterKey = process.env.OPENROUTER_API_KEY;
       if (!openrouterKey) throw new Error("OPENROUTER_API_KEY not configured");
       return openrouterKey;
+    default:
+      throw new Error(`Unknown provider: ${provider}`);
   }
-}
-
-/**
- * Call Anthropic API
- */
-async function callAnthropic(
-  apiKey: string,
-  options: GenerateOptions
-): Promise<GenerateResult> {
-  const modelConfig = getModel("anthropic", options.model) || getDefaultModel("anthropic");
-
-  // Convert messages to Anthropic format (system is separate)
-  const anthropicMessages = options.messages
-    .filter((m) => m.role !== "system")
-    .map((m) => ({
-      role: m.role as "user" | "assistant",
-      content: m.content,
-    }));
-
-  const response = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01",
-    },
-    body: JSON.stringify({
-      model: options.model,
-      max_tokens: options.maxTokens || modelConfig.maxTokens,
-      temperature: options.temperature ?? 0.9,
-      system: options.systemPrompt,
-      messages: anthropicMessages,
-    }),
-  });
-
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`Anthropic API error: ${response.status} - ${error}`);
-  }
-
-  const data = await response.json();
-
-  return {
-    content: data.content[0]?.text || "",
-    provider: "anthropic",
-    model: options.model,
-    tokensUsed: data.usage?.output_tokens,
-  };
 }
 
 /**
@@ -212,8 +162,6 @@ export async function generateAiMessage(
 
   // Route to correct provider
   switch (options.provider) {
-    case "anthropic":
-      return callAnthropic(apiKey, options);
     case "openai":
       return callOpenAI(apiKey, options);
     case "openrouter":
@@ -237,33 +185,6 @@ export async function validateApiKey(
   try {
     // Make a minimal request to validate the key
     switch (provider) {
-      case "anthropic": {
-        const response = await fetch("https://api.anthropic.com/v1/messages", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-api-key": apiKey,
-            "anthropic-version": "2023-06-01",
-          },
-          body: JSON.stringify({
-            model: "claude-haiku-4-5-20241022",
-            max_tokens: 1,
-            messages: [{ role: "user", content: "hi" }],
-          }),
-        });
-
-        if (response.ok) {
-          return { valid: true };
-        }
-
-        const error = await response.json();
-        if (error.error?.type === "authentication_error") {
-          return { valid: false, error: "Invalid API key" };
-        }
-        // Other errors (rate limit, etc.) still mean key is valid
-        return { valid: true };
-      }
-
       case "openai": {
         const response = await fetch("https://api.openai.com/v1/models", {
           headers: { Authorization: `Bearer ${apiKey}` },
@@ -310,11 +231,11 @@ export async function validateApiKey(
  */
 export function hasPlatformKey(provider: AiProvider): boolean {
   switch (provider) {
-    case "anthropic":
-      return !!process.env.ANTHROPIC_API_KEY;
     case "openai":
       return !!process.env.OPENAI_API_KEY;
     case "openrouter":
       return !!process.env.OPENROUTER_API_KEY;
+    default:
+      return false;
   }
 }

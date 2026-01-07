@@ -44,7 +44,7 @@ export async function PATCH(request: NextRequest) {
 
     // AI Provider Settings
     if (aiProvider !== undefined) {
-      if (!["anthropic", "openai", "openrouter"].includes(aiProvider)) {
+      if (!["openai", "openrouter"].includes(aiProvider)) {
         return NextResponse.json({ error: "Invalid AI provider" }, { status: 400 });
       }
       updateData.aiProvider = aiProvider;
@@ -60,7 +60,7 @@ export async function PATCH(request: NextRequest) {
       updateData.aiUseCustomKey = false;
     } else if (aiApiKey !== undefined && aiApiKey !== "") {
       // Validate key format
-      const provider = (aiProvider || "anthropic") as AiProvider;
+      const provider = (aiProvider || "openrouter") as AiProvider;
       if (!validateKeyFormat(provider, aiApiKey)) {
         return NextResponse.json({ error: "Invalid API key format" }, { status: 400 });
       }

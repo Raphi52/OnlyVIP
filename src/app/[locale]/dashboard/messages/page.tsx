@@ -851,12 +851,12 @@ export default function MessagesPage() {
       <AnimatePresence>
         {(showLeftPanel || !selectedConversation) && (
           <motion.div
-            initial={{ width: 0, opacity: 0 }}
-            animate={{ width: "auto", opacity: 1 }}
-            exit={{ width: 0, opacity: 0 }}
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
             transition={{ duration: 0.2 }}
             className={cn(
-              "w-full lg:w-96 border-r border-white/5 flex flex-col bg-[#0a0a0a] overflow-hidden",
+              "w-full lg:w-96 lg:min-w-96 lg:max-w-96 border-r border-white/5 flex flex-col bg-[#0a0a0a] overflow-hidden flex-shrink-0",
               selectedConversation && "hidden lg:flex"
             )}
           >

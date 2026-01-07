@@ -4,7 +4,7 @@
  * Centralized configuration for all supported AI providers and models.
  */
 
-export type AiProvider = "anthropic" | "openai" | "openrouter";
+export type AiProvider = "openai" | "openrouter";
 
 export interface AiModel {
   id: string;
@@ -24,36 +24,6 @@ export interface AiProviderConfig {
 }
 
 export const AI_PROVIDERS: Record<AiProvider, AiProviderConfig> = {
-  anthropic: {
-    name: "Anthropic (Claude)",
-    models: [
-      {
-        id: "claude-haiku-4-5-20241022",
-        name: "Claude Haiku 4.5",
-        tier: "fast",
-        default: true,
-        maxTokens: 4096,
-        contextWindow: 200000,
-      },
-      {
-        id: "claude-sonnet-4-20250514",
-        name: "Claude Sonnet 4",
-        tier: "balanced",
-        maxTokens: 8192,
-        contextWindow: 200000,
-      },
-      {
-        id: "claude-opus-4-20250514",
-        name: "Claude Opus 4",
-        tier: "premium",
-        maxTokens: 8192,
-        contextWindow: 200000,
-      },
-    ],
-    keyPattern: /^sk-ant-[a-zA-Z0-9_-]+$/,
-    keyPlaceholder: "sk-ant-api03-...",
-    baseUrl: "https://api.anthropic.com",
-  },
   openai: {
     name: "OpenAI (GPT)",
     models: [
@@ -88,40 +58,54 @@ export const AI_PROVIDERS: Record<AiProvider, AiProviderConfig> = {
     name: "OpenRouter",
     models: [
       {
-        id: "mistralai/mistral-7b-instruct",
-        name: "Mistral 7B (Free)",
-        tier: "free",
+        id: "mistralai/mistral-small-creative",
+        name: "Mistral Small Creative (Roleplay)",
+        tier: "fast",
         default: true,
+        maxTokens: 4096,
+        contextWindow: 32000,
+      },
+      {
+        id: "nousresearch/hermes-3-llama-3.1-405b:free",
+        name: "Hermes 3 405B (Free)",
+        tier: "free",
+        maxTokens: 4096,
+        contextWindow: 128000,
+      },
+      {
+        id: "neversleep/llama-3.1-lumimaid-8b",
+        name: "Lumimaid 8B (Roleplay)",
+        tier: "fast",
+        maxTokens: 4096,
+        contextWindow: 128000,
+      },
+      {
+        id: "gryphe/mythomax-l2-13b",
+        name: "MythoMax 13B (Classic)",
+        tier: "fast",
+        maxTokens: 4096,
+        contextWindow: 4096,
+      },
+      {
+        id: "venice/uncensored:free",
+        name: "Venice Uncensored (Free)",
+        tier: "free",
         maxTokens: 4096,
         contextWindow: 32000,
       },
       {
         id: "meta-llama/llama-3.1-70b-instruct",
         name: "Llama 3.1 70B",
-        tier: "fast",
-        maxTokens: 4096,
-        contextWindow: 128000,
-      },
-      {
-        id: "anthropic/claude-3.5-sonnet",
-        name: "Claude 3.5 Sonnet",
         tier: "balanced",
         maxTokens: 4096,
-        contextWindow: 200000,
+        contextWindow: 128000,
       },
       {
         id: "openai/gpt-4o",
-        name: "GPT-4o",
-        tier: "balanced",
+        name: "GPT-4o (via OpenRouter)",
+        tier: "premium",
         maxTokens: 4096,
         contextWindow: 128000,
-      },
-      {
-        id: "google/gemini-pro-1.5",
-        name: "Gemini Pro 1.5",
-        tier: "balanced",
-        maxTokens: 8192,
-        contextWindow: 1000000,
       },
     ],
     keyPattern: /^sk-or-v1-[a-zA-Z0-9]+$/,

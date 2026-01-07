@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import NextImage from "next/image";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import { useTranslations } from "next-intl";
 import { motion, AnimatePresence } from "framer-motion";
@@ -92,8 +92,20 @@ export function Sidebar() {
   const { data: session } = useSession();
   const pathname = usePathname();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const t = useTranslations("dashboard");
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+
+  // Auto-open mobile menu if ?menu=open is in URL
+  useEffect(() => {
+    if (searchParams.get("menu") === "open") {
+      setIsMobileOpen(true);
+      // Remove the query param from URL without navigation
+      const url = new URL(window.location.href);
+      url.searchParams.delete("menu");
+      window.history.replaceState({}, "", url.toString());
+    }
+  }, [searchParams]);
   const unreadCount = useUnreadCountSimple(); // No polling - updates via Pusher
   const [pendingPayoutsCount, setPendingPayoutsCount] = useState(0);
   const [pendingApplicationsCount, setPendingApplicationsCount] = useState(0);

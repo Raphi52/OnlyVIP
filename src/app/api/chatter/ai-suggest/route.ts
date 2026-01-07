@@ -169,8 +169,8 @@ export async function POST(request: NextRequest) {
       (creator?.aiUseCustomKey && creator?.aiApiKey) ||
       (agency?.aiUseCustomKey && agency?.aiApiKey);
 
-    const provider = creator?.aiProvider || agency?.aiProvider || "anthropic";
-    const model = creator?.aiModel || agency?.aiModel || "claude-3-5-haiku-20241022";
+    const provider = creator?.aiProvider || agency?.aiProvider || "openrouter";
+    const model = creator?.aiModel || agency?.aiModel || "mistralai/mistral-small-creative";
     const apiKey = useCustomKey
       ? (creator?.aiApiKey || agency?.aiApiKey)
       : null;

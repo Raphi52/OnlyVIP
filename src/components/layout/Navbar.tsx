@@ -6,7 +6,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import { motion, AnimatePresence } from "framer-motion";
-import { User, LogOut, Crown, MessageCircle, Sparkles } from "lucide-react";
+import { User, LogOut, Crown, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui";
 import { getCreator, Creator } from "@/lib/creators";
 import { CreditBalance } from "@/components/layout/CreditBalance";
@@ -191,7 +191,7 @@ export function Navbar({ creatorSlug }: NavbarProps) {
   }, []);
 
   const navLinks = [
-    { href: `${basePath}/gallery`, label: t("gallery"), icon: Sparkles },
+    { href: `${basePath}/gallery`, label: t("gallery"), icon: Crown },
   ];
 
   return (
@@ -208,12 +208,12 @@ export function Navbar({ creatorSlug }: NavbarProps) {
       {/* Gold accent line at top */}
       <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-[var(--gold)]/50 to-transparent" />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-20">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 overflow-hidden">
+        <div className="flex items-center justify-between h-20 overflow-hidden">
           {/* Logo with avatar (creator pages) or brand logo (other pages) */}
-          <Link href={basePath}>
+          <Link href={isCreatorPage ? basePath : session ? `/${locale}/dashboard?menu=open` : basePath} className="min-w-0 flex-shrink overflow-hidden">
             <motion.div
-              className="flex items-center gap-3 px-3 py-2 -ml-3 rounded-2xl border border-transparent hover:border-[var(--gold)]/30 hover:bg-white/5 transition-all duration-300"
+              className="flex items-center gap-2 sm:gap-3 px-2 sm:px-3 py-2 -ml-2 sm:-ml-3 rounded-2xl border border-transparent hover:border-[var(--gold)]/30 hover:bg-white/5 transition-all duration-300"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               transition={{ type: "spring", stiffness: 400 }}
@@ -253,11 +253,44 @@ export function Navbar({ creatorSlug }: NavbarProps) {
                     </div>
                   </div>
                 </>
+              ) : session ? (
+                /* Logged in user on homepage - show avatar like creator page */
+                <>
+                  <div className="relative flex-shrink-0">
+                    <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-gradient-to-br from-[var(--gold)] to-yellow-600 p-[2px] relative overflow-hidden">
+                      {userCreatorAvatar || session.user?.image ? (
+                        <Image
+                          src={userCreatorAvatar || session.user?.image || ""}
+                          alt={userCreatorName || session.user?.name || "User"}
+                          fill
+                          sizes="44px"
+                          className="rounded-full object-cover"
+                          referrerPolicy="no-referrer"
+                          unoptimized
+                        />
+                      ) : (
+                        <div className="w-full h-full rounded-full bg-black/80 flex items-center justify-center">
+                          <User className="w-5 h-5 text-[var(--gold)]" />
+                        </div>
+                      )}
+                    </div>
+                    <span className="absolute bottom-0 right-0 w-2.5 h-2.5 sm:w-3 sm:h-3 bg-green-500 rounded-full border-2 border-black" />
+                  </div>
+                  <div className="hidden sm:block min-w-0 max-w-[120px] overflow-hidden">
+                    <span className="text-lg font-bold gradient-gold-text font-serif tracking-wide block truncate">
+                      {userCreatorName || session.user?.name?.split(" ")[0] || "VipOnly"}
+                    </span>
+                    <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                      <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
+                      {t("online")}
+                    </div>
+                  </div>
+                </>
               ) : (
-                /* Brand logo for non-creator pages */
+                /* Brand logo for non-logged in users */
                 <div className="flex items-center gap-2">
-                  <Crown className="w-8 h-8 text-[var(--gold)]" />
-                  <span className="text-xl font-bold gradient-gold-text font-serif tracking-wide">
+                  <Crown className="w-7 h-7 sm:w-8 sm:h-8 text-[var(--gold)] flex-shrink-0" />
+                  <span className="text-lg sm:text-xl font-bold gradient-gold-text font-serif tracking-wide">
                     VipOnly
                   </span>
                 </div>
@@ -433,7 +466,7 @@ export function Navbar({ creatorSlug }: NavbarProps) {
           </div>
 
           {/* Mobile: Credits + Send Message + User Menu */}
-          <div className="md:hidden flex items-center gap-2">
+          <div className="md:hidden flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
             {/* Mobile Credit Balance - Ultra compact */}
             {session && (
               <CreditBalance variant="compact" />

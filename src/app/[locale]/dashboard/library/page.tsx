@@ -185,7 +185,7 @@ export default function LibraryPage() {
             )}
           >
             <Package className="w-4 h-4" />
-            <span className="hidden xs:inline">Purchased</span> ({purchasedContent.length})
+            Purchased ({purchasedContent.length})
           </button>
           <button
             onClick={() => setActiveTab("favorites")}
@@ -197,7 +197,7 @@ export default function LibraryPage() {
             )}
           >
             <Star className="w-4 h-4" />
-            <span className="hidden xs:inline">Favorites</span> ({favoritesContent.length})
+            Favorites ({favoritesContent.length})
           </button>
         </div>
       </motion.div>

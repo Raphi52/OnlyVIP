@@ -533,8 +533,8 @@ export async function GET(request: NextRequest) {
           } else {
             // Fallback to normal AI response if objection handling fails
             responseText = await generateAiResponse(context, personality, suggestedMediaForAI, {
-              provider: (creator.aiProvider as AiProvider) || "anthropic",
-              model: creator.aiModel || "claude-haiku-4-5-20241022",
+              provider: (creator.aiProvider as AiProvider) || "openrouter",
+              model: creator.aiModel || "mistralai/mistral-small-creative",
               apiKey: creator.aiUseCustomKey ? creator.aiApiKey : null,
               deepCharacter,
             });
@@ -620,8 +620,8 @@ export async function GET(request: NextRequest) {
                 isAiOnlyFan: fanProfile?.aiOnlyMode || false,
                 scriptReference: scriptPrompt || undefined,
                 // Multi-provider AI settings
-                provider: (creator.aiProvider as AiProvider) || "anthropic",
-                model: creator.aiModel || "claude-haiku-4-5-20241022",
+                provider: (creator.aiProvider as AiProvider) || "openrouter",
+                model: creator.aiModel || "mistralai/mistral-small-creative",
                 apiKey: creator.aiUseCustomKey ? creator.aiApiKey : null,
                 // Deep character data
                 deepCharacter,

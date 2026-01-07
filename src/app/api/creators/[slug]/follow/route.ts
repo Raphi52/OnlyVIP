@@ -40,28 +40,52 @@ export async function POST(
       },
     });
 
-    const isNewFollow = !existingMember;
+    // Already following - return early without sending email
+    if (existingMember) {
+      return NextResponse.json({
+        success: true,
+        following: true,
+        member: existingMember,
+        alreadyFollowing: true,
+      });
+    }
 
-    // Create or update member record
-    const member = await prisma.creatorMember.upsert({
-      where: {
-        creatorSlug_userId: {
+    // New follow - create member record with race condition protection
+    let member;
+    let isNewFollow = false;
+    try {
+      member = await prisma.creatorMember.create({
+        data: {
           creatorSlug: slug,
           userId: session.user.id,
+          isVip: false,
+          isBlocked: false,
         },
-      },
-      update: {}, // Don't change anything if already following
-      create: {
-        creatorSlug: slug,
-        userId: session.user.id,
-        isVip: false,
-        isBlocked: false,
-      },
-    });
+      });
+      isNewFollow = true;
+    } catch (error: any) {
+      // Unique constraint violation - already following (race condition)
+      if (error?.code === "P2002") {
+        const existing = await prisma.creatorMember.findUnique({
+          where: {
+            creatorSlug_userId: {
+              creatorSlug: slug,
+              userId: session.user.id,
+            },
+          },
+        });
+        return NextResponse.json({
+          success: true,
+          following: true,
+          member: existing,
+          alreadyFollowing: true,
+        });
+      }
+      throw error;
+    }
 
-    // Send welcome email for new followers
+    // Send welcome email ONLY for genuinely new followers
     if (isNewFollow && session.user.email) {
-      // Send email in background (don't await)
       sendFollowWelcomeEmail(
         session.user.email,
         session.user.name || "",

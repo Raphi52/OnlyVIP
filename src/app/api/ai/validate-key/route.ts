@@ -28,9 +28,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate provider
-    if (!["anthropic", "openai", "openrouter"].includes(provider)) {
+    if (!["openai", "openrouter"].includes(provider)) {
       return NextResponse.json(
-        { error: "Invalid provider. Must be: anthropic, openai, or openrouter" },
+        { error: "Invalid provider. Must be: openai or openrouter" },
         { status: 400 }
       );
     }

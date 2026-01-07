@@ -106,8 +106,8 @@ export async function generateHumanResponse(params: GeneratorParams): Promise<Ge
     currentMessage,
     personalityId,
     language = "fr",
-    provider = "anthropic",
-    model = "claude-3-5-haiku-20241022",
+    provider = "openrouter",
+    model = "mistralai/mistral-small-creative",
     apiKey,
     agencyId
   } = params;
