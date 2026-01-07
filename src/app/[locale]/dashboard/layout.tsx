@@ -30,9 +30,9 @@ export default async function DashboardLayout({
 
   return (
     <AdminCreatorProvider>
-      <div className="flex min-h-screen bg-[var(--background)]">
+      <div className="flex min-h-screen bg-[var(--background)] max-w-[100vw] overflow-x-hidden">
         <Sidebar />
-        <main className="flex-1 lg:pl-0">
+        <main className="flex-1 lg:pl-0 min-w-0 overflow-x-hidden">
           {children}
         </main>
         <MessagesFAB />
