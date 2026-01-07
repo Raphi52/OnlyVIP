@@ -191,16 +191,16 @@ export default function CreatorDashboard() {
   ];
 
   return (
-    <div className="p-4 pt-20 pb-24 sm:p-6 sm:pt-20 lg:p-8 lg:pt-8 overflow-x-hidden">
+    <div className="p-4 pt-20 pb-24 sm:p-6 sm:pt-20 lg:p-8 lg:pt-8">
       {/* Creator Selector (if multiple) */}
       {creators.length > 1 && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-5"
+          className="mb-5 -mx-4 px-4 sm:mx-0 sm:px-0"
         >
           <p className="text-xs text-gray-500 mb-2">Select profile</p>
-          <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-hide">
+          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
             {creators.map((creator) => (
               <button
                 key={creator.id}
