@@ -518,14 +518,65 @@ export async function GET(request: NextRequest) {
 
         // ===== OBJECTION DETECTION =====
         // Check if fan is expressing objection (too expensive, maybe later, etc.)
-        const objectionResult = detectObjection(originalMessage.text || "");
+        const objectionResult = detectObjection(originalMessage.text || "", personality.language);
 
         let responseText: string | null = "";
+        let priceDiscountApplied = false;
+        let discountedPpvPrice: number | null = null;
 
-        if (objectionResult) {
-          console.log(`[AI] Objection detected: ${objectionResult.patternName} (${objectionResult.strategy})`);
+        if (objectionResult && objectionResult.strategy === "discount_offer") {
+          console.log(`[AI] Price objection detected: ${objectionResult.patternName}`);
 
-          // Handle objection with counter-offer
+          // Apply 20% discount directly to the PPV price
+          if (mediaDecision.type === "PPV" && mediaDecision.media?.ppvPriceCredits) {
+            const originalPrice = mediaDecision.media.ppvPriceCredits;
+            const discountPercent = 20;
+            discountedPpvPrice = Math.floor(originalPrice * (1 - discountPercent / 100));
+            priceDiscountApplied = true;
+
+            console.log(`[AI] Applying ${discountPercent}% discount: ${originalPrice} -> ${discountedPpvPrice} credits`);
+
+            // Update the media info for AI context
+            if (suggestedMediaForAI) {
+              suggestedMediaForAI.ppvPriceCredits = discountedPpvPrice;
+              suggestedMediaForAI.price = discountedPpvPrice / 100;
+            }
+          }
+
+          // Generate response with discount context
+          const discountResponses: Record<string, string[]> = {
+            fr: [
+              "Bon ok... juste parce que c'est toi 💋",
+              "Allez, comme tu me plais je te fais un prix 😘",
+              "Ok spécialement pour toi mon cœur 💕",
+              "Mmh d'accord, mais c'est bien parce que t'es mignon 😏",
+            ],
+            en: [
+              "Okay fine... just because it's you 💋",
+              "Alright, since I like you I'll give you a deal 😘",
+              "Ok specially for you babe 💕",
+              "Mmh alright, but only because you're cute 😏",
+            ],
+          };
+
+          const responses = discountResponses[personality.language] || discountResponses["en"];
+          responseText = responses[Math.floor(Math.random() * responses.length)];
+
+          // Record objection handling
+          await prisma.objectionHandling.create({
+            data: {
+              conversationId: queueItem.conversationId,
+              messageId: queueItem.messageId,
+              patternId: objectionResult.patternId,
+              strategy: objectionResult.strategy,
+              // No discount code - direct price reduction
+            },
+          });
+
+        } else if (objectionResult) {
+          // Other objection types (not price) - use original handling
+          console.log(`[AI] Non-price objection: ${objectionResult.patternName} (${objectionResult.strategy})`);
+
           const objectionResponse = await handleObjection(
             queueItem.conversationId,
             queueItem.messageId,
@@ -533,24 +584,20 @@ export async function GET(request: NextRequest) {
             {
               creatorSlug: queueItem.creatorSlug,
               fanUserId,
+              language: personality.language,
             }
           );
 
           if (objectionResponse) {
             responseText = objectionResponse.text;
-          } else {
-            // Fallback to normal AI response if objection handling fails
-            responseText = await generateAiResponse(context, personality, suggestedMediaForAI, {
-              provider: (creator.aiProvider as AiProvider) || "openrouter",
-              model: creator.aiModel || "mistralai/mistral-small-creative",
-              apiKey: creator.aiUseCustomKey ? creator.aiApiKey : null,
-              deepCharacter,
-            });
           }
-        } else if (mediaDecision.type === "TEASE" && mediaDecision.teaseText) {
-          // For teasing, generate a response that incorporates the tease
-          responseText = mediaDecision.teaseText;
-        } else {
+        }
+
+        if (!responseText) {
+          if (mediaDecision.type === "TEASE" && mediaDecision.teaseText) {
+            // For teasing, generate a response that incorporates the tease
+            responseText = mediaDecision.teaseText;
+          } else {
           // ===== GET FAN MEMORIES FOR PERSONALIZATION =====
           const memoriesPrompt = await formatMemoriesForPrompt(fanUserId, queueItem.creatorSlug);
           if (memoriesPrompt) {
@@ -680,9 +727,9 @@ export async function GET(request: NextRequest) {
 
         // Determine if this message should be PPV and the price
         const shouldBePPV = mediaDecision.type === "PPV" && mediaDecision.media !== null;
-        // ppvPrice is stored in credits (same as ppvPriceCredits from media library)
+        // ppvPrice is stored in credits - use discounted price if objection handling applied one
         const ppvPrice = shouldBePPV && mediaDecision.media?.ppvPriceCredits
-          ? mediaDecision.media.ppvPriceCredits
+          ? (priceDiscountApplied && discountedPpvPrice ? discountedPpvPrice : mediaDecision.media.ppvPriceCredits)
           : null;
 
         // ===== ASSISTED MODE: Create suggestion instead of sending =====
