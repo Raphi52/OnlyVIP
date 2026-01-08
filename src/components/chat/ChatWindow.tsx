@@ -320,17 +320,22 @@ export function ChatWindow({
   // Maintain scroll position after loading older messages
   useEffect(() => {
     const container = messagesContainerRef.current;
-    if (!container || !isLoadingMoreRef.current) return;
+    if (!container) return;
 
     // When loading finishes, adjust scroll position
-    if (!isLoadingMore && prevScrollHeightRef.current > 0) {
-      const newScrollHeight = container.scrollHeight;
-      const scrollDiff = newScrollHeight - prevScrollHeightRef.current;
-      container.scrollTop = scrollDiff;
+    if (!isLoadingMore && isLoadingMoreRef.current) {
+      if (prevScrollHeightRef.current > 0) {
+        const newScrollHeight = container.scrollHeight;
+        const scrollDiff = newScrollHeight - prevScrollHeightRef.current;
+        if (scrollDiff > 0) {
+          container.scrollTop = scrollDiff;
+        }
+      }
+      // Always reset refs when loading completes
       prevScrollHeightRef.current = 0;
       isLoadingMoreRef.current = false;
     }
-  }, [isLoadingMore, messages.length]);
+  }, [isLoadingMore]);
 
   // Group messages
   const groupedMessages = useMemo(
@@ -656,7 +661,8 @@ export function ChatWindow({
               ) : (
                 <span className="truncate">{otherUser.name}</span>
               )}
-              {isAdmin && (
+              {/* Show CREATOR badge only if the OTHER user is a creator (has a slug) */}
+              {otherUser.slug && (
                 <span className="px-1.5 sm:px-2 py-0.5 text-[9px] sm:text-[10px] font-bold rounded-full bg-gradient-to-r from-[var(--gold)] to-amber-600 text-black">
                   CREATOR
                 </span>

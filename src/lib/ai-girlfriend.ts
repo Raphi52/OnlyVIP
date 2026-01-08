@@ -448,7 +448,9 @@ export async function generateAiResponse(
       : suggestedMedia.price
         ? `$${suggestedMedia.price}`
         : "unlock with credits";
-    additionalContext += `\n[You have exclusive content "${suggestedMedia.title}" (${priceDisplay}) that might interest them. Tease about it naturally if appropriate.]`;
+    const mediaType = suggestedMedia.type === "PHOTO" ? "photo" : "video";
+    // Don't show technical title like "Post 123456" - just describe the content type
+    additionalContext += `\n[You have an exclusive ${mediaType} (${priceDisplay}) that might interest them. Tease about it naturally if appropriate. NEVER mention any code, ID, or technical reference in your message.]`;
   }
 
   // Build messages for the unified AI client

@@ -138,9 +138,9 @@ export async function GET(
     // Reverse to get chronological order (oldest first)
     const sortedMessages = paginatedMessages.reverse();
 
-    // Get the cursor for next "load older" request
+    // Get the cursor for next "load older" request - only if there are more messages
     const oldestMessage = sortedMessages[0];
-    const nextCursor = oldestMessage?.id || null;
+    const nextCursor = hasMore ? (oldestMessage?.id || null) : null;
 
     // Only mark messages as read if explicitly requested via query param
     // This prevents polling from marking messages as read

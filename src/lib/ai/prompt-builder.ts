@@ -222,10 +222,13 @@ function formatMediaForPrompt(media: MediaContext[]): string {
   lines.push("Tu peux mentionner ces medias naturellement si c'est pertinent:");
   lines.push("");
 
-  for (const m of media.slice(0, 3)) { // Max 3 media
+  for (let i = 0; i < Math.min(media.length, 3); i++) { // Max 3 media
+    const m = media[i];
     const priceInfo = m.isFree ? "(gratuit)" : `(${m.ppvPrice} credits)`;
+    const typeLabel = m.type === "PHOTO" ? "Photo" : "Video";
 
-    lines.push(`### ${m.type}: ${m.title} ${priceInfo}`);
+    // Don't show technical titles like "Post 123456" to the AI
+    lines.push(`### ${typeLabel} ${i + 1} ${priceInfo}`);
     if (m.description) {
       lines.push(`Description: ${m.description}`);
     }
@@ -241,7 +244,8 @@ function formatMediaForPrompt(media: MediaContext[]): string {
     lines.push("");
   }
 
-  lines.push("Note: Parle du media naturellement, comme si c'etait ton contenu personnel.");
+  lines.push("IMPORTANT: Ne mentionne JAMAIS de numero, code, ID ou titre technique dans ta reponse.");
+  lines.push("Parle du media naturellement, comme si c'etait ton contenu personnel.");
   lines.push("Ne dis pas 'voici mon PPV a X credits'. Intrigue, tease, fais desirer.");
 
   return lines.join("\n");
