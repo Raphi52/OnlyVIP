@@ -134,6 +134,15 @@ export default function CreditsPage() {
     return pkg.credits + (pkg.bonus || 0);
   };
 
+  // Card payment fee: 1% + 0.02€ (PayGate/Kryptonim fees)
+  const getCardFee = (price: number) => {
+    return Math.round((price * 0.01 + 0.02) * 100) / 100;
+  };
+
+  const getCardTotal = (price: number) => {
+    return Math.round((price + getCardFee(price)) * 100) / 100;
+  };
+
   if (status === "loading" || isLoading) {
     return (
       <>
@@ -818,8 +827,13 @@ export default function CreditsPage() {
                       <p className="text-sm text-gray-500">
                         Visa, Mastercard, Apple Pay
                       </p>
+                      <p className="text-xs text-gray-600 mt-1">
+                        +${getCardFee(selectedPackage.price).toFixed(2)} processing fee
+                      </p>
                     </div>
-                    <ArrowRight className="w-5 h-5 text-gray-500 group-hover:text-blue-400 transition-colors" />
+                    <div className="text-right">
+                      <span className="text-lg font-bold text-white">${getCardTotal(selectedPackage.price).toFixed(2)}</span>
+                    </div>
                   </motion.button>
 
                   <p className="text-xs text-center text-gray-500 pt-2">
@@ -857,7 +871,7 @@ export default function CreditsPage() {
             setShowPayGateModal(false);
             setSelectedPackage(null);
           }}
-          amount={selectedPackage.price}
+          amount={getCardTotal(selectedPackage.price)}
           credits={selectedPackage.credits}
           bonusCredits={selectedPackage.bonus}
         />
