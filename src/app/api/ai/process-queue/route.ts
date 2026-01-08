@@ -559,7 +559,8 @@ export async function GET(request: NextRequest) {
             ],
           };
 
-          const responses = discountResponses[personality.language] || discountResponses["en"];
+          const lang = personality.language || "en";
+          const responses = discountResponses[lang as keyof typeof discountResponses] || discountResponses["en"];
           responseText = responses[Math.floor(Math.random() * responses.length)];
 
           // Record objection handling
@@ -598,7 +599,7 @@ export async function GET(request: NextRequest) {
             // For teasing, generate a response that incorporates the tease
             responseText = mediaDecision.teaseText;
           } else {
-          // ===== GET FAN MEMORIES FOR PERSONALIZATION =====
+            // ===== GET FAN MEMORIES FOR PERSONALIZATION =====
           const memoriesPrompt = await formatMemoriesForPrompt(fanUserId, queueItem.creatorSlug);
           if (memoriesPrompt) {
             console.log(`[AI] Injecting fan memories: ${memoriesPrompt.substring(0, 100)}...`);
@@ -688,6 +689,7 @@ export async function GET(request: NextRequest) {
                 deepCharacter,
               }
             );
+          }
           }
         }
 

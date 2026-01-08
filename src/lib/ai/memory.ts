@@ -251,8 +251,7 @@ export async function getLongTermMemory(fanUserId: string, creatorSlug: string):
       activityLevel: true,
       preferredTone: true,
       personalNote: true,
-      relationshipStage: true,
-      sharedMoments: true,
+      spendingTier: true,
     }
   });
 
@@ -321,10 +320,16 @@ export async function getLongTermMemory(fanUserId: string, creatorSlug: string):
     .filter(m => m.category === "preference" && m.key.includes("content"))
     .map(m => m.value);
 
+  // Compute relationship stage from spending tier
+  const computedStage = fanProfile?.spendingTier === "whale" ? "vip"
+    : (fanProfile?.totalMessages || 0) > 20 ? "regular"
+    : (fanProfile?.totalMessages || 0) > 5 ? "getting_to_know"
+    : "new";
+
   return {
     fanFacts,
     personalNote: fanProfile?.personalNote || undefined,
-    relationshipStage: (fp?.relationshipStage as LongTermMemory["relationshipStage"]) || "new",
+    relationshipStage: computedStage as LongTermMemory["relationshipStage"],
     firstContact: fanProfile?.firstSeen || new Date(),
     totalMessages: fanProfile?.totalMessages || 0,
     totalSpent: fanProfile?.totalSpent || 0,
