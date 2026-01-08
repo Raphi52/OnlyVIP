@@ -35,6 +35,9 @@ export interface LongTermMemory {
     importantDates: Array<{ date: string; event: string }>;
   };
 
+  // Personal note - AI-generated rich summary of everything known about the fan
+  personalNote?: string;
+
   // Relationship tracking
   relationshipStage: "new" | "getting_to_know" | "regular" | "vip" | "cooling_off";
   firstContact: Date;
@@ -236,10 +239,20 @@ function findUnansweredQuestions(messages: Array<{ text: string | null; sender: 
  * Get long-term memory for a fan-creator relationship
  */
 export async function getLongTermMemory(fanUserId: string, creatorSlug: string): Promise<LongTermMemory> {
-  // Get fan profile
+  // Get fan profile with personal note
   const fanProfile = await prisma.fanProfile.findUnique({
     where: {
       fanUserId_creatorSlug: { fanUserId, creatorSlug }
+    },
+    select: {
+      firstSeen: true,
+      totalMessages: true,
+      totalSpent: true,
+      activityLevel: true,
+      preferredTone: true,
+      personalNote: true,
+      relationshipStage: true,
+      sharedMoments: true,
     }
   });
 
@@ -310,6 +323,7 @@ export async function getLongTermMemory(fanUserId: string, creatorSlug: string):
 
   return {
     fanFacts,
+    personalNote: fanProfile?.personalNote || undefined,
     relationshipStage: (fp?.relationshipStage as LongTermMemory["relationshipStage"]) || "new",
     firstContact: fanProfile?.firstSeen || new Date(),
     totalMessages: fanProfile?.totalMessages || 0,
@@ -412,6 +426,12 @@ export function formatLongTermForPrompt(memory: LongTermMemory): string {
 
   lines.push("## Ce que tu sais sur ce fan");
 
+  // Personal note - AI-generated rich summary (highest priority)
+  if (memory.personalNote) {
+    lines.push(`📝 Notes: ${memory.personalNote}`);
+    lines.push("");
+  }
+
   // Fan facts
   const facts: string[] = [];
   if (memory.fanFacts.name) facts.push(`Prenom: ${memory.fanFacts.name}`);
@@ -473,4 +493,179 @@ export function formatSummariesForPrompt(summaries: ConversationSummaryData[]): 
   }
 
   return lines.join("\n");
+}
+
+// ============= PERSONAL NOTE UPDATES =============
+
+/**
+ * Update personal note for a fan
+ * Called by AI after extracting facts from conversation
+ */
+export async function updatePersonalNote(
+  fanUserId: string,
+  creatorSlug: string,
+  newFacts: Array<{ key: string; value: string }>,
+  updatedBy: "ai" | string = "ai"
+): Promise<string | null> {
+  if (newFacts.length === 0) return null;
+
+  // Get current profile
+  const profile = await prisma.fanProfile.findUnique({
+    where: {
+      fanUserId_creatorSlug: { fanUserId, creatorSlug }
+    },
+    select: {
+      personalNote: true,
+    }
+  });
+
+  // Build updated note
+  const currentNote = profile?.personalNote || "";
+  const newInfo = newFacts.map(f => `${f.key}: ${f.value}`).join(", ");
+
+  // Append new info (keep it concise)
+  let updatedNote: string;
+  if (currentNote) {
+    // Check if we already have this info to avoid duplicates
+    const noteWords = currentNote.toLowerCase();
+    const trulyNewFacts = newFacts.filter(f =>
+      !noteWords.includes(f.value.toLowerCase())
+    );
+
+    if (trulyNewFacts.length === 0) return currentNote;
+
+    const newAdditions = trulyNewFacts.map(f => `${f.key}: ${f.value}`).join(", ");
+    updatedNote = `${currentNote} | ${newAdditions}`;
+  } else {
+    updatedNote = newInfo;
+  }
+
+  // Limit note length (max ~500 chars)
+  if (updatedNote.length > 500) {
+    updatedNote = updatedNote.substring(0, 497) + "...";
+  }
+
+  // Update in database
+  await prisma.fanProfile.upsert({
+    where: {
+      fanUserId_creatorSlug: { fanUserId, creatorSlug }
+    },
+    update: {
+      personalNote: updatedNote,
+      personalNoteUpdatedAt: new Date(),
+      personalNoteUpdatedBy: updatedBy,
+    },
+    create: {
+      fanUserId,
+      creatorSlug,
+      personalNote: updatedNote,
+      personalNoteUpdatedAt: new Date(),
+      personalNoteUpdatedBy: updatedBy,
+    }
+  });
+
+  console.log(`[Memory] Updated personal note for fan ${fanUserId}: "${newInfo}"`);
+  return updatedNote;
+}
+
+/**
+ * Generate personal note update from message
+ * Uses pattern matching to extract facts
+ */
+export function extractFactsFromMessage(message: string): Array<{ key: string; value: string }> {
+  const facts: Array<{ key: string; value: string }> = [];
+  const lower = message.toLowerCase();
+
+  // Name patterns (multiple languages)
+  const namePatterns = [
+    /(?:je m'appelle|i'm|my name is|moi c'est|je suis|call me)\s+([A-Z][a-z]+)/i,
+    /^([A-Z][a-z]+)\s+(?:ici|here)$/i,
+  ];
+  for (const pattern of namePatterns) {
+    const match = message.match(pattern);
+    if (match && match[1].length > 2 && match[1].length < 20) {
+      facts.push({ key: "prénom", value: match[1] });
+      break;
+    }
+  }
+
+  // Age patterns
+  const agePatterns = [
+    /(?:j'ai|i'm|i am|je suis)\s+(\d{2})\s*(?:ans|years|yo)/i,
+    /(\d{2})\s*(?:ans|years old)/i,
+  ];
+  for (const pattern of agePatterns) {
+    const match = message.match(pattern);
+    if (match) {
+      const age = parseInt(match[1]);
+      if (age >= 18 && age <= 99) {
+        facts.push({ key: "âge", value: `${age} ans` });
+        break;
+      }
+    }
+  }
+
+  // Job patterns
+  const jobPatterns = [
+    /(?:je suis|i'm a|i work as|je travaille comme)\s+(?:un|une|a)?\s*([a-zéèêëàâäùûüôöîïç]+(?:\s+[a-zéèêëàâäùûüôöîïç]+)?)/i,
+    /(?:mon boulot|my job|my work).*?(?:c'est|is)\s+([a-zéèêëàâäùûüôöîïç]+)/i,
+  ];
+  for (const pattern of jobPatterns) {
+    const match = message.match(pattern);
+    if (match && match[1].length > 3 && match[1].length < 30) {
+      // Exclude common false positives
+      const excluded = ["un", "une", "le", "la", "très", "super", "trop", "vraiment"];
+      if (!excluded.includes(match[1].toLowerCase())) {
+        facts.push({ key: "travail", value: match[1] });
+        break;
+      }
+    }
+  }
+
+  // Location patterns
+  const locationPatterns = [
+    /(?:je vis a|i live in|je suis de|i'm from|j'habite a|j'habite à)\s+([A-ZÀ-Ÿ][a-zà-ÿ]+(?:\s+[A-ZÀ-Ÿ][a-zà-ÿ]+)?)/i,
+    /(?:de|from)\s+([A-ZÀ-Ÿ][a-zà-ÿ]+)(?:\s|$|,)/i,
+  ];
+  for (const pattern of locationPatterns) {
+    const match = message.match(pattern);
+    if (match && match[1].length > 2 && match[1].length < 30) {
+      facts.push({ key: "ville", value: match[1] });
+      break;
+    }
+  }
+
+  // Interests/hobbies patterns
+  const interestPatterns = [
+    /(?:j'aime|j'adore|i love|i like|je kiffe)\s+(?:le|la|les|the)?\s*([a-zéèêëàâäùûüôöîïç]+(?:\s+[a-zéèêëàâäùûüôöîïç]+)?)/i,
+    /(?:ma passion|my passion|mon hobby)\s+(?:c'est|is)\s+(?:le|la|les|the)?\s*([a-zéèêëàâäùûüôöîïç]+)/i,
+  ];
+  for (const pattern of interestPatterns) {
+    const match = message.match(pattern);
+    if (match && match[1].length > 2) {
+      facts.push({ key: "aime", value: match[1] });
+      break;
+    }
+  }
+
+  // Relationship status
+  if (/célibataire|single|pas de copine|pas de copain|seul/i.test(lower)) {
+    facts.push({ key: "statut", value: "célibataire" });
+  } else if (/marié|married|en couple|girlfriend|boyfriend|copine|copain/i.test(lower)) {
+    facts.push({ key: "statut", value: "en couple" });
+  }
+
+  // Special dates
+  const birthdayPatterns = [
+    /(?:mon anniv|my birthday|née le|né le|born on)\s+(\d{1,2})\s*(janvier|février|mars|avril|mai|juin|juillet|août|septembre|octobre|novembre|décembre|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)/i,
+  ];
+  for (const pattern of birthdayPatterns) {
+    const match = message.match(pattern);
+    if (match) {
+      facts.push({ key: "anniversaire", value: `${match[1]} ${match[2]}` });
+      break;
+    }
+  }
+
+  return facts;
 }

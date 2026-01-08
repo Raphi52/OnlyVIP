@@ -20,6 +20,7 @@ import { shouldHandoff, createHandoff } from "@/lib/handoff-manager";
 import { detectObjection, handleObjection } from "@/lib/objection-handler";
 import { getLeadScore } from "@/lib/lead-scoring";
 import { formatMemoriesForPrompt, extractMemories } from "@/lib/memory-extractor";
+import { updatePersonalNote, extractFactsFromMessage } from "@/lib/ai/memory";
 import { isAiOnlyFan, updateFanQualification } from "@/lib/fan-qualifier";
 import { selectModel, type LLMContext } from "@/lib/llm-router";
 import { hasAiChatCredits, chargeAiChatCredit } from "@/lib/credits";
@@ -662,6 +663,15 @@ export async function GET(request: NextRequest) {
           queueItem.creatorSlug,
           { sourceMessageId: queueItem.messageId, useLLM: false } // Quick extraction only
         ).catch((err) => console.error("[AI] Memory extraction error:", err));
+
+        // ===== UPDATE PERSONAL NOTE FROM FAN MESSAGE (async, non-blocking) =====
+        // Extract facts like name, age, job, location and save to personal note
+        const extractedFacts = extractFactsFromMessage(originalMessage.text || "");
+        if (extractedFacts.length > 0) {
+          console.log(`[AI] Extracted ${extractedFacts.length} facts from fan message:`, extractedFacts);
+          updatePersonalNote(fanUserId, queueItem.creatorSlug, extractedFacts, "ai")
+            .catch((err) => console.error("[AI] Personal note update error:", err));
+        }
 
         // ===== UPDATE FAN QUALIFICATION (async, non-blocking) =====
         updateFanQualification(fanUserId, queueItem.creatorSlug).catch((err) =>
