@@ -591,14 +591,17 @@ export async function GET(request: NextRequest) {
                 console.log(`[AI] Script matched: "${matchedScript.script.name}" (${matchedScript.confidence.toFixed(2)} confidence, strategy: ${matchedScript.strategy})`);
 
                 // Build prompt based on strategy
-                if (matchedScript.strategy === "SCRIPT_ONLY" && matchedScript.confidence >= 0.85) {
-                  // Very high confidence - use script verbatim
+                // Note: Scripts are always in English, so we need AI for translation unless target is English
+                const needsTranslation = personality.language !== "en";
+
+                if (matchedScript.strategy === "SCRIPT_ONLY" && matchedScript.confidence >= 0.85 && !needsTranslation) {
+                  // Very high confidence AND target is English - use script verbatim
                   responseText = matchedScript.parsedContent;
-                  console.log(`[AI] Using script verbatim: "${responseText.substring(0, 50)}..."`);
+                  console.log(`[AI] Using script verbatim (English): "${responseText.substring(0, 50)}..."`);
                 } else {
-                  // Add script as reference for AI
-                  scriptPrompt = buildMatchedScriptPrompt(matchedScript);
-                  console.log(`[AI] Adding script reference to prompt`);
+                  // Need AI to translate/adapt script to target language
+                  scriptPrompt = buildMatchedScriptPrompt(matchedScript, personality.language);
+                  console.log(`[AI] Adding script reference to prompt (lang: ${personality.language}, translate: ${needsTranslation})`);
                 }
               }
               // Note: If matchedScript is null, no script reference is added

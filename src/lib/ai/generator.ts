@@ -335,8 +335,9 @@ export async function generateHumanResponse(params: GeneratorParams): Promise<Ge
   let systemPrompt = buildSystemPrompt(character, language);
 
   // Add matched script prompt if we have a high-confidence match
+  // Pass the target language so the AI knows to translate English scripts
   if (matchedScript && matchedScript.confidence >= 0.5) {
-    systemPrompt += buildMatchedScriptPrompt(matchedScript);
+    systemPrompt += buildMatchedScriptPrompt(matchedScript, language);
   }
 
   const userPrompt = buildUserPrompt({

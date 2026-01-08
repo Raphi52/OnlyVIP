@@ -113,12 +113,9 @@ export async function matchScript(
     ];
   }
 
-  // Filter by language
-  if (context.language) {
-    whereClause.language = {
-      in: [context.language, "any"],
-    };
-  }
+  // NOTE: Scripts are written in English only.
+  // The AI will translate/adapt to the persona's language during generation.
+  // No language filtering here - we match all scripts regardless of language.
 
   // Filter by creator (creator-specific or global)
   whereClause.OR = [
@@ -388,20 +385,31 @@ export function buildScriptReferencePrompt(reference: ScriptReference): string {
 
 /**
  * Build AI system prompt from matched script
+ * Scripts are always in English - AI must translate to target language
+ * @param matched - The matched script
+ * @param targetLanguage - The language to translate to (from persona)
  */
-export function buildMatchedScriptPrompt(matched: MatchedScript): string {
+export function buildMatchedScriptPrompt(matched: MatchedScript, targetLanguage: string = "en"): string {
   let prompt = "";
 
+  // Language instruction - scripts are in English, must translate
+  const needsTranslation = targetLanguage !== "en";
+  const translationNote = needsTranslation
+    ? `\n⚠️ IMPORTANT: This script is in English. You MUST translate/adapt it naturally to ${getLanguageName(targetLanguage)}.\n`
+    : "";
+
   if (matched.strategy === "SCRIPT_ONLY") {
-    // Use the script exactly as is
-    prompt = `\n\n## REQUIRED RESPONSE\nYou MUST use this exact message:\n"${matched.parsedContent}"\n`;
-    prompt += `Do not modify this message. Send it exactly as written.\n`;
+    // Translate but keep the exact meaning
+    prompt = `\n\n## REQUIRED RESPONSE\nUse this message (translate to your language if needed):\n"${matched.parsedContent}"\n`;
+    prompt += translationNote;
+    prompt += `Keep the EXACT meaning and structure, but express it naturally in your language.\n`;
   } else if (matched.strategy === "AI_PERSONALIZED_SCRIPT") {
     // Use the script as a base but allow personalization
-    prompt = `\n\n## SCRIPT BASE\nUse this script as your starting point:\n"${matched.parsedContent}"\n\n`;
+    prompt = `\n\n## SCRIPT BASE\nUse this script as your starting point:\n"${matched.parsedContent}"\n`;
+    prompt += translationNote;
 
     if (matched.script.preserveCore) {
-      prompt += `IMPORTANT: You must keep this part intact: "${matched.script.preserveCore}"\n`;
+      prompt += `IMPORTANT: You must keep this core message: "${matched.script.preserveCore}"\n`;
     }
 
     if (matched.script.aiInstructions) {
@@ -412,7 +420,8 @@ export function buildMatchedScriptPrompt(matched: MatchedScript): string {
   } else {
     // AI_WITH_HINTS - just provide guidance
     prompt = `\n\n## SUGGESTED APPROACH\n`;
-    prompt += `A proven script for this situation:\n"${matched.parsedContent}"\n\n`;
+    prompt += `A proven script for this situation:\n"${matched.parsedContent}"\n`;
+    prompt += translationNote;
     prompt += `Use this as inspiration but craft your own personalized response.\n`;
 
     if (matched.script.aiInstructions) {
@@ -425,6 +434,27 @@ export function buildMatchedScriptPrompt(matched: MatchedScript): string {
   }
 
   return prompt;
+}
+
+/**
+ * Get human-readable language name
+ */
+function getLanguageName(code: string): string {
+  const names: Record<string, string> = {
+    fr: "French",
+    en: "English",
+    es: "Spanish",
+    de: "German",
+    it: "Italian",
+    pt: "Portuguese",
+    ru: "Russian",
+    zh: "Chinese",
+    ja: "Japanese",
+    ko: "Korean",
+    ar: "Arabic",
+    hi: "Hindi",
+  };
+  return names[code] || code;
 }
 
 /**
