@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { spendCredits, getCreditBalances } from "@/lib/credits";
 import { recordEarningDistribution } from "@/lib/commission";
+import { validateDiscountCode, useDiscountCode, recordObjectionConversion } from "@/lib/objection-handler";
 
 // POST /api/messages/[id]/unlock - Unlock PPV message content using credits
 export async function POST(
@@ -17,6 +18,15 @@ export async function POST(
 
     const { id: messageId } = await params;
     const userId = session.user.id;
+
+    // Parse request body for optional discount code
+    let discountCode: string | undefined;
+    try {
+      const body = await request.json();
+      discountCode = body.discountCode;
+    } catch {
+      // No body or invalid JSON - that's fine, discount is optional
+    }
 
     // Get the message with media and source content
     const message = await prisma.message.findUnique({
@@ -86,7 +96,31 @@ export async function POST(
     }
 
     // ppvPrice is now in credits
-    const priceInCredits = message.ppvPrice;
+    let priceInCredits = message.ppvPrice;
+    let discountApplied = false;
+    let discountPercent = 0;
+
+    // Validate and apply discount code if provided
+    if (discountCode) {
+      const discountValidation = await validateDiscountCode(
+        discountCode,
+        message.conversation.creatorSlug,
+        userId
+      );
+
+      if (discountValidation.valid && discountValidation.discountPercent) {
+        discountPercent = discountValidation.discountPercent;
+        const discount = Math.floor(priceInCredits * (discountPercent / 100));
+        priceInCredits = priceInCredits - discount;
+        discountApplied = true;
+        console.log(`[PPV] Discount applied: ${discountPercent}% off, new price: ${priceInCredits} credits`);
+      } else if (!discountValidation.valid) {
+        return NextResponse.json(
+          { error: discountValidation.error || "Invalid discount code" },
+          { status: 400 }
+        );
+      }
+    }
 
     // Check PAID credit balance - PPV messages require paid credits only
     const balances = await getCreditBalances(userId);
@@ -101,8 +135,30 @@ export async function POST(
     const creditResult = await spendCredits(userId, priceInCredits, "PPV", {
       allowBonus: false, // Chat PPV messages = paid credits only
       messageId,
-      description: `PPV unlock for message`,
+      description: discountApplied
+        ? `PPV unlock with ${discountPercent}% discount`
+        : `PPV unlock for message`,
     });
+
+    // Mark discount code as used if applied
+    if (discountApplied && discountCode) {
+      await useDiscountCode(discountCode);
+
+      // Record conversion for objection tracking
+      const objectionHandling = await prisma.objectionHandling.findFirst({
+        where: {
+          discountCodeId: discountCode,
+          outcome: null,
+        },
+      });
+      if (objectionHandling) {
+        await recordObjectionConversion(
+          objectionHandling.id,
+          messageId,
+          priceInCredits
+        );
+      }
+    }
 
     // Parse current unlocked users
     const currentUnlockedBy: string[] = JSON.parse(message.ppvUnlockedBy || "[]");
@@ -163,6 +219,12 @@ export async function POST(
       unlocked: true,
       newBalance: creditResult.newBalance,
       media: unlockedMedia,
+      discount: discountApplied ? {
+        applied: true,
+        percent: discountPercent,
+        originalPrice: message.ppvPrice,
+        finalPrice: priceInCredits,
+      } : undefined,
     });
   } catch (error: any) {
     console.error("Error unlocking PPV:", error);
