@@ -95,6 +95,7 @@ interface ChatWindowProps {
   onSendTip: (messageId: string, amount: number) => void;
   onReact?: (messageId: string, emoji: string) => void;
   onMarkAsRead?: () => void;
+  onTyping?: (isTyping: boolean) => void;
   onAISuggest?: (lastUserMessage: string) => Promise<string>;
   onSearch?: (query: string) => Promise<SearchResult[]>;
   onBack?: () => void;
@@ -167,6 +168,7 @@ export function ChatWindow({
   onSendTip,
   onReact,
   onMarkAsRead,
+  onTyping,
   onAISuggest,
   onSearch,
   onBack,
@@ -290,6 +292,8 @@ export function ChatWindow({
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isTypingRef = useRef<boolean>(false);
 
   // Intersection observer
   const { ref: bottomRef, inView: isAtBottom } = useInView({ threshold: 0 });
@@ -418,6 +422,43 @@ export function ChatWindow({
     }
   }, [isAtBottom, messages, currentUserId, onMarkAsRead]);
 
+  // Handle typing indicator detection with debounce
+  const handleTypingIndicator = useCallback(() => {
+    if (!onTyping) return;
+
+    // If not currently marked as typing, send typing: true
+    if (!isTypingRef.current) {
+      isTypingRef.current = true;
+      onTyping(true);
+    }
+
+    // Clear existing timeout
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+
+    // Set timeout to stop typing after 2.5 seconds of inactivity
+    typingTimeoutRef.current = setTimeout(() => {
+      if (isTypingRef.current) {
+        isTypingRef.current = false;
+        onTyping(false);
+      }
+    }, 2500);
+  }, [onTyping]);
+
+  // Cleanup typing timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+      // Send typing: false on unmount if we were typing
+      if (isTypingRef.current && onTyping) {
+        onTyping(false);
+      }
+    };
+  }, [onTyping]);
+
   // Get last user message for AI
   const getLastUserMessage = useCallback(() => {
     const userMessages = messages.filter((m) => m.senderId === otherUser.id && m.text);
@@ -446,6 +487,15 @@ export function ChatWindow({
   const handleSend = () => {
     if (!newMessage.trim() && selectedFiles.length === 0) return;
     if (isSending) return;
+
+    // Stop typing indicator when sending
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+    if (isTypingRef.current && onTyping) {
+      isTypingRef.current = false;
+      onTyping(false);
+    }
 
     onSendMessage(
       newMessage,
@@ -1179,7 +1229,10 @@ export function ChatWindow({
             <textarea
               ref={textareaRef}
               value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
+              onChange={(e) => {
+                setNewMessage(e.target.value);
+                handleTypingIndicator();
+              }}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault();

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { triggerNewMessage } from "@/lib/pusher";
+import { triggerNewMessage, triggerTyping, triggerMessageRead } from "@/lib/pusher";
 import {
   generateAiResponse,
   parsePersonality,
@@ -771,6 +771,44 @@ export async function GET(request: NextRequest) {
         }
 
         // ===== AUTO MODE: Send message directly =====
+
+        // ===== SIMULATE REALISTIC HUMAN BEHAVIOR =====
+        // 1. Simulate reading the message (1-3 seconds)
+        const readDelay = 1000 + Math.random() * 2000;
+        await new Promise(resolve => setTimeout(resolve, readDelay));
+
+        // 2. Mark fan's message as "read" (double blue check)
+        await triggerMessageRead(queueItem.conversationId, creator.userId);
+        // Also mark in DB
+        await prisma.message.updateMany({
+          where: {
+            conversationId: queueItem.conversationId,
+            receiverId: creator.userId,
+            isRead: false,
+          },
+          data: { isRead: true, readAt: new Date() },
+        });
+
+        // 3. Simulate thinking before typing (1-3 seconds)
+        const thinkDelay = 1000 + Math.random() * 2000;
+        await new Promise(resolve => setTimeout(resolve, thinkDelay));
+
+        // 4. Show typing indicator
+        await triggerTyping(queueItem.conversationId, creator.userId, true);
+
+        // 5. Simulate typing time based on response length (2-6 seconds)
+        // Longer responses = more typing time
+        const baseTypingTime = 2000;
+        const charsPerSecond = 30; // ~30 chars per second typing speed
+        const typingTime = Math.min(
+          baseTypingTime + (responseText.length / charsPerSecond) * 1000,
+          6000 // Max 6 seconds
+        );
+        await new Promise(resolve => setTimeout(resolve, typingTime));
+
+        // 6. Stop typing indicator
+        await triggerTyping(queueItem.conversationId, creator.userId, false);
+
         // Calculate response time in seconds
         const responseTimeSeconds = Math.round(
           (Date.now() - new Date(originalMessage.createdAt).getTime()) / 1000

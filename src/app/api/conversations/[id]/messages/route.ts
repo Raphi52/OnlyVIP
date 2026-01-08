@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
-import { triggerNewMessage } from "@/lib/pusher";
+import { triggerNewMessage, triggerMessageRead } from "@/lib/pusher";
 import { scheduleAiResponse } from "@/lib/ai-girlfriend";
 
 // GET /api/conversations/[id]/messages - Get messages for a conversation
@@ -148,13 +148,13 @@ export async function GET(
 
     if (markAsRead) {
       // Mark all unread messages as read
-      await prisma.message.updateMany({
+      const updateResult = await prisma.message.updateMany({
         where: {
           conversationId,
           receiverId: currentUserId,
           isRead: false,
         },
-        data: { isRead: true },
+        data: { isRead: true, readAt: new Date() },
       });
 
       // Also update participant's lastReadAt for consistency
@@ -165,6 +165,11 @@ export async function GET(
         },
         data: { lastReadAt: new Date() },
       });
+
+      // If messages were marked as read, notify the sender via Pusher
+      if (updateResult.count > 0) {
+        await triggerMessageRead(conversationId, currentUserId);
+      }
     }
 
     // Security: Locked placeholder for PPV content - never expose real URLs

@@ -99,6 +99,9 @@ export default function MessagesPage() {
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [isLoadingMoreMessages, setIsLoadingMoreMessages] = useState(false);
 
+  // Typing indicator state
+  const [isOtherUserTyping, setIsOtherUserTyping] = useState(false);
+
   const userId = session?.user?.id;
   const isCreator = (session?.user as any)?.isCreator;
   const isAdmin = (session?.user as any)?.role === "ADMIN";
@@ -316,6 +319,7 @@ export default function MessagesPage() {
       setHasMoreMessages(false);
       setNextCursor(null);
       setMessages([]);
+      setIsOtherUserTyping(false); // Reset typing indicator
       fetchMessages(true); // markAsRead=true when user opens conversation
     }
   }, [selectedConversation, fetchMessages]);
@@ -339,6 +343,14 @@ export default function MessagesPage() {
           : msg
       )
     );
+  }, [userId]);
+
+  // Handle typing indicator from Pusher
+  const handleTyping = useCallback((data: { userId: string; isTyping: boolean }) => {
+    // Only show typing if it's not the current user
+    if (data.userId !== userId) {
+      setIsOtherUserTyping(data.isTyping);
+    }
   }, [userId]);
 
   // Handle marking messages as read (batch approach)
@@ -370,11 +382,28 @@ export default function MessagesPage() {
     }
   }, [selectedConversation, userId]);
 
+  // Handle sending typing indicator to the server
+  const handleSendTyping = useCallback(async (isTyping: boolean) => {
+    if (!selectedConversation) return;
+
+    try {
+      await fetch(`/api/conversations/${selectedConversation.id}/typing`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isTyping }),
+      });
+    } catch (error) {
+      // Silent fail - typing indicator is not critical
+      console.debug("Error sending typing indicator:", error);
+    }
+  }, [selectedConversation]);
+
   // Pusher real-time connection
   const { isConnected } = usePusherChat({
     conversationId: selectedConversation?.id || "",
     onNewMessage: handleNewMessage,
     onMessagesRead: handleMessagesRead,
+    onTyping: handleTyping,
   });
 
   // Fallback polling when Pusher is not connected (every 5 seconds)
@@ -1148,6 +1177,7 @@ export default function MessagesPage() {
               messages={transformedMessages}
               isAdmin={isCreator || !!selectedCreator}
               isMuted={selectedConversation.isMuted}
+              isTyping={isOtherUserTyping}
               hasMore={hasMoreMessages}
               isLoadingMore={isLoadingMoreMessages}
               onLoadMore={loadMoreMessages}
@@ -1156,6 +1186,7 @@ export default function MessagesPage() {
               onSendTip={handleSendTip}
               onReact={handleReact}
               onMarkAsRead={handleMarkAsRead}
+              onTyping={handleSendTyping}
               onAISuggest={(isCreator || selectedCreator) ? handleAISuggest : undefined}
               creatorSlug={selectedCreator?.slug || undefined}
               onSendPPVFromLibrary={selectedCreator?.slug ? handleSendPPVFromLibrary : undefined}
