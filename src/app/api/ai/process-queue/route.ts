@@ -680,8 +680,9 @@ export async function GET(request: NextRequest) {
 
         // Determine if this message should be PPV and the price
         const shouldBePPV = mediaDecision.type === "PPV" && mediaDecision.media !== null;
+        // ppvPrice is stored in credits (same as ppvPriceCredits from media library)
         const ppvPrice = shouldBePPV && mediaDecision.media?.ppvPriceCredits
-          ? mediaDecision.media.ppvPriceCredits / 100 // Convert credits to price
+          ? mediaDecision.media.ppvPriceCredits
           : null;
 
         // ===== ASSISTED MODE: Create suggestion instead of sending =====
