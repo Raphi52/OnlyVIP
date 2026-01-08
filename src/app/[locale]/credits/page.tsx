@@ -827,13 +827,8 @@ export default function CreditsPage() {
                       <p className="text-sm text-gray-500">
                         Visa, Mastercard, Apple Pay
                       </p>
-                      <p className="text-xs text-gray-600 mt-1">
-                        +${getCardFee(selectedPackage.price).toFixed(2)} processing fee
-                      </p>
                     </div>
-                    <div className="text-right">
-                      <span className="text-lg font-bold text-white">${getCardTotal(selectedPackage.price).toFixed(2)}</span>
-                    </div>
+                    <ArrowRight className="w-5 h-5 text-gray-500 group-hover:text-blue-400 transition-colors" />
                   </motion.button>
 
                   <p className="text-xs text-center text-gray-500 pt-2">
