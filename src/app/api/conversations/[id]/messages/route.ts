@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { triggerNewMessage, triggerMessageRead } from "@/lib/pusher";
 import { scheduleAiResponse } from "@/lib/ai-girlfriend";
+import { getCreatorPermissions } from "@/lib/agency-permissions";
 
 // GET /api/conversations/[id]/messages - Get messages for a conversation
 export async function GET(
@@ -323,6 +324,23 @@ export async function POST(
           { error: "You have been blocked by this creator" },
           { status: 403 }
         );
+      }
+
+      // Check if sender is agency-managed creator trying to send messages
+      // Only check if the sender owns the creator profile (not a fan sending to creator)
+      const creator = await prisma.creator.findUnique({
+        where: { slug: conversation.creatorSlug },
+        select: { userId: true, isAgencyManaged: true },
+      });
+
+      if (creator && creator.userId === actualSenderId && creator.isAgencyManaged) {
+        const permissions = await getCreatorPermissions(conversation.creatorSlug, actualSenderId);
+        if (!permissions.canSendMessages) {
+          return NextResponse.json(
+            { error: "Your profile is managed by an agency. Contact them to send messages." },
+            { status: 403 }
+          );
+        }
       }
     }
 

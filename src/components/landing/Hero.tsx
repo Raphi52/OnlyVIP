@@ -226,35 +226,61 @@ export function Hero({ creator }: HeroProps) {
                 )}
               </motion.p>
 
-              {/* CTA Buttons */}
+              {/* CTA Buttons - Ultra Premium Design */}
               <motion.div
                 initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8, delay: 0.6 }}
-                className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 mb-10"
+                className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center lg:justify-start gap-3 sm:gap-4 mb-10"
               >
-                <Link href={`${basePath}/membership`}>
-                  <Button
-                    variant="premium"
-                    size="lg"
-                    className="gap-3 text-lg px-8 py-6 shadow-2xl shadow-[var(--gold)]/30 hover:shadow-[var(--gold)]/50 transition-shadow relative overflow-hidden group whitespace-nowrap"
+                {/* Primary CTA - Join VIP */}
+                <Link href={`${basePath}/membership`} className="group">
+                  <motion.div
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="relative"
                   >
-                    <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
-                    <Crown className="w-5 h-5 flex-shrink-0" />
-                    <span className="flex-shrink-0">{tNav("joinVip")}</span>
-                  </Button>
+                    {/* Animated glow */}
+                    <div className="absolute -inset-1 bg-gradient-to-r from-[var(--gold)] via-amber-400 to-[var(--gold)] rounded-2xl opacity-70 blur-lg group-hover:opacity-100 transition-opacity duration-500 animate-pulse" />
+
+                    <div className="relative flex items-center justify-center gap-3 px-8 py-4 sm:py-5 rounded-xl bg-gradient-to-r from-[var(--gold)] via-amber-400 to-[var(--gold)] text-black font-bold text-base sm:text-lg shadow-2xl shadow-[var(--gold)]/40 overflow-hidden">
+                      {/* Shine effect */}
+                      <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
+                      {/* Sparkle particles */}
+                      <span className="absolute top-1 right-4 w-1 h-1 bg-white rounded-full opacity-0 group-hover:opacity-100 group-hover:animate-ping" />
+                      <span className="absolute bottom-2 left-6 w-1.5 h-1.5 bg-white/80 rounded-full opacity-0 group-hover:opacity-100 group-hover:animate-ping animation-delay-200" />
+
+                      <Crown className="w-5 h-5 sm:w-6 sm:h-6 relative z-10" />
+                      <span className="relative z-10 whitespace-nowrap">{tNav("joinVip")}</span>
+                    </div>
+                  </motion.div>
                 </Link>
-                <Link href={`${basePath}/gallery`}>
-                  <Button
-                    variant="gold-outline"
-                    size="sm"
-                    className="gap-2 px-4 py-2 backdrop-blur-sm"
-                  >
-                    <Eye className="w-4 h-4" />
-                    {t("gallery")}
-                  </Button>
-                </Link>
-                <FollowButton creatorSlug={creatorSlug} className="text-lg px-8 py-7" />
+
+                {/* Secondary buttons container */}
+                <div className="flex items-center gap-3">
+                  {/* Gallery Button */}
+                  <Link href={`${basePath}/gallery`} className="group flex-1 sm:flex-initial">
+                    <motion.div
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      className="relative flex items-center justify-center gap-2 px-5 py-4 sm:py-5 rounded-xl bg-white/5 backdrop-blur-md border border-white/20 hover:border-[var(--gold)]/50 hover:bg-white/10 transition-all duration-300 group"
+                    >
+                      {/* Hover glow */}
+                      <div className="absolute inset-0 rounded-xl bg-[var(--gold)]/0 group-hover:bg-[var(--gold)]/5 transition-colors duration-300" />
+
+                      <Eye className="w-4 h-4 sm:w-5 sm:h-5 text-white/70 group-hover:text-[var(--gold)] transition-colors relative z-10" />
+                      <span className="text-white/90 group-hover:text-white font-semibold text-sm sm:text-base relative z-10 whitespace-nowrap">{t("gallery")}</span>
+                    </motion.div>
+                  </Link>
+
+                  {/* Follow Button */}
+                  <div className="flex-1 sm:flex-initial">
+                    <FollowButton
+                      creatorSlug={creatorSlug}
+                      className="!px-5 !py-4 sm:!py-5 !rounded-xl !text-sm sm:!text-base !font-semibold !bg-white/5 !backdrop-blur-md !border !border-white/20 hover:!border-pink-500/50 hover:!bg-pink-500/10 !transition-all !duration-300 [&>svg]:!w-4 [&>svg]:sm:!w-5 [&>svg]:!h-4 [&>svg]:sm:!h-5 w-full"
+                    />
+                  </div>
+                </div>
               </motion.div>
 
               {/* Social Links */}
