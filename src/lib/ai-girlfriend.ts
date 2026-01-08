@@ -573,17 +573,25 @@ export async function scheduleAiResponse(
 
 // ============= PARSE PERSONALITY =============
 
-export function parsePersonality(jsonString: string | null): AiPersonality {
-  if (!jsonString) return DEFAULT_PERSONALITY;
+export function parsePersonality(jsonString: string | null, primaryLanguage?: string | null): AiPersonality {
+  if (!jsonString) {
+    return primaryLanguage
+      ? { ...DEFAULT_PERSONALITY, language: primaryLanguage }
+      : DEFAULT_PERSONALITY;
+  }
 
   try {
     const parsed = JSON.parse(jsonString);
     return {
       ...DEFAULT_PERSONALITY,
       ...parsed,
+      // Override with primaryLanguage from DB if provided (takes precedence over JSON)
+      language: primaryLanguage || parsed.language || DEFAULT_PERSONALITY.language,
     };
   } catch {
-    return DEFAULT_PERSONALITY;
+    return primaryLanguage
+      ? { ...DEFAULT_PERSONALITY, language: primaryLanguage }
+      : DEFAULT_PERSONALITY;
   }
 }
 

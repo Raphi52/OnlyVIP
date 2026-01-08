@@ -69,6 +69,7 @@ export async function POST(request: NextRequest) {
             id: true,
             name: true,
             agencyId: true,
+            primaryLanguage: true,
           },
         },
         creator: {
@@ -151,13 +152,16 @@ export async function POST(request: NextRequest) {
     const detected = detectIntent(lastFanMessage.text);
     let matchedScript: MatchedScript | null = null;
 
+    // Use persona language (from DB) with fallback to "fr"
+    const personaLanguage = conversation.aiPersonality?.primaryLanguage || "fr";
+
     if (conversation.creator?.agencyId) {
       matchedScript = await matchScript({
         message: lastFanMessage.text,
         creatorSlug: conversation.creatorSlug,
         agencyId: conversation.creator.agencyId,
         fanName: fanParticipant?.user?.name || undefined,
-        language: "fr", // TODO: detect language
+        language: personaLanguage,
       });
     }
 

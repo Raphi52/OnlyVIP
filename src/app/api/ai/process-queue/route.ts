@@ -237,6 +237,7 @@ export async function GET(request: NextRequest) {
                 id: true,
                 name: true,
                 personality: true,
+                primaryLanguage: true, // Language for AI and scripts
                 // Media settings from personality
                 aiMediaEnabled: true,
                 aiMediaFrequency: true,
@@ -296,6 +297,7 @@ export async function GET(request: NextRequest) {
                     id: true,
                     name: true,
                     personality: true,
+                    primaryLanguage: true,
                     aiMediaEnabled: true,
                     aiMediaFrequency: true,
                     aiPPVRatio: true,
@@ -369,6 +371,7 @@ export async function GET(request: NextRequest) {
                     id: true,
                     name: true,
                     personality: true,
+                    primaryLanguage: true,
                     aiMediaEnabled: true,
                     aiMediaFrequency: true,
                     aiPPVRatio: true,
@@ -418,6 +421,7 @@ export async function GET(request: NextRequest) {
                   id: true,
                   name: true,
                   personality: true,
+                  primaryLanguage: true,
                   aiMediaEnabled: true,
                   aiMediaFrequency: true,
                   aiPPVRatio: true,
@@ -449,9 +453,12 @@ export async function GET(request: NextRequest) {
           throw new Error("Creator not found or has no user account");
         }
 
-        // Parse personality from CreatorAiPersonality
-        const personality = parsePersonality(conversation.aiPersonality?.personality || null);
-        console.log(`[AI] Using personality: ${conversation.aiPersonality?.name || "default"}`);
+        // Parse personality from CreatorAiPersonality (with primaryLanguage from DB)
+        const personality = parsePersonality(
+          conversation.aiPersonality?.personality || null,
+          conversation.aiPersonality?.primaryLanguage
+        );
+        console.log(`[AI] Using personality: ${conversation.aiPersonality?.name || "default"} (lang: ${personality.language})`);
 
         // Deep character data (placeholder for future use)
         const deepCharacter = undefined;
@@ -565,7 +572,10 @@ export async function GET(request: NextRequest) {
                 : fanProfile?.totalMessages && fanProfile.totalMessages > 10 ? "engaged"
                 : "new";
 
-              // Try to match a script
+              // Try to match a script (use detected fan language, fallback to persona language)
+              const detectedFanLang = detectLanguageFromMessages([originalMessage.text || ""]);
+              const scriptLanguage = detectedFanLang || personality.language || "fr";
+
               const matchedScript = await matchScript({
                 message: originalMessage.text || "",
                 creatorSlug: queueItem.creatorSlug,
@@ -573,7 +583,7 @@ export async function GET(request: NextRequest) {
                 fanName: originalMessage.sender.name || undefined,
                 fanStage: fanStage as "new" | "engaged" | "vip" | "cooling_off",
                 creatorName: creator.displayName || undefined,
-                language: detectLanguageFromMessages([originalMessage.text || ""]) || "fr",
+                language: scriptLanguage,
                 conversationHistory: context.messages,
               });
 
