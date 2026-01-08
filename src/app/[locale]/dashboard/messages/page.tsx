@@ -94,6 +94,11 @@ export default function MessagesPage() {
   const [showLeftPanel, setShowLeftPanel] = useState(true);
   const [showRightPanel, setShowRightPanel] = useState(true); // Open by default on desktop
 
+  // Infinite scroll state
+  const [hasMoreMessages, setHasMoreMessages] = useState(false);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [isLoadingMoreMessages, setIsLoadingMoreMessages] = useState(false);
+
   const userId = session?.user?.id;
   const isCreator = (session?.user as any)?.isCreator;
   const isAdmin = (session?.user as any)?.role === "ADMIN";
@@ -265,7 +270,10 @@ export default function MessagesPage() {
       const res = await fetch(url);
       if (res.ok) {
         const data = await res.json();
-        setMessages(data);
+        // Handle new response format with messages, hasMore, nextCursor
+        setMessages(data.messages || data);
+        setHasMoreMessages(data.hasMore || false);
+        setNextCursor(data.nextCursor || null);
 
         // Notify sidebar to update unread count when messages are marked as read
         if (markAsRead) {
@@ -279,8 +287,35 @@ export default function MessagesPage() {
     }
   }, [selectedConversation]);
 
+  // Load more (older) messages for infinite scroll
+  const loadMoreMessages = useCallback(async () => {
+    if (!selectedConversation || !nextCursor || isLoadingMoreMessages) return;
+
+    setIsLoadingMoreMessages(true);
+    try {
+      const url = `/api/conversations/${selectedConversation.id}/messages?direction=older&cursor=${nextCursor}`;
+      const res = await fetch(url);
+      if (res.ok) {
+        const data = await res.json();
+        const olderMessages = data.messages || data;
+        // Prepend older messages to the existing list
+        setMessages((prev) => [...olderMessages, ...prev]);
+        setHasMoreMessages(data.hasMore || false);
+        setNextCursor(data.nextCursor || null);
+      }
+    } catch (error) {
+      console.error("Error loading more messages:", error);
+    } finally {
+      setIsLoadingMoreMessages(false);
+    }
+  }, [selectedConversation, nextCursor, isLoadingMoreMessages]);
+
   useEffect(() => {
     if (selectedConversation) {
+      // Reset infinite scroll state when changing conversation
+      setHasMoreMessages(false);
+      setNextCursor(null);
+      setMessages([]);
       fetchMessages(true); // markAsRead=true when user opens conversation
     }
   }, [selectedConversation, fetchMessages]);
@@ -353,14 +388,28 @@ export default function MessagesPage() {
         const res = await fetch(`/api/conversations/${selectedConversation.id}/messages`);
         if (res.ok) {
           const data = await res.json();
+          const newMessages = data.messages || data;
           setMessages((prev) => {
-            // Only update if there are new messages
-            if (data.length !== prev.length ||
-                (data.length > 0 && prev.length > 0 && data[data.length - 1].id !== prev[prev.length - 1].id)) {
-              return data;
+            // Only update if there are new messages at the end
+            if (newMessages.length !== prev.length ||
+                (newMessages.length > 0 && prev.length > 0 && newMessages[newMessages.length - 1].id !== prev[prev.length - 1].id)) {
+              // If we already have more messages loaded (from infinite scroll), merge them
+              if (prev.length > newMessages.length) {
+                // Find where the new messages start
+                const oldestNew = newMessages[0];
+                const insertIndex = prev.findIndex(m => m.id === oldestNew?.id);
+                if (insertIndex >= 0) {
+                  // Keep older messages, replace from insertIndex onwards
+                  return [...prev.slice(0, insertIndex), ...newMessages];
+                }
+              }
+              return newMessages;
             }
             return prev;
           });
+          // Update hasMore/nextCursor from latest fetch
+          setHasMoreMessages(data.hasMore || false);
+          setNextCursor(data.nextCursor || null);
         }
       } catch (error) {
         console.error("Polling error:", error);
@@ -1099,6 +1148,9 @@ export default function MessagesPage() {
               messages={transformedMessages}
               isAdmin={isCreator || !!selectedCreator}
               isMuted={selectedConversation.isMuted}
+              hasMore={hasMoreMessages}
+              isLoadingMore={isLoadingMoreMessages}
+              onLoadMore={loadMoreMessages}
               onSendMessage={handleSendMessage}
               onUnlockPPV={handleUnlockPPV}
               onSendTip={handleSendTip}

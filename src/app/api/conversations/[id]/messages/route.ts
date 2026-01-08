@@ -49,11 +49,23 @@ export async function GET(
     const { searchParams } = new URL(request.url);
     const limit = parseInt(searchParams.get("limit") || "50");
     const cursor = searchParams.get("cursor");
+    const direction = searchParams.get("direction") || "initial"; // "initial", "older", "newer"
 
+    // For "older" direction, we fetch messages BEFORE the cursor (descending)
+    // For "initial" and "newer", we fetch the most recent messages
+    const isLoadingOlder = direction === "older" && cursor;
+
+    // Build the query
     const messages = await prisma.message.findMany({
       where: {
         conversationId,
         isDeleted: false,
+        // When loading older messages, get messages created BEFORE the cursor
+        ...(isLoadingOlder && {
+          createdAt: {
+            lt: (await prisma.message.findUnique({ where: { id: cursor }, select: { createdAt: true } }))?.createdAt,
+          },
+        }),
       },
       include: {
         media: {
@@ -113,13 +125,22 @@ export async function GET(
           },
         },
       },
-      orderBy: { createdAt: "asc" },
-      take: limit,
-      ...(cursor && {
-        skip: 1,
-        cursor: { id: cursor },
-      }),
+      // For initial load: get the LAST N messages (order desc, then reverse)
+      // For older: get N messages before cursor (order desc)
+      orderBy: { createdAt: "desc" },
+      take: limit + 1, // Fetch one extra to check if there are more
     });
+
+    // Check if there are more messages
+    const hasMore = messages.length > limit;
+    const paginatedMessages = hasMore ? messages.slice(0, limit) : messages;
+
+    // Reverse to get chronological order (oldest first)
+    const sortedMessages = paginatedMessages.reverse();
+
+    // Get the cursor for next "load older" request
+    const oldestMessage = sortedMessages[0];
+    const nextCursor = oldestMessage?.id || null;
 
     // Only mark messages as read if explicitly requested via query param
     // This prevents polling from marking messages as read
@@ -150,7 +171,7 @@ export async function GET(
     const LOCKED_PLACEHOLDER = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' style='stop-color:%23d4af37'/%3E%3Cstop offset='50%25' style='stop-color:%23b8860b'/%3E%3Cstop offset='100%25' style='stop-color:%23996515'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect fill='url(%23g)' width='400' height='400'/%3E%3C/svg%3E";
 
     // Transform messages for frontend
-    const transformedMessages = messages.map((msg) => {
+    const transformedMessages = sortedMessages.map((msg) => {
       // Group reactions by emoji and count
       const reactionMap = new Map<string, { count: number; users: string[] }>();
       msg.reactions.forEach((r) => {
@@ -229,7 +250,11 @@ export async function GET(
       };
     });
 
-    return NextResponse.json(transformedMessages);
+    return NextResponse.json({
+      messages: transformedMessages,
+      hasMore,
+      nextCursor,
+    });
   } catch (error) {
     console.error("Error fetching messages:", error);
     console.error("Error stack:", error instanceof Error ? error.stack : "No stack");

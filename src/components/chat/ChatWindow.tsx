@@ -85,6 +85,10 @@ interface ChatWindowProps {
   isTyping?: boolean;
   isMuted?: boolean;
   creatorSlug?: string; // For PPV media picker
+  // Infinite scroll props
+  hasMore?: boolean;
+  isLoadingMore?: boolean;
+  onLoadMore?: () => void;
   onSendMessage: (text: string, media?: File[], isPPV?: boolean, ppvPrice?: number, replyToId?: string) => void;
   onSendPPVFromLibrary?: (media: LibraryMedia) => void;
   onUnlockPPV: (messageId: string) => void;
@@ -154,6 +158,9 @@ export function ChatWindow({
   isTyping,
   isMuted,
   creatorSlug,
+  hasMore,
+  isLoadingMore,
+  onLoadMore,
   onSendMessage,
   onSendPPVFromLibrary,
   onUnlockPPV,
@@ -286,6 +293,44 @@ export function ChatWindow({
 
   // Intersection observer
   const { ref: bottomRef, inView: isAtBottom } = useInView({ threshold: 0 });
+
+  // Ref to track scroll height before loading more (for maintaining position)
+  const prevScrollHeightRef = useRef<number>(0);
+  const isLoadingMoreRef = useRef<boolean>(false);
+
+  // Infinite scroll - detect when user scrolls near top
+  useEffect(() => {
+    const container = messagesContainerRef.current;
+    if (!container || !hasMore || !onLoadMore) return;
+
+    const handleScroll = () => {
+      // Trigger load more when scrolled within 100px of top
+      if (container.scrollTop < 100 && !isLoadingMore && !isLoadingMoreRef.current) {
+        // Save scroll height before loading more
+        prevScrollHeightRef.current = container.scrollHeight;
+        isLoadingMoreRef.current = true;
+        onLoadMore();
+      }
+    };
+
+    container.addEventListener("scroll", handleScroll);
+    return () => container.removeEventListener("scroll", handleScroll);
+  }, [hasMore, isLoadingMore, onLoadMore]);
+
+  // Maintain scroll position after loading older messages
+  useEffect(() => {
+    const container = messagesContainerRef.current;
+    if (!container || !isLoadingMoreRef.current) return;
+
+    // When loading finishes, adjust scroll position
+    if (!isLoadingMore && prevScrollHeightRef.current > 0) {
+      const newScrollHeight = container.scrollHeight;
+      const scrollDiff = newScrollHeight - prevScrollHeightRef.current;
+      container.scrollTop = scrollDiff;
+      prevScrollHeightRef.current = 0;
+      isLoadingMoreRef.current = false;
+    }
+  }, [isLoadingMore, messages.length]);
 
   // Group messages
   const groupedMessages = useMemo(
@@ -763,6 +808,20 @@ export function ChatWindow({
         ref={messagesContainerRef}
         className="flex-1 overflow-y-auto px-3 md:px-4 py-4 space-y-1 overscroll-contain relative z-10"
       >
+        {/* Loading indicator for older messages */}
+        {isLoadingMore && (
+          <div className="flex justify-center py-4">
+            <Loader2 className="w-5 h-5 text-[var(--gold)] animate-spin" />
+          </div>
+        )}
+
+        {/* Load more indicator when there are more messages */}
+        {hasMore && !isLoadingMore && (
+          <div className="flex justify-center py-2">
+            <span className="text-xs text-white/30">Scroll up for older messages</span>
+          </div>
+        )}
+
         {groupedMessages.map((group) => (
           <div key={group.date.toISOString()}>
             <DateSeparator date={group.date} />

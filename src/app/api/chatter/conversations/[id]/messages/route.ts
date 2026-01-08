@@ -18,7 +18,7 @@ export async function GET(
     const chatterId = (session.user as any).chatterId;
     const { id: conversationId } = await params;
     const { searchParams } = new URL(request.url);
-    const limit = parseInt(searchParams.get("limit") || "50");
+    const limit = parseInt(searchParams.get("limit") || "200");
     const cursor = searchParams.get("cursor");
 
     // Verify chatter is assigned to this conversation's creator
