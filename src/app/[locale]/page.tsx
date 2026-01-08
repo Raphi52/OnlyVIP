@@ -195,13 +195,13 @@ export default function HomePage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-black">
+    <div className="min-h-screen bg-black max-w-[100vw] overflow-x-hidden">
       {/* Navbar */}
       <nav className="fixed top-0 left-0 right-0 z-50 bg-black/80 backdrop-blur-xl border-b border-white/5">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            <Link href={`/${locale}`} className="flex items-center gap-2">
-              <Crown className="w-7 h-7 text-[var(--gold)]" />
+            <Link href={`/${locale}`} className="flex items-center gap-2 flex-shrink-0">
+              <Crown className="w-7 h-7 text-[var(--gold)] flex-shrink-0" />
               <span className="text-xl font-bold gradient-gold-text">VipOnly</span>
             </Link>
 
@@ -250,7 +250,7 @@ export default function HomePage() {
                           animate={{ opacity: 1, y: 0, scale: 1 }}
                           exit={{ opacity: 0, y: 10, scale: 0.95 }}
                           transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                          className="absolute right-0 mt-3 w-56 bg-black/95 backdrop-blur-xl border border-[var(--gold)]/20 rounded-2xl shadow-2xl shadow-black/50 overflow-hidden z-50"
+                          className="absolute right-0 mt-3 w-56 max-w-[calc(100vw-2rem)] bg-black/95 backdrop-blur-xl border border-[var(--gold)]/20 rounded-2xl shadow-2xl shadow-black/50 overflow-hidden z-50"
                         >
                           {/* Gold accent */}
                           <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-[var(--gold)]/50 to-transparent" />
