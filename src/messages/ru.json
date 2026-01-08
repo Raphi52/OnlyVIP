@@ -461,5 +461,8 @@
     "members": "Участников",
     "ratingLabel": "Рейтинг",
     "satisfaction": "Удовлетворённость"
+  },
+  "subscriptions": {
+    "discoverCreators": "Найти авторов"
   }
 }

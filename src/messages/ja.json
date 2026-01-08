@@ -452,5 +452,8 @@
     "proTip": "ヒント：",
     "biggerPackages": "大きいパックにはボーナスクレジット付き！",
     "buyCredits": "クレジットを購入"
+  },
+  "subscriptions": {
+    "discoverCreators": "クリエイターを探す"
   }
 }

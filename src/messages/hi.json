@@ -461,5 +461,8 @@
     "members": "सदस्य",
     "ratingLabel": "रेटिंग",
     "satisfaction": "संतुष्टि"
+  },
+  "subscriptions": {
+    "discoverCreators": "क्रिएटर्स खोजें"
   }
 }

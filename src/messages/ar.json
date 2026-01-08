@@ -461,5 +461,8 @@
     "members": "أعضاء",
     "ratingLabel": "التقييم",
     "satisfaction": "الرضا"
+  },
+  "subscriptions": {
+    "discoverCreators": "اكتشف المبدعين"
   }
 }

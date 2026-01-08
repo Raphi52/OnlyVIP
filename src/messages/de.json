@@ -452,5 +452,8 @@
     "proTip": "Tipp:",
     "biggerPackages": "Größere Pakete enthalten Bonus-Credits!",
     "buyCredits": "Credits Kaufen"
+  },
+  "subscriptions": {
+    "discoverCreators": "Ersteller entdecken"
   }
 }

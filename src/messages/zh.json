@@ -452,5 +452,8 @@
     "proTip": "小贴士：",
     "biggerPackages": "大额套餐包含额外赠送积分！",
     "buyCredits": "购买积分"
+  },
+  "subscriptions": {
+    "discoverCreators": "发现创作者"
   }
 }

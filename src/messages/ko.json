@@ -452,5 +452,8 @@
     "proTip": "팁:",
     "biggerPackages": "큰 패키지에는 보너스 크레딧이 포함됩니다!",
     "buyCredits": "크레딧 구매"
+  },
+  "subscriptions": {
+    "discoverCreators": "크리에이터 찾기"
   }
 }

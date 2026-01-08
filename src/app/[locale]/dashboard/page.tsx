@@ -263,7 +263,7 @@ export default function DashboardPage() {
                   />
                   <Button className="relative gap-2 text-sm bg-gradient-to-r from-yellow-400 to-amber-500 hover:from-yellow-500 hover:to-amber-600 text-black font-bold border-0">
                     <Sparkles className="w-4 h-4" />
-                    {t("subscriptions.subscribe")}
+                    {t("subscriptions.discoverCreators")}
                   </Button>
                 </motion.div>
               </Link>
