@@ -112,6 +112,12 @@ export async function DELETE(
 
     // Delete everything in a transaction for clean removal
     await prisma.$transaction(async (tx) => {
+      // ========== CHAT & MESSAGES ==========
+      // Delete message reactions first (references messages)
+      await tx.messageReaction.deleteMany({
+        where: { userId: id },
+      });
+
       // Delete messages sent or received by user
       await tx.message.deleteMany({
         where: { OR: [{ senderId: id }, { receiverId: id }] },
@@ -122,32 +128,86 @@ export async function DELETE(
         where: { userId: id },
       });
 
-      // Delete reactions
-      await tx.messageReaction.deleteMany({
-        where: { userId: id },
+      // Delete orphaned conversations (no participants left)
+      const orphanedConvs = await tx.conversation.findMany({
+        where: {
+          participants: { none: {} },
+        },
+        select: { id: true },
       });
+      if (orphanedConvs.length > 0) {
+        await tx.conversation.deleteMany({
+          where: { id: { in: orphanedConvs.map(c => c.id) } },
+        });
+      }
 
-      // Delete subscriptions
+      // ========== SUBSCRIPTIONS & MEMBERSHIPS ==========
       await tx.subscription.deleteMany({
         where: { userId: id },
       });
 
-      // Delete credit transactions
+      await tx.creatorMember.deleteMany({
+        where: { userId: id },
+      });
+
+      // ========== PURCHASES & PAYMENTS ==========
+      await tx.mediaPurchase.deleteMany({
+        where: { userId: id },
+      });
+
+      await tx.messagePayment.deleteMany({
+        where: { userId: id },
+      });
+
+      await tx.payment.deleteMany({
+        where: { userId: id },
+      });
+
+      // Note: PayoutRequest is linked to Creator, not User directly
+      // It will remain with the creator profile
+
+      // ========== CREDITS ==========
       await tx.creditTransaction.deleteMany({
         where: { userId: id },
       });
 
-      // Delete accounts (OAuth)
+      // ========== USER CONTENT ==========
+      await tx.userFavorite.deleteMany({
+        where: { userId: id },
+      });
+
+      // ========== ANALYTICS ==========
+      await tx.pageView.deleteMany({
+        where: { userId: id },
+      });
+
+      // ========== PPV LINK CLICKS ==========
+      await tx.pPVLinkClick.updateMany({
+        where: { userId: id },
+        data: { userId: null },
+      });
+
+      // ========== CREATOR APPLICATIONS ==========
+      await tx.creatorApplication.deleteMany({
+        where: { userId: id },
+      });
+
+      // ========== AUTH ==========
       await tx.account.deleteMany({
         where: { userId: id },
       });
 
-      // Delete sessions
       await tx.session.deleteMany({
         where: { userId: id },
       });
 
-      // Finally delete user (cascades remaining relations)
+      // ========== UNLINK CREATOR PROFILES (don't delete, just unlink) ==========
+      await tx.creator.updateMany({
+        where: { userId: id },
+        data: { userId: null },
+      });
+
+      // ========== FINALLY DELETE USER ==========
       await tx.user.delete({
         where: { id },
       });

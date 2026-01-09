@@ -221,6 +221,17 @@ export default function MessagesPage() {
       if (targetConversation) {
         setSelectedConversation(targetConversation);
         setAutoSelectDone(true);
+      } else {
+        // Conversation from URL not found - clear the URL param to avoid confusion
+        // This can happen if user was deleted and recreated, or conversation was removed
+        console.log("[Messages] Conversation from URL not found:", conversationIdFromUrl);
+        setAutoSelectDone(true);
+        // Remove the invalid conversation param from URL
+        if (typeof window !== "undefined") {
+          const url = new URL(window.location.href);
+          url.searchParams.delete("conversation");
+          window.history.replaceState({}, "", url.toString());
+        }
       }
     }
   }, [conversationIdFromUrl, conversations, autoSelectDone]);

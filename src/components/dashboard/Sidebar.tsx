@@ -36,6 +36,7 @@ import {
   Eye,
   DoorOpen,
   AlertTriangle,
+  Link2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAdminCreator, Creator, Agency } from "@/components/providers/AdminCreatorContext";
@@ -56,6 +57,7 @@ const creatorLinksDef = [
   { href: "/dashboard/creator/members", icon: Users, labelKey: "creator.members" },
   { href: "/dashboard/creator/earnings", icon: DollarSign, labelKey: "creator.earnings" },
   { href: "/dashboard/creator/analytics", icon: BarChart3, labelKey: "creator.analytics" },
+  { href: "/dashboard/creator/ppv-links", icon: Link2, labelKey: "creator.ppvLinks" },
   { href: "/dashboard/creator/scripts", icon: FileText, labelKey: "creator.scripts" },
   { href: "/dashboard/creator/ai", icon: Bot, labelKey: "creator.aiGirlfriend" },
   { href: "/dashboard/find-agency", icon: Search, labelKey: "creator.findAgency" },

@@ -2733,3 +2733,78 @@ model AgencyCreatorPayout {
 
 // PayoutStatus: "PENDING" | "PAID"
 
+// ============= PPV LINK ANALYTICS =============
+
+model PPVLink {
+  id          String @id @default(cuid())
+  creatorSlug String
+
+  // Link to media
+  mediaId String
+
+  // Unique short code for the link (e.g., "abc123")
+  shortCode String @unique
+
+  // Optional custom name for tracking
+  name String? // "Twitter promo", "Instagram bio", etc.
+
+  // Source/Campaign tracking
+  source   String? // "twitter", "instagram", "telegram", "email"
+  campaign String? // Campaign name for grouping
+
+  // Stats (cached for performance)
+  totalClicks    Int   @default(0)
+  uniqueClicks   Int   @default(0)
+  totalPurchases Int   @default(0)
+  totalRevenue   Float @default(0)
+  conversionRate Float @default(0) // purchases / unique clicks * 100
+
+  // Status
+  isActive Boolean @default(true)
+
+  // Relations
+  clicks PPVLinkClick[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([creatorSlug])
+  @@index([mediaId])
+  @@index([shortCode])
+  @@index([source])
+  @@index([isActive])
+}
+
+model PPVLinkClick {
+  id        String  @id @default(cuid())
+  ppvLinkId String
+  ppvLink   PPVLink @relation(fields: [ppvLinkId], references: [id], onDelete: Cascade)
+
+  // Visitor info
+  visitorId String  // Anonymous visitor ID (from cookie/fingerprint)
+  userId    String? // Logged in user ID (if authenticated)
+
+  // Device/Browser info
+  userAgent String?
+  device    String? // "desktop" | "mobile" | "tablet"
+  browser   String?
+  os        String?
+  country   String?
+
+  // Referrer
+  referrer String?
+
+  // Conversion tracking
+  converted      Boolean   @default(false)
+  convertedAt    DateTime?
+  purchaseAmount Float?
+
+  createdAt DateTime @default(now())
+
+  @@index([ppvLinkId])
+  @@index([visitorId])
+  @@index([userId])
+  @@index([converted])
+  @@index([createdAt])
+}
+
