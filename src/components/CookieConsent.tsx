@@ -191,13 +191,13 @@ export function CookieConsent() {
                       </button>
                       <button
                         onClick={rejectNonEssential}
-                        className="py-2.5 px-4 bg-white/10 text-white text-sm font-semibold rounded-xl hover:bg-white/20 transition-colors"
+                        className="py-2.5 px-4 bg-white/10 text-white text-sm font-semibold rounded-xl hover:bg-white/20 transition-colors text-center"
                       >
                         Reject All
                       </button>
                       <button
                         onClick={acceptAll}
-                        className="py-2.5 px-6 bg-gradient-to-r from-[var(--gold)] to-[var(--gold-dark)] text-black text-sm font-semibold rounded-xl hover:shadow-lg hover:shadow-[var(--gold)]/25 transition-all flex items-center gap-2"
+                        className="py-2.5 px-6 bg-gradient-to-r from-[var(--gold)] to-[var(--gold-dark)] text-black text-sm font-semibold rounded-xl hover:shadow-lg hover:shadow-[var(--gold)]/25 transition-all flex items-center justify-center gap-2"
                       >
                         <Check className="w-4 h-4" />
                         Accept All
