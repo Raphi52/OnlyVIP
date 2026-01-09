@@ -183,6 +183,8 @@ export function ChatWindow({
 
   // Track keyboard visibility for mobile
   const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
+  const [viewportOffset, setViewportOffset] = useState(0);
 
   // Listen to visualViewport changes for keyboard detection
   useEffect(() => {
@@ -195,16 +197,24 @@ export function ChatWindow({
       // Calculate keyboard height by comparing viewport to window height
       const keyboardH = window.innerHeight - viewport.height;
       const newKeyboardHeight = keyboardH > 50 ? keyboardH : 0;
+      const newIsKeyboardOpen = newKeyboardHeight > 50;
+
+      // Track viewport offset (for when browser chrome hides/shows)
+      setViewportOffset(viewport.offsetTop);
 
       // If keyboard just opened, scroll to bottom
-      if (newKeyboardHeight > 0 && keyboardHeight === 0) {
+      if (newIsKeyboardOpen && !isKeyboardOpen) {
         setTimeout(() => {
           messagesEndRef.current?.scrollIntoView({ behavior: "instant" });
         }, 100);
       }
 
       setKeyboardHeight(newKeyboardHeight);
+      setIsKeyboardOpen(newIsKeyboardOpen);
     };
+
+    // Initial check
+    handleResize();
 
     viewport.addEventListener("resize", handleResize);
     viewport.addEventListener("scroll", handleResize);
@@ -213,7 +223,7 @@ export function ChatWindow({
       viewport.removeEventListener("resize", handleResize);
       viewport.removeEventListener("scroll", handleResize);
     };
-  }, [keyboardHeight]);
+  }, [isKeyboardOpen]);
 
   // Local state for reactions (to update UI instantly)
   const [localReactions, setLocalReactions] = useState<Record<string, Reaction[]>>({});
@@ -612,7 +622,12 @@ export function ChatWindow({
       style={{
         // Use dvh on mobile to account for browser UI
         height: "100%",
-        maxHeight: keyboardHeight > 0 ? `calc(100dvh - ${keyboardHeight}px)` : "100dvh",
+        // On mobile when keyboard is open, shrink the container to fit above keyboard
+        maxHeight: isKeyboardOpen
+          ? `calc(100dvh - ${keyboardHeight}px - ${viewportOffset}px)`
+          : "100dvh",
+        // Ensure container stays at top when keyboard opens
+        position: "relative",
       }}
       onDragOver={(e) => {
         e.preventDefault();
@@ -1121,7 +1136,11 @@ export function ChatWindow({
           animate={{ y: 0, opacity: 1 }}
           className="relative z-20 p-4 border-t border-orange-500/30 bg-gradient-to-r from-orange-500/10 to-amber-500/5"
           style={{
-            paddingBottom: "max(16px, calc(env(safe-area-inset-bottom) + 12px))",
+            // Same padding logic as regular input for Android nav buttons
+            paddingBottom: isKeyboardOpen
+              ? "16px"
+              : "max(24px, calc(env(safe-area-inset-bottom) + 16px))",
+            flexShrink: 0,
           }}
         >
           <div className="flex items-center justify-center gap-3 text-orange-400">
@@ -1137,10 +1156,13 @@ export function ChatWindow({
         animate={{ y: 0, opacity: 1 }}
         className="relative z-20 p-3 md:p-4 border-t border-white/5 bg-[#0a0a0a]/95 backdrop-blur-xl"
         style={{
-          // Extra padding for mobile browser navigation bars (Brave, Chrome, Safari)
-          paddingBottom: keyboardHeight > 0
-            ? "12px" // When keyboard is open, less padding needed
-            : "max(20px, calc(env(safe-area-inset-bottom) + 12px))",
+          // On mobile: when keyboard is closed, add padding for Android nav buttons and safe area
+          // When keyboard is open, the keyboard sits directly above the system nav, so less padding needed
+          paddingBottom: isKeyboardOpen
+            ? "12px" // When keyboard is open, minimal padding (keyboard handles the spacing)
+            : "max(24px, calc(env(safe-area-inset-bottom) + 16px))", // Extra padding for Android nav buttons
+          // Ensure input stays in flex flow and shrinks content properly
+          flexShrink: 0,
         }}
       >
         <div className="flex items-end gap-1.5 sm:gap-2 pb-[2px]">
@@ -1259,6 +1281,12 @@ export function ChatWindow({
                   e.preventDefault();
                   handleSend();
                 }
+              }}
+              onFocus={() => {
+                // On mobile, scroll to bottom after keyboard opens to keep latest messages visible
+                setTimeout(() => {
+                  messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+                }, 300);
               }}
               placeholder="Message..."
               rows={1}
