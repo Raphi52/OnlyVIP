@@ -6,17 +6,19 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
 import { Crown, MessageSquare, DollarSign, FileText, LogOut, User, ChevronDown, BarChart3 } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 export default function ChatterNav() {
+  const t = useTranslations("chatterNav");
   const { data: session } = useSession();
   const pathname = usePathname();
   const [showDropdown, setShowDropdown] = useState(false);
 
   const navItems = [
-    { href: "/chatter/dashboard", label: "Inbox", icon: MessageSquare },
-    { href: "/chatter/earnings", label: "Earnings", icon: DollarSign },
-    { href: "/chatter/scripts", label: "Scripts", icon: FileText },
-    { href: "/chatter/analytics", label: "Analytics", icon: BarChart3 },
+    { href: "/chatter/dashboard", label: t("inbox"), icon: MessageSquare },
+    { href: "/chatter/earnings", label: t("earnings"), icon: DollarSign },
+    { href: "/chatter/scripts", label: t("scripts"), icon: FileText },
+    { href: "/chatter/analytics", label: t("analytics"), icon: BarChart3 },
   ];
 
   return (
@@ -73,7 +75,7 @@ export default function ChatterNav() {
               )}
             </div>
             <span className="text-sm text-gray-300 hidden sm:block">
-              {session?.user?.name || "Chatter"}
+              {session?.user?.name || t("chatter")}
             </span>
             <ChevronDown className="w-4 h-4 text-gray-400" />
           </button>

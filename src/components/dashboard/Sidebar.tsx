@@ -458,18 +458,18 @@ export function Sidebar() {
             )}
             <div className="flex-1 min-w-0">
               <p className="font-semibold text-white text-sm">
-                {isAgencyOwner && agency?.name ? agency.name : (creatorName || session?.user?.name || "User")}
+                {creatorName || (isAgencyOwner && agency?.name ? agency.name : session?.user?.name) || "User"}
               </p>
-              {isAgencyOwner && agency ? (
+              {selectedCreator?.slug ? (
+                <p className="text-xs text-gray-500">
+                  @{selectedCreator.slug}
+                </p>
+              ) : isAgencyOwner && agency ? (
                 <p className="text-xs text-purple-400 flex items-center gap-1">
                   <Building2 className="w-3 h-3" />
                   Agency
                 </p>
-              ) : selectedCreator?.slug && (
-                <p className="text-xs text-gray-500">
-                  @{selectedCreator.slug}
-                </p>
-              )}
+              ) : null}
             </div>
             {(isAdmin || isCreatorUser || isAgencyOwner) && displayCreators.length > 0 && (
               <ChevronDown className={cn(

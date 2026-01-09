@@ -4,6 +4,7 @@ import prisma from "@/lib/prisma";
 import { spendCredits, getCreditBalances } from "@/lib/credits";
 import { recordEarningDistribution } from "@/lib/commission";
 import { validateDiscountCode, useDiscountCode, recordObjectionConversion } from "@/lib/objection-handler";
+import { rateLimit, rateLimitResponse, PAYMENT_LIMIT } from "@/lib/ratelimit";
 
 // POST /api/messages/[id]/unlock - Unlock PPV message content using credits
 export async function POST(
@@ -18,6 +19,12 @@ export async function POST(
 
     const { id: messageId } = await params;
     const userId = session.user.id;
+
+    // Rate limiting: 10 unlocks per minute per user
+    const rateLimitResult = rateLimit(`unlock:${userId}`, PAYMENT_LIMIT);
+    if (!rateLimitResult.success) {
+      return rateLimitResponse(rateLimitResult);
+    }
 
     // Parse request body for optional discount code
     let discountCode: string | undefined;

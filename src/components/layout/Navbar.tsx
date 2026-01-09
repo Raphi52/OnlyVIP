@@ -34,6 +34,7 @@ export function Navbar({ creatorSlug }: NavbarProps) {
   const [creator, setCreator] = useState<Creator | undefined>(getCreator(effectiveCreatorSlug));
   const [userCreatorAvatar, setUserCreatorAvatar] = useState<string | null>(null);
   const [userCreatorName, setUserCreatorName] = useState<string | null>(null);
+  const [userAgencyName, setUserAgencyName] = useState<string | null>(null);
 
   const isAdmin = (session?.user as any)?.role === "ADMIN";
   const isUserCreator = (session?.user as any)?.isCreator === true;
@@ -71,6 +72,7 @@ export function Navbar({ creatorSlug }: NavbarProps) {
           if (data.creators && data.creators.length > 0) {
             setUserCreatorAvatar(data.creators[0].avatar);
             setUserCreatorName(data.creators[0].displayName);
+            setUserAgencyName(data.creators[0].agencyName);
           }
         }
       } catch (error) {
@@ -211,12 +213,10 @@ export function Navbar({ creatorSlug }: NavbarProps) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-20">
           {/* Logo with avatar (creator pages) or brand logo (other pages) */}
-          <Link href={isCreatorPage ? basePath : session ? `/${locale}/dashboard?menu=open` : basePath} className="min-w-0 flex-shrink overflow-hidden">
+          <Link href={isCreatorPage ? basePath : session ? `/${locale}/dashboard?menu=open` : basePath} className="min-w-0 flex-shrink group">
             <motion.div
-              className="flex items-center gap-2 sm:gap-3 px-2 sm:px-3 py-2 -ml-2 sm:-ml-3 rounded-2xl border border-transparent hover:border-[var(--gold)]/30 hover:bg-white/5 transition-all duration-300"
-              whileHover={{ scale: 1.02 }}
+              className="flex items-center gap-3 px-4 py-2.5 rounded-xl border border-white/5 group-hover:border-[var(--gold)]/40 group-hover:bg-[var(--gold)]/5 transition-all duration-300"
               whileTap={{ scale: 0.98 }}
-              transition={{ type: "spring", stiffness: 400 }}
             >
               {isCreatorPage ? (
                 <>
@@ -278,7 +278,7 @@ export function Navbar({ creatorSlug }: NavbarProps) {
                   </div>
                   <div className="hidden sm:block min-w-0 max-w-[120px] overflow-hidden">
                     <span className="text-lg font-bold gradient-gold-text font-serif tracking-wide block truncate">
-                      {userCreatorName || session.user?.name?.split(" ")[0] || "VipOnly"}
+                      {userAgencyName || userCreatorName || session.user?.name?.split(" ")[0] || "VipOnly"}
                     </span>
                     <div className="flex items-center gap-1.5 text-xs text-gray-500">
                       <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
@@ -369,7 +369,7 @@ export function Navbar({ creatorSlug }: NavbarProps) {
                     </div>
                   )}
                   <span className="text-sm text-gray-300 max-w-[100px] truncate">
-                    {userCreatorName || session.user?.name?.split(" ")[0] || "User"}
+                    {userAgencyName || userCreatorName || session.user?.name?.split(" ")[0] || "User"}
                   </span>
                 </motion.button>
 
@@ -397,7 +397,7 @@ export function Navbar({ creatorSlug }: NavbarProps) {
 
                         <div className="px-5 py-4 border-b border-white/10">
                           <p className="text-sm font-semibold text-white">
-                            {userCreatorName || session.user?.name || "User"}
+                            {userAgencyName || userCreatorName || session.user?.name || "User"}
                           </p>
                           <p className="text-xs text-gray-500 truncate">
                             {session.user?.email}
@@ -535,7 +535,7 @@ export function Navbar({ creatorSlug }: NavbarProps) {
 
                         <div className="px-4 py-3 border-b border-white/10">
                           <p className="text-sm font-semibold text-white truncate">
-                            {userCreatorName || session.user?.name || "User"}
+                            {userAgencyName || userCreatorName || session.user?.name || "User"}
                           </p>
                           <p className="text-xs text-gray-500 truncate">
                             {session.user?.email}

@@ -1,9 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
+import { rateLimit, getClientIP, rateLimitResponse, AUTH_LIMIT } from "@/lib/ratelimit";
 
 export async function POST(request: NextRequest) {
   try {
+    // Rate limiting: 5 registrations per minute per IP
+    const ip = getClientIP(request);
+    const rateLimitResult = rateLimit(`creator-register:${ip}`, AUTH_LIMIT);
+    if (!rateLimitResult.success) {
+      return rateLimitResponse(rateLimitResult);
+    }
+
     const body = await request.json();
     const { name, email, password, slug } = body;
 

@@ -4,8 +4,10 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Crown } from "lucide-react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 
 export function AgeGate() {
+  const t = useTranslations("ageGate");
   const [show, setShow] = useState(false);
 
   useEffect(() => {
@@ -49,13 +51,12 @@ export function AgeGate() {
 
               {/* Title */}
               <h2 className="text-2xl font-bold text-white mb-2">
-                Adult Content
+                {t("title")}
               </h2>
 
               {/* Subtitle */}
               <p className="text-gray-400 mb-8 text-sm leading-relaxed">
-                By entering, I confirm that I am 18 years or older
-                and I accept the cookies and terms of service.
+                {t("description")}
               </p>
 
               {/* Enter button */}
@@ -63,17 +64,17 @@ export function AgeGate() {
                 onClick={handleEnter}
                 className="w-full py-4 px-8 bg-gradient-to-r from-[var(--gold)] to-[var(--gold-dark)] text-black font-bold rounded-xl hover:shadow-lg hover:shadow-[var(--gold)]/25 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
               >
-                Enter
+                {t("enter")}
               </button>
 
               {/* Legal links */}
               <div className="mt-6 flex items-center justify-center gap-4 text-xs text-gray-500">
                 <Link href="/terms" className="hover:text-[var(--gold)] transition-colors">
-                  Terms
+                  {t("terms")}
                 </Link>
                 <span>•</span>
                 <Link href="/privacy" className="hover:text-[var(--gold)] transition-colors">
-                  Privacy
+                  {t("privacy")}
                 </Link>
               </div>
             </div>

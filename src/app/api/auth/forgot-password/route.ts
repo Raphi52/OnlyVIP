@@ -2,9 +2,17 @@ import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
 import { sendPasswordResetEmail } from "@/lib/email";
+import { rateLimit, getClientIP, rateLimitResponse, PASSWORD_RESET_LIMIT } from "@/lib/ratelimit";
 
 export async function POST(request: NextRequest) {
   try {
+    // Rate limiting: 3 reset requests per 5 minutes per IP
+    const ip = getClientIP(request);
+    const rateLimitResult = rateLimit(`forgot-password:${ip}`, PASSWORD_RESET_LIMIT);
+    if (!rateLimitResult.success) {
+      return rateLimitResponse(rateLimitResult);
+    }
+
     const { email } = await request.json();
 
     if (!email) {

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Heart, Loader2, Check, Mail } from "lucide-react";
 import { Button } from "@/components/ui";
+import { useTranslations } from "next-intl";
 
 interface FollowButtonProps {
   creatorSlug: string;
@@ -14,6 +15,7 @@ interface FollowButtonProps {
 }
 
 export function FollowButton({ creatorSlug, variant = "default", className = "" }: FollowButtonProps) {
+  const t = useTranslations("follow");
   const { data: session, status } = useSession();
   const router = useRouter();
   const [isFollowing, setIsFollowing] = useState(false);
@@ -92,7 +94,7 @@ export function FollowButton({ creatorSlug, variant = "default", className = "" 
           <Heart className="w-4 h-4" />
         )}
         <span className="text-sm font-medium">
-          {isVip ? "VIP" : isFollowing ? "Following" : "Follow"}
+          {isVip ? t("vip") : isFollowing ? t("following") : t("follow")}
         </span>
       </motion.button>
     );
@@ -117,7 +119,7 @@ export function FollowButton({ creatorSlug, variant = "default", className = "" 
         ) : (
           <Heart className="w-4 h-4" />
         )}
-        {isVip ? "VIP Member" : isFollowing ? "Following" : "Follow"}
+        {isVip ? t("vipMember") : isFollowing ? t("following") : t("follow")}
       </Button>
 
       {/* Tooltip */}
@@ -135,8 +137,8 @@ export function FollowButton({ creatorSlug, variant = "default", className = "" 
                 <Mail className="w-4 h-4 text-[var(--gold)] flex-shrink-0 mt-0.5" />
                 <p className="text-xs text-gray-300">
                   {isFollowing
-                    ? "You'll receive an email every time new content drops!"
-                    : "Follow to receive an email every time new content drops!"
+                    ? t("notifyEnabled")
+                    : t("notifyPrompt")
                   }
                 </p>
               </div>

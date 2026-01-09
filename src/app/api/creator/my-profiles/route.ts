@@ -26,6 +26,11 @@ export async function GET() {
         displayName: true,
         avatar: true,
         coverImage: true,
+        agency: {
+          select: {
+            name: true,
+          },
+        },
       },
     });
 
@@ -75,6 +80,7 @@ export async function GET() {
       displayName: creator.displayName,
       avatar: creator.avatar,
       coverImage: creator.coverImage,
+      agencyName: creator.agency?.name || null,
       stats: {
         photos: mediaCountMap[creator.slug]?.photos || 0,
         videos: mediaCountMap[creator.slug]?.videos || 0,

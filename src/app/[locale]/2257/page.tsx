@@ -3,8 +3,10 @@
 import { motion } from "framer-motion";
 import { FileText, ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 
 export default function Compliance2257Page() {
+  const t = useTranslations("legal");
   return (
     <main className="min-h-screen bg-black py-16">
       <div className="max-w-4xl mx-auto px-6">
@@ -13,7 +15,7 @@ export default function Compliance2257Page() {
           className="inline-flex items-center gap-2 text-gray-400 hover:text-white mb-8 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
-          Back to Home
+          {t("backToHome")}
         </Link>
 
         <motion.div
@@ -24,8 +26,8 @@ export default function Compliance2257Page() {
           <div className="w-16 h-16 rounded-full bg-[var(--gold)]/10 flex items-center justify-center mb-6">
             <FileText className="w-8 h-8 text-[var(--gold)]" />
           </div>
-          <h1 className="text-4xl font-bold text-white mb-4">18 U.S.C. 2257 Compliance</h1>
-          <p className="text-gray-400">Record-Keeping Requirements Compliance Statement</p>
+          <h1 className="text-4xl font-bold text-white mb-4">{t("compliance2257.title")}</h1>
+          <p className="text-gray-400">{t("compliance2257.subtitle")}</p>
         </motion.div>
 
         <motion.div

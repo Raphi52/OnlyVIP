@@ -1031,5 +1031,364 @@
     "noScriptsYet": "Votre agence n'a pas encore ajouté de scripts",
     "copied": "Copié !",
     "copy": "Copier"
+  },
+  "cookies": {
+    "title": "Nous Respectons Votre Vie Privée",
+    "description": "Nous utilisons des cookies pour améliorer votre expérience de navigation, personnaliser le contenu et analyser notre trafic. En cliquant sur \"Tout Accepter\", vous consentez à notre utilisation des cookies.",
+    "privacyPolicy": "Politique de Confidentialité",
+    "customize": "Personnaliser",
+    "rejectAll": "Tout Refuser",
+    "acceptAll": "Tout Accepter",
+    "savePreferences": "Enregistrer les Préférences",
+    "preferences": "Préférences de Cookies",
+    "necessary": "Cookies Nécessaires",
+    "necessaryDesc": "Requis pour le bon fonctionnement du site",
+    "alwaysOn": "Toujours Actif",
+    "analytics": "Cookies Analytiques",
+    "analyticsDesc": "Nous aident à comprendre comment les visiteurs utilisent notre site",
+    "marketing": "Cookies Marketing",
+    "marketingDesc": "Utilisés pour diffuser des publicités personnalisées"
+  },
+  "ageGate": {
+    "title": "Contenu pour Adultes",
+    "description": "En entrant, je confirme avoir 18 ans ou plus et j'accepte les cookies et les conditions d'utilisation.",
+    "enter": "Entrer",
+    "terms": "Conditions",
+    "privacy": "Confidentialité"
+  },
+  "follow": {
+    "vip": "VIP",
+    "following": "Abonné",
+    "follow": "Suivre",
+    "vipMember": "Membre VIP",
+    "notifyEnabled": "Vous recevrez un email à chaque nouveau contenu !",
+    "notifyPrompt": "Suivez pour recevoir un email à chaque nouveau contenu !"
+  },
+  "conversationList": {
+    "noMessages": "Pas encore de messages",
+    "subscribePrompt": "Abonnez-vous pour chatter avec le créateur"
+  },
+  "chatterNav": {
+    "inbox": "Boîte de réception",
+    "earnings": "Revenus",
+    "scripts": "Scripts",
+    "analytics": "Analytiques",
+    "chatter": "Chatter"
+  },
+  "agencyBanner": {
+    "viewOnly": "Mode Lecture Seule",
+    "managedBy": "Votre profil est géré par {agency}. Vous pouvez voir vos revenus et messages mais ne pouvez pas faire de modifications.",
+    "leaveAgency": "Quitter l'Agence",
+    "featureDisabled": "Cette fonctionnalité est désactivée en mode lecture seule"
+  },
+  "shiftBanner": {
+    "outsideShift": "Vous travaillez en dehors de votre horaire prévu",
+    "noShifts": "Aucun shift programmé pour {day}",
+    "todayShifts": "Shifts du jour : {shifts}",
+    "nextShift": "Prochain : {shift}"
+  },
+  "instagramGrid": {
+    "title": "Nouveau Contenu Chaque Jour",
+    "previewGallery": "Aperçu de Ma Galerie",
+    "description": "Découvrez mon contenu exclusif. Abonnez-vous pour tout débloquer."
+  },
+  "legal": {
+    "backToHome": "Retour à l'Accueil",
+    "lastUpdated": "Dernière mise à jour : {date}",
+    "privacyPolicy": {
+      "title": "Politique de Confidentialité",
+      "section1Title": "1. Informations que Nous Collectons",
+      "accountInfo": "Informations de Compte",
+      "accountInfoDesc": "Lors de la création de votre compte, nous collectons votre adresse email, nom d'utilisateur et mot de passe. Pour les créateurs, nous collectons également des documents de vérification d'identité.",
+      "paymentInfo": "Informations de Paiement",
+      "paymentInfoDesc": "Nous traitons les paiements via des prestataires tiers sécurisés. Nous ne stockons pas vos coordonnées bancaires complètes sur nos serveurs.",
+      "usageInfo": "Informations d'Utilisation",
+      "usageInfoDesc": "Nous collectons des informations sur votre utilisation de notre plateforme, y compris les pages consultées, le contenu accédé et les interactions avec les créateurs.",
+      "section2Title": "2. Comment Nous Utilisons Vos Informations",
+      "section2Intro": "Nous utilisons les informations collectées pour :",
+      "use1": "Fournir et maintenir nos services",
+      "use2": "Traiter les transactions et envoyer les informations associées",
+      "use3": "Envoyer des communications promotionnelles (avec votre consentement)",
+      "use4": "Détecter, enquêter et prévenir les transactions frauduleuses",
+      "use5": "Respecter les obligations légales",
+      "section3Title": "3. Partage d'Informations",
+      "section3Desc": "Nous ne vendons pas vos informations personnelles. Nous pouvons partager des informations avec :",
+      "share1": "Les prestataires de services qui nous assistent dans nos opérations",
+      "share2": "Les forces de l'ordre lorsque la loi l'exige",
+      "share3": "Les partenaires commerciaux avec votre consentement",
+      "section4Title": "4. Sécurité des Données",
+      "section4Desc": "Nous mettons en œuvre des mesures de sécurité conformes aux standards de l'industrie pour protéger vos données, incluant le chiffrement, des serveurs sécurisés et des audits de sécurité réguliers.",
+      "section5Title": "5. Vos Droits",
+      "rights1": "Accéder et télécharger vos données personnelles",
+      "rights2": "Demander la correction de données inexactes",
+      "rights3": "Demander la suppression de votre compte et données",
+      "rights4": "Vous désinscrire des communications marketing",
+      "section6Title": "6. Nous Contacter",
+      "section6Desc": "Si vous avez des questions sur cette Politique de Confidentialité, contactez-nous à :"
+    },
+    "terms": {
+      "title": "Conditions d'Utilisation",
+      "section1Title": "1. Acceptation des Conditions",
+      "section1Desc": "En accédant ou en utilisant VIPOnly, vous acceptez d'être lié par ces Conditions d'Utilisation. Si vous n'acceptez pas ces conditions, veuillez ne pas utiliser notre plateforme.",
+      "section2Title": "2. Éligibilité",
+      "section2Item1": "Vous devez avoir au moins 18 ans pour utiliser cette plateforme",
+      "section2Item2": "Vous devez fournir des informations d'inscription exactes et complètes",
+      "section2Item3": "Vous êtes responsable de la sécurité de votre compte",
+      "section3Title": "3. Inscription au Compte",
+      "section3Desc": "Pour accéder à certaines fonctionnalités, vous devez créer un compte. Vous êtes responsable de toute activité sur votre compte. Gardez votre mot de passe confidentiel.",
+      "section4Title": "4. Abonnements et Paiements",
+      "section4Item1": "Les abonnements se renouvellent automatiquement sauf annulation",
+      "section4Item2": "Les remboursements sont traités au cas par cas",
+      "section4Item3": "Les créateurs reçoivent 95% des revenus d'abonnement",
+      "section4Item4": "La plateforme conserve 5% comme frais de service",
+      "section5Title": "5. Contenu et Conduite",
+      "section5Desc": "Les utilisateurs ne doivent pas publier de contenu illégal, harceler d'autres utilisateurs ou violer les droits de propriété intellectuelle. Nous nous réservons le droit de supprimer tout contenu violant ces conditions.",
+      "section6Title": "6. Propriété Intellectuelle",
+      "section6Desc": "Tout le contenu sur VIPOnly est protégé par le droit d'auteur. Les utilisateurs conservent la propriété de leur contenu téléchargé mais accordent à VIPOnly une licence pour l'afficher et le distribuer sur la plateforme."
+    },
+    "dmca": {
+      "title": "Politique DMCA",
+      "subtitle": "Procédure de Notification et Retrait selon le Digital Millennium Copyright Act",
+      "successTitle": "Notification Reçue",
+      "successDesc": "Votre notification de retrait DMCA a été soumise. Notre équipe l'examinera sous 24-48 heures et prendra les mesures appropriées. Vous recevrez un email de confirmation.",
+      "returnHome": "Retourner à l'Accueil",
+      "section1Title": "1. Aperçu de la Politique",
+      "section1Desc": "VIPOnly respecte les droits de propriété intellectuelle d'autrui et attend de nos utilisateurs qu'ils fassent de même. Conformément au Digital Millennium Copyright Act (DMCA), nous répondrons aux notifications d'infraction présumée au droit d'auteur.",
+      "section2Title": "2. Déposer une Notification DMCA",
+      "section2Desc": "Si vous pensez que votre œuvre protégée a été copiée d'une manière constituant une violation du droit d'auteur, veuillez soumettre une notification contenant :",
+      "notice1": "Votre signature physique ou électronique",
+      "notice2": "Identification de l'œuvre protégée prétendument violée",
+      "notice3": "Identification du matériel prétendument contrefaisant",
+      "notice4": "Vos coordonnées (adresse, téléphone, email)",
+      "notice5": "Une déclaration de bonne foi que l'utilisation n'est pas autorisée",
+      "notice6": "Une déclaration que les informations de la notification sont exactes",
+      "section3Title": "3. Contre-Notification",
+      "section3Desc": "Si vous pensez que votre contenu a été retiré à tort, vous pouvez déposer une contre-notification incluant les mêmes éléments que ci-dessus plus une déclaration sous serment que vous croyez de bonne foi que le matériel a été retiré par erreur.",
+      "section4Title": "4. Soumettre une Demande de Retrait",
+      "formTitle": "Formulaire de Demande de Retrait",
+      "yourName": "Votre Nom",
+      "yourEmail": "Votre Email",
+      "contentUrl": "URL du Contenu Contrefaisant",
+      "originalWork": "Description de l'Œuvre Originale",
+      "originalWorkPlaceholder": "Veuillez décrire votre œuvre originale protégée",
+      "statement": "Je crois de bonne foi que l'utilisation du matériel protégé décrit ci-dessus n'est pas autorisée par le titulaire du droit d'auteur, son agent ou la loi.",
+      "accuracy": "Les informations de cette notification sont exactes, et sous peine de parjure, je suis le propriétaire ou autorisé à agir au nom du propriétaire du droit d'auteur prétendument violé.",
+      "submit": "Soumettre la Notification DMCA"
+    },
+    "compliance2257": {
+      "title": "Conformité 18 U.S.C. 2257",
+      "subtitle": "Déclaration de Conformité aux Exigences de Tenue de Registres",
+      "section1Title": "Déclaration de Conformité",
+      "section1Desc": "VIPOnly s'engage à respecter le 18 U.S.C. § 2257 et le 28 C.F.R. Part 75. Tous les créateurs de contenu sur notre plateforme sont tenus de conserver des registres démontrant que tous les interprètes avaient au moins 18 ans au moment de la création du contenu.",
+      "section2Title": "Tenue des Registres",
+      "section2Item1": "Tous les interprètes doivent être vérifiés comme ayant 18 ans ou plus",
+      "section2Item2": "Une pièce d'identité avec photo délivrée par le gouvernement est requise",
+      "section2Item3": "Les registres sont conservés par les créateurs de contenu",
+      "section2Item4": "Les registres sont disponibles pour inspection sur demande légale",
+      "section3Title": "Responsabilités de la Plateforme",
+      "section3Desc": "En tant que plateforme, VIPOnly :",
+      "responsibility1": "Exige une vérification d'âge de tous les créateurs avant d'autoriser les téléchargements de contenu",
+      "responsibility2": "Maintient un système pour recevoir et traiter les demandes liées à la conformité",
+      "responsibility3": "Coopère avec les demandes des forces de l'ordre pour les registres",
+      "responsibility4": "Supprime le contenu dès la découverte de toute violation de conformité",
+      "section4Title": "Exigences de Vérification des Créateurs",
+      "section4Desc": "Avant de publier du contenu, les créateurs doivent :",
+      "requirement1": "Soumettre une pièce d'identité avec photo valide délivrée par le gouvernement",
+      "requirement2": "Compléter la vérification d'identité via notre fournisseur tiers",
+      "requirement3": "Confirmer qu'ils sont le seul créateur ou disposent de la documentation appropriée pour tous les interprètes",
+      "requirement4": "Maintenir leurs propres registres 2257 pour tout contenu mettant en scène d'autres interprètes",
+      "section5Title": "Gardien des Registres",
+      "section5Desc": "Le gardien des registres de ce site web peut être contacté à :",
+      "company": "VIPONLY LTD",
+      "address": "Enregistrée en Angleterre et au Pays de Galles"
+    },
+    "legalNotice": {
+      "title": "Mentions Légales",
+      "subtitle": "Mentions Légales / Impressum",
+      "section1Title": "1. Informations sur l'Éditeur",
+      "companyName": "VIPOnly",
+      "companyLegal": "VIPONLY LTD",
+      "registeredIn": "Enregistrée en Angleterre et au Pays de Galles",
+      "section2Title": "2. Directeur de Publication",
+      "directorInfo": "Directeur de Publication : Équipe VIPOnly",
+      "section3Title": "3. Hébergeur",
+      "hostingInfo": "Ce site web est hébergé par des fournisseurs cloud sécurisés conformes aux réglementations européennes sur la protection des données.",
+      "section4Title": "4. Statut de la Plateforme",
+      "platformDesc": "VIPOnly est une plateforme qui connecte les créateurs de contenu avec leur audience. En tant qu'hébergeur selon la loi applicable, VIPOnly n'est pas responsable du contenu publié par les créateurs mais répond promptement aux violations signalées.",
+      "section5Title": "5. Responsabilité du Contenu",
+      "contentDesc": "Chaque créateur est seul responsable du contenu qu'il publie. VIPOnly fournit des outils pour signaler le contenu illégal ou inapproprié et s'engage à supprimer ce contenu dans les délais légaux."
+    }
+  },
+  "faq": {
+    "title": "Questions Fréquentes",
+    "subtitle": "Trouvez des réponses aux questions courantes sur les abonnements, le contenu et plus.",
+    "stillHaveQuestions": "Encore des questions ?",
+    "cantFindAnswer": "Vous ne trouvez pas ce que vous cherchez ? Contactez notre équipe support.",
+    "contactSupport": "Contacter le Support",
+    "categories": {
+      "subscription": "Abonnement",
+      "content": "Contenu",
+      "messaging": "Messagerie",
+      "account": "Compte"
+    },
+    "questions": {
+      "howToSubscribe": "Comment m'abonner ?",
+      "howToSubscribeAnswer": "Cliquez sur le bouton 'Rejoindre VIP' sur la page d'un créateur, choisissez votre plan et complétez le paiement. Vous aurez un accès instantané à tout leur contenu exclusif.",
+      "cancelSubscription": "Puis-je annuler mon abonnement ?",
+      "cancelSubscriptionAnswer": "Oui, vous pouvez annuler à tout moment depuis votre tableau de bord. Vous continuerez à avoir accès jusqu'à la fin de votre période de facturation.",
+      "paymentMethods": "Quels moyens de paiement sont acceptés ?",
+      "paymentMethodsAnswer": "Nous acceptons les cartes de crédit/débit (Visa, Mastercard, Amex) et les cryptomonnaies (Bitcoin, Ethereum, et plus).",
+      "contentTypes": "À quel type de contenu puis-je accéder ?",
+      "contentTypesAnswer": "Les membres VIP ont accès aux photos exclusives, vidéos, contenu des coulisses et messagerie directe avec les créateurs.",
+      "downloadContent": "Puis-je télécharger le contenu ?",
+      "downloadContentAnswer": "Le contenu est disponible uniquement en streaming. Le téléchargement ou la redistribution sont interdits par nos conditions d'utilisation.",
+      "howToMessage": "Comment envoyer un message ?",
+      "howToMessageAnswer": "Cliquez sur le bouton 'Message' sur le profil d'un créateur. Les abonnés VIP peuvent envoyer des messages illimités.",
+      "responseTime": "Combien de temps pour recevoir une réponse ?",
+      "responseTimeAnswer": "Les temps de réponse varient selon les créateurs. Les membres VIP reçoivent généralement des réponses prioritaires sous 24-48 heures.",
+      "changePassword": "Comment changer mon mot de passe ?",
+      "changePasswordAnswer": "Allez dans Tableau de bord > Paramètres du compte > Sécurité pour mettre à jour votre mot de passe.",
+      "deleteAccount": "Comment supprimer mon compte ?",
+      "deleteAccountAnswer": "Contactez le support pour demander la suppression de votre compte. Toutes vos données seront définitivement supprimées sous 30 jours."
+    }
+  },
+  "forAgencies": {
+    "title": "Pour les Agences",
+    "subtitle": "Développez votre activité de gestion de créateurs",
+    "heroTitle": "Gérez Plusieurs Créateurs",
+    "heroSubtitle": "Des outils puissants pour les agences de talents",
+    "features": {
+      "multiCreator": {
+        "title": "Gestion Multi-Créateurs",
+        "description": "Gérez un nombre illimité de profils créateurs depuis un seul tableau de bord. Suivez les performances, planifiez le contenu et gérez les paiements pour tous vos talents."
+      },
+      "chatterAssignment": {
+        "title": "Attribution des Chatters",
+        "description": "Assignez des chatters dédiés à chaque créateur. Suivez les temps de réponse, taux de conversion et revenus par chatter."
+      },
+      "aiMessaging": {
+        "title": "Messagerie Alimentée par l'IA",
+        "description": "Notre assistant IA aide les chatters à répondre plus vite avec des suggestions personnalisées. Boostez l'engagement et les conversions."
+      },
+      "analytics": {
+        "title": "Analytiques des Revenus",
+        "description": "Analytiques en temps réel pour chaque créateur. Suivez les abonnements, ventes PPV, pourboires et tendances de revenus globales."
+      },
+      "commission": {
+        "title": "Gestion des Commissions",
+        "description": "Structures de commissions flexibles. Définissez des taux différents pour chaque créateur et automatisez les paiements."
+      },
+      "moderation": {
+        "title": "Modération de Contenu",
+        "description": "Examinez et approuvez le contenu avant publication. Assurez la cohérence de la marque sur tous les profils créateurs."
+      }
+    },
+    "workflow": {
+      "title": "Comment Ça Marche",
+      "step1": {
+        "title": "Inscrivez-vous comme Agence",
+        "description": "Créez votre compte agence et configurez votre profil d'organisation."
+      },
+      "step2": {
+        "title": "Ajoutez des Créateurs",
+        "description": "Invitez des créateurs à rejoindre votre agence ou créez de nouveaux profils."
+      },
+      "step3": {
+        "title": "Assignez des Chatters",
+        "description": "Construisez votre équipe et assignez des chatters pour gérer les conversations."
+      },
+      "step4": {
+        "title": "Configurez l'IA",
+        "description": "Configurez les personnalités IA et modèles de réponse pour chaque créateur."
+      },
+      "step5": {
+        "title": "Surveillez et Développez",
+        "description": "Suivez les performances, optimisez les stratégies et développez votre business."
+      }
+    },
+    "cta": "Lancez Votre Agence"
+  },
+  "onlyfansAlternative": {
+    "title": "Alternative à OnlyFans",
+    "subtitle": "Pourquoi les créateurs passent à VIPOnly",
+    "heroTitle": "La Meilleure Alternative à OnlyFans",
+    "heroSubtitle": "Moins de frais, plus de fonctionnalités, meilleur support",
+    "comparison": {
+      "title": "Comparaison des Fonctionnalités",
+      "feature": "Fonctionnalité",
+      "viponly": "VIPOnly",
+      "onlyfans": "OnlyFans",
+      "platformFee": "Frais Plateforme",
+      "firstMonthFee": "Frais Premier Mois",
+      "cryptoPayments": "Paiements Crypto",
+      "bitcoinAccepted": "Bitcoin Accepté",
+      "aiChat": "Assistant Chat IA",
+      "agencyTools": "Outils Agence",
+      "ppvLinks": "Liens PPV",
+      "instantPayouts": "Paiements Instantanés"
+    },
+    "whySwitch": {
+      "title": "Pourquoi Passer à VIPOnly ?",
+      "earnings": {
+        "title": "Gardez 95% de vos Revenus",
+        "description": "Seulement 5% de frais vs 20% sur les autres plateformes. Premier mois à 0% !",
+        "stat": "95%",
+        "statLabel": "Revenus Créateur"
+      },
+      "crypto": {
+        "title": "Paiements Crypto",
+        "description": "Acceptez Bitcoin, Ethereum et 100+ cryptomonnaies. Soyez payé instantanément.",
+        "stat": "100+",
+        "statLabel": "Cryptos Supportées"
+      },
+      "ai": {
+        "title": "Assistant Chat IA",
+        "description": "Notre IA vous aide à répondre plus vite aux fans. Boostez l'engagement et les ventes.",
+        "stat": "3x",
+        "statLabel": "Réponses Plus Rapides"
+      },
+      "agency": {
+        "title": "Fonctionnalités Agence",
+        "description": "Outils intégrés pour les agences gérant plusieurs créateurs.",
+        "stat": "∞",
+        "statLabel": "Créateurs par Agence"
+      }
+    },
+    "testimonials": {
+      "title": "Témoignages de Créateurs",
+      "testimonial1": {
+        "name": "Sarah J.",
+        "text": "Passer à VIPOnly était la meilleure décision. Je gagne 15% de plus grâce aux frais réduits !",
+        "role": "Top Créatrice"
+      },
+      "testimonial2": {
+        "name": "Mike R.",
+        "text": "Les paiements crypto changent tout. Plus de problèmes avec les processeurs de paiement.",
+        "role": "Créateur Fitness"
+      },
+      "testimonial3": {
+        "name": "Luna M.",
+        "text": "L'assistant IA m'aide à répondre aux fans même quand je suis occupée. Mon engagement a augmenté de 200% !",
+        "role": "Créatrice Lifestyle"
+      }
+    },
+    "cta": "Passez à VIPOnly Aujourd'hui"
+  },
+  "topCreators": {
+    "title": "Top Créateurs",
+    "subtitle": "Découvrez les meilleurs créateurs sur VIPOnly",
+    "categories": {
+      "all": "Tous",
+      "latina": "Latina",
+      "asian": "Asiatique",
+      "milf": "MILF",
+      "cosplay": "Cosplay",
+      "feet": "Pieds",
+      "bbw": "BBW/Ronde",
+      "ebony": "Ébène",
+      "blonde": "Blonde",
+      "brunette": "Brune",
+      "petite": "Petite"
+    }
   }
 }

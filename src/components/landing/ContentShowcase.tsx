@@ -19,6 +19,7 @@ interface MediaItem {
   title: string;
   type: "PHOTO" | "VIDEO";
   thumbnailUrl: string;
+  contentUrl?: string | null;
   accessTier: string; // Legacy
   duration?: number;
   createdAt: string;
@@ -139,17 +140,28 @@ function ParallaxImage({
               }}
             />
           </div>
-          {/* Image - no blur for FREE content */}
-          <Image
-            src={media.thumbnailUrl}
-            alt={media.title}
-            fill
-            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-            className={`object-cover transition-all duration-500 scale-105 group-hover:scale-100 ${
-              shouldBlur ? "blur-[10px] group-hover:blur-[3px]" : ""
-            }`}
-            unoptimized
-          />
+          {/* Media - Video with autoplay for accessible content, Image for others */}
+          {media.type === "VIDEO" && media.contentUrl && !shouldBlur ? (
+            <video
+              src={media.contentUrl}
+              autoPlay
+              loop
+              muted
+              playsInline
+              className="absolute inset-0 w-full h-full object-cover transition-all duration-500 scale-105 group-hover:scale-100"
+            />
+          ) : (
+            <Image
+              src={media.thumbnailUrl}
+              alt={media.title}
+              fill
+              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+              className={`object-cover transition-all duration-500 scale-105 group-hover:scale-100 ${
+                shouldBlur ? "blur-[10px] group-hover:blur-[3px]" : ""
+              }`}
+              unoptimized
+            />
+          )}
 
           {/* Dark overlay */}
           <div className="absolute inset-0 bg-black/40 group-hover:bg-black/30 transition-colors duration-300" />

@@ -3,8 +3,10 @@
 import { motion } from "framer-motion";
 import { Shield, ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 
 export default function PrivacyPage() {
+  const t = useTranslations("legal");
   return (
     <main className="min-h-screen bg-black py-16">
       <div className="max-w-4xl mx-auto px-6">
@@ -13,7 +15,7 @@ export default function PrivacyPage() {
           className="inline-flex items-center gap-2 text-gray-400 hover:text-white mb-8 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
-          Back to Home
+          {t("backToHome")}
         </Link>
 
         <motion.div
@@ -24,8 +26,8 @@ export default function PrivacyPage() {
           <div className="w-16 h-16 rounded-full bg-[var(--gold)]/10 flex items-center justify-center mb-6">
             <Shield className="w-8 h-8 text-[var(--gold)]" />
           </div>
-          <h1 className="text-4xl font-bold text-white mb-4">Privacy Policy</h1>
-          <p className="text-gray-400">Last updated: December 29, 2025</p>
+          <h1 className="text-4xl font-bold text-white mb-4">{t("privacyPolicy.title")}</h1>
+          <p className="text-gray-400">{t("lastUpdated", { date: "December 29, 2025" })}</p>
         </motion.div>
 
         <motion.div

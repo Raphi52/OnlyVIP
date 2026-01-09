@@ -5,7 +5,7 @@ import { useSession } from "next-auth/react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import Image from "next/image";
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import {
   Crown,
   Camera,
@@ -40,25 +40,32 @@ interface Creator {
   createdAt?: string;
 }
 
-// SEO-optimized category links
-const TOP_CATEGORIES = [
-  { id: "latina", label: "Latina", icon: "🔥" },
-  { id: "asian", label: "Asian", icon: "🌸" },
-  { id: "mature", label: "MILF", icon: "💎" },
-  { id: "cosplay", label: "Cosplay", icon: "🎭" },
-  { id: "feet", label: "Feet", icon: "👠" },
-  { id: "curvy", label: "BBW/Curvy", icon: "🍑" },
-  { id: "ebony", label: "Ebony", icon: "✨" },
-  { id: "blonde", label: "Blonde", icon: "💫" },
-  { id: "brunette", label: "Brunette", icon: "🖤" },
-  { id: "petite", label: "Petite", icon: "🦋" },
+// Category IDs for dynamic labels
+const TOP_CATEGORY_IDS = [
+  { id: "latina", key: "latina", icon: "🔥" },
+  { id: "asian", key: "asian", icon: "🌸" },
+  { id: "mature", key: "milf", icon: "💎" },
+  { id: "cosplay", key: "cosplay", icon: "🎭" },
+  { id: "feet", key: "feet", icon: "👠" },
+  { id: "curvy", key: "bbw", icon: "🍑" },
+  { id: "ebony", key: "ebony", icon: "✨" },
+  { id: "blonde", key: "blonde", icon: "💫" },
+  { id: "brunette", key: "brunette", icon: "🖤" },
+  { id: "petite", key: "petite", icon: "🦋" },
 ];
 
 export default function TopCreatorsPage() {
   const { data: session } = useSession();
   const locale = useLocale();
+  const t = useTranslations("topCreators");
   const [creators, setCreators] = useState<Creator[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Generate category labels with translations
+  const TOP_CATEGORIES = TOP_CATEGORY_IDS.map(cat => ({
+    ...cat,
+    label: t(`categories.${cat.key}`)
+  }));
 
   useEffect(() => {
     async function fetchCreators() {

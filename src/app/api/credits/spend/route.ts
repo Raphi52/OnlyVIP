@@ -7,6 +7,7 @@ import {
 } from "@/lib/credits";
 import { recordEarningDistribution } from "@/lib/commission";
 import prisma from "@/lib/prisma";
+import { rateLimit, rateLimitResponse, PAYMENT_LIMIT } from "@/lib/ratelimit";
 
 // POST /api/credits/spend - Spend credits on media, PPV, or tips
 export async function POST(request: NextRequest) {
@@ -20,6 +21,13 @@ export async function POST(request: NextRequest) {
     }
 
     const userId = session.user.id;
+
+    // Rate limiting: 10 transactions per minute per user
+    const rateLimitResult = rateLimit(`credits-spend:${userId}`, PAYMENT_LIMIT);
+    if (!rateLimitResult.success) {
+      return rateLimitResponse(rateLimitResult);
+    }
+
     const body = await request.json();
     let { amount, type, mediaId, messageId, description } = body;
 

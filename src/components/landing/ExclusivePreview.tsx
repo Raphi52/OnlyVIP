@@ -19,6 +19,7 @@ interface MediaItem {
   description?: string;
   type: "PHOTO" | "VIDEO";
   thumbnailUrl: string;
+  contentUrl?: string | null;
   accessTier: string; // Legacy
   duration?: number;
   createdAt: string;
@@ -132,7 +133,7 @@ function PreviewCard({
               }}
             />
           </div>
-          {/* Background image - no blur for FREE content */}
+          {/* Background media - Video with autoplay for accessible content, Image for others */}
           <div
             className="absolute inset-0 transition-all duration-700"
             style={{
@@ -140,14 +141,25 @@ function PreviewCard({
               transform: isHovered ? "scale(1.02)" : "scale(1.05)",
             }}
           >
-            <Image
-              src={item.thumbnailUrl}
-              alt={item.title}
-              fill
-              sizes="100vw"
-              className="object-cover"
-              unoptimized
-            />
+            {item.type === "VIDEO" && item.contentUrl && !shouldBlur ? (
+              <video
+                src={item.contentUrl}
+                autoPlay
+                loop
+                muted
+                playsInline
+                className="absolute inset-0 w-full h-full object-cover"
+              />
+            ) : (
+              <Image
+                src={item.thumbnailUrl}
+                alt={item.title}
+                fill
+                sizes="100vw"
+                className="object-cover"
+                unoptimized
+              />
+            )}
           </div>
 
           {/* Gradient overlays */}

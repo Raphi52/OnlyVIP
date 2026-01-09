@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Cookie, X, Settings, Check } from "lucide-react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 
 interface CookiePreferences {
   necessary: boolean;
@@ -15,6 +16,7 @@ const COOKIE_CONSENT_KEY = "cookie_consent";
 const COOKIE_PREFERENCES_KEY = "cookie_preferences";
 
 export function CookieConsent() {
+  const t = useTranslations("cookies");
   const [show, setShow] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [preferences, setPreferences] = useState<CookiePreferences>({
@@ -86,7 +88,7 @@ export function CookieConsent() {
                   <div className="flex items-center justify-between mb-6">
                     <h3 className="text-lg font-semibold text-white flex items-center gap-2">
                       <Settings className="w-5 h-5 text-[var(--gold)]" />
-                      Cookie Preferences
+                      {t("preferences")}
                     </h3>
                     <button
                       onClick={() => setShowSettings(false)}
@@ -100,19 +102,19 @@ export function CookieConsent() {
                     {/* Necessary cookies */}
                     <div className="flex items-center justify-between p-4 bg-white/5 rounded-xl">
                       <div>
-                        <p className="font-medium text-white">Necessary Cookies</p>
-                        <p className="text-sm text-gray-400">Required for the website to function properly</p>
+                        <p className="font-medium text-white">{t("necessary")}</p>
+                        <p className="text-sm text-gray-400">{t("necessaryDesc")}</p>
                       </div>
                       <div className="px-3 py-1 bg-[var(--gold)]/20 text-[var(--gold)] text-sm rounded-full">
-                        Always On
+                        {t("alwaysOn")}
                       </div>
                     </div>
 
                     {/* Analytics cookies */}
                     <label className="flex items-center justify-between p-4 bg-white/5 rounded-xl cursor-pointer hover:bg-white/10 transition-colors">
                       <div>
-                        <p className="font-medium text-white">Analytics Cookies</p>
-                        <p className="text-sm text-gray-400">Help us understand how visitors use our site</p>
+                        <p className="font-medium text-white">{t("analytics")}</p>
+                        <p className="text-sm text-gray-400">{t("analyticsDesc")}</p>
                       </div>
                       <div className="relative">
                         <input
@@ -130,8 +132,8 @@ export function CookieConsent() {
                     {/* Marketing cookies */}
                     <label className="flex items-center justify-between p-4 bg-white/5 rounded-xl cursor-pointer hover:bg-white/10 transition-colors">
                       <div>
-                        <p className="font-medium text-white">Marketing Cookies</p>
-                        <p className="text-sm text-gray-400">Used to deliver personalized advertisements</p>
+                        <p className="font-medium text-white">{t("marketing")}</p>
+                        <p className="text-sm text-gray-400">{t("marketingDesc")}</p>
                       </div>
                       <div className="relative">
                         <input
@@ -152,13 +154,13 @@ export function CookieConsent() {
                       onClick={acceptSelected}
                       className="flex-1 py-3 px-6 bg-gradient-to-r from-[var(--gold)] to-[var(--gold-dark)] text-black font-semibold rounded-xl hover:shadow-lg hover:shadow-[var(--gold)]/25 transition-all"
                     >
-                      Save Preferences
+                      {t("savePreferences")}
                     </button>
                     <button
                       onClick={acceptAll}
                       className="flex-1 py-3 px-6 bg-white/10 text-white font-semibold rounded-xl hover:bg-white/20 transition-colors"
                     >
-                      Accept All
+                      {t("acceptAll")}
                     </button>
                   </div>
                 </div>
@@ -171,12 +173,11 @@ export function CookieConsent() {
                         <Cookie className="w-6 h-6 text-[var(--gold)]" />
                       </div>
                       <div>
-                        <h3 className="text-lg font-semibold text-white mb-1">We Value Your Privacy</h3>
+                        <h3 className="text-lg font-semibold text-white mb-1">{t("title")}</h3>
                         <p className="text-sm text-gray-400">
-                          We use cookies to enhance your browsing experience, serve personalized content, and analyze our traffic.
-                          By clicking "Accept All", you consent to our use of cookies.{" "}
+                          {t("description")}{" "}
                           <Link href="/privacy" className="text-[var(--gold)] hover:underline">
-                            Privacy Policy
+                            {t("privacyPolicy")}
                           </Link>
                         </p>
                       </div>
@@ -187,20 +188,20 @@ export function CookieConsent() {
                         onClick={() => setShowSettings(true)}
                         className="py-2.5 px-4 text-gray-400 hover:text-white text-sm font-medium transition-colors"
                       >
-                        Customize
+                        {t("customize")}
                       </button>
                       <button
                         onClick={rejectNonEssential}
                         className="py-2.5 px-4 bg-white/10 text-white text-sm font-semibold rounded-xl hover:bg-white/20 transition-colors text-center"
                       >
-                        Reject All
+                        {t("rejectAll")}
                       </button>
                       <button
                         onClick={acceptAll}
                         className="py-2.5 px-6 bg-gradient-to-r from-[var(--gold)] to-[var(--gold-dark)] text-black text-sm font-semibold rounded-xl hover:shadow-lg hover:shadow-[var(--gold)]/25 transition-all flex items-center justify-center gap-2"
                       >
                         <Check className="w-4 h-4" />
-                        Accept All
+                        {t("acceptAll")}
                       </button>
                     </div>
                   </div>

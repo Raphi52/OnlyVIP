@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Crown, Check, CheckCheck, Pin, BellOff, Bell, Trash2, MoreVertical } from "lucide-react";
 import { Badge } from "@/components/ui";
 import { cn } from "@/lib/utils";
+import { useTranslations } from "next-intl";
 
 interface Conversation {
   id: string;
@@ -46,6 +47,7 @@ export function ConversationList({
   onMuteConversation,
   onDeleteConversation,
 }: ConversationListProps) {
+  const t = useTranslations("conversationList");
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
@@ -63,10 +65,10 @@ export function ConversationList({
           <Crown className="w-8 h-8 text-[var(--gold)]" />
         </div>
         <h3 className="text-lg font-medium text-[var(--foreground)] mb-2">
-          No messages yet
+          {t("noMessages")}
         </h3>
         <p className="text-sm text-[var(--muted)]">
-          Subscribe to start chatting with the creator
+          {t("subscribePrompt")}
         </p>
       </div>
     );

@@ -4,8 +4,10 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { Shield, ArrowLeft, Send, CheckCircle, AlertTriangle } from "lucide-react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 
 export default function DMCAPage() {
+  const t = useTranslations("legal");
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -57,17 +59,16 @@ export default function DMCAPage() {
           <div className="w-20 h-20 rounded-full bg-green-500/20 flex items-center justify-center mx-auto mb-6">
             <CheckCircle className="w-10 h-10 text-green-500" />
           </div>
-          <h1 className="text-3xl font-bold text-white mb-4">Notice Received</h1>
+          <h1 className="text-3xl font-bold text-white mb-4">{t("dmca.successTitle")}</h1>
           <p className="text-gray-400 mb-8">
-            Your DMCA takedown notice has been submitted. Our team will review it within 24-48 hours
-            and take appropriate action. You will receive a confirmation email.
+            {t("dmca.successDesc")}
           </p>
           <Link
             href="/"
             className="inline-flex items-center gap-2 text-[var(--gold)] hover:underline"
           >
             <ArrowLeft className="w-4 h-4" />
-            Return to Home
+            {t("dmca.returnHome")}
           </Link>
         </div>
       </main>
@@ -82,7 +83,7 @@ export default function DMCAPage() {
           className="inline-flex items-center gap-2 text-gray-400 hover:text-white mb-8 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
-          Back to Home
+          {t("backToHome")}
         </Link>
 
         <motion.div
@@ -93,8 +94,8 @@ export default function DMCAPage() {
           <div className="w-16 h-16 rounded-full bg-[var(--gold)]/10 flex items-center justify-center mb-6">
             <Shield className="w-8 h-8 text-[var(--gold)]" />
           </div>
-          <h1 className="text-4xl font-bold text-white mb-4">DMCA Policy</h1>
-          <p className="text-gray-400">Digital Millennium Copyright Act Notice and Takedown Procedure</p>
+          <h1 className="text-4xl font-bold text-white mb-4">{t("dmca.title")}</h1>
+          <p className="text-gray-400">{t("dmca.subtitle")}</p>
         </motion.div>
 
         <motion.div
