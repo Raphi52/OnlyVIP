@@ -10,7 +10,7 @@ interface PPVLinksProps {
 }
 
 export function PPVLinks({ creatorSlug = "creator" }: PPVLinksProps) {
-  const t = useTranslations("creator");
+  const t = useTranslations("home");
   const [copied, setCopied] = useState(false);
 
   const features = [

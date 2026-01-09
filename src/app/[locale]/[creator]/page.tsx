@@ -6,8 +6,7 @@ import {
   ContentShowcase,
   ExclusivePreview,
   ChatPreview,
-  Pricing,
-  PPVLinks
+  Pricing
 } from "@/components/landing";
 import { getCreatorFromDB } from "@/lib/creators";
 
@@ -47,9 +46,6 @@ export default async function CreatorHome({ params }: PageProps) {
 
         {/* Chat Preview - Messaging feature showcase */}
         <ChatPreview creator={creator} />
-
-        {/* PPV Links - Monetization feature */}
-        <PPVLinks creatorSlug={creatorSlug} />
 
         {/* Pricing - Subscription plans */}
         <Pricing creatorSlug={creatorSlug} />

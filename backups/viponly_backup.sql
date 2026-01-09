@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict mLzSOJhIDyowdH3N2d5TduROJYGjgliSdpIWnytuNWKjAKLilZkUlI1j3FTfnC6
+\restrict XEgWKrowB0j8cDeSiOtFDwTBnnmnNQBihVwFD76jHoOdOVD1dIVIHr5dlTHbyf8
 
 -- Dumped from database version 16.11
 -- Dumped by pg_dump version 16.11
@@ -2160,12 +2160,12 @@ cmk1fp6980011l8uapo7o13ku	cmk1fp698000zl8uajwqr8hza	cmjzuusq60000peus3yh1w5h0	20
 cmk5rs6r0000jtw3v5naogg2r	cmk5rs6r0000gtw3vtn5913j1	cmk2mw4dt0005nznp1v0exjea	2026-01-08 21:18:34.779	f	f	f
 cmk5rs6r0000itw3vxlq81svp	cmk5rs6r0000gtw3vtn5913j1	cmjzuusq60000peus3yh1w5h0	\N	f	f	f
 cmk36yuv2001xlh2q0dl8jxo9	cmk36yuv2001vlh2qpr9vnlbw	cmjzuusq60000peus3yh1w5h0	2026-01-08 14:39:24.392	f	f	f
+cmk2z00m30005v6k4ovw5i8p6	cmk2z00m30002v6k45pya8mg6	cmk2mw4dt0005nznp1v0exjea	2026-01-09 08:46:58.682	f	f	f
 cmk1xjp9d0009jvmh3h3biw26	cmk1xjp9d0006jvmh3ca5ygw4	cmjzuusq60000peus3yh1w5h0	2026-01-06 12:35:01.041	f	f	f
-cmk2z00m30005v6k4ovw5i8p6	cmk2z00m30002v6k45pya8mg6	cmk2mw4dt0005nznp1v0exjea	2026-01-08 22:32:42.032	f	f	f
 cmk1fp6980012l8ualcfjfzn7	cmk1fp698000zl8uajwqr8hza	cmk1f94jh002jv6nsto6u1low	2026-01-05 18:12:52.153	f	f	f
 cmk2bks7l001tdqe2xbq3d95o	cmk2bks7l001qdqe2m8eljo35	cmjzuusq60000peus3yh1w5h0	2026-01-06 12:35:32.141	f	f	f
 cmk1f6e0w001tv6nsbkhihcco	cmk1f6e0w001rv6ns35i65pco	cmjzuusq60000peus3yh1w5h0	2026-01-06 21:36:32.584	f	f	f
-cmk2z00m30004v6k4i977g4i4	cmk2z00m30002v6k45pya8mg6	cmjzuusq60000peus3yh1w5h0	2026-01-08 21:55:56.401	f	f	f
+cmk2z00m30004v6k4i977g4i4	cmk2z00m30002v6k45pya8mg6	cmjzuusq60000peus3yh1w5h0	2026-01-09 09:18:46.579	f	f	f
 \.
 
 
@@ -5477,6 +5477,33 @@ cmk69ownn0008qt4eh7t03zh9	/fr	\N	v_1766808100130_nq519a6ii39	cmjzuusq60000peus3y
 cmk69oz0g0009qt4eggt6dlkj	/fr/dashboard	\N	v_1766808100130_nq519a6ii39	cmjzuusq60000peus3yh1w5h0	Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767925697114_dyblfnkt45d	2026-01-09 02:38:55.553
 cmk69p5pd000aqt4exbqfoh92	/fr/dashboard/admin/creator-applications	\N	v_1766808100130_nq519a6ii39	cmjzuusq60000peus3yh1w5h0	Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767925697114_dyblfnkt45d	2026-01-09 02:39:04.225
 cmk69p9du000bqt4evj0xfzxw	/fr/dashboard/admin/creator-applications	\N	v_1766808100130_nq519a6ii39	cmjzuusq60000peus3yh1w5h0	Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767925697114_dyblfnkt45d	2026-01-09 02:39:08.994
+cmk6mnhu40000fb4ymosx62jh	/fr/dashboard/admin/creator-applications	\N	v_1766808100130_nq519a6ii39	cmjzuusq60000peus3yh1w5h0	Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767948101523_vfcamkzxm5b	2026-01-09 08:41:41.644
+cmk6mpkfw0001fb4y07n19g5s	/fr/dashboard	\N	v_1766808100130_nq519a6ii39	cmjzuusq60000peus3yh1w5h0	Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767948101523_vfcamkzxm5b	2026-01-09 08:43:18.333
+cmk6mplwa0002fb4yzq2igg1u	/fr	\N	v_1766808100130_nq519a6ii39	cmjzuusq60000peus3yh1w5h0	Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767948101523_vfcamkzxm5b	2026-01-09 08:43:20.219
+cmk6mpntr0003fb4yerxdja6u	/fr/miacosta	\N	v_1766808100130_nq519a6ii39	cmjzuusq60000peus3yh1w5h0	Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767948101523_vfcamkzxm5b	2026-01-09 08:43:22.719
+cmk6mpx710004fb4ytf19kuv4	/fr	\N	v_1766808100130_nq519a6ii39	cmjzuusq60000peus3yh1w5h0	Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767948101523_vfcamkzxm5b	2026-01-09 08:43:34.861
+cmk6mqxuy0005fb4yjhupxpdy	/fr	\N	v_1766808100130_nq519a6ii39	cmjzuusq60000peus3yh1w5h0	Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767948101523_vfcamkzxm5b	2026-01-09 08:44:22.378
+cmk6mu6wl0006fb4y67l7dnzx	/en/dashboard/messages	https://viponly.fun/en/miacosta	v_1766804955115_r25kzpvto1	cmk2mw4dt0005nznp1v0exjea	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767948413959_4qc1no5yzaf	2026-01-09 08:46:54.033
+cmk6mualk0007fb4ybd0rdtt9	/en	https://viponly.fun/en/miacosta	v_1766804955115_r25kzpvto1	cmk2mw4dt0005nznp1v0exjea	Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36	desktop	Chrome	Windows	\N	s_1767948413959_4qc1no5yzaf	2026-01-09 08:46:58.857
+cmk6mwdfs0008fb4yxr07yj3g	/fr	\N	v_1766808100130_nq519a6ii39	cmjzuusq60000peus3yh1w5h0	Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767948101523_vfcamkzxm5b	2026-01-09 08:48:35.849
+cmk6my9kr0009fb4y09iviyjz	/fr/dashboard	\N	v_1766808100130_nq519a6ii39	cmjzuusq60000peus3yh1w5h0	Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767948101523_vfcamkzxm5b	2026-01-09 08:50:04.156
+cmk6myiw9000afb4yzrmdomw2	/fr/dashboard/creator/media	\N	v_1766808100130_nq519a6ii39	cmjzuusq60000peus3yh1w5h0	Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767948101523_vfcamkzxm5b	2026-01-09 08:50:16.233
+cmk6n276b000bfb4y3x26liqg	/fr/dashboard/admin/users	\N	v_1766808100130_nq519a6ii39	cmjzuusq60000peus3yh1w5h0	Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767948101523_vfcamkzxm5b	2026-01-09 08:53:07.667
+cmk6ni189000cfb4yf23bzm0f	/fr/dashboard/admin/users	\N	v_1766808100130_nq519a6ii39	cmjzuusq60000peus3yh1w5h0	Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767948101523_vfcamkzxm5b	2026-01-09 09:05:26.458
+cmk6ni2tk000dfb4yf0lf32ll	/fr	\N	v_1766808100130_nq519a6ii39	cmjzuusq60000peus3yh1w5h0	Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767948101523_vfcamkzxm5b	2026-01-09 09:05:28.52
+cmk6niast000efb4y669flpj1	/fr/miacosta	\N	v_1766808100130_nq519a6ii39	cmjzuusq60000peus3yh1w5h0	Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767948101523_vfcamkzxm5b	2026-01-09 09:05:38.861
+cmk6niqg5000ffb4yvy807s7k	/fr/miacosta/membership	https://viponly.fun/fr/miacosta	v_1766808100130_nq519a6ii39	cmjzuusq60000peus3yh1w5h0	Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767948101523_vfcamkzxm5b	2026-01-09 09:05:59.141
+cmk6njk2b000gfb4yee25vdp1	/fr/miacosta	https://viponly.fun/fr/miacosta	v_1766808100130_nq519a6ii39	cmjzuusq60000peus3yh1w5h0	Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767948101523_vfcamkzxm5b	2026-01-09 09:06:37.524
+cmk6no8ww00008x034j37vdy1	/fr/dashboard	https://viponly.fun/fr/miacosta	v_1766808100130_nq519a6ii39	cmjzuusq60000peus3yh1w5h0	Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767948101523_vfcamkzxm5b	2026-01-09 09:10:16.353
+cmk6nrvjp00018x03ru4ez2ft	/fr/miacosta	https://viponly.fun/fr/miacosta	v_1766808100130_nq519a6ii39	cmjzuusq60000peus3yh1w5h0	Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767949985510_p40w2j0ifj	2026-01-09 09:13:05.653
+cmk6ns0kw00028x03w0xy8wre	/fr/dashboard	https://viponly.fun/fr/miacosta	v_1766808100130_nq519a6ii39	cmjzuusq60000peus3yh1w5h0	Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767949985510_p40w2j0ifj	2026-01-09 09:13:12.177
+cmk6ns9z800038x03xmiwai15	/fr/miacosta	https://viponly.fun/fr/miacosta	v_1766808100130_nq519a6ii39	cmjzuusq60000peus3yh1w5h0	Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767949985510_p40w2j0ifj	2026-01-09 09:13:24.357
+cmk6nw4vs00048x03gh4ovfky	/fr/dashboard	https://viponly.fun/fr/miacosta	v_1766808100130_nq519a6ii39	cmjzuusq60000peus3yh1w5h0	Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767949985510_p40w2j0ifj	2026-01-09 09:16:24.376
+cmk6nwdkp00058x03qbqq5clx	/fr/dashboard/messages	https://viponly.fun/fr/miacosta	v_1766808100130_nq519a6ii39	cmjzuusq60000peus3yh1w5h0	Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767949985510_p40w2j0ifj	2026-01-09 09:16:35.641
+cmk6nwj0p00068x039snvn6rk	/fr/dashboard	https://viponly.fun/fr/miacosta	v_1766808100130_nq519a6ii39	cmjzuusq60000peus3yh1w5h0	Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767949985510_p40w2j0ifj	2026-01-09 09:16:42.697
+cmk6nwkr300078x037emn8xqs	/fr/dashboard/messages	https://viponly.fun/fr/miacosta	v_1766808100130_nq519a6ii39	cmjzuusq60000peus3yh1w5h0	Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767949985510_p40w2j0ifj	2026-01-09 09:16:44.943
+cmk6nz6us00088x03daam70tc	/fr/dashboard	https://viponly.fun/fr/miacosta	v_1766808100130_nq519a6ii39	cmjzuusq60000peus3yh1w5h0	Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767949985510_p40w2j0ifj	2026-01-09 09:18:46.9
+cmk6nz8wx00098x03oscc1b3r	/fr/miacosta	https://viponly.fun/fr/miacosta	v_1766808100130_nq519a6ii39	cmjzuusq60000peus3yh1w5h0	Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36	mobile	Chrome	Linux	\N	s_1767949985510_p40w2j0ifj	2026-01-09 09:18:49.568
 \.
 
 
@@ -5693,7 +5720,7 @@ cmk01osv10005du8011smicnb	bold-kira			\N		\N	\N	\N	\N	\N	\N	{"plans":[{"id":"bas
 cmk01mj2u0000du80rea9x32u	emmarose			\N		\N	\N	\N	\N	\N	\N	{"plans":[{"id":"basic","monthlyCredits":999,"annualCredits":9588,"bonusCredits":500},{"id":"vip","monthlyCredits":2999,"annualCredits":28788,"bonusCredits":2000}]}	t	f	t	t	t	f	t	t	f	\N	\N	0.05	t	2026-01-04 18:06:27.605	2026-01-04 19:43:58.623	f
 cmjzygmdf000o104ec3samvzb	miacosta	miacosta		\N		\N	\N	\N	\N	\N	\N	{"plans":[{"id":"basic","monthlyCredits":999,"annualCredits":9588,"bonusCredits":500},{"id":"vip","monthlyCredits":2999,"annualCredits":28788,"bonusCredits":2000}]}	t	f	t	t	t	f	t	t	f	\N	\N	0.05	t	2026-01-04 16:37:53.091	2026-01-05 17:01:22.655	f
 cmk36uxjc001llh2qn3haaa4t	gfgfgf			\N		\N	\N	\N	\N	\N	\N	{"plans":[{"id":"basic","monthlyCredits":1,"annualCredits":9588,"bonusCredits":500},{"id":"vip","monthlyCredits":3000,"annualCredits":28788,"bonusCredits":2000}]}	t	f	t	t	t	f	t	t	f	\N	\N	0.05	t	2026-01-06 22:56:16.2	2026-01-06 23:07:16.972	f
-global-settings	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	{}	t	f	t	t	t	f	t	t	f	\N	\N	0.05	t	2026-01-09 02:41:53.622	2026-01-09 02:41:53.622	f
+global-settings	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	{}	t	f	t	t	t	f	t	t	f	\N	\N	0.05	t	2026-01-09 02:41:53.622	2026-01-09 08:42:10.342	t
 \.
 
 
@@ -8435,5 +8462,5 @@ REVOKE USAGE ON SCHEMA public FROM PUBLIC;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict mLzSOJhIDyowdH3N2d5TduROJYGjgliSdpIWnytuNWKjAKLilZkUlI1j3FTfnC6
+\unrestrict XEgWKrowB0j8cDeSiOtFDwTBnnmnNQBihVwFD76jHoOdOVD1dIVIHr5dlTHbyf8
 

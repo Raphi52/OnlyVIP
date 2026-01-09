@@ -32,6 +32,7 @@ import {
 } from "lucide-react";
 import { Button, Card, PremiumCard, FeatureCard, PremiumBadge } from "@/components/ui";
 import { Footer } from "@/components/layout/Footer";
+import { PPVLinks } from "@/components/landing";
 import { getCategoryById } from "@/lib/categories";
 import { cn } from "@/lib/utils";
 
@@ -665,6 +666,9 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* PPV Links Section */}
+      <PPVLinks />
 
       {/* Divider */}
       <div className="max-w-7xl mx-auto px-4 py-8">
