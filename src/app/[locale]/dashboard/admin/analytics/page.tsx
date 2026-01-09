@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
+import { useTranslations } from "next-intl";
 import {
   DollarSign,
   Users,
@@ -123,6 +124,7 @@ const periods = [
 export default function AdminAnalyticsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const t = useTranslations("dashboard.admin");
   const [data, setData] = useState<AdminAnalytics | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [period, setPeriod] = useState<Period>("30d");
@@ -160,7 +162,7 @@ export default function AdminAnalyticsPage() {
       const result = await response.json();
       setData(result);
     } catch (err) {
-      setError("Error loading analytics");
+      setError(t("errorLoadingAnalytics"));
       console.error(err);
     } finally {
       setIsLoading(false);
@@ -224,8 +226,8 @@ export default function AdminAnalyticsPage() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-[var(--foreground)]">Analytics Dashboard</h1>
-            <p className="text-[var(--muted)] mt-1">Platform-wide statistics and insights</p>
+            <h1 className="text-3xl font-bold text-[var(--foreground)]">{t("analyticsDashboard")}</h1>
+            <p className="text-[var(--muted)] mt-1">{t("platformStats")}</p>
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
@@ -296,7 +298,7 @@ export default function AdminAnalyticsPage() {
             {/* KPI Cards Row */}
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
               <RevenueKpiCard
-                title="Total Revenue"
+                title={t("totalRevenue")}
                 value={data.kpis.totalRevenue}
                 change={data.kpis.revenueChange}
                 sparklineData={revenueSparkline}

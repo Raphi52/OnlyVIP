@@ -417,7 +417,18 @@ export function Sidebar() {
               (isAdmin || isCreatorUser || isAgencyOwner) && displayCreators.length > 0 && "hover:border-[var(--gold)]/30 cursor-pointer"
             )}
           >
-            {creatorAvatar ? (
+            {isAgencyOwner && agency?.logo ? (
+              <NextImage
+                key={agency.logo}
+                src={agency.logo}
+                alt={agency.name || "Agency"}
+                width={44}
+                height={44}
+                className="w-11 h-11 rounded-xl object-cover border-2 border-purple-500/50 flex-shrink-0"
+                referrerPolicy="no-referrer"
+                unoptimized
+              />
+            ) : creatorAvatar ? (
               <NextImage
                 key={creatorAvatar}
                 src={creatorAvatar}
@@ -445,9 +456,14 @@ export function Sidebar() {
             )}
             <div className="flex-1 min-w-0">
               <p className="font-semibold text-white text-sm">
-                {creatorName || session?.user?.name || "User"}
+                {isAgencyOwner && agency?.name ? agency.name : (creatorName || session?.user?.name || "User")}
               </p>
-              {selectedCreator?.slug && (
+              {isAgencyOwner && agency ? (
+                <p className="text-xs text-purple-400 flex items-center gap-1">
+                  <Building2 className="w-3 h-3" />
+                  Agency
+                </p>
+              ) : selectedCreator?.slug && (
                 <p className="text-xs text-gray-500">
                   @{selectedCreator.slug}
                 </p>
