@@ -741,7 +741,12 @@ model Creator {
 
   // AI Girlfriend Mode
   aiPersonality   String? // JSON: name, age, traits, interests, style
-  aiResponseDelay Int       @default(120) // Average delay in seconds (2min default)
+  aiResponseDelayMin  Int @default(5)   // Min response delay in seconds
+  aiResponseDelayMax  Int @default(120) // Max response delay in seconds (2min)
+  aiPauseDurationMin  Int @default(0)   // Min pause duration in minutes
+  aiPauseDurationMax  Int @default(5)   // Max pause duration in minutes
+  aiPauseIntervalMin  Int @default(3)   // Min messages before pause
+  aiPauseIntervalMax  Int @default(8)   // Max messages before pause
   aiLastActive    DateTime?
 
   // AI Media Sending Settings
@@ -1582,6 +1587,7 @@ model SiteSettings {
   registrationEnabled Boolean @default(true)
   emailNotifications  Boolean @default(true)
   pushNotifications   Boolean @default(false)
+  autoAcceptCreators   Boolean @default(false)
 
   // Platform commission settings
   platformWalletEth        String?

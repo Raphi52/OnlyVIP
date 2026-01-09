@@ -4,10 +4,10 @@ import { Footer } from "@/components/layout/Footer";
 import {
   Hero,
   ContentShowcase,
-  SocialProof,
   ExclusivePreview,
   ChatPreview,
-  Pricing
+  Pricing,
+  PPVLinks
 } from "@/components/landing";
 import { getCreatorFromDB } from "@/lib/creators";
 
@@ -42,14 +42,14 @@ export default async function CreatorHome({ params }: PageProps) {
         {/* Content Showcase - Parallax gallery with blurred previews */}
         <ContentShowcase creatorSlug={creatorSlug} />
 
-        {/* Social Proof - Notifications, stats, trust badges */}
-        <SocialProof />
-
         {/* Exclusive Preview - Large teaser cards */}
         <ExclusivePreview creatorSlug={creatorSlug} />
 
         {/* Chat Preview - Messaging feature showcase */}
         <ChatPreview creator={creator} />
+
+        {/* PPV Links - Monetization feature */}
+        <PPVLinks creatorSlug={creatorSlug} />
 
         {/* Pricing - Subscription plans */}
         <Pricing creatorSlug={creatorSlug} />

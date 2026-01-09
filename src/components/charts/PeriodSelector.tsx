@@ -3,7 +3,7 @@
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
-export type Period = "7d" | "30d" | "90d" | "1y";
+export type Period = "1d" | "7d" | "30d" | "90d" | "1y";
 
 interface PeriodSelectorProps {
   value: Period;
@@ -12,6 +12,7 @@ interface PeriodSelectorProps {
 }
 
 const periods: { value: Period; label: string }[] = [
+  { value: "1d", label: "1D" },
   { value: "7d", label: "7D" },
   { value: "30d", label: "30D" },
   { value: "90d", label: "90D" },

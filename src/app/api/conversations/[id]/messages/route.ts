@@ -155,7 +155,7 @@ export async function GET(
           receiverId: currentUserId,
           isRead: false,
         },
-        data: { isRead: true, readAt: new Date() },
+        data: { isRead: true },
       });
 
       // Also update participant's lastReadAt for consistency
@@ -474,15 +474,20 @@ export async function POST(
       // Get the creator's AI settings
       const creator = await prisma.creator.findUnique({
         where: { slug: conversation.creatorSlug },
-        select: { aiResponseDelay: true },
+        select: { aiResponseDelayMin: true, aiResponseDelayMax: true },
       });
 
-      // Schedule AI response with the creator's configured delay
+      // Calculate random delay between min and max
+      const minDelay = creator?.aiResponseDelayMin || 5;
+      const maxDelay = creator?.aiResponseDelayMax || 120;
+      const randomDelay = Math.floor(Math.random() * (maxDelay - minDelay + 1)) + minDelay;
+
+      // Schedule AI response with the random delay
       await scheduleAiResponse(
         message.id,
         conversationId,
         conversation.creatorSlug,
-        creator?.aiResponseDelay || 120
+        randomDelay
       );
     }
 

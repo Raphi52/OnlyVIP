@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { sendAgencyOfferEmail } from "@/lib/email";
 
 // POST /api/find-model/[listingId]/contact - Contact a model
 export async function POST(
@@ -42,7 +43,13 @@ export async function POST(
         isActive: true,
       },
       include: {
-        creator: true,
+        creator: {
+          include: {
+            user: {
+              select: { email: true },
+            },
+          },
+        },
       },
     });
 
@@ -82,6 +89,19 @@ export async function POST(
         message: message || null,
       },
     });
+
+    // Send email notification to creator
+    if (listing.creator.user?.email) {
+      await sendAgencyOfferEmail(
+        listing.creator.user.email,
+        listing.creator.displayName,
+        {
+          agencyName: agency.name,
+          agencySlug: agency.slug,
+          message: message || null,
+        }
+      );
+    }
 
     return NextResponse.json({ application }, { status: 201 });
   } catch (error) {

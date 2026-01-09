@@ -32,6 +32,8 @@ import {
   CheckSquare,
   Square,
   Folder,
+  Link2,
+  Copy,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAdminCreator } from "@/components/providers/AdminCreatorContext";
@@ -130,7 +132,25 @@ export default function CreatorMediaPage() {
   // Multi-upload states
   const [uploadMode, setUploadMode] = useState<"files" | "folder">("files");
 
+  // PPV link copy state
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
   const isCreatorUser = (session?.user as any)?.isCreator === true;
+
+  // Copy PPV link to clipboard
+  const copyPPVLink = async (item: MediaItem) => {
+    if (!selectedCreator) return;
+    const baseUrl = window.location.origin;
+    const link = `${baseUrl}/${selectedCreator.slug}/ppv/${item.id}`;
+
+    try {
+      await navigator.clipboard.writeText(link);
+      setCopiedId(item.id);
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch (err) {
+      console.error("Failed to copy:", err);
+    }
+  };
 
   // Redirect if not creator
   useEffect(() => {
@@ -919,6 +939,26 @@ export default function CreatorMediaPage() {
                     <Edit className="w-4 h-4 mr-2" />
                     Edit
                   </Button>
+                  {/* PPV Link button */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      copyPPVLink(item);
+                    }}
+                    title="Copy PPV Link"
+                    className={cn(
+                      "p-2 transition-colors rounded-lg",
+                      copiedId === item.id
+                        ? "bg-emerald-500/20 text-emerald-400"
+                        : "text-[var(--muted)] hover:text-[var(--gold)] hover:bg-[var(--gold)]/10"
+                    )}
+                  >
+                    {copiedId === item.id ? (
+                      <Check className="w-5 h-5" />
+                    ) : (
+                      <Link2 className="w-5 h-5" />
+                    )}
+                  </button>
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -1460,7 +1500,7 @@ export default function CreatorMediaPage() {
                         <span className={cn("text-sm", editTagPPV ? "text-orange-400" : "text-[var(--foreground)]")}>PPV</span>
                       </button>
                       {editTagPPV && (
-                        <div className="mt-2">
+                        <div className="mt-2 space-y-2">
                           <Input
                             label="Price (credits)"
                             type="number"
@@ -1469,6 +1509,29 @@ export default function CreatorMediaPage() {
                             placeholder="1000"
                             leftIcon={<Coins className="w-4 h-4" />}
                           />
+                          {/* PPV Link */}
+                          <div className="flex items-center gap-2 p-2 bg-orange-500/10 border border-orange-500/30 rounded-lg">
+                            <Link2 className="w-4 h-4 text-orange-400 flex-shrink-0" />
+                            <span className="text-xs text-orange-300 truncate flex-1 font-mono">
+                              {`${typeof window !== 'undefined' ? window.location.origin : ''}/${selectedCreator?.slug}/ppv/${editItem.id}`}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const link = `${window.location.origin}/${selectedCreator?.slug}/ppv/${editItem.id}`;
+                                navigator.clipboard.writeText(link);
+                                setCopiedId(editItem.id);
+                                setTimeout(() => setCopiedId(null), 2000);
+                              }}
+                              className="p-1.5 rounded-md bg-orange-500/20 hover:bg-orange-500/30 transition-colors flex-shrink-0"
+                            >
+                              {copiedId === editItem.id ? (
+                                <Check className="w-3.5 h-3.5 text-green-400" />
+                              ) : (
+                                <Copy className="w-3.5 h-3.5 text-orange-400" />
+                              )}
+                            </button>
+                          </div>
                         </div>
                       )}
                     </div>

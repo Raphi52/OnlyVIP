@@ -20,6 +20,9 @@ import {
   FileText,
   Link2,
   MapPin,
+  Calendar,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { Button, Card } from "@/components/ui";
 import { RevenueKpiCard } from "@/components/charts/RevenueKpiCard";
@@ -29,7 +32,7 @@ import { UserGrowthChart } from "@/components/charts/UserGrowthChart";
 import { AiPerformanceChart } from "@/components/charts/AiPerformanceChart";
 import { ConversionFunnel } from "@/components/charts/ConversionFunnel";
 import { TopCreatorsChart } from "@/components/charts/TopCreatorsChart";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow, format, subDays, addDays } from "date-fns";
 import type { Period } from "@/components/charts/PeriodSelector";
 
 interface AdminAnalytics {
@@ -110,6 +113,7 @@ interface AdminAnalytics {
 }
 
 const periods = [
+  { value: "1d", label: "1 day" },
   { value: "7d", label: "7 days" },
   { value: "30d", label: "30 days" },
   { value: "90d", label: "90 days" },
@@ -122,6 +126,8 @@ export default function AdminAnalyticsPage() {
   const [data, setData] = useState<AdminAnalytics | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [period, setPeriod] = useState<Period>("30d");
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const isAdmin = (session?.user as any)?.role === "ADMIN";
@@ -139,13 +145,17 @@ export default function AdminAnalyticsPage() {
     if (isAdmin) {
       fetchData();
     }
-  }, [period, isAdmin]);
+  }, [period, selectedDate, isAdmin]);
 
   const fetchData = async () => {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch(`/api/admin/analytics?period=${period}`);
+      let url = `/api/admin/analytics?period=${period}`;
+      if (period === "1d") {
+        url += `&date=${format(selectedDate, "yyyy-MM-dd")}`;
+      }
+      const response = await fetch(url);
       if (!response.ok) throw new Error("Failed to fetch analytics");
       const result = await response.json();
       setData(result);
@@ -154,6 +164,25 @@ export default function AdminAnalyticsPage() {
       console.error(err);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handlePrevDay = () => {
+    setSelectedDate(subDays(selectedDate, 1));
+  };
+
+  const handleNextDay = () => {
+    const tomorrow = addDays(new Date(), 1);
+    const nextDay = addDays(selectedDate, 1);
+    if (nextDay <= tomorrow) {
+      setSelectedDate(nextDay);
+    }
+  };
+
+  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const date = new Date(e.target.value);
+    if (!isNaN(date.getTime())) {
+      setSelectedDate(date);
     }
   };
 
@@ -199,7 +228,7 @@ export default function AdminAnalyticsPage() {
             <p className="text-[var(--muted)] mt-1">Platform-wide statistics and insights</p>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             {/* Period selector */}
             <div className="flex bg-[var(--surface)] rounded-lg p-1">
               {periods.map((p) => (
@@ -216,6 +245,34 @@ export default function AdminAnalyticsPage() {
                 </button>
               ))}
             </div>
+
+            {/* Date picker for 1 day */}
+            {period === "1d" && (
+              <div className="flex items-center gap-2 bg-[var(--surface)] rounded-lg p-1">
+                <button
+                  onClick={handlePrevDay}
+                  className="p-1.5 rounded-md text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-white/10 transition-colors"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <div className="relative">
+                  <input
+                    type="date"
+                    value={format(selectedDate, "yyyy-MM-dd")}
+                    onChange={handleDateChange}
+                    max={format(new Date(), "yyyy-MM-dd")}
+                    className="bg-transparent text-sm text-[var(--foreground)] border-none outline-none cursor-pointer px-2 py-1"
+                  />
+                </div>
+                <button
+                  onClick={handleNextDay}
+                  disabled={format(selectedDate, "yyyy-MM-dd") >= format(new Date(), "yyyy-MM-dd")}
+                  className="p-1.5 rounded-md text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-white/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            )}
 
             <Button
               variant="outline"

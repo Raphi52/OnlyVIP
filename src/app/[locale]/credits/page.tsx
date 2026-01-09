@@ -492,7 +492,7 @@ export default function CreditsPage() {
                           ${pkg.price}
                         </div>
                         <div className="text-xs text-gray-500">
-                          ${((pkg.price / pkg.credits) * 100).toFixed(2)} per 100
+                          ${((pkg.price / (pkg.credits + (pkg.bonus || 0))) * 100).toFixed(2)} per 100
                         </div>
 
                         {/* Buy indicator */}

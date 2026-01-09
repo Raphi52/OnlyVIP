@@ -4,6 +4,14 @@ import prisma from "@/lib/prisma";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
 
+function generateSlug(displayName: string): string {
+  return displayName
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 30);
+}
+
 // POST /api/creator/apply - Submit application to become a creator
 export async function POST(request: NextRequest) {
   try {
@@ -88,7 +96,78 @@ export async function POST(request: NextRequest) {
 
     const documentUrl = `/uploads/applications/${fileName}`;
 
-    // Create the application
+    // Check if auto-accept is enabled
+    const siteSettings = await prisma.siteSettings.findFirst({
+      where: { creatorSlug: null },
+      select: { autoAcceptCreators: true },
+    });
+
+    const autoAccept = siteSettings?.autoAcceptCreators === true;
+
+    if (autoAccept) {
+      // Auto-approve: Create creator profile directly
+      let baseSlug = generateSlug(displayName);
+      let slug = baseSlug;
+      let counter = 1;
+
+      // Check for slug conflicts
+      while (await prisma.creator.findUnique({ where: { slug } })) {
+        slug = `${baseSlug}-${counter}`;
+        counter++;
+      }
+
+      // Create everything in a transaction
+      const result = await prisma.$transaction(async (tx) => {
+        // Create the application as approved
+        const application = await tx.creatorApplication.create({
+          data: {
+            userId,
+            displayName,
+            bio: bio || null,
+            documentUrl,
+            documentType,
+            status: "APPROVED",
+            reviewedAt: new Date(),
+          },
+        });
+
+        // Create the creator profile
+        const creator = await tx.creator.create({
+          data: {
+            slug,
+            name: displayName,
+            displayName,
+            bio: bio || null,
+            userId,
+            isActive: true,
+          },
+        });
+
+        // Update user to be a creator
+        await tx.user.update({
+          where: { id: userId },
+          data: { isCreator: true },
+        });
+
+        // Update application with creator ID
+        await tx.creatorApplication.update({
+          where: { id: application.id },
+          data: { createdCreatorId: creator.id },
+        });
+
+        return { application, creator };
+      });
+
+      return NextResponse.json({
+        success: true,
+        applicationId: result.application.id,
+        autoApproved: true,
+        creatorSlug: result.creator.slug,
+        message: "Your creator profile has been created! You can now start posting content.",
+      });
+    }
+
+    // Normal flow: Create pending application
     const application = await prisma.creatorApplication.create({
       data: {
         userId,

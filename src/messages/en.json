@@ -98,7 +98,19 @@
     "protectionAgencies3": "Built-in anti-fraud",
     "protectionAgencies3Desc": "Creator verification and abuse protection",
     "protectionTrustTitle": "Zero disputes since launch",
-    "protectionTrustDesc": "Transparency prevents problems"
+    "protectionTrustDesc": "Transparency prevents problems",
+    "ppvTitle": "Pay-Per-View Content Links",
+    "ppvSubtitle": "Monetize your content with shareable PPV links",
+    "ppvDesc": "Create instant pay-per-view links for any photo or video. Share on social media, in DMs, or anywhere online. Fans pay with credits and unlock content instantly - you earn 95% of every sale.",
+    "ppvFeature1": "Instant Paywall Links",
+    "ppvFeature1Desc": "Generate shareable links that work anywhere. Share on Twitter, Instagram, Telegram, or any platform.",
+    "ppvFeature2": "Credit-Based Payments",
+    "ppvFeature2Desc": "Fans buy credits once, unlock content instantly. No payment friction, no chargebacks.",
+    "ppvFeature3": "95% Creator Earnings",
+    "ppvFeature3Desc": "Keep almost everything. Only 5% platform fee - the best rates in the industry.",
+    "ppvFeature4": "Beautiful Preview Pages",
+    "ppvFeature4Desc": "Premium paywall pages with blurred previews that convert fans into buyers.",
+    "ppvCTA": "Start Selling PPV Content"
   },
   "features": {
     "zeroPercent": "VIPOnly 0% First Month",

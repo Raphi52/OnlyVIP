@@ -26,6 +26,7 @@ import Link from "next/link";
 import { usePusherChat } from "@/hooks/usePusher";
 import { cn, formatRelativeTime } from "@/lib/utils";
 import { useAdminCreator } from "@/components/providers/AdminCreatorContext";
+import { useCreatorPermissions } from "@/hooks/useCreatorPermissions";
 
 interface Message {
   id: string;
@@ -110,6 +111,10 @@ export default function MessagesPage() {
 
   // For creators: get selected creator profile for PPV functionality
   const { selectedCreator } = useAdminCreator();
+
+  // Check if creator is agency-managed (read-only mode)
+  const { permissions } = useCreatorPermissions(selectedCreator?.slug);
+  const isReadOnly = permissions.isAgencyManaged && !permissions.canSendMessages;
 
   // Check subscription status - Creators, Admins, and Agency owners can always message
   useEffect(() => {
@@ -1178,6 +1183,8 @@ export default function MessagesPage() {
               isAdmin={isCreator || !!selectedCreator}
               isMuted={selectedConversation.isMuted}
               isTyping={isOtherUserTyping}
+              readOnly={isReadOnly}
+              readOnlyMessage={isReadOnly ? `Your profile is managed by ${permissions.agencyName || "an agency"}. Contact them to send messages.` : undefined}
               hasMore={hasMoreMessages}
               isLoadingMore={isLoadingMoreMessages}
               onLoadMore={loadMoreMessages}

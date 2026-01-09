@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { sendCreatorApplicationEmail } from "@/lib/email";
 
 // POST /api/find-agency/[agencyId]/apply - Apply to an agency
 export async function POST(
@@ -43,6 +44,11 @@ export async function POST(
         publicVisible: true,
         status: "ACTIVE",
       },
+      include: {
+        owner: {
+          select: { email: true, name: true },
+        },
+      },
     });
 
     if (!agency) {
@@ -76,6 +82,19 @@ export async function POST(
         message: message || null,
       },
     });
+
+    // Send email notification to agency owner
+    if (agency.owner?.email) {
+      await sendCreatorApplicationEmail(
+        agency.owner.email,
+        agency.owner.name || agency.name,
+        {
+          creatorName: creator.displayName,
+          creatorSlug: creator.slug,
+          message: message || null,
+        }
+      );
+    }
 
     return NextResponse.json({ application }, { status: 201 });
   } catch (error) {

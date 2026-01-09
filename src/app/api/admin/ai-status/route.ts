@@ -15,7 +15,8 @@ export async function GET(request: NextRequest) {
       select: {
         slug: true,
         displayName: true,
-        aiResponseDelay: true,
+        aiResponseDelayMin: true,
+        aiResponseDelayMax: true,
         aiLastActive: true,
       },
     });
@@ -83,7 +84,8 @@ export async function GET(request: NextRequest) {
       creators: creators.map((c) => ({
         slug: c.slug,
         name: c.displayName,
-        delay: c.aiResponseDelay,
+        delayMin: c.aiResponseDelayMin,
+        delayMax: c.aiResponseDelayMax,
         lastActive: c.aiLastActive,
       })),
       conversations: {

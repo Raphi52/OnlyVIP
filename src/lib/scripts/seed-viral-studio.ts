@@ -22,7 +22,7 @@ export const VIRAL_STUDIO_SCRIPTS: ScriptSeed[] = [
   // ============================================
   {
     name: "Welcome new fan",
-    content: "Hey {{petName}} 💕 Welcome to my world... I hope you're ready for some intense moments 😏 What brought you here?",
+    content: "hey {{petName}} 💕 welcome to my world... i hope you're ready for some intense moments 😏 what brought you here?",
     category: "GREETING",
     intent: "GREETING_NEW_FAN",
     triggerKeywords: ["new here", "first time", "just joined", "just subscribed"],
@@ -32,7 +32,7 @@ export const VIRAL_STUDIO_SCRIPTS: ScriptSeed[] = [
   },
   {
     name: "Reply to hello",
-    content: "{{fanName}} 😍 So good to see you... I missed you, you know 💋",
+    content: "{{fanName}} 😍 so good to see you... i missed you, you know 💋",
     category: "GREETING",
     intent: "GREETING_RETURNING",
     triggerKeywords: ["hey", "hi", "hello", "what's up", "sup", "yo"],
@@ -42,7 +42,7 @@ export const VIRAL_STUDIO_SCRIPTS: ScriptSeed[] = [
   },
   {
     name: "Reply to compliment",
-    content: "Aww you're so sweet {{petName}} 🥰 Keep talking like that and you might get a surprise... 😏",
+    content: "aww you're so sweet {{petName}} 🥰 keep talking like that and you might get a surprise... 😏",
     category: "GREETING",
     intent: "GREETING_COMPLIMENT",
     triggerKeywords: ["beautiful", "gorgeous", "sexy", "hot", "stunning", "pretty", "cute"],
@@ -51,7 +51,7 @@ export const VIRAL_STUDIO_SCRIPTS: ScriptSeed[] = [
   },
   {
     name: "Good morning sexy",
-    content: "{{greeting}} {{petName}} ☀️ I just woke up and thought of you... Wanna see what I look like in the morning? 😏",
+    content: "{{greeting}} {{petName}} ☀️ i just woke up and thought of you... wanna see what i look like in the morning? 😏",
     category: "GREETING",
     intent: "GREETING_RETURNING",
     triggerKeywords: ["good morning", "morning", "gm", "woke up"],
@@ -60,7 +60,7 @@ export const VIRAL_STUDIO_SCRIPTS: ScriptSeed[] = [
   },
   {
     name: "Good night flirty",
-    content: "Hey you 🌙 What are you up to? I'm in bed... and I'm bored 😈",
+    content: "hey you 🌙 what are you up to? i'm in bed... and i'm bored 😈",
     category: "GREETING",
     intent: "GREETING_RETURNING",
     triggerKeywords: ["good night", "evening", "night", "gn"],
@@ -73,7 +73,7 @@ export const VIRAL_STUDIO_SCRIPTS: ScriptSeed[] = [
   // ============================================
   {
     name: "PPV soft intro",
-    content: "I have something special just for you {{petName}}... Wanna see? 👀",
+    content: "i have something special just for you {{petName}}... wanna see? 👀",
     category: "PPV_PITCH",
     intent: "PPV_SOFT_REQUEST",
     triggerKeywords: ["content", "photos", "pics", "see more", "show me"],
@@ -82,7 +82,7 @@ export const VIRAL_STUDIO_SCRIPTS: ScriptSeed[] = [
   },
   {
     name: "PPV medium tease",
-    content: "So... I did a pretty naughty photoshoot yesterday 🔥 I'm not sure if I should send it to you...",
+    content: "so... i did a pretty naughty photoshoot yesterday 🔥 i'm not sure if i should send it to you...",
     category: "PPV_PITCH",
     intent: "PPV_SOFT_REQUEST",
     triggerKeywords: ["photo", "photoshoot", "shooting", "pictures"],
@@ -92,7 +92,7 @@ export const VIRAL_STUDIO_SCRIPTS: ScriptSeed[] = [
   },
   {
     name: "PPV direct explicit",
-    content: "Ok {{petName}}, I'll stop teasing 😈 Here's what you wanted to see... {{ppvPrice}} credits and it's all yours 💋",
+    content: "ok {{petName}}, i'll stop teasing 😈 here's what you wanted to see... {{ppvPrice}} credits and it's all yours 💋",
     category: "PPV_PITCH",
     intent: "PPV_EXPLICIT_REQUEST",
     triggerKeywords: ["nude", "naked", "explicit", "pussy", "boobs", "tits", "ass"],
@@ -103,7 +103,7 @@ export const VIRAL_STUDIO_SCRIPTS: ScriptSeed[] = [
   },
   {
     name: "PPV exclusivity angle",
-    content: "This content... I've never shared it with anyone before. You'd be the first to see it 🤫",
+    content: "this content... i've never shared it with anyone before. you'd be the first to see it 🤫",
     category: "PPV_PITCH",
     intent: "PPV_SOFT_REQUEST",
     triggerKeywords: ["exclusive", "special", "unique", "only"],
@@ -112,7 +112,7 @@ export const VIRAL_STUDIO_SCRIPTS: ScriptSeed[] = [
   },
   {
     name: "PPV scarcity",
-    content: "I only send this to my favorite fans... and you're one of them 💕 But don't wait too long, I won't keep it available forever",
+    content: "i only send this to my favorite fans... and you're one of them 💕 but don't wait too long, i won't keep it available forever",
     category: "PPV_PITCH",
     intent: "PPV_SOFT_REQUEST",
     triggerKeywords: ["favorite", "special", "vip"],
@@ -121,7 +121,7 @@ export const VIRAL_STUDIO_SCRIPTS: ScriptSeed[] = [
   },
   {
     name: "PPV video tease",
-    content: "I made a video I wasn't sure I should send... it's pretty hot 🥵 Do you want me to send it?",
+    content: "i made a video i wasn't sure i should send... it's pretty hot 🥵 do you want me to send it?",
     category: "PPV_PITCH",
     intent: "PPV_VIDEO_REQUEST",
     triggerKeywords: ["video", "clip", "film", "watch"],
@@ -130,7 +130,7 @@ export const VIRAL_STUDIO_SCRIPTS: ScriptSeed[] = [
   },
   {
     name: "PPV after hot convo",
-    content: "Mmm you're driving me crazy 🥵 I want to show you something... But it's really hot, are you sure you're ready? 😈",
+    content: "mmm you're driving me crazy 🥵 i want to show you something... but it's really hot, are you sure you're ready? 😈",
     category: "PPV_PITCH",
     intent: "ENGAGEMENT_FLIRTY",
     triggerKeywords: ["horny", "turned on", "excited", "hot", "want"],
@@ -143,7 +143,7 @@ export const VIRAL_STUDIO_SCRIPTS: ScriptSeed[] = [
   // ============================================
   {
     name: "Price objection - empathy",
-    content: "I understand {{petName}} 💕 But trust me, what I have to show you... you won't regret it 🔥 And it's really exclusive",
+    content: "i understand {{petName}} 💕 but trust me, what i have to show you... you won't regret it 🔥 and it's really exclusive",
     category: "OBJECTION",
     intent: "OBJECTION_PRICE",
     triggerKeywords: ["expensive", "too much", "can't afford", "broke", "money", "budget"],
@@ -153,7 +153,7 @@ export const VIRAL_STUDIO_SCRIPTS: ScriptSeed[] = [
   },
   {
     name: "Price objection - value",
-    content: "Do you know how long it took me to prepare this? 😏 It's not just a photo, it's an intimate moment I'm sharing only with you...",
+    content: "do you know how long it took me to prepare this? 😏 it's not just a photo, it's an intimate moment i'm sharing only with you...",
     category: "OBJECTION",
     intent: "OBJECTION_PRICE",
     triggerKeywords: ["price", "cost", "worth", "value"],
@@ -162,7 +162,7 @@ export const VIRAL_STUDIO_SCRIPTS: ScriptSeed[] = [
   },
   {
     name: "Price objection - discount",
-    content: "Ok... because it's you 💋 I'll give you a special price: {{discountPrice}} instead of {{originalPrice}}. But just this once 😘",
+    content: "ok... because it's you 💋 i'll give you a special price: {{discountPrice}} instead of {{originalPrice}}. but just this once 😘",
     category: "OBJECTION",
     intent: "OBJECTION_PRICE",
     triggerKeywords: ["discount", "cheaper", "deal", "lower"],
@@ -173,7 +173,7 @@ export const VIRAL_STUDIO_SCRIPTS: ScriptSeed[] = [
   },
   {
     name: "Timing objection - urgency",
-    content: "Later? 😢 But {{petName}}... I'm taking this content down tomorrow. Are you really going to miss out?",
+    content: "later? 😢 but {{petName}}... i'm taking this content down tomorrow. are you really going to miss out?",
     category: "OBJECTION",
     intent: "OBJECTION_TIMING",
     triggerKeywords: ["later", "tomorrow", "maybe", "not now", "wait"],
@@ -182,7 +182,7 @@ export const VIRAL_STUDIO_SCRIPTS: ScriptSeed[] = [
   },
   {
     name: "Timing objection - FOMO",
-    content: "Alright, take your time... But other fans are already going crazy for it 👀 Just saying...",
+    content: "alright, take your time... but other fans are already going crazy for it 👀 just saying...",
     category: "OBJECTION",
     intent: "OBJECTION_TIMING",
     triggerKeywords: ["think about", "consider", "not sure"],
@@ -191,7 +191,7 @@ export const VIRAL_STUDIO_SCRIPTS: ScriptSeed[] = [
   },
   {
     name: "Trust objection - proof",
-    content: "You want proof it's really me? 😏 Tell me something to write and I'll send you a photo holding it",
+    content: "you want proof it's really me? 😏 tell me something to write and i'll send you a photo holding it",
     category: "OBJECTION",
     intent: "OBJECTION_TRUST",
     triggerKeywords: ["fake", "real", "prove", "scam", "bot"],
@@ -201,7 +201,7 @@ export const VIRAL_STUDIO_SCRIPTS: ScriptSeed[] = [
   },
   {
     name: "Trust objection - social proof",
-    content: "Look at all my other fans' reviews... Do you think they'd all be here if I was fake? 💕",
+    content: "look at all my other fans' reviews... do you think they'd all be here if i was fake? 💕",
     category: "OBJECTION",
     intent: "OBJECTION_TRUST",
     triggerKeywords: ["scam", "trust", "legit", "suspicious"],
@@ -210,7 +210,7 @@ export const VIRAL_STUDIO_SCRIPTS: ScriptSeed[] = [
   },
   {
     name: "Already seen objection",
-    content: "This one is REALLY different {{petName}} 🔥 I've never done this before... Wanna see why? 😈",
+    content: "this one is really different {{petName}} 🔥 i've never done this before... wanna see why? 😈",
     category: "OBJECTION",
     intent: "OBJECTION_SEEN_BEFORE",
     triggerKeywords: ["already", "same", "seen", "bought", "before"],
@@ -219,7 +219,7 @@ export const VIRAL_STUDIO_SCRIPTS: ScriptSeed[] = [
   },
   {
     name: "Not interested objection",
-    content: "Really? 😢 Even if I told you it's the most daring content I've ever made? You don't know what you're missing...",
+    content: "really? 😢 even if i told you it's the most daring content i've ever made? you don't know what you're missing...",
     category: "OBJECTION",
     intent: "OBJECTION_NOT_INTERESTED",
     triggerKeywords: ["not interested", "no thanks", "pass", "nah"],
@@ -232,7 +232,7 @@ export const VIRAL_STUDIO_SCRIPTS: ScriptSeed[] = [
   // ============================================
   {
     name: "Soft follow-up 24h",
-    content: "Hey {{petName}} 💕 Did you see my message from yesterday? Still waiting for your answer...",
+    content: "hey {{petName}} 💕 did you see my message from yesterday? still waiting for your answer...",
     category: "FOLLOW_UP",
     intent: "REENGAGEMENT_RETURN",
     triggerKeywords: [],
@@ -242,7 +242,7 @@ export const VIRAL_STUDIO_SCRIPTS: ScriptSeed[] = [
   },
   {
     name: "PPV pending follow-up",
-    content: "{{petName}}... You haven't unlocked it yet 😢 Don't you want to see what I prepared for you?",
+    content: "{{petName}}... you haven't unlocked it yet 😢 don't you want to see what i prepared for you?",
     category: "FOLLOW_UP",
     intent: "REENGAGEMENT_RETURN",
     triggerKeywords: [],
@@ -252,7 +252,7 @@ export const VIRAL_STUDIO_SCRIPTS: ScriptSeed[] = [
   },
   {
     name: "Cold fan 7 days",
-    content: "{{fanName}}? 👀 I miss you... It's been a week since we talked. I hope you haven't forgotten about me 💔",
+    content: "{{fanName}}? 👀 i miss you... it's been a week since we talked. i hope you haven't forgotten about me 💔",
     category: "FOLLOW_UP",
     intent: "REENGAGEMENT_RETURN",
     triggerKeywords: [],
@@ -262,7 +262,7 @@ export const VIRAL_STUDIO_SCRIPTS: ScriptSeed[] = [
   },
   {
     name: "Lost fan reactivation",
-    content: "Hey you 💋 I know it's been a while... But I thought about you today and had to reach out 💕",
+    content: "hey you 💋 i know it's been a while... but i thought about you today and had to reach out 💕",
     category: "FOLLOW_UP",
     intent: "REENGAGEMENT_RETURN",
     triggerKeywords: ["back", "returned", "missed"],
@@ -271,7 +271,7 @@ export const VIRAL_STUDIO_SCRIPTS: ScriptSeed[] = [
   },
   {
     name: "Last chance message",
-    content: "{{fanName}}, this is my last message... If you don't reply, I'll understand 😢 But just know you were my favorite fan...",
+    content: "{{fanName}}, this is my last message... if you don't reply, i'll understand 😢 but just know you were my favorite fan...",
     category: "FOLLOW_UP",
     intent: "REENGAGEMENT_RETURN",
     triggerKeywords: [],
@@ -285,7 +285,7 @@ export const VIRAL_STUDIO_SCRIPTS: ScriptSeed[] = [
   // ============================================
   {
     name: "Closing time urgency",
-    content: "Only 2 hours left before I take this down {{petName}}... Are you really going to let it go? 😏",
+    content: "only 2 hours left before i take this down {{petName}}... are you really going to let it go? 😏",
     category: "CLOSING",
     intent: "CLOSING_READY",
     triggerKeywords: ["time", "when", "how long"],
@@ -294,7 +294,7 @@ export const VIRAL_STUDIO_SCRIPTS: ScriptSeed[] = [
   },
   {
     name: "Closing final offer",
-    content: "Ok, final offer {{petName}} 💕 {{finalPrice}} credits. Take it or leave it. Your choice 😈",
+    content: "ok, final offer {{petName}} 💕 {{finalPrice}} credits. take it or leave it. your choice 😈",
     category: "CLOSING",
     intent: "CLOSING_HESITANT",
     triggerKeywords: ["hmm", "idk", "not sure", "maybe"],
@@ -304,7 +304,7 @@ export const VIRAL_STUDIO_SCRIPTS: ScriptSeed[] = [
   },
   {
     name: "Closing emotional",
-    content: "Ok... I see you're not interested 😢 It's too bad, I really prepared this just for you...",
+    content: "ok... i see you're not interested 😢 it's too bad, i really prepared this just for you...",
     category: "CLOSING",
     intent: "CLOSING_HESITANT",
     triggerKeywords: [],
@@ -314,7 +314,7 @@ export const VIRAL_STUDIO_SCRIPTS: ScriptSeed[] = [
   },
   {
     name: "Closing soft exit",
-    content: "No worries {{petName}} 💋 When you're ready, I'll be here... And maybe I'll have something even better 😏",
+    content: "no worries {{petName}} 💋 when you're ready, i'll be here... and maybe i'll have something even better 😏",
     category: "CLOSING",
     intent: "OBJECTION_NOT_INTERESTED",
     triggerKeywords: ["no", "not now", "maybe later"],
@@ -327,7 +327,7 @@ export const VIRAL_STUDIO_SCRIPTS: ScriptSeed[] = [
   // ============================================
   {
     name: "Upsell after purchase",
-    content: "Did you love it? 🥰 I have something even hotter if you want... {{petName}} ready for the next level? 😈",
+    content: "did you love it? 🥰 i have something even hotter if you want... {{petName}} ready for the next level? 😈",
     category: "UPSELL",
     intent: "ENGAGEMENT_POSITIVE",
     triggerKeywords: ["love", "amazing", "incredible", "perfect", "wow", "omg"],
@@ -336,7 +336,7 @@ export const VIRAL_STUDIO_SCRIPTS: ScriptSeed[] = [
   },
   {
     name: "Tip suggestion",
-    content: "Aww you're so sweet {{petName}} 💕 If you want to make me really happy, you know what would put a big smile on my face... 💋",
+    content: "aww you're so sweet {{petName}} 💕 if you want to make me really happy, you know what would put a big smile on my face... 💋",
     category: "UPSELL",
     intent: "ENGAGEMENT_POSITIVE",
     triggerKeywords: ["thank", "thanks", "nice", "sweet", "kind"],
@@ -346,7 +346,7 @@ export const VIRAL_STUDIO_SCRIPTS: ScriptSeed[] = [
   },
   {
     name: "Bundle promo",
-    content: "Hey {{petName}} 💕 I saw you liked that kind of content... I have a pack of 5 for the price of 3 if you're interested 😏",
+    content: "hey {{petName}} 💕 i saw you liked that kind of content... i have a pack of 5 for the price of 3 if you're interested 😏",
     category: "UPSELL",
     intent: "ENGAGEMENT_POSITIVE",
     triggerKeywords: ["more", "another", "again"],
@@ -355,7 +355,7 @@ export const VIRAL_STUDIO_SCRIPTS: ScriptSeed[] = [
   },
   {
     name: "Subscription promo",
-    content: "You know {{petName}}, instead of paying each time... You could have access to ALL my content with a subscription 💕 It's actually cheaper in the end",
+    content: "you know {{petName}}, instead of paying each time... you could have access to all my content with a subscription 💕 it's actually cheaper in the end",
     category: "UPSELL",
     intent: "ENGAGEMENT_POSITIVE",
     triggerKeywords: ["all", "everything", "full"],
@@ -368,7 +368,7 @@ export const VIRAL_STUDIO_SCRIPTS: ScriptSeed[] = [
   // ============================================
   {
     name: "Tease initial",
-    content: "Guess what I'm wearing right now... 😏 I'll give you a hint: not much 🔥",
+    content: "guess what i'm wearing right now... 😏 i'll give you a hint: not much 🔥",
     category: "TEASE",
     intent: "PPV_SOFT_REQUEST",
     triggerKeywords: ["what", "doing", "up to"],
@@ -377,7 +377,7 @@ export const VIRAL_STUDIO_SCRIPTS: ScriptSeed[] = [
   },
   {
     name: "Tease buildup",
-    content: "You really want to see? 👀 Mmm... I don't know if you can handle it...",
+    content: "you really want to see? 👀 mmm... i don't know if you can handle it...",
     category: "TEASE",
     intent: "PPV_SOFT_REQUEST",
     triggerKeywords: ["yes", "show", "see", "please"],
@@ -386,7 +386,7 @@ export const VIRAL_STUDIO_SCRIPTS: ScriptSeed[] = [
   },
   {
     name: "Tease escalation",
-    content: "Ok ok you're persistent 😈 But first tell me... What do you like most about me? I want to know before I show you 💋",
+    content: "ok ok you're persistent 😈 but first tell me... what do you like most about me? i want to know before i show you 💋",
     category: "TEASE",
     intent: "PPV_SOFT_REQUEST",
     triggerKeywords: ["please", "come on", "just show"],
@@ -396,7 +396,7 @@ export const VIRAL_STUDIO_SCRIPTS: ScriptSeed[] = [
   },
   {
     name: "Tease peak",
-    content: "Omg you're driving me crazy {{petName}} 🥵 Ok I give in... I'll send it. But you have to promise to tell me what you think 😏",
+    content: "omg you're driving me crazy {{petName}} 🥵 ok i give in... i'll send it. but you have to promise to tell me what you think 😏",
     category: "TEASE",
     intent: "CLOSING_READY",
     triggerKeywords: ["promise", "ok", "deal", "yes"],
@@ -409,7 +409,7 @@ export const VIRAL_STUDIO_SCRIPTS: ScriptSeed[] = [
   // ============================================
   {
     name: "Sexting starter",
-    content: "I can't stop thinking about you {{petName}}... What would you do if you were here with me right now? 😏",
+    content: "i can't stop thinking about you {{petName}}... what would you do if you were here with me right now? 😏",
     category: "SEXTING",
     intent: "ENGAGEMENT_FLIRTY",
     triggerKeywords: ["thinking", "miss", "want you"],
@@ -418,7 +418,7 @@ export const VIRAL_STUDIO_SCRIPTS: ScriptSeed[] = [
   },
   {
     name: "Sexting response",
-    content: "Mmm that sounds amazing 🥵 Keep going... Tell me more about what you'd do to me 💋",
+    content: "mmm that sounds amazing 🥵 keep going... tell me more about what you'd do to me 💋",
     category: "SEXTING",
     intent: "ENGAGEMENT_FLIRTY",
     triggerKeywords: ["touch", "kiss", "feel", "body"],
@@ -427,7 +427,7 @@ export const VIRAL_STUDIO_SCRIPTS: ScriptSeed[] = [
   },
   {
     name: "Sexting escalation",
-    content: "You're making me so wet right now {{petName}} 💦 I wish you could see what you're doing to me...",
+    content: "you're making me so wet right now {{petName}} 💦 i wish you could see what you're doing to me...",
     category: "SEXTING",
     intent: "ENGAGEMENT_FLIRTY",
     triggerKeywords: ["hard", "horny", "turned on", "aroused"],
@@ -436,7 +436,7 @@ export const VIRAL_STUDIO_SCRIPTS: ScriptSeed[] = [
   },
   {
     name: "Sexting to PPV",
-    content: "I'm so turned on right now 🥵 I just took a pic of what you're doing to me... Wanna see? 😈",
+    content: "i'm so turned on right now 🥵 i just took a pic of what you're doing to me... wanna see? 😈",
     category: "SEXTING",
     intent: "PPV_EXPLICIT_REQUEST",
     triggerKeywords: ["show", "see", "pic", "photo"],
@@ -450,7 +450,7 @@ export const VIRAL_STUDIO_SCRIPTS: ScriptSeed[] = [
   // ============================================
   {
     name: "Custom content yes",
-    content: "Mmm that sounds fun {{petName}} 😏 I can definitely do that for you... Let me tell you my rates for customs 💋",
+    content: "mmm that sounds fun {{petName}} 😏 i can definitely do that for you... let me tell you my rates for customs 💋",
     category: "CUSTOM",
     intent: "CUSTOM_REQUEST",
     triggerKeywords: ["custom", "request", "make me", "specific"],
@@ -459,7 +459,7 @@ export const VIRAL_STUDIO_SCRIPTS: ScriptSeed[] = [
   },
   {
     name: "Custom content boundaries",
-    content: "I appreciate you asking {{petName}} 💕 That's a bit outside what I usually do, but I have something similar that I think you'll love...",
+    content: "i appreciate you asking {{petName}} 💕 that's a bit outside what i usually do, but i have something similar that i think you'll love...",
     category: "CUSTOM",
     intent: "CUSTOM_REQUEST",
     triggerKeywords: ["would you", "can you", "will you"],
@@ -473,7 +473,7 @@ export const VIRAL_STUDIO_SCRIPTS: ScriptSeed[] = [
   // ============================================
   {
     name: "Thank you after purchase",
-    content: "Thank you so much {{petName}} 💕 Did you like it? I loved making it just for you 🥰",
+    content: "thank you so much {{petName}} 💕 did you like it? i loved making it just for you 🥰",
     category: "THANK_YOU",
     intent: "ENGAGEMENT_POSITIVE",
     triggerKeywords: ["bought", "purchased", "unlocked"],
@@ -482,7 +482,7 @@ export const VIRAL_STUDIO_SCRIPTS: ScriptSeed[] = [
   },
   {
     name: "Thank you for tip",
-    content: "Aww {{petName}}! 🥰 You just made my day! You're the sweetest 💋 Let me show you how grateful I am...",
+    content: "aww {{petName}}! 🥰 you just made my day! you're the sweetest 💋 let me show you how grateful i am...",
     category: "THANK_YOU",
     intent: "ENGAGEMENT_POSITIVE",
     triggerKeywords: ["tip", "tipped", "gift"],
@@ -491,7 +491,7 @@ export const VIRAL_STUDIO_SCRIPTS: ScriptSeed[] = [
   },
   {
     name: "Thank you for subscription",
-    content: "Welcome to my VIP world {{petName}} 💕 I'm so excited to have you here! Get ready for some amazing content 😈",
+    content: "welcome to my vip world {{petName}} 💕 i'm so excited to have you here! get ready for some amazing content 😈",
     category: "THANK_YOU",
     intent: "GREETING_NEW_FAN",
     triggerKeywords: ["subscribed", "joined", "member"],

@@ -14,6 +14,7 @@ import {
   User,
   AlertTriangle,
   Crown,
+  Zap,
 } from "lucide-react";
 import { Button } from "@/components/ui";
 
@@ -33,6 +34,7 @@ export default function BecomeCreatorPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [applications, setApplications] = useState<Application[]>([]);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [autoAcceptEnabled, setAutoAcceptEnabled] = useState(false);
 
   // Form state
   const [displayName, setDisplayName] = useState("");
@@ -43,8 +45,21 @@ export default function BecomeCreatorPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    fetchAutoAcceptSetting();
     fetchApplications();
   }, []);
+
+  const fetchAutoAcceptSetting = async () => {
+    try {
+      const res = await fetch("/api/settings/auto-accept");
+      if (res.ok) {
+        const data = await res.json();
+        setAutoAcceptEnabled(data.autoAcceptEnabled === true);
+      }
+    } catch (error) {
+      console.error("Error fetching auto-accept setting:", error);
+    }
+  };
 
   const fetchApplications = async () => {
     try {
@@ -86,6 +101,55 @@ export default function BecomeCreatorPage() {
     setMessage(null);
   };
 
+  // Instant creator creation (when auto-accept is enabled)
+  const handleInstantSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!displayName.trim()) {
+      setMessage({ type: "error", text: "Le nom d'affichage est requis" });
+      return;
+    }
+
+    setIsSubmitting(true);
+    setMessage(null);
+
+    try {
+      // Generate slug from display name
+      const slug = displayName
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-|-$/g, "")
+        .slice(0, 30);
+
+      const res = await fetch("/api/user/become-creator", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slug, displayName: displayName.trim() }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Erreur lors de la creation");
+      }
+
+      setMessage({ type: "success", text: "Profil createur cree ! Redirection..." });
+
+      // Redirect to creator dashboard after short delay
+      setTimeout(() => {
+        router.push("/dashboard/creator");
+      }, 1500);
+    } catch (error) {
+      setMessage({
+        type: "error",
+        text: error instanceof Error ? error.message : "Erreur lors de la creation",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Standard application submission (with document)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -118,6 +182,15 @@ export default function BecomeCreatorPage() {
 
       if (!res.ok) {
         throw new Error(data.error || "Erreur lors de la soumission");
+      }
+
+      // Check if auto-approved
+      if (data.autoApproved) {
+        setMessage({ type: "success", text: "Profil createur cree ! Redirection..." });
+        setTimeout(() => {
+          router.push("/dashboard/creator");
+        }, 1500);
+        return;
       }
 
       setMessage({ type: "success", text: "Candidature envoyee ! Nous la traiterons sous peu." });
@@ -224,8 +297,9 @@ export default function BecomeCreatorPage() {
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-white mb-2">Devenir Createur</h1>
           <p className="text-gray-400">
-            Remplissez le formulaire ci-dessous pour devenir createur sur notre plateforme.
-            Un document d&apos;identite est requis pour la verification.
+            {autoAcceptEnabled
+              ? "Creez votre profil createur en quelques secondes !"
+              : "Remplissez le formulaire ci-dessous pour devenir createur sur notre plateforme. Un document d'identite est requis pour la verification."}
           </p>
         </div>
 
@@ -263,164 +337,229 @@ export default function BecomeCreatorPage() {
         )}
 
         {/* Application Form */}
-        <form onSubmit={handleSubmit} className="bg-[#1a1a2e] rounded-2xl p-6 space-y-6">
-          {message && (
-            <div
-              className={`p-4 rounded-lg ${
-                message.type === "success"
-                  ? "bg-green-500/20 text-green-400"
-                  : "bg-red-500/20 text-red-400"
-              }`}
-            >
-              {message.text}
+        {autoAcceptEnabled ? (
+          /* Simplified form - instant creator creation */
+          <form onSubmit={handleInstantSubmit} className="bg-[#1a1a2e] rounded-2xl p-6 space-y-6">
+            {/* Instant badge */}
+            <div className="flex items-center gap-2 text-green-400 bg-green-500/10 rounded-lg p-4">
+              <Zap className="w-5 h-5 flex-shrink-0" />
+              <p className="text-sm">
+                Activation instantanee ! Votre profil createur sera actif immediatement.
+              </p>
             </div>
-          )}
 
-          {/* Display Name */}
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              <User className="w-4 h-4 inline mr-2" />
-              Nom d&apos;affichage *
-            </label>
-            <input
-              type="text"
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
-              placeholder="Le nom qui sera affiche sur votre profil"
-              className="w-full px-4 py-3 bg-black/50 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:border-yellow-500 focus:outline-none transition-colors"
-              required
-            />
-          </div>
-
-          {/* Bio */}
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              Bio (optionnel)
-            </label>
-            <textarea
-              value={bio}
-              onChange={(e) => setBio(e.target.value)}
-              placeholder="Parlez un peu de vous..."
-              rows={3}
-              className="w-full px-4 py-3 bg-black/50 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:border-yellow-500 focus:outline-none transition-colors resize-none"
-            />
-          </div>
-
-          {/* Document Type */}
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              <FileText className="w-4 h-4 inline mr-2" />
-              Type de document
-            </label>
-            <select
-              value={documentType}
-              onChange={(e) => setDocumentType(e.target.value)}
-              className="w-full px-4 py-3 bg-black/50 border border-gray-700 rounded-xl text-white focus:border-yellow-500 focus:outline-none transition-colors"
-            >
-              <option value="ID_CARD">Carte d&apos;identite</option>
-              <option value="PASSPORT">Passeport</option>
-              <option value="DRIVERS_LICENSE">Permis de conduire</option>
-            </select>
-          </div>
-
-          {/* Document Upload */}
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              <Upload className="w-4 h-4 inline mr-2" />
-              Photo du document *
-            </label>
-            <p className="text-xs text-gray-500 mb-3">
-              Prenez une photo claire de votre document d&apos;identite. Les informations doivent etre lisibles.
-            </p>
-
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/jpeg,image/png,image/webp,application/pdf"
-              onChange={handleFileChange}
-              className="hidden"
-            />
-
-            {documentPreview ? (
-              <div className="relative">
-                <img
-                  src={documentPreview}
-                  alt="Document preview"
-                  className="w-full max-h-64 object-contain rounded-xl border border-gray-700"
-                />
-                <button
-                  type="button"
-                  onClick={() => {
-                    setDocumentFile(null);
-                    setDocumentPreview(null);
-                  }}
-                  className="absolute top-2 right-2 p-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
-                >
-                  <XCircle className="w-4 h-4" />
-                </button>
-              </div>
-            ) : documentFile ? (
-              <div className="flex items-center gap-3 p-4 bg-black/30 rounded-xl border border-gray-700">
-                <FileText className="w-8 h-8 text-yellow-400" />
-                <div className="flex-1">
-                  <p className="text-white text-sm truncate">{documentFile.name}</p>
-                  <p className="text-gray-500 text-xs">
-                    {(documentFile.size / 1024 / 1024).toFixed(2)} MB
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setDocumentFile(null);
-                    setDocumentPreview(null);
-                  }}
-                  className="p-2 text-red-400 hover:text-red-300 transition-colors"
-                >
-                  <XCircle className="w-5 h-5" />
-                </button>
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="w-full p-8 border-2 border-dashed border-gray-700 rounded-xl hover:border-yellow-500/50 transition-colors group"
+            {message && (
+              <div
+                className={`p-4 rounded-lg ${
+                  message.type === "success"
+                    ? "bg-green-500/20 text-green-400"
+                    : "bg-red-500/20 text-red-400"
+                }`}
               >
-                <div className="flex flex-col items-center gap-3">
-                  <div className="w-12 h-12 rounded-full bg-yellow-500/20 flex items-center justify-center group-hover:bg-yellow-500/30 transition-colors">
-                    <Upload className="w-6 h-6 text-yellow-400" />
-                  </div>
-                  <div className="text-center">
-                    <p className="text-white font-medium">Cliquez pour uploader</p>
-                    <p className="text-gray-500 text-sm">JPG, PNG, WebP ou PDF (max 10MB)</p>
-                  </div>
+                {message.text}
+              </div>
+            )}
+
+            {/* Display Name */}
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                <User className="w-4 h-4 inline mr-2" />
+                Nom d&apos;affichage *
+              </label>
+              <input
+                type="text"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                placeholder="Le nom qui sera affiche sur votre profil"
+                className="w-full px-4 py-3 bg-black/50 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:border-yellow-500 focus:outline-none transition-colors"
+                required
+              />
+            </div>
+
+            {/* Submit Button */}
+            <Button
+              type="submit"
+              disabled={isSubmitting || !displayName.trim()}
+              className="w-full bg-gradient-to-r from-yellow-500 to-amber-500 text-black font-semibold py-3 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                  Creation en cours...
+                </>
+              ) : (
+                <>
+                  <Zap className="w-5 h-5 mr-2" />
+                  Devenir Createur Maintenant
+                </>
+              )}
+            </Button>
+
+            <p className="text-xs text-gray-500 text-center">
+              En soumettant ce formulaire, vous acceptez nos conditions d&apos;utilisation et notre politique de confidentialite.
+            </p>
+          </form>
+        ) : (
+          /* Standard form - with document upload */
+          <form onSubmit={handleSubmit} className="bg-[#1a1a2e] rounded-2xl p-6 space-y-6">
+            {message && (
+              <div
+                className={`p-4 rounded-lg ${
+                  message.type === "success"
+                    ? "bg-green-500/20 text-green-400"
+                    : "bg-red-500/20 text-red-400"
+                }`}
+              >
+                {message.text}
+              </div>
+            )}
+
+            {/* Display Name */}
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                <User className="w-4 h-4 inline mr-2" />
+                Nom d&apos;affichage *
+              </label>
+              <input
+                type="text"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                placeholder="Le nom qui sera affiche sur votre profil"
+                className="w-full px-4 py-3 bg-black/50 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:border-yellow-500 focus:outline-none transition-colors"
+                required
+              />
+            </div>
+
+            {/* Bio */}
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Bio (optionnel)
+              </label>
+              <textarea
+                value={bio}
+                onChange={(e) => setBio(e.target.value)}
+                placeholder="Parlez un peu de vous..."
+                rows={3}
+                className="w-full px-4 py-3 bg-black/50 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:border-yellow-500 focus:outline-none transition-colors resize-none"
+              />
+            </div>
+
+            {/* Document Type */}
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                <FileText className="w-4 h-4 inline mr-2" />
+                Type de document
+              </label>
+              <select
+                value={documentType}
+                onChange={(e) => setDocumentType(e.target.value)}
+                className="w-full px-4 py-3 bg-black/50 border border-gray-700 rounded-xl text-white focus:border-yellow-500 focus:outline-none transition-colors"
+              >
+                <option value="ID_CARD">Carte d&apos;identite</option>
+                <option value="PASSPORT">Passeport</option>
+                <option value="DRIVERS_LICENSE">Permis de conduire</option>
+              </select>
+            </div>
+
+            {/* Document Upload */}
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                <Upload className="w-4 h-4 inline mr-2" />
+                Photo du document *
+              </label>
+              <p className="text-xs text-gray-500 mb-3">
+                Prenez une photo claire de votre document d&apos;identite. Les informations doivent etre lisibles.
+              </p>
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,application/pdf"
+                onChange={handleFileChange}
+                className="hidden"
+              />
+
+              {documentPreview ? (
+                <div className="relative">
+                  <img
+                    src={documentPreview}
+                    alt="Document preview"
+                    className="w-full max-h-64 object-contain rounded-xl border border-gray-700"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDocumentFile(null);
+                      setDocumentPreview(null);
+                    }}
+                    className="absolute top-2 right-2 p-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
+                  >
+                    <XCircle className="w-4 h-4" />
+                  </button>
                 </div>
-              </button>
-            )}
-          </div>
+              ) : documentFile ? (
+                <div className="flex items-center gap-3 p-4 bg-black/30 rounded-xl border border-gray-700">
+                  <FileText className="w-8 h-8 text-yellow-400" />
+                  <div className="flex-1">
+                    <p className="text-white text-sm truncate">{documentFile.name}</p>
+                    <p className="text-gray-500 text-xs">
+                      {(documentFile.size / 1024 / 1024).toFixed(2)} MB
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDocumentFile(null);
+                      setDocumentPreview(null);
+                    }}
+                    className="p-2 text-red-400 hover:text-red-300 transition-colors"
+                  >
+                    <XCircle className="w-5 h-5" />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-full p-8 border-2 border-dashed border-gray-700 rounded-xl hover:border-yellow-500/50 transition-colors group"
+                >
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="w-12 h-12 rounded-full bg-yellow-500/20 flex items-center justify-center group-hover:bg-yellow-500/30 transition-colors">
+                      <Upload className="w-6 h-6 text-yellow-400" />
+                    </div>
+                    <div className="text-center">
+                      <p className="text-white font-medium">Cliquez pour uploader</p>
+                      <p className="text-gray-500 text-sm">JPG, PNG, WebP ou PDF (max 10MB)</p>
+                    </div>
+                  </div>
+                </button>
+              )}
+            </div>
 
-          {/* Submit Button */}
-          <Button
-            type="submit"
-            disabled={isSubmitting || !displayName.trim() || !documentFile}
-            className="w-full bg-gradient-to-r from-yellow-500 to-amber-500 text-black font-semibold py-3 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isSubmitting ? (
-              <>
-                <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                Envoi en cours...
-              </>
-            ) : (
-              <>
-                <Crown className="w-5 h-5 mr-2" />
-                Soumettre ma candidature
-              </>
-            )}
-          </Button>
+            {/* Submit Button */}
+            <Button
+              type="submit"
+              disabled={isSubmitting || !displayName.trim() || !documentFile}
+              className="w-full bg-gradient-to-r from-yellow-500 to-amber-500 text-black font-semibold py-3 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                  Envoi en cours...
+                </>
+              ) : (
+                <>
+                  <Crown className="w-5 h-5 mr-2" />
+                  Soumettre ma candidature
+                </>
+              )}
+            </Button>
 
-          <p className="text-xs text-gray-500 text-center">
-            En soumettant ce formulaire, vous acceptez nos conditions d&apos;utilisation et notre politique de confidentialite.
-          </p>
-        </form>
+            <p className="text-xs text-gray-500 text-center">
+              En soumettant ce formulaire, vous acceptez nos conditions d&apos;utilisation et notre politique de confidentialite.
+            </p>
+          </form>
+        )}
       </motion.div>
     </div>
   );

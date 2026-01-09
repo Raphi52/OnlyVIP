@@ -98,7 +98,19 @@
     "protectionAgencies3": "Anti-fraude intégré",
     "protectionAgencies3Desc": "Vérification des créateurs et protection contre les abus",
     "protectionTrustTitle": "Zéro litige depuis notre lancement",
-    "protectionTrustDesc": "La transparence, ça évite les problèmes"
+    "protectionTrustDesc": "La transparence, ça évite les problèmes",
+    "ppvTitle": "Liens Pay-Per-View",
+    "ppvSubtitle": "Monétisez votre contenu avec des liens PPV partageables",
+    "ppvDesc": "Créez des liens pay-per-view instantanés pour vos photos et vidéos. Partagez sur les réseaux sociaux, en DM, ou n'importe où. Les fans paient en crédits et débloquent le contenu instantanément - vous gagnez 95% de chaque vente.",
+    "ppvFeature1": "Liens Paywall Instantanés",
+    "ppvFeature1Desc": "Générez des liens partageables qui fonctionnent partout. Partagez sur Twitter, Instagram, Telegram, ou ailleurs.",
+    "ppvFeature2": "Paiements en Crédits",
+    "ppvFeature2Desc": "Les fans achètent des crédits une fois, débloquent le contenu instantanément. Pas de friction, pas de chargebacks.",
+    "ppvFeature3": "95% pour les Créateurs",
+    "ppvFeature3Desc": "Gardez presque tout. Seulement 5% de commission - les meilleurs taux du marché.",
+    "ppvFeature4": "Pages de Prévisualisation Premium",
+    "ppvFeature4Desc": "Des pages paywall premium avec aperçus floutés qui convertissent les fans en acheteurs.",
+    "ppvCTA": "Commencer à Vendre du PPV"
   },
   "features": {
     "zeroPercent": "0% Premier Mois",

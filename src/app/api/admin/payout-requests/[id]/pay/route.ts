@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { sendPayoutCompletedEmail } from "@/lib/email";
 
 // POST /api/admin/payout-requests/[id]/pay - Mark payout as paid
 export async function POST(
@@ -85,6 +86,25 @@ export async function POST(
 
       return updatedPayout;
     });
+
+    // Send completion email to creator
+    const creatorWithUser = await prisma.creator.findUnique({
+      where: { slug: payoutRequest.creatorSlug },
+      include: { user: { select: { email: true, name: true } } },
+    });
+
+    if (creatorWithUser?.user?.email) {
+      await sendPayoutCompletedEmail(
+        creatorWithUser.user.email,
+        creatorWithUser.user.name || creatorWithUser.displayName || "",
+        {
+          amount: payoutRequest.amount,
+          walletType: payoutRequest.walletType,
+          walletAddress: payoutRequest.walletAddress,
+          txHash: txHash || null,
+        }
+      );
+    }
 
     return NextResponse.json({
       success: true,

@@ -14,27 +14,48 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const period = searchParams.get("period") || "30d";
+    const specificDate = searchParams.get("date"); // Format: YYYY-MM-DD
 
     // Calculate date ranges
     const now = new Date();
     let periodDays = 30;
-    switch (period) {
-      case "7d":
-        periodDays = 7;
-        break;
-      case "30d":
-        periodDays = 30;
-        break;
-      case "90d":
-        periodDays = 90;
-        break;
-      case "1y":
-        periodDays = 365;
-        break;
+    let startDate: Date;
+    let endDate: Date | null = null;
+    let previousStartDate: Date;
+
+    // Handle single day filter with specific date
+    if (period === "1d" && specificDate) {
+      const [year, month, day] = specificDate.split("-").map(Number);
+      startDate = new Date(year, month - 1, day, 0, 0, 0, 0);
+      endDate = new Date(year, month - 1, day, 23, 59, 59, 999);
+      periodDays = 1;
+      previousStartDate = startOfDay(subDays(startDate, 1));
+    } else {
+      switch (period) {
+        case "1d":
+          periodDays = 1;
+          break;
+        case "7d":
+          periodDays = 7;
+          break;
+        case "30d":
+          periodDays = 30;
+          break;
+        case "90d":
+          periodDays = 90;
+          break;
+        case "1y":
+          periodDays = 365;
+          break;
+      }
+      startDate = startOfDay(subDays(now, periodDays));
+      previousStartDate = startOfDay(subDays(startDate, periodDays));
     }
 
-    const startDate = startOfDay(subDays(now, periodDays));
-    const previousStartDate = startOfDay(subDays(startDate, periodDays));
+    // Date filter for queries
+    const dateFilter = endDate
+      ? { gte: startDate, lte: endDate }
+      : { gte: startDate };
 
     // === KPI CALCULATIONS ===
     const [
@@ -55,16 +76,16 @@ export async function GET(request: NextRequest) {
     ] = await Promise.all([
       // Current period revenue
       prisma.creatorEarning.aggregate({
-        where: { createdAt: { gte: startDate } },
+        where: { createdAt: dateFilter },
         _sum: { grossAmount: true },
       }),
       // Current period new users
       prisma.user.count({
-        where: { createdAt: { gte: startDate } },
+        where: { createdAt: dateFilter },
       }),
       // Current period new creators
       prisma.creator.count({
-        where: { createdAt: { gte: startDate } },
+        where: { createdAt: dateFilter },
       }),
       // Current active subscriptions
       prisma.subscription.count({
@@ -73,7 +94,7 @@ export async function GET(request: NextRequest) {
       // Current period unique spenders
       prisma.creatorEarning.groupBy({
         by: ["userId"],
-        where: { createdAt: { gte: startDate } },
+        where: { createdAt: dateFilter },
       }),
       // Previous period revenue
       prisma.creatorEarning.aggregate({
@@ -129,13 +150,13 @@ export async function GET(request: NextRequest) {
     // === REVENUE CHART DATA ===
     const revenueByDay = await prisma.creatorEarning.groupBy({
       by: ["createdAt"],
-      where: { createdAt: { gte: startDate } },
+      where: { createdAt: dateFilter },
       _sum: { grossAmount: true },
     });
 
     // Aggregate by type for each day
     const earningsWithType = await prisma.creatorEarning.findMany({
-      where: { createdAt: { gte: startDate } },
+      where: { createdAt: dateFilter },
       select: { createdAt: true, grossAmount: true, type: true },
     });
 
@@ -184,7 +205,7 @@ export async function GET(request: NextRequest) {
     // === REVENUE BREAKDOWN ===
     const revenueByType = await prisma.creatorEarning.groupBy({
       by: ["type"],
-      where: { createdAt: { gte: startDate } },
+      where: { createdAt: dateFilter },
       _sum: { grossAmount: true },
     });
 
@@ -198,12 +219,12 @@ export async function GET(request: NextRequest) {
     // === USER GROWTH ===
     const usersByDay = await prisma.user.groupBy({
       by: ["createdAt"],
-      where: { createdAt: { gte: startDate } },
+      where: { createdAt: dateFilter },
     });
 
     const creatorsByDay = await prisma.creator.groupBy({
       by: ["createdAt"],
-      where: { createdAt: { gte: startDate } },
+      where: { createdAt: dateFilter },
     });
 
     // Aggregate by day
@@ -248,7 +269,7 @@ export async function GET(request: NextRequest) {
     // === AI PERFORMANCE ===
     const aiPerformanceData = await prisma.aiPerformanceSummary.findMany({
       where: {
-        date: { gte: startDate },
+        date: dateFilter,
       },
       orderBy: { date: "asc" },
     });
@@ -275,7 +296,7 @@ export async function GET(request: NextRequest) {
     // === TOP CREATORS ===
     const topCreatorsData = await prisma.creatorEarning.groupBy({
       by: ["creatorSlug"],
-      where: { createdAt: { gte: startDate } },
+      where: { createdAt: dateFilter },
       _sum: { grossAmount: true },
       orderBy: { _sum: { grossAmount: "desc" } },
       take: 5,
@@ -302,20 +323,20 @@ export async function GET(request: NextRequest) {
       // Unique visitors (from page views)
       prisma.pageView.groupBy({
         by: ["visitorId"],
-        where: { createdAt: { gte: startDate } },
+        where: { createdAt: dateFilter },
       }),
       // Signups
       prisma.user.count({
-        where: { createdAt: { gte: startDate } },
+        where: { createdAt: dateFilter },
       }),
       // Subscribers
       prisma.subscription.count({
-        where: { createdAt: { gte: startDate }, status: "ACTIVE" },
+        where: { createdAt: dateFilter, status: "ACTIVE" },
       }),
       // Spenders (users who made a purchase)
       prisma.creatorEarning.groupBy({
         by: ["userId"],
-        where: { createdAt: { gte: startDate } },
+        where: { createdAt: dateFilter },
       }),
     ]);
 
@@ -351,7 +372,7 @@ export async function GET(request: NextRequest) {
     // Top pages
     const topPagesData = await prisma.pageView.groupBy({
       by: ["path"],
-      where: { createdAt: { gte: startDate } },
+      where: { createdAt: dateFilter },
       _count: { path: true },
       orderBy: { _count: { path: "desc" } },
       take: 10,
@@ -366,7 +387,7 @@ export async function GET(request: NextRequest) {
     const referrerData = await prisma.pageView.groupBy({
       by: ["referrer"],
       where: {
-        createdAt: { gte: startDate },
+        createdAt: dateFilter,
         referrer: { not: null },
       },
       _count: { referrer: true },
@@ -398,7 +419,7 @@ export async function GET(request: NextRequest) {
     // Add direct visits
     const directVisits = await prisma.pageView.count({
       where: {
-        createdAt: { gte: startDate },
+        createdAt: dateFilter,
         referrer: null,
       },
     });
@@ -410,7 +431,7 @@ export async function GET(request: NextRequest) {
     // Device breakdown
     const deviceData = await prisma.pageView.groupBy({
       by: ["device"],
-      where: { createdAt: { gte: startDate } },
+      where: { createdAt: dateFilter },
       _count: { device: true },
     });
 
@@ -423,7 +444,7 @@ export async function GET(request: NextRequest) {
     const countryData = await prisma.pageView.groupBy({
       by: ["country"],
       where: {
-        createdAt: { gte: startDate },
+        createdAt: dateFilter,
         country: { not: null },
       },
       _count: { country: true },
@@ -438,7 +459,7 @@ export async function GET(request: NextRequest) {
 
     // Total page views
     const totalPageViews = await prisma.pageView.count({
-      where: { createdAt: { gte: startDate } },
+      where: { createdAt: dateFilter },
     });
 
     // Unique visitors

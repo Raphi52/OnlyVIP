@@ -101,7 +101,8 @@ export default function CreatorAiSettingsPage({
 
   // Creator data
   const [creatorName, setCreatorName] = useState("");
-  const [responseDelay, setResponseDelay] = useState(120);
+  const [responseDelayMin, setResponseDelayMin] = useState(5);
+  const [responseDelayMax, setResponseDelayMax] = useState(120);
 
   // Personality
   const [personality, setPersonality] = useState<AiPersonality>({
@@ -140,7 +141,8 @@ export default function CreatorAiSettingsPage({
       if (res.ok) {
         const data = await res.json();
         setCreatorName(data.displayName || data.name);
-        setResponseDelay(data.aiResponseDelay || 120);
+        setResponseDelayMin(data.aiResponseDelayMin || 5);
+        setResponseDelayMax(data.aiResponseDelayMax || 120);
 
         if (data.aiPersonality) {
           try {
@@ -178,7 +180,8 @@ export default function CreatorAiSettingsPage({
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          aiResponseDelay: responseDelay,
+          aiResponseDelayMin: responseDelayMin,
+          aiResponseDelayMax: responseDelayMax,
           aiPersonality: JSON.stringify(personality),
         }),
       });
@@ -366,23 +369,42 @@ export default function CreatorAiSettingsPage({
                 <h3 className="font-semibold text-[var(--foreground)]">Response Delay</h3>
               </div>
               <p className="text-sm text-[var(--muted)] mb-4">
-                Average time before AI responds (will vary ±50% for realism)
+                Response time range (AI will randomly pick a delay in this range)
               </p>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm text-gray-400">Min</span>
+                <span className="text-sm text-[var(--gold)]">
+                  {responseDelayMin < 60 ? `${responseDelayMin}s` : `${Math.floor(responseDelayMin / 60)}m${responseDelayMin % 60 > 0 ? ` ${responseDelayMin % 60}s` : ''}`}
+                  {' — '}
+                  {responseDelayMax < 60 ? `${responseDelayMax}s` : `${Math.floor(responseDelayMax / 60)}m${responseDelayMax % 60 > 0 ? ` ${responseDelayMax % 60}s` : ''}`}
+                </span>
+                <span className="text-sm text-gray-400">Max</span>
+              </div>
               <div className="flex items-center gap-4">
                 <input
                   type="range"
-                  min="30"
+                  min="5"
                   max="600"
-                  step="30"
-                  value={responseDelay}
-                  onChange={(e) => setResponseDelay(parseInt(e.target.value))}
+                  step="5"
+                  value={responseDelayMin}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value);
+                    setResponseDelayMin(Math.min(val, responseDelayMax - 5));
+                  }}
                   className="flex-1 h-2 bg-gray-700 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[var(--gold)]"
                 />
-                <span className="text-lg font-semibold text-[var(--foreground)] min-w-[80px] text-right">
-                  {responseDelay < 60
-                    ? `${responseDelay}s`
-                    : `${Math.floor(responseDelay / 60)}m ${responseDelay % 60}s`}
-                </span>
+                <input
+                  type="range"
+                  min="5"
+                  max="600"
+                  step="5"
+                  value={responseDelayMax}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value);
+                    setResponseDelayMax(Math.max(val, responseDelayMin + 5));
+                  }}
+                  className="flex-1 h-2 bg-gray-700 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[var(--gold)]"
+                />
               </div>
             </Card>
           </motion.div>

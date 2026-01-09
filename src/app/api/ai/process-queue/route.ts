@@ -786,7 +786,7 @@ export async function GET(request: NextRequest) {
             receiverId: creator.userId,
             isRead: false,
           },
-          data: { isRead: true, readAt: new Date() },
+          data: { isRead: true },
         });
 
         // 3. Simulate thinking before typing (1-3 seconds)

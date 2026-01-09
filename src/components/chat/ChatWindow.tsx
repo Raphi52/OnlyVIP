@@ -84,6 +84,8 @@ interface ChatWindowProps {
   isSending?: boolean;
   isTyping?: boolean;
   isMuted?: boolean;
+  readOnly?: boolean; // For agency-managed creators in view-only mode
+  readOnlyMessage?: string; // Message to display when in read-only mode
   creatorSlug?: string; // For PPV media picker
   // Infinite scroll props
   hasMore?: boolean;
@@ -158,6 +160,8 @@ export function ChatWindow({
   isSending,
   isTyping,
   isMuted,
+  readOnly,
+  readOnlyMessage,
   creatorSlug,
   hasMore,
   isLoadingMore,
@@ -1110,7 +1114,24 @@ export function ChatWindow({
         )}
       </AnimatePresence>
 
-      {/* Input area */}
+      {/* Input area - or read-only message */}
+      {readOnly ? (
+        <motion.div
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          className="relative z-20 p-4 border-t border-orange-500/30 bg-gradient-to-r from-orange-500/10 to-amber-500/5"
+          style={{
+            paddingBottom: "max(16px, calc(env(safe-area-inset-bottom) + 12px))",
+          }}
+        >
+          <div className="flex items-center justify-center gap-3 text-orange-400">
+            <Lock className="w-5 h-5" />
+            <span className="text-sm font-medium">
+              {readOnlyMessage || "Your profile is managed by an agency. Contact them to send messages."}
+            </span>
+          </div>
+        </motion.div>
+      ) : (
       <motion.div
         initial={{ y: 20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
@@ -1288,6 +1309,7 @@ export function ChatWindow({
           </motion.button>
         </div>
       </motion.div>
+      )}
 
       {/* Tip Modal */}
       <AnimatePresence>

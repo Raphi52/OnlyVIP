@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { isCreatorAgencyManaged } from "@/lib/agency-permissions";
+import { sendPayoutRequestConfirmationEmail, sendAdminPayoutNotificationEmail } from "@/lib/email";
 
 const MINIMUM_PAYOUT = 100; // Minimum 100€ to request payout
 const COOLDOWN_HOURS = 24; // 1 request per 24 hours
@@ -199,6 +200,36 @@ export async function POST(request: NextRequest) {
         data: walletUpdate,
       });
     }
+
+    // Send confirmation email to creator
+    const creatorWithUser = await prisma.creator.findUnique({
+      where: { slug: creator.slug },
+      include: { user: { select: { email: true, name: true } } },
+    });
+
+    if (creatorWithUser?.user?.email) {
+      await sendPayoutRequestConfirmationEmail(
+        creatorWithUser.user.email,
+        creatorWithUser.user.name || creatorWithUser.displayName || "",
+        {
+          amount: payoutRequest.amount,
+          walletType: payoutRequest.walletType,
+          walletAddress: payoutRequest.walletAddress,
+          requestId: payoutRequest.id,
+        }
+      );
+    }
+
+    // Send notification to admin
+    const adminEmail = process.env.ADMIN_EMAIL || "admin@viponly.fun";
+    await sendAdminPayoutNotificationEmail(adminEmail, {
+      creatorName: creatorWithUser?.displayName || creator.slug,
+      creatorSlug: creator.slug,
+      amount: payoutRequest.amount,
+      walletType: payoutRequest.walletType,
+      walletAddress: payoutRequest.walletAddress,
+      requestId: payoutRequest.id,
+    });
 
     return NextResponse.json({
       success: true,

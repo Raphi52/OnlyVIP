@@ -490,6 +490,18 @@ export async function generateAiResponse(
       .replace(/\[INST\][\s\S]*?\[\/INST\]/g, '') // Remove instruction tokens
       .replace(/<<SYS>>[\s\S]*?<<\/SYS>>/g, '')   // Remove system tokens
       .replace(/\*[^*]+\*/g, '')         // Remove roleplay actions like *soupir*, *giggle*, *mord la lèvre*
+      .replace(/Post\s*\d+/gi, '')       // Remove technical titles like "Post 123456"
+      .replace(/Media\s*\d+/gi, '')      // Remove "Media 123456" patterns
+      .replace(/ID:\s*\d+/gi, '')        // Remove "ID: 123456" patterns
+      .replace(/[a-f0-9]{24,}/gi, '')    // Remove MongoDB-style IDs
+      .replace(/\(\s*\)/g, '')           // Remove empty parentheses ()
+      .replace(/\[\s*\]/g, '')           // Remove empty brackets []
+      .replace(/\{\s*\}/g, '')           // Remove empty braces {}
+      .replace(/"\s*"/g, '')             // Remove empty quotes ""
+      .replace(/'\s*'/g, '')             // Remove empty single quotes ''
+      .replace(/:\s*,/g, ',')            // Fix ": ," patterns
+      .replace(/,\s*,/g, ',')            // Fix ",," patterns
+      .replace(/\s+([.,!?])/g, '$1')     // Remove space before punctuation
       .replace(/\s+/g, ' ')              // Normalize whitespace after removals
       .trim();
 

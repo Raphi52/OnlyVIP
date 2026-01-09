@@ -18,6 +18,8 @@ import {
   AlertTriangle,
   RefreshCw,
   Crown,
+  ToggleLeft,
+  ToggleRight,
 } from "lucide-react";
 import { Button, Card } from "@/components/ui";
 import { cn } from "@/lib/utils";
@@ -59,6 +61,40 @@ export default function AdminCreatorApplicationsPage() {
   const [rejectReason, setRejectReason] = useState("");
   const [showRejectModal, setShowRejectModal] = useState(false);
 
+  // Auto-accept toggle
+  const [autoAccept, setAutoAccept] = useState(false);
+  const [isTogglingAutoAccept, setIsTogglingAutoAccept] = useState(false);
+
+  const fetchAutoAcceptSetting = async () => {
+    try {
+      const res = await fetch("/api/admin/settings/auto-accept");
+      if (res.ok) {
+        const data = await res.json();
+        setAutoAccept(data.autoAcceptCreators || false);
+      }
+    } catch (error) {
+      console.error("Error fetching auto-accept setting:", error);
+    }
+  };
+
+  const toggleAutoAccept = async () => {
+    setIsTogglingAutoAccept(true);
+    try {
+      const res = await fetch("/api/admin/settings/auto-accept", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ autoAcceptCreators: !autoAccept }),
+      });
+      if (res.ok) {
+        setAutoAccept(!autoAccept);
+      }
+    } catch (error) {
+      console.error("Error toggling auto-accept:", error);
+    } finally {
+      setIsTogglingAutoAccept(false);
+    }
+  };
+
   const fetchApplications = async () => {
     setIsLoading(true);
     try {
@@ -78,6 +114,10 @@ export default function AdminCreatorApplicationsPage() {
   useEffect(() => {
     fetchApplications();
   }, [filterStatus]);
+
+  useEffect(() => {
+    fetchAutoAcceptSetting();
+  }, []);
 
   const handleApprove = async (app: Application) => {
     if (!confirm(`Approuver la candidature de ${app.displayName} ?`)) return;
@@ -188,14 +228,37 @@ export default function AdminCreatorApplicationsPage() {
           </p>
         </div>
 
-        <Button
-          onClick={fetchApplications}
-          variant="outline"
-          className="border-gray-700"
-        >
-          <RefreshCw className="w-4 h-4 mr-2" />
-          Actualiser
-        </Button>
+        <div className="flex items-center gap-3">
+          {/* Auto-accept Toggle */}
+          <button
+            onClick={toggleAutoAccept}
+            disabled={isTogglingAutoAccept}
+            className={cn(
+              "flex items-center gap-2 px-4 py-2 rounded-xl border transition-all",
+              autoAccept
+                ? "bg-green-500/20 border-green-500/50 text-green-400"
+                : "bg-white/5 border-gray-700 text-gray-400 hover:border-gray-600"
+            )}
+          >
+            {isTogglingAutoAccept ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : autoAccept ? (
+              <ToggleRight className="w-5 h-5" />
+            ) : (
+              <ToggleLeft className="w-5 h-5" />
+            )}
+            <span className="text-sm font-medium">Auto-accept</span>
+          </button>
+
+          <Button
+            onClick={fetchApplications}
+            variant="outline"
+            className="border-gray-700"
+          >
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Actualiser
+          </Button>
+        </div>
       </div>
 
       {/* Filters */}

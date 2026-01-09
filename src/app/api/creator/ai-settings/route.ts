@@ -15,7 +15,13 @@ export async function PATCH(request: NextRequest) {
     const body = await request.json();
     const {
       creatorSlug,
-      aiResponseDelay,
+      // Response Timing Settings
+      aiResponseDelayMin,
+      aiResponseDelayMax,
+      aiPauseDurationMin,
+      aiPauseDurationMax,
+      aiPauseIntervalMin,
+      aiPauseIntervalMax,
       aiPersonality,
       // AI Media Settings
       aiMediaEnabled,
@@ -50,8 +56,13 @@ export async function PATCH(request: NextRequest) {
     // Build update data
     const updateData: Record<string, unknown> = {};
 
-    // Legacy AI settings
-    if (aiResponseDelay !== undefined) updateData.aiResponseDelay = aiResponseDelay;
+    // Response Timing Settings
+    if (aiResponseDelayMin !== undefined) updateData.aiResponseDelayMin = aiResponseDelayMin;
+    if (aiResponseDelayMax !== undefined) updateData.aiResponseDelayMax = aiResponseDelayMax;
+    if (aiPauseDurationMin !== undefined) updateData.aiPauseDurationMin = aiPauseDurationMin;
+    if (aiPauseDurationMax !== undefined) updateData.aiPauseDurationMax = aiPauseDurationMax;
+    if (aiPauseIntervalMin !== undefined) updateData.aiPauseIntervalMin = aiPauseIntervalMin;
+    if (aiPauseIntervalMax !== undefined) updateData.aiPauseIntervalMax = aiPauseIntervalMax;
     if (aiPersonality !== undefined) updateData.aiPersonality = aiPersonality;
 
     // AI Media Settings
@@ -96,8 +107,15 @@ export async function PATCH(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      aiResponseDelay: updated.aiResponseDelay,
+      // Response Timing
+      aiResponseDelayMin: updated.aiResponseDelayMin,
+      aiResponseDelayMax: updated.aiResponseDelayMax,
+      aiPauseDurationMin: updated.aiPauseDurationMin,
+      aiPauseDurationMax: updated.aiPauseDurationMax,
+      aiPauseIntervalMin: updated.aiPauseIntervalMin,
+      aiPauseIntervalMax: updated.aiPauseIntervalMax,
       aiPersonality: updated.aiPersonality,
+      // Media Settings
       aiMediaEnabled: updated.aiMediaEnabled,
       aiMediaFrequency: updated.aiMediaFrequency,
       aiPPVRatio: updated.aiPPVRatio,

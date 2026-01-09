@@ -311,13 +311,9 @@ export function formatCharacterForPrompt(character: DeepCharacter): string {
   const lines: string[] = [];
   const rules = character.responseRules;
 
-  // Identity - short and punchy
-  lines.push(`# Tu es ${character.name}, ${character.age} ans`);
-  lines.push("");
-
-  // Background - condensed
-  lines.push(`## Ton histoire`);
-  lines.push(character.background.split('\n')[0]); // Just first line
+  // Background - contains the character's identity
+  lines.push(`# Ton histoire`);
+  lines.push(character.background);
   lines.push("");
 
   // Inner voice - the KEY to consistent behavior

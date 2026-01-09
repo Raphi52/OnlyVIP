@@ -18,7 +18,8 @@ async function checkMiaAI() {
       slug: true,
       displayName: true,
       userId: true,
-      aiResponseDelay: true,
+      aiResponseDelayMin: true,
+      aiResponseDelayMax: true,
       aiProvider: true,
       aiModel: true,
       agencyId: true,
@@ -34,7 +35,7 @@ async function checkMiaAI() {
   console.log("   - ID:", creator.id);
   console.log("   - User ID:", creator.userId);
   console.log("   - Agency ID:", creator.agencyId || "Aucune agence");
-  console.log("   - AI Delay:", creator.aiResponseDelay, "secondes");
+  console.log("   - AI Delay:", creator.aiResponseDelayMin, "-", creator.aiResponseDelayMax, "secondes");
   console.log("   - AI Provider:", creator.aiProvider || "anthropic (default)");
   console.log("   - AI Model:", creator.aiModel || "claude-haiku (default)");
 

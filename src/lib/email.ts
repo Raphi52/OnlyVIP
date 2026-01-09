@@ -510,3 +510,273 @@ export async function notifyFollowersOfNewContent(
     return { success: false, error };
   }
 }
+
+// ============= AGENCY NOTIFICATION EMAILS =============
+
+export async function sendAgencyOfferEmail(
+  email: string,
+  creatorName: string,
+  details: {
+    agencyName: string;
+    agencySlug?: string;
+    message?: string | null;
+  }
+) {
+  const viewUrl = `${APP_URL}/dashboard/creator/agency`;
+
+  const html = emailTemplate(`
+    <h1>New Agency Offer! 🤝</h1>
+    <p>Hi ${creatorName || "there"},</p>
+    <p>Great news! <span class="highlight">${details.agencyName}</span> wants to work with you and has sent you an offer to join their agency.</p>
+    ${details.message ? `
+    <div class="details">
+      <p style="color: #888; margin-bottom: 10px;">Their message:</p>
+      <p style="color: #fff; font-style: italic;">"${details.message}"</p>
+    </div>
+    ` : ''}
+    <p>As a managed creator, you'll benefit from professional management while focusing on what you do best - creating amazing content.</p>
+    <div class="button-container">
+      <a href="${viewUrl}" class="button">View Offer</a>
+    </div>
+    <p style="color: #888; font-size: 14px;">You can accept or decline this offer from your dashboard.</p>
+  `);
+
+  try {
+    const result = await getResend().emails.send({
+      from: FROM_EMAIL,
+      to: email,
+      subject: `🤝 ${details.agencyName} wants to work with you!`,
+      html,
+    });
+
+    console.log("[Email] Agency offer email sent to:", email);
+    return { success: true, id: result.data?.id };
+  } catch (error) {
+    console.error("[Email] Failed to send agency offer email:", error);
+    return { success: false, error };
+  }
+}
+
+export async function sendCreatorApplicationEmail(
+  email: string,
+  agencyOwnerName: string,
+  details: {
+    creatorName: string;
+    creatorSlug: string;
+    message?: string | null;
+  }
+) {
+  const viewUrl = `${APP_URL}/dashboard/agency/applications`;
+
+  const html = emailTemplate(`
+    <h1>New Creator Application! ⭐</h1>
+    <p>Hi ${agencyOwnerName || "there"},</p>
+    <p><span class="highlight">${details.creatorName}</span> has applied to join your agency!</p>
+    ${details.message ? `
+    <div class="details">
+      <p style="color: #888; margin-bottom: 10px;">Their message:</p>
+      <p style="color: #fff; font-style: italic;">"${details.message}"</p>
+    </div>
+    ` : ''}
+    <p>Review their profile and decide if they're a good fit for your agency.</p>
+    <div class="button-container">
+      <a href="${viewUrl}" class="button">Review Application</a>
+    </div>
+    <p style="text-align: center; margin-top: 15px;">
+      <a href="${APP_URL}/${details.creatorSlug}" style="color: #FFD700; text-decoration: none;">View ${details.creatorName}'s Profile →</a>
+    </p>
+  `);
+
+  try {
+    const result = await getResend().emails.send({
+      from: FROM_EMAIL,
+      to: email,
+      subject: `⭐ ${details.creatorName} wants to join your agency!`,
+      html,
+    });
+
+    console.log("[Email] Creator application email sent to:", email);
+    return { success: true, id: result.data?.id };
+  } catch (error) {
+    console.error("[Email] Failed to send creator application email:", error);
+    return { success: false, error };
+  }
+}
+
+// ============= PAYOUT EMAIL FUNCTIONS =============
+
+export async function sendPayoutRequestConfirmationEmail(
+  email: string,
+  name: string,
+  details: {
+    amount: number;
+    walletType: string;
+    walletAddress: string;
+    requestId: string;
+  }
+) {
+  const html = emailTemplate(`
+    <h1>Payout Request Received ✓</h1>
+    <p>Hi ${name || "there"},</p>
+    <p>We've received your payout request and it's now being processed.</p>
+    <div class="amount">€${details.amount.toFixed(2)}</div>
+    <div class="details">
+      <table width="100%" cellpadding="0" cellspacing="0">
+        <tr>
+          <td style="color: #888; padding: 10px 0;">Request ID</td>
+          <td style="color: #fff; text-align: right; padding: 10px 0; font-family: monospace;">${details.requestId.slice(0, 12)}...</td>
+        </tr>
+        <tr>
+          <td style="color: #888; padding: 10px 0;">Wallet Type</td>
+          <td style="color: #FFD700; text-align: right; padding: 10px 0;">${details.walletType}</td>
+        </tr>
+        <tr>
+          <td style="color: #888; padding: 10px 0;">Wallet Address</td>
+          <td style="color: #fff; text-align: right; padding: 10px 0; font-family: monospace; font-size: 12px;">${details.walletAddress.slice(0, 10)}...${details.walletAddress.slice(-8)}</td>
+        </tr>
+        <tr>
+          <td style="color: #888; padding: 10px 0;">Status</td>
+          <td style="color: #FFA500; text-align: right; padding: 10px 0;">⏳ Pending</td>
+        </tr>
+      </table>
+    </div>
+    <p style="color: #888;">Payouts are typically processed within 24-48 hours. You'll receive another email once the payment is sent.</p>
+    <div class="button-container">
+      <a href="${APP_URL}/dashboard/creator/earnings" class="button">View Earnings</a>
+    </div>
+  `);
+
+  try {
+    const result = await getResend().emails.send({
+      from: FROM_EMAIL,
+      to: email,
+      subject: `💰 Payout Request Received - €${details.amount.toFixed(2)}`,
+      html,
+    });
+
+    console.log("[Email] Payout request confirmation sent to:", email);
+    return { success: true, id: result.data?.id };
+  } catch (error) {
+    console.error("[Email] Failed to send payout request confirmation:", error);
+    return { success: false, error };
+  }
+}
+
+export async function sendPayoutCompletedEmail(
+  email: string,
+  name: string,
+  details: {
+    amount: number;
+    walletType: string;
+    walletAddress: string;
+    txHash?: string | null;
+  }
+) {
+  const html = emailTemplate(`
+    <h1>Payout Completed! 🎉</h1>
+    <p>Hi ${name || "there"},</p>
+    <p>Great news! Your payout has been sent successfully.</p>
+    <div class="amount">€${details.amount.toFixed(2)}</div>
+    <div class="details">
+      <table width="100%" cellpadding="0" cellspacing="0">
+        <tr>
+          <td style="color: #888; padding: 10px 0;">Wallet Type</td>
+          <td style="color: #FFD700; text-align: right; padding: 10px 0;">${details.walletType}</td>
+        </tr>
+        <tr>
+          <td style="color: #888; padding: 10px 0;">Wallet Address</td>
+          <td style="color: #fff; text-align: right; padding: 10px 0; font-family: monospace; font-size: 12px;">${details.walletAddress.slice(0, 10)}...${details.walletAddress.slice(-8)}</td>
+        </tr>
+        ${details.txHash ? `
+        <tr>
+          <td style="color: #888; padding: 10px 0;">Transaction Hash</td>
+          <td style="color: #4ade80; text-align: right; padding: 10px 0; font-family: monospace; font-size: 12px;">${details.txHash.slice(0, 10)}...${details.txHash.slice(-8)}</td>
+        </tr>
+        ` : ''}
+        <tr>
+          <td style="color: #888; padding: 10px 0;">Status</td>
+          <td style="color: #4ade80; text-align: right; padding: 10px 0;">✓ Completed</td>
+        </tr>
+        <tr>
+          <td style="color: #888; padding: 10px 0;">Date</td>
+          <td style="color: #fff; text-align: right; padding: 10px 0;">${new Date().toLocaleDateString()}</td>
+        </tr>
+      </table>
+    </div>
+    <p style="color: #888;">The funds should appear in your wallet shortly. Thank you for being a creator on ${APP_NAME}!</p>
+    <div class="button-container">
+      <a href="${APP_URL}/dashboard/creator/earnings" class="button">View Earnings</a>
+    </div>
+  `);
+
+  try {
+    const result = await getResend().emails.send({
+      from: FROM_EMAIL,
+      to: email,
+      subject: `✓ Payout Completed - €${details.amount.toFixed(2)} sent!`,
+      html,
+    });
+
+    console.log("[Email] Payout completed email sent to:", email);
+    return { success: true, id: result.data?.id };
+  } catch (error) {
+    console.error("[Email] Failed to send payout completed email:", error);
+    return { success: false, error };
+  }
+}
+
+export async function sendAdminPayoutNotificationEmail(
+  adminEmail: string,
+  details: {
+    creatorName: string;
+    creatorSlug: string;
+    amount: number;
+    walletType: string;
+    walletAddress: string;
+    requestId: string;
+  }
+) {
+  const html = emailTemplate(`
+    <h1>New Payout Request 💸</h1>
+    <p>A creator has requested a payout:</p>
+    <div class="amount">€${details.amount.toFixed(2)}</div>
+    <div class="details">
+      <table width="100%" cellpadding="0" cellspacing="0">
+        <tr>
+          <td style="color: #888; padding: 10px 0;">Creator</td>
+          <td style="color: #FFD700; text-align: right; padding: 10px 0;">${details.creatorName}</td>
+        </tr>
+        <tr>
+          <td style="color: #888; padding: 10px 0;">Wallet Type</td>
+          <td style="color: #fff; text-align: right; padding: 10px 0;">${details.walletType}</td>
+        </tr>
+        <tr>
+          <td style="color: #888; padding: 10px 0;">Wallet Address</td>
+          <td style="color: #fff; text-align: right; padding: 10px 0; font-family: monospace; font-size: 11px;">${details.walletAddress}</td>
+        </tr>
+        <tr>
+          <td style="color: #888; padding: 10px 0;">Request ID</td>
+          <td style="color: #888; text-align: right; padding: 10px 0; font-family: monospace;">${details.requestId.slice(0, 16)}...</td>
+        </tr>
+      </table>
+    </div>
+    <div class="button-container">
+      <a href="${APP_URL}/dashboard/admin/payouts" class="button">Process Payout</a>
+    </div>
+  `);
+
+  try {
+    const result = await getResend().emails.send({
+      from: FROM_EMAIL,
+      to: adminEmail,
+      subject: `💸 New Payout Request - €${details.amount.toFixed(2)} from ${details.creatorName}`,
+      html,
+    });
+
+    console.log("[Email] Admin payout notification sent to:", adminEmail);
+    return { success: true, id: result.data?.id };
+  } catch (error) {
+    console.error("[Email] Failed to send admin payout notification:", error);
+    return { success: false, error };
+  }
+}

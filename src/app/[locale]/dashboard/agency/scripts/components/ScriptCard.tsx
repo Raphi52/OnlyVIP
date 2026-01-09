@@ -15,6 +15,8 @@ import {
   ArrowRight,
   Clock,
   Eye,
+  CheckSquare,
+  Square,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
@@ -57,6 +59,9 @@ interface ScriptCardProps {
   onToggleFavorite: (script: Script) => void;
   onDelete: (script: Script) => void;
   isCopied: boolean;
+  selectionMode?: boolean;
+  isSelected?: boolean;
+  onToggleSelect?: (scriptId: string) => void;
 }
 
 const INTENT_COLORS: Record<string, { color: string; bg: string }> = {
@@ -88,6 +93,9 @@ export default function ScriptCard({
   onToggleFavorite,
   onDelete,
   isCopied,
+  selectionMode = false,
+  isSelected = false,
+  onToggleSelect,
 }: ScriptCardProps) {
   const params = useParams();
   const locale = params.locale as string;
@@ -95,18 +103,44 @@ export default function ScriptCard({
   const intentStyle = INTENT_COLORS[script.intent || "CUSTOM"] || INTENT_COLORS.CUSTOM;
   const hasFlow = script.nextScriptOnSuccess || script.nextScriptOnReject;
 
+  const handleCardClick = () => {
+    if (selectionMode && onToggleSelect) {
+      onToggleSelect(script.id);
+    }
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       className="group"
     >
-      <div className="relative bg-white/5 border border-white/10 rounded-2xl p-3 sm:p-4 hover:bg-white/[0.07] transition-all">
+      <div
+        onClick={selectionMode ? handleCardClick : undefined}
+        className={cn(
+          "relative bg-white/5 border rounded-2xl p-3 sm:p-4 transition-all",
+          selectionMode ? "cursor-pointer" : "",
+          isSelected
+            ? "border-red-500/50 bg-red-500/10"
+            : "border-white/10 hover:bg-white/[0.07]"
+        )}
+      >
         {/* Header */}
         <div className="flex items-start justify-between gap-2 sm:gap-3 mb-3">
           <div className="flex-1 min-w-0">
             {/* Title with favorite star */}
             <div className="flex items-center gap-2 mb-2">
+              {/* Selection checkbox */}
+              {selectionMode && (
+                <div className={cn(
+                  "w-5 h-5 rounded-md border flex-shrink-0 flex items-center justify-center transition-colors",
+                  isSelected
+                    ? "bg-red-500 border-red-500"
+                    : "border-white/30 bg-white/5"
+                )}>
+                  {isSelected && <Check className="w-3 h-3 text-white" />}
+                </div>
+              )}
               <h3 className="font-semibold text-white truncate text-sm sm:text-base">
                 {script.name}
               </h3>
@@ -173,32 +207,34 @@ export default function ScriptCard({
             </div>
           </div>
 
-          {/* Quick actions - smaller on mobile */}
-          <div className="flex items-center gap-0.5 sm:gap-1 flex-shrink-0">
-            <button
-              onClick={() => onToggleFavorite(script)}
-              className={cn(
-                "w-8 h-8 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl flex items-center justify-center transition-colors",
-                script.isFavorite
-                  ? "text-yellow-400 bg-yellow-500/10"
-                  : "text-gray-400 bg-white/5 hover:bg-white/10"
-              )}
-            >
-              <Star className={cn("w-4 h-4", script.isFavorite && "fill-current")} />
-            </button>
-            <Link
-              href={`/${locale}/dashboard/agency/scripts/${script.id}`}
-              className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-white/5 text-gray-400 flex items-center justify-center hover:bg-white/10 transition-colors"
-            >
-              <Eye className="w-4 h-4" />
-            </Link>
-            <Link
-              href={`/${locale}/dashboard/agency/scripts/${script.id}/edit`}
-              className="hidden sm:flex w-9 h-9 rounded-xl bg-white/5 text-gray-400 items-center justify-center hover:bg-white/10 transition-colors"
-            >
-              <Settings className="w-4 h-4" />
-            </Link>
-          </div>
+          {/* Quick actions - smaller on mobile, hidden in selection mode */}
+          {!selectionMode && (
+            <div className="flex items-center gap-0.5 sm:gap-1 flex-shrink-0">
+              <button
+                onClick={() => onToggleFavorite(script)}
+                className={cn(
+                  "w-8 h-8 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl flex items-center justify-center transition-colors",
+                  script.isFavorite
+                    ? "text-yellow-400 bg-yellow-500/10"
+                    : "text-gray-400 bg-white/5 hover:bg-white/10"
+                )}
+              >
+                <Star className={cn("w-4 h-4", script.isFavorite && "fill-current")} />
+              </button>
+              <Link
+                href={`/${locale}/dashboard/agency/scripts/${script.id}`}
+                className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-white/5 text-gray-400 flex items-center justify-center hover:bg-white/10 transition-colors"
+              >
+                <Eye className="w-4 h-4" />
+              </Link>
+              <Link
+                href={`/${locale}/dashboard/agency/scripts/${script.id}/edit`}
+                className="hidden sm:flex w-9 h-9 rounded-xl bg-white/5 text-gray-400 items-center justify-center hover:bg-white/10 transition-colors"
+              >
+                <Settings className="w-4 h-4" />
+              </Link>
+            </div>
+          )}
         </div>
 
         {/* Content Preview */}
@@ -249,36 +285,38 @@ export default function ScriptCard({
             )}
           </div>
 
-          {/* Copy button */}
-          <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
-            <button
-              onClick={() => onDelete(script)}
-              className="h-8 sm:h-9 w-8 sm:w-auto sm:px-3 rounded-lg sm:rounded-xl text-sm font-medium text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-all flex items-center justify-center gap-1.5"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => onCopy(script)}
-              className={cn(
-                "h-8 sm:h-9 px-3 sm:px-4 rounded-lg sm:rounded-xl text-sm font-medium transition-all flex items-center gap-1.5",
-                isCopied
-                  ? "bg-emerald-500/20 text-emerald-400"
-                  : "bg-purple-500/20 text-purple-400 hover:bg-purple-500/30"
-              )}
-            >
-              {isCopied ? (
-                <>
-                  <Check className="w-4 h-4" />
-                  <span className="hidden sm:inline">Copied</span>
-                </>
-              ) : (
-                <>
-                  <Copy className="w-4 h-4" />
-                  <span className="hidden sm:inline">Copy</span>
-                </>
-              )}
-            </button>
-          </div>
+          {/* Copy button - hidden in selection mode */}
+          {!selectionMode && (
+            <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+              <button
+                onClick={() => onDelete(script)}
+                className="h-8 sm:h-9 w-8 sm:w-auto sm:px-3 rounded-lg sm:rounded-xl text-sm font-medium text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-all flex items-center justify-center gap-1.5"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => onCopy(script)}
+                className={cn(
+                  "h-8 sm:h-9 px-3 sm:px-4 rounded-lg sm:rounded-xl text-sm font-medium transition-all flex items-center gap-1.5",
+                  isCopied
+                    ? "bg-emerald-500/20 text-emerald-400"
+                    : "bg-purple-500/20 text-purple-400 hover:bg-purple-500/30"
+                )}
+              >
+                {isCopied ? (
+                  <>
+                    <Check className="w-4 h-4" />
+                    <span className="hidden sm:inline">Copied</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-4 h-4" />
+                    <span className="hidden sm:inline">Copy</span>
+                  </>
+                )}
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </motion.div>

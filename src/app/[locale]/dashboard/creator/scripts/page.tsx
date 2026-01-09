@@ -16,6 +16,9 @@ import {
   Users,
   Download,
   Check,
+  Trash2,
+  CheckSquare,
+  Square,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
@@ -112,6 +115,11 @@ export default function ScriptsPage() {
 
   // Template import
   const [importingTemplates, setImportingTemplates] = useState(false);
+
+  // Bulk selection
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedScripts, setSelectedScripts] = useState<Set<string>>(new Set());
+  const [deletingBulk, setDeletingBulk] = useState(false);
 
   const isCreator = (session?.user as any)?.isCreator === true;
 
@@ -348,6 +356,69 @@ export default function ScriptsPage() {
     }
   };
 
+  // Bulk selection functions
+  const toggleScriptSelection = (scriptId: string) => {
+    setSelectedScripts(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(scriptId)) {
+        newSet.delete(scriptId);
+      } else {
+        newSet.add(scriptId);
+      }
+      return newSet;
+    });
+  };
+
+  const selectAllScriptsForDelete = () => {
+    if (selectedScripts.size === scripts.length) {
+      setSelectedScripts(new Set());
+    } else {
+      setSelectedScripts(new Set(scripts.map(s => s.id)));
+    }
+  };
+
+  const cancelSelection = () => {
+    setSelectionMode(false);
+    setSelectedScripts(new Set());
+  };
+
+  const bulkDeleteScripts = async () => {
+    if (selectedScripts.size === 0 || !selectedCreator?.slug) return;
+
+    const confirmMsg = selectedScripts.size === 1
+      ? "Delete this script?"
+      : `Delete ${selectedScripts.size} scripts?`;
+
+    if (!confirm(confirmMsg)) return;
+
+    setDeletingBulk(true);
+    try {
+      const res = await fetch("/api/creator/scripts/bulk", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          scriptIds: Array.from(selectedScripts),
+          creatorSlug: selectedCreator.slug,
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        await fetchScripts(selectedCreator.slug);
+        setSelectedScripts(new Set());
+        setSelectionMode(false);
+        alert(`${data.deleted} script${data.deleted > 1 ? "s" : ""} deleted`);
+      } else {
+        alert("Error deleting scripts");
+      }
+    } catch (error) {
+      console.error("Error bulk deleting:", error);
+      alert("Error deleting scripts");
+    } finally {
+      setDeletingBulk(false);
+    }
+  };
+
   const hasActiveFilters = selectedIntent || selectedStage || selectedLanguage || searchQuery;
 
   if (status === "loading" || isLoading || contextLoading) {
@@ -393,29 +464,88 @@ export default function ScriptsPage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {canImportFromOthers && (
-              <button
-                onClick={openImportModal}
-                className="h-11 px-4 rounded-xl bg-white/5 border border-white/10 text-gray-400 font-medium flex items-center justify-center gap-2 hover:bg-white/10 hover:text-white transition-all"
-              >
-                <Users className="w-5 h-5" />
-                <span className="hidden sm:inline">Import</span>
-              </button>
+            {/* Selection mode controls */}
+            {selectionMode ? (
+              <>
+                <button
+                  onClick={selectAllScriptsForDelete}
+                  className={cn(
+                    "h-11 px-4 rounded-xl border font-medium flex items-center justify-center gap-2 transition-all",
+                    selectedScripts.size === scripts.length
+                      ? "bg-purple-500/20 border-purple-500/50 text-purple-400"
+                      : "bg-white/5 border-white/10 text-gray-400 hover:bg-white/10"
+                  )}
+                >
+                  {selectedScripts.size === scripts.length ? (
+                    <CheckSquare className="w-5 h-5" />
+                  ) : (
+                    <Square className="w-5 h-5" />
+                  )}
+                  <span className="hidden sm:inline">
+                    {selectedScripts.size === scripts.length ? "Deselect All" : "Select All"}
+                  </span>
+                </button>
+                <button
+                  onClick={cancelSelection}
+                  className="h-11 px-4 rounded-xl bg-white/5 border border-white/10 text-gray-400 font-medium flex items-center justify-center gap-2 hover:bg-white/10 hover:text-white transition-all"
+                >
+                  <X className="w-5 h-5" />
+                  <span className="hidden sm:inline">Cancel</span>
+                </button>
+                <button
+                  onClick={bulkDeleteScripts}
+                  disabled={selectedScripts.size === 0 || deletingBulk}
+                  className="h-11 px-5 rounded-xl bg-gradient-to-r from-red-600 to-red-700 text-white font-medium shadow-lg shadow-red-500/25 flex items-center justify-center gap-2 hover:opacity-90 transition-opacity disabled:opacity-50"
+                >
+                  {deletingBulk ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <Trash2 className="w-5 h-5" />
+                  )}
+                  <span className="hidden sm:inline">Delete</span>
+                  {selectedScripts.size > 0 && (
+                    <span className="bg-white/20 px-2 py-0.5 rounded-full text-xs">
+                      {selectedScripts.size}
+                    </span>
+                  )}
+                </button>
+              </>
+            ) : (
+              <>
+                {scripts.length > 0 && (
+                  <button
+                    onClick={() => setSelectionMode(true)}
+                    className="h-11 px-4 rounded-xl bg-white/5 border border-white/10 text-gray-400 font-medium flex items-center justify-center gap-2 hover:bg-white/10 hover:text-white transition-all"
+                  >
+                    <Trash2 className="w-5 h-5" />
+                    <span className="hidden sm:inline">Delete</span>
+                  </button>
+                )}
+                {canImportFromOthers && (
+                  <button
+                    onClick={openImportModal}
+                    className="h-11 px-4 rounded-xl bg-white/5 border border-white/10 text-gray-400 font-medium flex items-center justify-center gap-2 hover:bg-white/10 hover:text-white transition-all"
+                  >
+                    <Users className="w-5 h-5" />
+                    <span className="hidden sm:inline">Import</span>
+                  </button>
+                )}
+                <Link
+                  href={`/${locale}/dashboard/creator/scripts/flows`}
+                  className="h-11 px-4 rounded-xl bg-white/5 border border-white/10 text-gray-400 font-medium flex items-center justify-center gap-2 hover:bg-white/10 hover:text-white transition-all"
+                >
+                  <GitBranch className="w-5 h-5" />
+                  <span className="hidden sm:inline">Flows</span>
+                </Link>
+                <Link
+                  href={`/${locale}/dashboard/creator/scripts/new`}
+                  className="h-11 px-5 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 text-white font-medium shadow-lg shadow-purple-500/25 flex items-center justify-center gap-2 hover:opacity-90 transition-opacity"
+                >
+                  <Plus className="w-5 h-5" />
+                  <span className="hidden sm:inline">New Script</span>
+                </Link>
+              </>
             )}
-            <Link
-              href={`/${locale}/dashboard/creator/scripts/flows`}
-              className="h-11 px-4 rounded-xl bg-white/5 border border-white/10 text-gray-400 font-medium flex items-center justify-center gap-2 hover:bg-white/10 hover:text-white transition-all"
-            >
-              <GitBranch className="w-5 h-5" />
-              <span className="hidden sm:inline">Flows</span>
-            </Link>
-            <Link
-              href={`/${locale}/dashboard/creator/scripts/new`}
-              className="h-11 px-5 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 text-white font-medium shadow-lg shadow-purple-500/25 flex items-center justify-center gap-2 hover:opacity-90 transition-opacity"
-            >
-              <Plus className="w-5 h-5" />
-              <span className="hidden sm:inline">New Script</span>
-            </Link>
           </div>
         </div>
 
@@ -591,6 +721,9 @@ export default function ScriptsPage() {
                   onToggleFavorite={toggleFavorite}
                   onDelete={deleteScript}
                   isCopied={copiedId === script.id}
+                  selectionMode={selectionMode}
+                  isSelected={selectedScripts.has(script.id)}
+                  onToggleSelect={toggleScriptSelection}
                 />
               ))}
             </div>

@@ -87,7 +87,7 @@ interface AiPersona {
   createdAt: string;
 }
 
-type AiProvider = "openai" | "openrouter";
+type AiProvider = "openrouter";
 
 interface AiModel {
   id: string;
@@ -100,15 +100,6 @@ interface AiModel {
 // ==================== CONSTANTS ====================
 
 const AI_PROVIDERS: Record<AiProvider, { name: string; models: AiModel[]; keyPlaceholder: string }> = {
-  openai: {
-    name: "OpenAI (GPT)",
-    models: [
-      { id: "gpt-4o-mini", name: "GPT-4o Mini", tier: "fast", default: true },
-      { id: "gpt-4o", name: "GPT-4o", tier: "balanced" },
-      { id: "gpt-4-turbo", name: "GPT-4 Turbo", tier: "premium" },
-    ],
-    keyPlaceholder: "sk-proj-...",
-  },
   openrouter: {
     name: "OpenRouter",
     models: [

@@ -112,6 +112,7 @@ export function Sidebar() {
   const [isCreatorDropdownOpen, setIsCreatorDropdownOpen] = useState(false);
   const [isAgencyManaged, setIsAgencyManaged] = useState(false);
   const [managingAgencyName, setManagingAgencyName] = useState<string | null>(null);
+  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0 });
 
   const isAdmin = (session?.user as any)?.role === "ADMIN";
   const isCreatorUser = (session?.user as any)?.isCreator === true;
@@ -120,6 +121,7 @@ export function Sidebar() {
   // Ref for sidebar nav scroll position persistence
   const navRef = useRef<HTMLElement>(null);
   const scrollPositionRef = useRef<number>(0);
+  const creatorButtonRef = useRef<HTMLButtonElement>(null);
 
   // Save scroll position before navigation
   const saveScrollPosition = useCallback(() => {
@@ -396,7 +398,20 @@ export function Sidebar() {
         {/* Creator card */}
         <div className="relative">
           <button
-            onClick={() => (isAdmin || isCreatorUser || isAgencyOwner) && displayCreators.length > 0 && setIsCreatorDropdownOpen(!isCreatorDropdownOpen)}
+            ref={creatorButtonRef}
+            onClick={() => {
+              if ((isAdmin || isCreatorUser || isAgencyOwner) && displayCreators.length > 0) {
+                if (!isCreatorDropdownOpen && creatorButtonRef.current) {
+                  const rect = creatorButtonRef.current.getBoundingClientRect();
+                  setDropdownPosition({
+                    top: rect.bottom + 8,
+                    left: rect.left,
+                    width: rect.width,
+                  });
+                }
+                setIsCreatorDropdownOpen(!isCreatorDropdownOpen);
+              }
+            }}
             className={cn(
               "w-full flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/10 transition-all",
               (isAdmin || isCreatorUser || isAgencyOwner) && displayCreators.length > 0 && "hover:border-[var(--gold)]/30 cursor-pointer"
@@ -462,7 +477,12 @@ export function Sidebar() {
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: -10, scale: 0.95 }}
                   transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                  className="absolute left-0 right-0 mt-2 bg-black/95 backdrop-blur-xl border border-[var(--gold)]/20 rounded-xl shadow-2xl shadow-black/50 overflow-hidden z-[70]"
+                  className="fixed bg-black/95 backdrop-blur-xl border border-[var(--gold)]/20 rounded-xl shadow-2xl shadow-black/50 overflow-hidden z-[70]"
+                  style={{
+                    top: dropdownPosition.top,
+                    left: dropdownPosition.left,
+                    width: dropdownPosition.width,
+                  }}
                 >
                   <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-[var(--gold)]/50 to-transparent" />
 

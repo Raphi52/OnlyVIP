@@ -7,3 +7,4 @@ export { Testimonials } from "./Testimonials";
 export { ContentShowcase } from "./ContentShowcase";
 export { SocialProof } from "./SocialProof";
 export { ExclusivePreview } from "./ExclusivePreview";
+export { PPVLinks } from "./PPVLinks";

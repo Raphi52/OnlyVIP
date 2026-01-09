@@ -237,28 +237,130 @@ export function Pricing({ creatorSlug = "miacosta" }: PricingProps) {
       <div className="absolute bottom-1/4 -right-32 w-96 h-96 bg-purple-500/5 rounded-full blur-3xl" />
 
       <div className="max-w-7xl mx-auto px-6 relative z-10">
-        {/* Header */}
+        {/* Header - Ultra Premium Design */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="text-center mb-12"
+          transition={{ duration: 0.8, ease: "easeOut" }}
+          className="text-center mb-16 relative"
         >
-          <motion.span
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[var(--gold)]/10 border border-[var(--gold)]/20 text-[var(--gold)] text-sm font-medium mb-6"
-            initial={{ opacity: 0, scale: 0.9 }}
+          {/* Floating particles */}
+          {[...Array(6)].map((_, i) => (
+            <motion.div
+              key={i}
+              className="absolute w-1 h-1 rounded-full bg-[var(--gold)]"
+              style={{
+                left: `${20 + i * 12}%`,
+                top: `${30 + (i % 3) * 20}%`,
+                boxShadow: '0 0 10px 3px rgba(255,215,0,0.4)',
+              }}
+              animate={{
+                y: [-10, 10, -10],
+                opacity: [0.3, 0.8, 0.3],
+                scale: [0.8, 1.2, 0.8],
+              }}
+              transition={{
+                duration: 3 + i * 0.5,
+                repeat: Infinity,
+                delay: i * 0.3,
+                ease: "easeInOut",
+              }}
+            />
+          ))}
+
+          {/* Premium badge with holographic effect */}
+          <motion.div
+            className="relative inline-block mb-8"
+            initial={{ opacity: 0, scale: 0.8 }}
             whileInView={{ opacity: 1, scale: 1 }}
             viewport={{ once: true }}
+            transition={{ delay: 0.2 }}
           >
-            <Sparkles className="w-4 h-4" />
-            {t("membershipCredits")}
-          </motion.span>
-          <h2 className="text-4xl sm:text-5xl font-bold text-white mb-4">
-            {t("unlock")} <span className="gradient-gold-text">{t("exclusiveAccess")}</span>
-          </h2>
-          <p className="text-gray-400 text-lg max-w-2xl mx-auto">
+            {/* Outer glow */}
+            <motion.div
+              className="absolute -inset-3 rounded-full opacity-50"
+              style={{
+                background: 'radial-gradient(ellipse at center, rgba(255,215,0,0.4) 0%, transparent 70%)',
+              }}
+              animate={{
+                scale: [1, 1.2, 1],
+                opacity: [0.3, 0.5, 0.3]
+              }}
+              transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+            />
+
+            {/* Rainbow animated border */}
+            <motion.div
+              className="absolute -inset-[2px] rounded-full"
+              style={{
+                background: 'linear-gradient(90deg, #ff0080, #ff8c00, #ffef00, #00ff80, #00bfff, #8000ff, #ff0080)',
+                backgroundSize: '300% 100%',
+              }}
+              animate={{
+                backgroundPosition: ['0% 0%', '100% 0%', '0% 0%'],
+              }}
+              transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
+            />
+
+            {/* Inner gold border */}
+            <div className="absolute -inset-[1px] rounded-full bg-gradient-to-r from-yellow-400 via-amber-300 to-yellow-500" />
+
+            {/* Badge content */}
+            <span className="relative inline-flex items-center gap-2.5 px-6 py-2.5 rounded-full bg-black/90 text-[var(--gold)] text-sm font-semibold">
+              <motion.div
+                animate={{ rotate: 360 }}
+                transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+              >
+                <Sparkles className="w-4 h-4" />
+              </motion.div>
+              {t("membershipCredits")}
+              <Crown className="w-4 h-4" />
+            </span>
+          </motion.div>
+
+          {/* Main title with enhanced styling */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.3 }}
+            className="relative"
+          >
+            {/* Title glow effect */}
+            <div className="absolute inset-0 blur-3xl opacity-30 bg-gradient-to-r from-yellow-500 via-amber-400 to-yellow-600" />
+
+            <h2 className="relative text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-5">
+              {t("unlock")}{" "}
+              <span className="relative inline-block">
+                {/* Shimmer effect on text */}
+                <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent bg-[length:200%_100%] animate-shimmer bg-clip-text" />
+                <span className="bg-gradient-to-r from-yellow-200 via-amber-300 to-yellow-400 bg-clip-text text-transparent drop-shadow-[0_0_20px_rgba(255,215,0,0.5)]">
+                  {t("exclusiveAccess")}
+                </span>
+              </span>
+            </h2>
+          </motion.div>
+
+          {/* Subtitle with better styling */}
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.4 }}
+            className="text-gray-400 text-lg sm:text-xl max-w-2xl mx-auto leading-relaxed"
+          >
             {t("subscribeDescription")}
-          </p>
+          </motion.p>
+
+          {/* Decorative line */}
+          <motion.div
+            initial={{ scaleX: 0, opacity: 0 }}
+            whileInView={{ scaleX: 1, opacity: 1 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.5, duration: 0.8 }}
+            className="mt-8 mx-auto w-32 h-[2px] bg-gradient-to-r from-transparent via-[var(--gold)] to-transparent"
+          />
         </motion.div>
 
         {/* How it works */}
@@ -663,7 +765,7 @@ export function Pricing({ creatorSlug = "miacosta" }: PricingProps) {
                       ${pkg.price}
                     </div>
                     <div className="text-xs text-gray-500">
-                      ${((pkg.price / pkg.credits) * 100).toFixed(2)} per 100
+                      ${((pkg.price / (pkg.credits + (pkg.bonus || 0))) * 100).toFixed(2)} per 100
                     </div>
 
                     {/* Buy indicator */}

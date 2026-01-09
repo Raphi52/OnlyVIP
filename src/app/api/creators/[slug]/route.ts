@@ -36,7 +36,12 @@ export async function GET(
           subscribers: dbCreator.subscriberCount,
         },
         // AI Settings (for authenticated creators)
-        aiResponseDelay: dbCreator.aiResponseDelay,
+        aiResponseDelayMin: dbCreator.aiResponseDelayMin,
+        aiResponseDelayMax: dbCreator.aiResponseDelayMax,
+        aiPauseDurationMin: dbCreator.aiPauseDurationMin,
+        aiPauseDurationMax: dbCreator.aiPauseDurationMax,
+        aiPauseIntervalMin: dbCreator.aiPauseIntervalMin,
+        aiPauseIntervalMax: dbCreator.aiPauseIntervalMax,
         aiPersonality: dbCreator.aiPersonality,
         // AI Provider Settings
         aiProvider: dbCreator.aiProvider,

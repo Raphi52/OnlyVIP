@@ -107,7 +107,9 @@ export function ChatPreview({ creator }: ChatPreviewProps) {
       });
 
       if (res.ok) {
-        router.push("/dashboard/messages");
+        const data = await res.json();
+        // Redirect to the specific conversation like the Navbar does
+        window.location.href = `/dashboard/messages?conversation=${data.conversationId}`;
       } else {
         const error = await res.json();
         console.error("Error:", error);
@@ -153,7 +155,8 @@ export function ChatPreview({ creator }: ChatPreviewProps) {
           body: JSON.stringify({ creatorSlug }),
         });
         if (convRes.ok) {
-          router.push("/dashboard/messages");
+          const convData = await convRes.json();
+          window.location.href = `/dashboard/messages?conversation=${convData.conversationId}`;
         }
       } else {
         const error = await res.json();
